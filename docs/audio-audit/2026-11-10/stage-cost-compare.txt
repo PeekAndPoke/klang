@@ -1,0 +1,303 @@
+Stage cost, JVM against Kotlin/JS (KLANG-00420, probe 7)
+JVM: stage-cost.txt (one process, 41 rounds); JS: stage-cost-js.txt (median of 5 node processes, production bundle).
+Both quoted as the ratio to each platform's own plain sine (JVM sine 2.24 ns, JS sine 4.07 ns per sample: JS's sine is 1.82x the JVM's).
+js/jvm = js_x_sine over jvm_x_sine: above 1 the row costs MORE on JS, relative to a sine, than on the JVM.
+rank_move = jvm_rank - js_rank: positive means the row climbs (costs more, relatively) on JS.
+Rows read in the two lead sections cost at least half a sine on one platform, are not unstable on JS, and are not controls.
+
+== The rows whose RATIO differs most (by |log2(js/jvm)|), top 25 ==
+
+family    stage               knobs                                           jvm_x_sine  jvm_rank  js_x_sine  js_rank  js/jvm  rank_move  js_stab
+--------  ------------------  ----------------------------------------------  ----------  --------  ---------  -------  ------  ---------  -------
+katalyst  pow                 -1                                              12.83       25        4.85       61       0.38    -36        fair
+katalyst  distort:linearfold  amount=0.5                                      2.13        125       5.23       54       2.45    +71        stable
+ignitor   coarse              factor=4800                                     0.32        210       0.77       190      2.43    +20        stable
+ignitor   distort:linearfold  amount=0.5                                      1.20        172       2.72       95       2.26    +77        stable
+ignitor   coarse              factor=1.5                                      0.54        202       1.22       171      2.25    +31        stable
+ignitor   coarse              factor=4                                        0.42        208       0.92       184      2.19    +24        stable
+source    berlinnoise         bare                                            1.98        130       4.08       75       2.06    +55        stable
+katalyst  distort:stompbox    amount=3                                        32.51       4         17.24      14       0.53    -10        stable
+ignitor   distort:stompbox    amount=3                                        16.32       16        8.66       36       0.53    -20        stable
+katalyst  pow                 3                                               12.78       26        24.02      5        1.88    +21        stable
+katalyst  distort:exp         amount=3                                        32.60       3         19.11      10       0.59    -7         stable
+ignitor   distort:exp         amount=3                                        16.39       15        9.67       29       0.59    -14        stable
+katalyst  eq                  band 1000 q=.707 +12 dB                         3.39        98        2.03       117      0.60    -19        fair
+katalyst  distort:rectify     amount=0.5                                      4.94        72        3.00       88       0.61    -16        fair
+ignitor   eq                  band 1000 q=.707 +12 dB                         1.79        138       1.10       178      0.61    -40        stable
+ignitor   phaser              default (rate .5 wet .5)                        4.26        81        2.67       97       0.63    -16        stable
+ignitor   phaser              wet=1 rate=20 center=20000 sweep=20000 floor=0  4.33        80        2.72       93       0.63    -13        stable
+ignitor   eq                  band 23999 q=200 +24 dB                         1.78        140       1.12       177      0.63    -37        stable
+katalyst  distort:asym        amount=0.5                                      8.02        40        5.09       59       0.63    -19        stable
+katalyst  abs                 -                                               3.36        100       2.14       114      0.64    -14        fair
+katalyst  distort:asym        amount=3                                        6.08        57        3.89       79       0.64    -22        fair
+katalyst  eq                  band 23999 q=200 +24 dB                         3.39        97        2.17       112      0.64    -15        fair
+source    pinknoise           bare                                            1.58        165       2.46       102      1.55    +63        stable
+ignitor   distort:asym        amount=0.5                                      4.16        83        2.68       96       0.64    -13        stable
+katalyst  phaser              wet=1 rate=20 center=20000 sweep=20000 floor=0  5.80        61        3.77       81       0.65    -20        fair
+
+== The rows whose RANK differs most, top 25 ==
+
+family    stage                 knobs                          jvm_x_sine  jvm_rank  js_x_sine  js_rank  js/jvm  rank_move  js_stab
+--------  --------------------  -----------------------------  ----------  --------  ---------  -------  ------  ---------  -------
+ignitor   distort:linearfold    amount=0.5                     1.20        172       2.72       95       2.26    +77        stable
+katalyst  distort:linearfold    amount=0.5                     2.13        125       5.23       54       2.45    +71        stable
+source    pinknoise             bare                           1.58        165       2.46       102      1.55    +63        stable
+source    berlinnoise           bare                           1.98        130       4.08       75       2.06    +55        stable
+voice     saw voice             accelerate 12 st (adsr.on=0)   1.38        167       1.82       122      1.32    +45        stable
+ignitor   distort:sineshaper    amount=0.5                     3.79        92        5.39       48       1.42    +44        stable
+ignitor   distort:sineshaper    amount=3                       3.82        88        5.55       47       1.45    +41        stable
+ignitor   distort:fold          amount=3                       3.69        94        5.07       53       1.38    +41        stable
+ignitor   eq                    band 1000 q=.707 +12 dB        1.79        138       1.10       178      0.61    -40        stable
+katalyst  min door (Max stage)  0.5                            2.29        120       1.56       159      0.68    -39        fair
+source    dust                  bare                           1.01        175       1.53       137      1.51    +38        fair
+ignitor   distort:softsat       amount=0.5                     2.01        128       1.46       166      0.73    -38        stable
+ignitor   adsr                  a=0 d=0 s=1 r=0                1.85        133       1.23       170      0.67    -37        stable
+ignitor   eq                    band 23999 q=200 +24 dB        1.78        140       1.12       177      0.63    -37        stable
+katalyst  pow                   -1                             12.83       25        4.85       61       0.38    -36        fair
+ignitor   adsr                  release=5                      2.01        129       1.46       165      0.73    -36        stable
+ignitor   distort:softsat       amount=3                       2.05        126       1.46       161      0.71    -35        stable
+ignitor   notch                 freq=23999 q=200               1.65        163       1.55       130      0.94    +33        stable
+ignitor   adsr                  default                        1.96        131       1.42       164      0.72    -33        stable
+katalyst  duck                  cyl=1 depth=.8 (self-trigger)  2.34        118       2.93       87       1.25    +31        fair
+ignitor   coarse                factor=1.5                     0.54        202       1.22       171      2.25    +31        stable
+ignitor   shimmer               wet=1 feedback=0.95 (max)      5.35        69        7.68       39       1.43    +30        stable
+ignitor   tremolo               depth=0.5 rate=5               1.54        166       1.59       139      1.04    +27        stable
+ignitor   distort:fold          amount=0.5                     3.74        93        4.54       67       1.21    +26        stable
+katalyst  distort:fold          amount=3                       6.96        53        9.80       28       1.41    +25        stable
+
+== Every row, sorted by JS cost ==
+
+family    stage                 knobs                                           jvm_x_sine  jvm_rank  js_x_sine  js_rank  js/jvm  rank_move  js_stab
+--------  --------------------  ----------------------------------------------  ----------  --------  ---------  -------  ------  ---------  --------
+katalyst  oversampleBy          16x distort hard 3                              105.93      1         85.83      1        0.81    +0         stable
+source    superpluck            voices=16                                       40.98       2         29.04      2        0.71    +0         stable
+ignitor   highpass              freq=1000 passes=16 (max)                       27.79       6         24.44      3        0.88    +3         stable
+ignitor   lowpass               freq=1000 passes=16 (max)                       28.16       5         24.22      4        0.86    +1         stable
+katalyst  pow                   3                                               12.78       26        24.02      5        1.88    +21        stable
+katalyst  blend (parallel)      wet=.5 over reverb wet=1                        17.10       11        22.94      6        1.34    +5         stable
+katalyst  reverb                default (wet .25 size 5)                        15.84       19        20.80      7        1.31    +12        stable
+katalyst  reverb                wet=1 size=10 (max)                             15.93       18        20.97      8        1.32    +10        stable
+katalyst  reverb                wet=1 size=10 lowpass=20000                     15.77       20        20.92      9        1.33    +11        stable
+katalyst  distort:exp           amount=3                                        32.60       3         19.11      10       0.59    -7         stable
+katalyst  body                  bell wet=1 floor=0                              26.05       7         17.16      11       0.66    -4         stable
+katalyst  body                  steel wet=1 floor=0                             25.97       8         17.23      12       0.66    -4         stable
+katalyst  body                  wood wet=.5 floor=.4                            25.90       9         17.25      13       0.67    -4         stable
+katalyst  distort:stompbox      amount=3                                        32.51       4         17.24      14       0.53    -10        stable
+katalyst  compressor            lookahead=0.05 (max)                            17.03       12        14.74      15       0.87    -3         stable
+source    superpluck            voices=8 (default)                              20.49       10        14.21      16       0.69    -6         stable
+source    supersine             voices=16                                       16.74       13        13.65      17       0.82    -4         stable
+katalyst  limiter               lookahead=0.005                                 14.67       22        11.91      18       0.81    +4         stable
+katalyst  oversampleBy          2x distort soft .5                              13.98       23        11.67      19       0.84    +4         stable
+katalyst  vowel                 soprano:i wet=1 floor=0                         16.45       14        10.97      20       0.67    -6         stable
+katalyst  vowel                 a wet=.5 floor=.2                               16.31       17        11.17      21       0.68    -4         stable
+katalyst  delay                 wet=1 fb=1.5 cap=1                              15.52       21        11.18      22       0.72    -1         stable
+source    supertri              voices=16                                       10.09       33        10.49      23       1.04    +10        stable
+katalyst  distort:sineshaper    amount=3                                        7.50        43        10.59      24       1.41    +19        stable
+katalyst  distort:sineshaper    amount=0.5                                      7.44        46        10.72      25       1.44    +21        stable
+source    supersquare           voices=16                                       9.51        34        10.43      26       1.10    +8         stable
+katalyst  bands (parallel)      cut 500, both bands empty                       13.57       24        9.75       27       0.72    -3         stable
+katalyst  distort:fold          amount=3                                        6.96        53        9.80       28       1.41    +25        stable
+ignitor   distort:exp           amount=3                                        16.39       15        9.67       29       0.59    -14        stable
+source    supersaw              voices=16                                       8.28        38        9.50       30       1.15    +8         stable
+source    superramp             voices=16                                       8.27        39        9.57       31       1.16    +8         stable
+katalyst  compressor            thr=-60 ratio=100 knee=0 att=0 rel=0            11.36       28        9.53       32       0.84    -4         stable
+katalyst  distort:stompbox      amount=0.5                                      8.92        36        9.13       33       1.02    +3         stable
+katalyst  delay                 time=0.01 fb=0.99                               11.88       27        8.99       34       0.76    -7         stable
+katalyst  distort:fold          amount=0.5                                      7.02        51        8.85       35       1.26    +16        stable
+ignitor   distort:stompbox      amount=3                                        16.32       16        8.66       36       0.53    -20        stable
+katalyst  delay                 fb=1 (endless)                                  11.25       30        8.53       37       0.76    -7         stable
+katalyst  delay                 default (wet .25 time .25 fb .3)                11.29       29        8.59       38       0.76    -9         stable
+ignitor   shimmer               wet=1 feedback=0.95 (max)                       5.35        69        7.68       39       1.43    +30        stable
+voice     supersaw voice        lpf=1000 + adsr, voices=8                       8.01        41        7.77       40       0.97    +1         stable
+katalyst  distort:exp           amount=0.5                                      9.44        35        7.52       41       0.80    -6         fair
+katalyst  compressor            default (-20 dB 4:1 knee 6)                     10.69       32        7.53       42       0.71    -10        fair
+ignitor   shimmer               default                                         5.46        65        7.63       43       1.40    +22        stable
+katalyst  limiter               default (-1 dB 20:1)                            10.92       31        7.46       44       0.68    -13        stable
+source    supersine             voices=8 (default)                              8.33        37        6.68       45       0.80    -8         stable
+source    sine                  partial bank, harmonics=4                       5.87        60        5.97       46       1.02    +14        stable
+ignitor   distort:sineshaper    amount=3                                        3.82        88        5.55       47       1.45    +41        stable
+ignitor   distort:sineshaper    amount=0.5                                      3.79        92        5.39       48       1.42    +44        stable
+source    supertri              voices=8 (default)                              5.07        71        5.19       49       1.02    +22        stable
+katalyst  distort:chebyshev     amount=0.5                                      7.35        50        5.28       50       0.72    +0         fair
+source    supersquare           voices=8 (default)                              4.78        74        5.22       51       1.09    +23        stable
+katalyst  distort:cubic         amount=0.5                                      7.37        49        5.11       52       0.69    -3         fair
+ignitor   distort:fold          amount=3                                        3.69        94        5.07       53       1.38    +41        stable
+katalyst  distort:linearfold    amount=0.5                                      2.13        125       5.23       54       2.45    +71        stable
+ignitor   lowpass               freq=1000 analog=1                              7.45        44        4.93       55       0.66    -11        stable
+ignitor   lowpass               freq=23999 q=200 analog=1                       7.43        48        4.98       56       0.67    -8         stable
+ignitor   highpass              freq=1000 analog=1                              7.44        45        4.88       57       0.66    -12        stable
+ignitor   highpass              freq=23999 q=200 analog=1                       7.44        47        4.95       58       0.67    -11        stable
+katalyst  distort:asym          amount=0.5                                      8.02        40        5.09       59       0.63    -19        stable
+katalyst  distort:diode         amount=0.5                                      7.52        42        4.91       60       0.65    -18        fair
+katalyst  pow                   -1                                              12.83       25        4.85       61       0.38    -36        fair
+ignitor   distort:stompbox      amount=0.5                                      4.55        76        4.72       62       1.04    +14        stable
+katalyst  pow                   0.5                                             6.38        55        4.78       63       0.75    -8         fair
+source    supersaw              voices=8 (default)                              4.14        84        4.73       64       1.14    +20        stable
+source    superramp             voices=8 (default)                              4.18        82        4.68       65       1.12    +17        stable
+katalyst  distort:hard          amount=0.5                                      6.97        52        4.85       66       0.70    -14        stable
+ignitor   distort:fold          amount=0.5                                      3.74        93        4.54       67       1.21    +26        stable
+katalyst  distort:zerosquare    amount=0.5                                      6.77        54        4.72       68       0.70    -14        stable
+voice     saw voice             vibrato 0.5 st (adsr.on=0)                      4.37        78        4.27       69       0.98    +9         stable
+katalyst  distort:tube          amount=3                                        5.95        58        4.34       70       0.73    -12        stable
+katalyst  distort:zerosquare    amount=3                                        6.10        56        4.14       71       0.68    -15        stable
+katalyst  distort:diode         amount=3                                        5.69        64        4.05       72       0.71    -8         stable
+ignitor   drive+shape           amount=0.5 soft                                 5.94        59        4.11       73       0.69    -14        stable
+katalyst  distort:cubic         amount=3                                        5.44        66        4.14       74       0.76    -8         stable
+source    berlinnoise           bare                                            1.98        130       4.08       75       2.06    +55        stable
+katalyst  distort:chebyshev     amount=3                                        5.40        67        4.08       76       0.76    -9         stable
+katalyst  distort:hard          amount=3                                        5.32        70        3.92       77       0.74    -7         stable
+ignitor   distort:exp           amount=0.5                                      4.89        73        3.92       78       0.80    -5         stable
+katalyst  distort:asym          amount=3                                        6.08        57        3.89       79       0.64    -22        fair
+ignitor   drive+shape           amount=3 asym                                   5.80        62        3.82       80       0.66    -18        stable
+katalyst  phaser                wet=1 rate=20 center=20000 sweep=20000 floor=0  5.80        61        3.77       81       0.65    -20        fair
+katalyst  distort:soft          amount=3                                        5.38        68        3.84       82       0.71    -14        fair
+katalyst  phaser                wet=.5 rate=.5                                  5.70        63        3.71       83       0.65    -20        fair
+katalyst  distort:tube          amount=0.5                                      4.73        75        3.52       84       0.74    -9         fair
+voice     saw voice             lpf=1000 + adsr                                 4.34        79        3.45       85       0.79    -6         stable
+katalyst  distort:soft          amount=0.5                                      4.39        77        3.15       86       0.72    -9         fair
+katalyst  duck                  cyl=1 depth=.8 (self-trigger)                   2.34        118       2.93       87       1.25    +31        fair
+katalyst  distort:rectify       amount=0.5                                      4.94        72        3.00       88       0.61    -16        fair
+katalyst  eq                    tap 1000 q=200 gain=1                           3.87        86        2.94       89       0.76    -3         stable
+voice     saw voice             fm depth=100 (adsr.on=0)                        2.65        110       2.89       90       1.09    +20        stable
+katalyst  duck                  cyl=1 depth=1 release=0                         2.41        117       2.78       91       1.16    +26        unstable
+ignitor   distort:cubic         amount=0.5                                      3.86        87        2.77       92       0.72    -5         stable
+ignitor   phaser                wet=1 rate=20 center=20000 sweep=20000 floor=0  4.33        80        2.72       93       0.63    -13        stable
+ignitor   distort:chebyshev     amount=0.5                                      3.80        90        2.78       94       0.73    -4         stable
+ignitor   distort:linearfold    amount=0.5                                      1.20        172       2.72       95       2.26    +77        stable
+ignitor   distort:asym          amount=0.5                                      4.16        83        2.68       96       0.64    -13        stable
+ignitor   phaser                default (rate .5 wet .5)                        4.26        81        2.67       97       0.63    -16        stable
+ignitor   distort:diode         amount=0.5                                      3.92        85        2.63       98       0.67    -13        stable
+ignitor   distort:hard          amount=0.5                                      3.62        95        2.57       99       0.71    -4         stable
+katalyst  distort:softsat       amount=0.5                                      3.82        89        2.53       100      0.66    -11        fair
+ignitor   distort:zerosquare    amount=0.5                                      3.57        96        2.52       101      0.71    -5         stable
+source    pinknoise             bare                                            1.58        165       2.46       102      1.55    +63        stable
+voice     sample instrument     adsr (default), rate=2^(1/12)                   2.81        106       2.43       103      0.86    +3         stable
+ignitor   distort:tube          amount=3                                        3.08        103       2.37       104      0.77    -1         stable
+katalyst  distort:softsat       amount=3                                        3.80        91        2.43       105      0.64    -14        unstable
+ignitor   distort:chebyshev     amount=3                                        2.82        105       2.22       106      0.79    -1         stable
+ignitor   distort:cubic         amount=3                                        2.79        109       2.24       107      0.80    +2         stable
+ignitor   distort:zerosquare    amount=3                                        3.20        101       2.22       108      0.69    -7         stable
+ignitor   distort:asym          amount=3                                        3.15        102       2.18       109      0.69    -7         stable
+ignitor   distort:hard          amount=3                                        2.79        108       2.14       110      0.77    -2         stable
+katalyst  eq                    band 5 q=200 +24 dB                             3.37        99        2.19       111      0.65    -12        fair
+katalyst  eq                    band 23999 q=200 +24 dB                         3.39        97        2.17       112      0.64    -15        fair
+voice     saw voice             penv 12 st (adsr.on=0)                          2.50        116       2.13       113      0.85    +3         stable
+katalyst  abs                   -                                               3.36        100       2.14       114      0.64    -14        fair
+ignitor   distort:diode         amount=3                                        2.95        104       2.13       115      0.72    -11        stable
+ignitor   distort:soft          amount=3                                        2.81        107       2.07       116      0.74    -9         stable
+katalyst  eq                    band 1000 q=.707 +12 dB                         3.39        98        2.03       117      0.60    -19        fair
+katalyst  distort:linearfold    amount=3                                        2.14        124       2.03       118      0.95    +6         stable
+ignitor   distort:tube          amount=0.5                                      2.51        115       1.92       119      0.76    -4         stable
+voice     saw voice             adsr (default)                                  2.60        112       1.92       120      0.74    -8         stable
+source    superpluck            voices=1                                        2.61        111       1.84       121      0.70    -10        stable
+voice     saw voice             accelerate 12 st (adsr.on=0)                    1.38        167       1.82       122      1.32    +45        stable
+ignitor   distort:soft          amount=0.5                                      2.32        119       1.79       123      0.77    -4         stable
+source    pluck                 bare                                            2.04        127       1.77       124      0.87    +3         stable
+ignitor   distort:rectify       amount=0.5                                      2.55        114       1.67       125      0.65    -11        fair
+ignitor   notch                 freq=1000 analog=1                              1.81        136       1.66       126      0.92    +10        stable
+ignitor   bandpass              freq=23999 q=200 analog=1                       1.85        134       1.68       127      0.91    +7         stable
+ignitor   notch                 freq=23999 q=200 analog=1                       1.80        137       1.67       128      0.93    +9         stable
+ignitor   bandpass              freq=1000 analog=1                              1.79        139       1.60       129      0.89    +10        stable
+ignitor   notch                 freq=23999 q=200                                1.65        163       1.55       130      0.94    +33        stable
+katalyst  max door (Min stage)  -0.5                                            2.25        121       1.62       131      0.72    -10        fair
+katalyst  distort:gentle        amount=0.5                                      2.22        122       1.64       132      0.74    -10        fair
+ignitor   lowpass               freq=20 q=200                                   1.72        146       1.55       133      0.90    +13        stable
+ignitor   notch                 freq=1000                                       1.69        155       1.53       134      0.90    +21        stable
+ignitor   bandpass              freq=1000                                       1.68        157       1.54       135      0.91    +22        stable
+ignitor   notch                 freq=20 q=200                                   1.68        158       1.54       136      0.92    +22        stable
+source    dust                  bare                                            1.01        175       1.53       137      1.51    +38        fair
+ignitor   lowpass               freq=1000                                       1.73        143       1.51       138      0.87    +5         stable
+ignitor   tremolo               depth=0.5 rate=5                                1.54        166       1.59       139      1.04    +27        stable
+ignitor   eq                    tap 1000 q=200 gain=1                           1.95        132       1.55       140      0.79    -8         stable
+katalyst  distort:gentle        amount=3                                        2.17        123       1.52       141      0.70    -18        fair
+ignitor   bandpass              freq=1 (floor 5)                                1.69        153       1.51       142      0.89    +11        stable
+ignitor   notch                 freq=1000 q=200 (max)                           1.66        162       1.55       143      0.93    +19        stable
+ignitor   notch                 freq=1 (floor 5)                                1.72        145       1.54       144      0.90    +1         stable
+ignitor   lowpass               freq=23999 (Nyquist-1)                          1.84        135       1.50       145      0.81    -10        stable
+ignitor   bandpass              freq=1000 q=200 (max)                           1.67        161       1.53       146      0.91    +15        stable
+ignitor   highpass              freq=20 q=200                                   1.73        142       1.50       147      0.87    -5         stable
+ignitor   lowpass               freq=1 (floor 5)                                1.71        150       1.46       148      0.85    +2         stable
+ignitor   highpass              freq=1000                                       1.68        156       1.53       149      0.91    +7         stable
+ignitor   bandpass              freq=20 q=200                                   1.72        147       1.50       150      0.87    -3         stable
+ignitor   highpass              freq=23999 (Nyquist-1)                          1.72        148       1.50       151      0.87    -3         stable
+ignitor   highpass              freq=23999 q=200                                1.68        159       1.48       152      0.88    +7         stable
+ignitor   bandpass              freq=23999 (Nyquist-1)                          1.68        160       1.51       153      0.90    +7         stable
+ignitor   notch                 freq=23999 (Nyquist-1)                          1.71        149       1.52       154      0.89    -5         stable
+ignitor   highpass              freq=1 (floor 5)                                1.70        151       1.48       155      0.87    -4         stable
+ignitor   highpass              freq=1000 q=200 (max)                           1.70        152       1.51       156      0.89    -4         stable
+ignitor   lowpass               freq=23999 q=200                                1.74        141       1.51       157      0.87    -16        stable
+ignitor   bandpass              freq=23999 q=200                                1.69        154       1.51       158      0.89    -4         stable
+katalyst  min door (Max stage)  0.5                                             2.29        120       1.56       159      0.68    -39        fair
+ignitor   lowpass               freq=1000 q=200 (max)                           1.72        144       1.49       160      0.87    -16        stable
+ignitor   distort:softsat       amount=3                                        2.05        126       1.46       161      0.71    -35        stable
+source    brownnoise            bare                                            1.61        164       1.48       162      0.92    +2         stable
+katalyst  distort:rectify       amount=3                                        2.55        113       1.46       163      0.57    -50        unstable
+ignitor   adsr                  default                                         1.96        131       1.42       164      0.72    -33        stable
+ignitor   adsr                  release=5                                       2.01        129       1.46       165      0.73    -36        stable
+ignitor   distort:softsat       amount=0.5                                      2.01        128       1.46       166      0.73    -38        stable
+source    whitenoise            bare                                            0.96        179       1.37       167      1.44    +12        stable
+control   plain block copy      no engine, copy in and out                      0.73        186       1.25       168      1.71    +18        unstable
+control   katalyst empty chain  no stage                                        0.61        193       1.24       169      2.05    +24        fair
+ignitor   adsr                  a=0 d=0 s=1 r=0                                 1.85        133       1.23       170      0.67    -37        stable
+ignitor   coarse                factor=1.5                                      0.54        202       1.22       171      2.25    +31        stable
+ignitor   distort:linearfold    amount=3                                        1.20        171       1.20       172      1.00    -1         stable
+ignitor   tremolo               depth=1 rate=40 shape=square                    1.20        173       1.18       173      0.99    +0         stable
+ignitor   onepole               freq=1000                                       0.94        181       1.14       174      1.22    +7         stable
+ignitor   onepole               freq=23999 (Nyquist-1)                          0.96        178       1.12       175      1.17    +3         stable
+ignitor   onepole               freq=1                                          0.91        183       1.14       176      1.25    +7         stable
+ignitor   eq                    band 23999 q=200 +24 dB                         1.78        140       1.12       177      0.63    -37        stable
+ignitor   eq                    band 1000 q=.707 +12 dB                         1.79        138       1.10       178      0.61    -40        stable
+source    crackle               bare                                            1.00        176       1.09       179      1.09    -3         stable
+source    perlinnoise           bare                                            1.18        174       1.03       180      0.87    -6         fair
+ignitor   distort:gentle        amount=0.5                                      1.28        168       0.99       181      0.77    -13        stable
+source    sine                  bare                                            1.00        177       1.00       182      1.00    -5         stable
+ignitor   distort:gentle        amount=3                                        1.26        169       0.99       183      0.79    -14        stable
+ignitor   coarse                factor=4                                        0.42        208       0.92       184      2.19    +24        stable
+source    sample playhead       rate=1                                          0.66        188       0.91       185      1.37    +3         fair
+source    sample playhead       rate=2^(1/12)                                   0.71        187       0.91       186      1.28    +1         fair
+source    impulse               bare                                            0.78        185       0.85       187      1.09    -2         stable
+ignitor   distort:rectify       amount=3                                        1.21        170       0.87       188      0.72    -18        stable
+source    supersine             voices=1                                        0.93        182       0.78       189      0.84    -7         fair
+ignitor   coarse                factor=4800                                     0.32        210       0.77       190      2.43    +20        stable
+katalyst  div                   0.001                                           0.95        180       0.78       191      0.82    -11        fair
+katalyst  div                   1e-20                                           0.88        184       0.79       192      0.89    -8         unstable
+katalyst  times                 2                                               0.62        191       0.69       193      1.10    -2         unstable
+ignitor   crush                 bits=8                                          0.54        203       0.60       194      1.12    +9         stable
+ignitor   crush                 bits=24                                         0.58        197       0.62       195      1.06    +2         stable
+source    supersquare           voices=1                                        0.66        189       0.60       196      0.92    -7         stable
+source    supertri              voices=1                                        0.64        190       0.58       197      0.90    -7         fair
+source    pulze                 bare (raw pulse)                                0.58        200       0.57       198      0.98    +2         fair
+source    supersaw              voices=1                                        0.58        198       0.54       199      0.93    -1         fair
+source    square                bare (pulze, duty .5)                           0.56        201       0.55       200      0.98    +1         fair
+source    square node           bare (not the built-in square)                  0.58        196       0.54       201      0.92    -5         fair
+voice     saw voice             everything off (adsr.on=0)                      0.58        199       0.49       202      0.84    -3         noise
+source    tri                   bare                                            0.62        192       0.49       203      0.79    -11        noise
+source    superramp             voices=1                                        0.59        195       0.47       204      0.81    -9         noise
+ignitor   crush                 bits=1 (lowest on)                              0.59        194       0.48       205      0.81    -11        noise
+control   ignitor sample leaf   bare sample leaf                                0.37        209       0.47       206      1.24    +3         noise
+source    zamp                  bare                                            0.51        205       0.46       207      0.89    -2         noise
+source    zawtooth              bare                                            0.52        204       0.45       208      0.86    -4         noise
+source    ramp                  bare                                            0.51        206       0.43       209      0.85    -3         noise
+source    saw                   bare                                            0.50        207       0.45       210      0.89    -3         noise
+katalyst  phaser                bare (wet 0)                                    0.08        214       0.32       211      3.91    +3         noise
+katalyst  minus                 0.5                                             0.12        213       0.29       212      2.46    +1         noise
+control   ignitor silence       silence node                                    0.25        211       0.26       213      1.04    -2         noise
+katalyst  reverb                wet=1 size=0                                    0.00        218       0.25       214      -76.03  +4         noise
+katalyst  gain                  gain=100                                        0.07        215       0.18       215      2.62    +0         noise
+katalyst  plus                  0.5                                             0.15        212       0.18       216      1.18    -4         noise
+katalyst  gain                  default (1)                                     0.07        216       0.07       217      1.04    -1         noise
+ignitor   classic() all off     adsr.on=0                                       0.02        217       0.01       218      0.40    -1         noise
+
+== Allocation: the rows with a net byte count per block of 1 or more on either platform (JS: V8 new space, 3 processes) ==
+The harness copies with copyInto, which makes a typed-array view per call on JS (96 B): the controls carry it, and so does
+the duck's row, whose adapter copies the sidechain too (2 views = 192 B): that row's bytes are the HARNESS, not the duck.
+
+family    stage      knobs                          jvm_net_B  js_net_B (median)  js_net_B per process  baseline
+--------  ---------  -----------------------------  ---------  -----------------  --------------------  --------------------
+ignitor   shimmer    default                        0.0        16.0               16.0/16.0/32.0        ignitor sample leaf
+source    sine       partial bank, harmonics=4      0.0        48.0               48.0/48.0/48.0        ignitor silence
+katalyst  duck       cyl=1 depth=.8 (self-trigger)  0.0        192.0              192.0/192.0/192.1     katalyst empty chain
+voice     saw voice  fm depth=100 (adsr.on=0)       0.0        16.0               16.0/16.0/16.0        ignitor silence
+katalyst  duck       cyl=1 depth=1 release=0        0.0        192.0              192.0/192.0/192.0     katalyst empty chain
+ignitor   phaser     default (rate .5 wet .5)       0.0        32.0               32.0/32.0/32.0        ignitor sample leaf
+source    dust       bare                           0.0        1.6                1.6/1.6/1.6           ignitor silence

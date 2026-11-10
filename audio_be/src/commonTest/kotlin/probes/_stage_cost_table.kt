@@ -5,8 +5,6 @@
 
 package io.peekandpoke.klang.audio_be.probes
 
-import java.util.Locale
-
 // The stage cost table's two forms (KLANG-00420, probe 7): the text table and the JSON rows for a page.
 
 /** The column legend printed above the cost table. */
@@ -30,7 +28,7 @@ fun sortedByCost(rows: List<StageCostRow>): List<StageCostRow> =
 private fun f(x: Double, digits: Int): String = when {
     x != x -> "NaN" // NaN-guard
     x.isInfinite() -> if (x > 0) "inf" else "-inf"
-    else -> String.format(Locale.ROOT, "%.${digits}f", x)
+    else -> formatFixed(x = x, digits = digits)
 }
 
 /** The text table, one row per case in the order given (rank = position), plain columns padded to their widest cell. */
@@ -75,8 +73,12 @@ fun formatStageCostTable(rows: List<StageCostRow>): String {
     }
 }
 
-/** One row as a JSON object's fields, for the page that shows the table; [rank] is its place in the sorted table. */
-fun stageCostJsonRow(row: StageCostRow, rank: Int): Map<String, Any?> = linkedMapOf(
+/**
+ * One row as a JSON object's fields, for the page that shows the table; [rank] is its place in the sorted table. A
+ * [platform] (`"js"` for the Kotlin/JS table) adds a `platform` field at the end; null leaves it out, as the JVM table
+ * has always been written.
+ */
+fun stageCostJsonRow(row: StageCostRow, rank: Int, platform: String? = null): Map<String, Any?> = linkedMapOf<String, Any?>(
     "rank" to rank,
     "family" to row.case.family,
     "stage" to row.case.stage,
@@ -93,7 +95,12 @@ fun stageCostJsonRow(row: StageCostRow, rank: Int): Map<String, Any?> = linkedMa
     "allocBytesPerBlock" to row.result.allocBytesPerBlock.median,
     "netAllocBytesPerBlock" to row.netAllocBytesPerBlock,
     "rounds" to row.result.rounds,
-)
+).also { fields ->
+    if (platform != null) {
+        fields["platform"] = platform
+    }
+}
 
-/** The table as JSON: an array of [stageCostJsonRow] objects, ranked in the order given. */
-fun formatStageCostJson(rows: List<StageCostRow>): String = jsonRows(rows.mapIndexed { index, row -> stageCostJsonRow(row = row, rank = index + 1) })
+/** The table as JSON: an array of [stageCostJsonRow] objects, ranked in the order given, each with [platform] when given. */
+fun formatStageCostJson(rows: List<StageCostRow>, platform: String? = null): String =
+    jsonRows(rows.mapIndexed { index, row -> stageCostJsonRow(row = row, rank = index + 1, platform = platform) })

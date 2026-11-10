@@ -43,7 +43,7 @@ data class OutputFacts(
     val tailFrames: Int,
     /** Frames from the input's end until the output STAYS exactly 0.0; [NEVER] when the last sample is not 0.0. */
     val zeroFrames: Int,
-    /** Output samples whose magnitude is subnormal: above 0 and below [java.lang.Double.MIN_NORMAL]. */
+    /** Output samples whose magnitude is subnormal: above 0 and below [DOUBLE_MIN_NORMAL]. */
     val subnormalCount: Int,
     /** The first subnormal output frame, or [NEVER]. */
     val firstSubnormalFrame: Int,

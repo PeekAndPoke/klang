@@ -1,0 +1,33 @@
+Where the time goes in a real song, Kotlin/JS (KLANG-00420, Performance step 2): NOT MEASURED
+2026-11-10
+
+Why: the song benchmark has no node mode. `runSongBenchmark` (root project, `src/jvmMain/kotlin/SongBenchmarkMain.kt`)
+is JVM only: it compiles the song text with KlangScript (`klangScript { registerLibrary(sprudelLib) }`), queries the
+pattern and renders through `KlangAudioRenderer`. audio/ref/performance.md names no node song mode, and no module that
+builds for node carries both KlangScript and the frozen songs:
+  - `audio_benchmark` (the only node production bundle, `jsNodeProductionRun`) has no song entry. It depends on
+    `audio_be` and `sprudel`, and `sprudel` brings `klangscript` and `klangscript-libs` as `api`, so everything a song
+    needs is in that bundle already; only the entry is missing, and the frozen song texts live in the root project's
+    `jvmMain` (`FrozenSongs.kt`), so a node entry would read the text from a file.
+  - `audio_be`'s production test bundle (used for the stage cost table, `stage-cost-js.txt`) has neither.
+  - The root project's JS target is the browser app (webpack), where the Chrome profiler on the worklet build is the
+    route the ticket names ("Performance", step 2), and that needs a browser session, not node.
+
+So there is no song profile on node in this run, and the JVM profile (`song-profile-jvm.txt`) has no JS twin to be
+compared with. The stage cost table's JS half (`stage-cost-js.txt`, `stage-cost-compare.txt`) is the only Kotlin/JS
+evidence of this run.
+
+Options to close the gap (each a decision, none taken here):
+  1. The Chrome profiler on the app (`:klang:jsBrowserDevelopmentRun` is the development bundle; a production build of the
+     app is the honest one), playing the same frozen song in the worklet, recorded by hand. The real deployment shape;
+     needs a person or a driven browser, and the worklet thread must be selected in the profiler.
+  2. The simplest node route: a song mode in `audio_benchmark`'s `jsMain` (an env mode beside `KLANG_ALLOC_CASE` in
+     `main.kt`), which compiles the song text read from a file with `klangScript { registerLibrary(sprudelLib) }`,
+     queries and schedules it as `SongBenchmark.renderPass` does and renders through `KlangAudioRenderer`, run as
+     `node --cpu-prof` on `klang-engine-audio_benchmark.js` of the production bundle. No build-script change and no new
+     dependency (the module already has sprudel and KlangScript), but it is new code in a module this run was not to
+     touch for job 2, so it was not written. Drums would be silent in node (no sample loader there), as they are in the
+     JVM harness when the sample cache misses.
+  3. A stand-in without the song: `node --cpu-prof` on `audio_benchmark`'s production bundle, its composition rows
+     (supersaw+lpf+adsr+reverb, pluck+distort, ...). Cheap, but it is not the song and it would not show what a song's
+     note density, cylinders and Katalyst chains cost.

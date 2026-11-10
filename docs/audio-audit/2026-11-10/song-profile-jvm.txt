@@ -1,0 +1,256 @@
+Where the time goes in a real song, JVM (KLANG-00420, Performance step 2), 2026-11-10
+
+COMMANDS (repeatable as written; SP is any scratch directory, the hosts file keeps the run off the network)
+
+  printf '127.0.0.1 localhost\n::1 localhost\n' > $SP/hosts-localhost-only
+  export JAVA_HOME=/opt/dev/sdkman/candidates/java/21.0.12-amzn
+  env KLANG_LOCK_TIMEOUT=7200 \
+      JAVA_TOOL_OPTIONS="-XX:StartFlightRecording=filename=$SP/jfr/,settings=profile,method-profiling=max,allocation-profiling=high -Djdk.net.hosts.file=$SP/hosts-localhost-only" \
+      console/with-build-lock.sh ./gradlew --offline runSongBenchmark --args=songs
+  # JAVA_TOOL_OPTIONS reaches the JVM `runSongBenchmark` forks (no build-script change); every JVM writes its own
+  # file into $SP/jfr/, the benchmark's is the largest (here hotspot-pid-531937-...jfr, 4.3 MB, 90 s).
+  # The benchmark also writes docs/benchmarks/<stamp>_song_jvm.md: moved out of docs after this run, not kept.
+  java docs/audio-audit/2026-11-10/song-profile-jvm-reader.java $SP/jfr/<the benchmark's>.jfr 333.913 349.091
+  # song-profile-jvm-reader.java: a single-file reader over jdk.jfr.consumer (a scratch tool kept beside its output;
+  # a candidate for console/tools). The two numbers are each song's audio seconds in the window: 4 passes (1 warm-up,
+  # 3 measured) x 48 cycles x 60 / rpm (34.5 and 33).
+
+WHAT RAN
+  JDK: Corretto 21.0.12 (the forked JVM), G1. 16 processors, machine shared with other sessions (load about 5).
+  The benchmark's own result:
+    Der Schmetterling (FULL frozen 11-03)  onsets 3523  culled 315  voices 11.0  work 467  medRTF 0.19033  peakRTF 3.08605  331012 us/cycle
+    Seltsamere Dinge  (FULL frozen 11-03)  onsets  595  culled 394  voices 15.0  work 256  medRTF 0.05619  peakRTF 0.69664  102155 us/cycle
+  So Der Schmetterling is the heaviest, 3.4 times Seltsamere Dinge. Both songs are profiled; song 1 is the one asked for.
+  Execution samples every 1 ms (method-profiling=max) on the benchmark thread "main": 54,577 in song 1's window,
+  18,485 in song 2's. The song windows are split at each song's KlangScript compile (SongBenchmark.compile).
+  Samples from the flight recording run under JFR's own overhead; the benchmark's RTF above is that run's.
+
+HOW TO READ
+  "Inside renderBlock": the stack holds KlangAudioRenderer.renderBlock (the timed part of the benchmark), or the stack is
+  truncated at JFR's 64 frames (deep Ignitor trees) and holds engine frames and no census frame. Everything else on the
+  thread is the harness: compile, pattern query, scheduling the events, and the per-block census (GraphCensus and its
+  string key), which runs between the timed blocks.
+  Self time: the leaf frame of the sample, inlined frames counted as their own method (JFR keeps them).
+  Areas: each sample is given to ONE area by walking from the leaf towards main, skipping shared cores (utils, filters,
+  effects, DistortionCore, EnvelopeCore, CrushCore, Oversampler, KnobGlide, java, kotlin) until a frame decides:
+    build of voices and chains  any frame of VoiceFactory, IgnitorDslRuntime (buildRaw/buildIgnitor/buildExciter),
+                                IgnitorDslOptimizer, KatalystChainBuilder, IgnitorRegistry.optimized (checked first)
+    scheduling                  VoiceScheduler, SampleStore, the dispatcher's command handling
+    Katalyst stages             katalyst.* (the cylinder chains: reverb, delay, body, compressor, ...)
+    sources                     the oscillator, noise, pluck and sample Ignitors
+    per-note stages             every other Ignitor (filters, envelopes, shapers, eq, regions, memo and arithmetic
+                                plumbing) and the Voice's own stages
+    mixing                      voice_channel (mixIntoCylinder, peak), cylinders, the house stage, the master
+    engine loop                 the renderer, engine and dispatcher's own frames
+  So the reverb's Reverb.process counts as a Katalyst stage when a cylinder chain runs it, the guitar rig's EqCore
+  as a per-note stage (its EqIgnitor), the house limiter's Compressor as mixing.
+  GC: not in the execution samples (GC threads); its pauses are counted from the jdk.GarbageCollection events.
+  Allocation: JFR's ObjectAllocationSample, a THROTTLED sample (1,386 events over 90 s, about 2 MB of allocation per
+  event): the totals are estimates, and a steady rate under about 10 KB per second of audio (about 30 B per block) can
+  have no event at all. The steady per-block allocation of single stages is the stage cost table's job (ThreadMXBean,
+  stage-cost.txt: no row allocates on the JVM).
+
+SUMMARY (song 1, the heaviest; share of the render samples)
+  per-note stages 60.2 %, Katalyst stages 28.9 %, sources 6.1 %, build of voices and chains 2.7 %, mixing 1.7 %,
+  scheduling 0.2 %, engine loop 0.1 %; the harness took 3.8 % of the thread outside renderBlock.
+  GC: 14 collections, 104 ms of pauses in a 67 s window (0.16 %), mostly from the harness's census (below).
+  Top self time: Reverb.process 21.7 % (Katalyst), EqCore.process 17.9 % (the guitar rig's EQ Ignitors, inside
+  oversampled regions), DcBlocker.process 6.0 % (inside DistortionCore.processBlock under ShapeIgnitor: the shaper's
+  DC blocker per oversampled sample), MemoizingIgnitor.generate 5.8 % (the memo node itself), ResonatorBank.runBand
+  5.4 % (body), DistortionCore.shapeRun 5.0 %, AdsrIgnitor.generate 4.0 %, SvfIgnitor.generate 3.9 %, the half-band
+  oversampler (decimate44, interpolate44, decimate33, interpolate33) 11.1 % together, UnisonStackIgnitor.trapezoidLoop
+  2.5 %, AffineIgnitor.generate 1.9 %, buildRaw 1.9 %.
+  Song 2 is another engine picture: SvfIgnitor.generate 29.3 %, ResonatorBank.runBand 19.7 %, AdsrIgnitor.generate
+  12.1 %, UnisonStackIgnitor.trapezoidLoop 11.0 %, Reverb.process 8.2 %.
+
+  Allocation inside renderBlock (estimate): song 1 about 449 MB over 334 s of audio = about 1.3 MB per second of audio
+  (about 3.6 KB per block), 93 % of it the voice build (about 30 KB per note over 14,092 note starts: BuiltIgnitor and its
+  copies, buildRaw's captured locals as Ref$ObjectRef / Ref$DoubleRef / Ref$BooleanRef, the memo caches, EnvelopeCore,
+  AnalogDrift, PerlinNoise's table, EqCore's arrays, the half-band filters' arrays, Reverb's buffers when a unit is
+  first taken), the rest the diagnostics message (documented, every 20 ms) and ScheduledVoice.copy per note. Song 2:
+  about 12.6 MB = 36 KB per second of audio. No event fell in a steady per-block render path except a class load on
+  first use (SvfIgnitor.generate loading a class, once).
+  The harness allocates far more than the engine: about 3.0 GB per song on the thread, almost all outside renderBlock
+  (the census key string "$sound|$index|$params" per voice per block, formatting doubles: FDBigInteger,
+  FloatingDecimal; GraphCensus walks), so the GC pauses inside the timed blocks are mostly the harness's.
+
+DETAIL (the reader's output, unedited but for the song names)
+
+===== song 1: Der Schmetterling (FULL frozen 11-03), the heaviest  window 67.2 s  audio 333.9 s  samples 54577 (render 52517, 96.2 %)  truncated stacks 1290
+-- areas, share of the render thread's samples
+   57.89 %   60.16 % of render  per-note stages
+   27.84 %   28.93 % of render  Katalyst stages
+    5.89 %    6.12 % of render  sources
+    3.77 %     NaN % of render  benchmark harness (outside renderBlock)
+    2.63 %    2.73 % of render  build of voices and chains
+    1.63 %    1.70 % of render  mixing (voice channel, cylinders, house stage)
+    0.20 %    0.21 % of render  scheduling
+    0.13 %    0.14 % of render  engine loop (renderer, engine, dispatcher)
+    0.01 %    0.01 % of render  other: io.peekandpoke.klang.audio_bridge.infra.KlangCommLink$Feedback$Diagnostics.<init>
+    0.01 %    0.01 % of render  other: io.peekandpoke.klang.SongBenchmark$$Lambda$2414+0x000075f10c31e000.596376940.invoke
+    0.00 %    0.00 % of render  other: io.peekandpoke.klang.audio_bridge.ScheduledVoice.<init>
+    0.00 %    0.00 % of render  other: io.peekandpoke.klang.audio_bridge.ScheduledVoice.copy
+    0.00 %    0.00 % of render  other: io.peekandpoke.klang.audio_bridge.KlangTime.internalMsNow
+-- top 30 methods by self time inside renderBlock (share of render samples; area by caller walk)
+   1   21.68 %  io.peekandpoke.klang.audio_be.effects.Reverb.process                                                  Katalyst stages 100%
+   2   17.87 %  io.peekandpoke.klang.audio_be.filters.EqCore.process                                                  per-note stages 100%
+   3    6.02 %  io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters$DcBlocker.process                        per-note stages 98%, mixing (voice channel, cylinders, house stage) 2%
+   4    5.78 %  io.peekandpoke.klang.audio_be.ignitor.MemoizingIgnitor.generate                                       per-note stages 100%
+   5    5.37 %  io.peekandpoke.klang.audio_be.filters.ResonatorBank.runBand                                           Katalyst stages 100%
+   6    4.96 %  io.peekandpoke.klang.audio_be.DistortionCore.shapeRun                                                 per-note stages 100%
+   7    4.04 %  io.peekandpoke.klang.audio_be.ignitor.AdsrIgnitor.generate                                            per-note stages 100%
+   8    3.92 %  io.peekandpoke.klang.audio_be.ignitor.SvfIgnitor.generate                                             per-note stages 100%
+   9    3.57 %  io.peekandpoke.klang.audio_be.Oversampler$HalfBand.decimate44                                         per-note stages 95%, Katalyst stages 5%
+  10    3.10 %  io.peekandpoke.klang.audio_be.Oversampler$HalfBand.interpolate44                                      per-note stages 100%
+  11    2.54 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$UnisonStackIgnitor.trapezoidLoop                       sources 100%
+  12    2.20 %  io.peekandpoke.klang.audio_be.Oversampler$HalfBand.decimate33                                         per-note stages 100%
+  13    2.17 %  io.peekandpoke.klang.audio_be.Oversampler$HalfBand.interpolate33                                      per-note stages 100%
+  14    1.91 %  io.peekandpoke.klang.audio_be.ignitor.AffineIgnitor.generate                                          per-note stages 100%
+  15    1.86 %  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw                                    build of voices and chains 100%
+  16    1.19 %  io.peekandpoke.klang.audio_be.ignitor.PitchModFactoriesKt.renderPitchEnvelopeRatios                   per-note stages 100%
+  17    1.04 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$PartialBankIgnitor.renderPartial                       sources 100%
+  18    0.81 %  io.peekandpoke.klang.audio_be.ignitor.EqIgnitor.generate                                              per-note stages 100%
+  19    0.74 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$WhiteNoiseIgnitor.generate                             sources 100%
+  20    0.66 %  io.peekandpoke.klang.common.math.PerlinNoise.noise                                                    sources 100%
+  21    0.57 %  io.peekandpoke.klang.audio_be.effects.Reverb.observeTail$io_peekandpoke_klang_audio_be                Katalyst stages 100%
+  22    0.46 %  io.peekandpoke.klang.audio_be.effects.Compressor.processLookahead$io_peekandpoke_klang_audio_be       mixing (voice channel, cylinders, house stage) 100%
+  23    0.42 %  io.peekandpoke.klang.audio_be.ignitor.DriveIgnitor.generate                                           per-note stages 100%
+  24    0.41 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$SineIgnitor.generate                                   sources 100%
+  25    0.33 %  io.peekandpoke.klang.audio_be.cylinders.Cylinders.processAndMix                                       mixing (voice channel, cylinders, house stage) 100%
+  26    0.30 %  io.peekandpoke.klang.audio_be.Oversampler$HalfBand.settle                                             per-note stages 99%, Katalyst stages 1%
+  27    0.29 %  io.peekandpoke.klang.audio_be.ignitor.RegionInputIgnitor.generate                                     per-note stages 100%
+  28    0.29 %  io.peekandpoke.klang.audio_be.voices.Voice_channelKt.mixIntoCylinder                                  mixing (voice channel, cylinders, house stage) 100%
+  29    0.28 %  io.peekandpoke.klang.audio_be.Oversampler.decimate                                                    per-note stages 100%
+  30    0.26 %  io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor.generate                                          sources 100%
+-- top 15 methods by self time OUTSIDE renderBlock on the same thread (harness, census, compile)
+          0.38 % of all  jdk.internal.math.FDBigInteger.valueOfPow52
+          0.25 % of all  java.lang.String.valueOf
+          0.24 % of all  java.lang.StringLatin1.hashCode
+          0.22 % of all  java.util.HashMap.getNode
+          0.14 % of all  java.util.Arrays.copyOf
+          0.12 % of all  io.peekandpoke.klang.sprudel.pattern.SequencePattern.queryArcContextual-sqO7Vhw
+          0.10 % of all  java.lang.AbstractStringBuilder.putStringAt
+          0.10 % of all  io.peekandpoke.klang.SongBenchmark.renderPass
+          0.10 % of all  io.peekandpoke.klang.sprudel.SprudelPatternEvent.copy
+          0.09 % of all  jdk.internal.math.FloatingDecimal.getBinaryToASCIIConverter
+          0.09 % of all  io.peekandpoke.klang.audio_bridge.IgnitorDslWalkKt.childNodes
+          0.08 % of all  io.peekandpoke.klang.sprudel.SprudelVoiceData.copy
+          0.08 % of all  io.peekandpoke.klang.audio_be.ignitor.GraphCensus$Walker.isScalar
+          0.06 % of all  io.peekandpoke.klang.common.SourceLocationChain$Companion.concat
+          0.06 % of all  io.peekandpoke.klang.sprudel.pattern.AtomicPattern.queryArcContextual-sqO7Vhw
+-- allocation (JFR ObjectAllocationSample weights, an estimate): all threads 3038.7 MB, inside renderBlock 449.1 MB = 1345 KB per second of audio (3587 B per 128-frame block)
+-- GC in the window: 14 collections, 104.1 ms of pauses (0.155 % of the window)
+-- render allocation by area
+    93.3 %    1254.6 KB/s audio  build of voices and chains
+     4.7 %      62.7 KB/s audio  engine loop (renderer, engine, dispatcher)
+     1.9 %      25.1 KB/s audio  other: io.peekandpoke.klang.audio_bridge.ScheduledVoice.copy
+     0.2 %       2.5 KB/s audio  per-note stages
+-- render allocation by class, top 12
+    28.0 %     376.8 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
+    15.9 %     213.5 KB/s audio  [D
+     8.3 %     111.9 KB/s audio  kotlin.jvm.internal.Ref$ObjectRef
+     7.5 %     100.5 KB/s audio  [I
+     5.6 %      75.4 KB/s audio  [Ljava.lang.Object;
+     3.7 %      50.2 KB/s audio  kotlin.jvm.internal.Ref$DoubleRef
+     3.7 %      50.2 KB/s audio  kotlin.jvm.internal.Ref$BooleanRef
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.ConstantIgnitor
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.audio_be.EnvelopeCore
+     3.7 %      50.0 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
+     2.8 %      37.7 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor
+     1.9 %      25.1 KB/s audio  java.lang.Double
+-- render allocation by first engine frame, top 25
+    11.2 %     150.7 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildIgnitor:422  [io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor]
+     8.4 %     113.0 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildIgnitor:419  [io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor]
+     5.6 %      75.4 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildIgnitor:2199  [[Ljava.lang.Object;]
+     4.7 %      62.8 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor.copy:-1  [io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor]
+     4.7 %      62.8 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw:1240  [kotlin.jvm.internal.Ref$ObjectRef]
+     4.7 %      62.8 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.MemoizingIgnitor.reserveCache:111  [[D]
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw:1263  [kotlin.jvm.internal.Ref$DoubleRef]
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildIgnitor:422  [io.peekandpoke.klang.audio_be.ignitor.ConstantIgnitor]
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw:1255  [kotlin.jvm.internal.Ref$BooleanRef]
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw:2090  [io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor]
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.AdsrIgnitor.<init>:104  [io.peekandpoke.klang.audio_be.EnvelopeCore]
+     3.7 %      50.2 KB/s audio  io.peekandpoke.klang.common.math.PerlinNoise.<init>:15  [[I]
+     3.7 %      49.1 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw:1268  [kotlin.jvm.internal.Ref$ObjectRef]
+     2.8 %      37.7 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildIgnitor:419  [io.peekandpoke.klang.audio_be.ignitor.ParamIgnitor]
+     2.8 %      37.7 KB/s audio  io.peekandpoke.klang.audio_be.filters.EqCore.<init>:150  [[I]
+     2.8 %      37.6 KB/s audio  io.peekandpoke.klang.audio_be.effects.Reverb.<init>:111  [[D]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.filters.EqCore.<init>:152  [[D]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorKt.controlRateValueOrNull:122  [java.lang.Double]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher.emitDiagnostics:321  [io.peekandpoke.klang.audio_bridge.infra.KlangCommLink$Feedback$Diagnostics]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildIgnitor:609  [io.peekandpoke.klang.audio_be.ignitor.MemoizingIgnitor]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.Oversampler$HalfBand.<init>:180  [[D]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.Oversampler$HalfBand.<init>:179  [[D]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_bridge.ScheduledVoice.copy:-1  [io.peekandpoke.klang.audio_bridge.ScheduledVoice]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.filters.EqCore.<init>:176  [io.peekandpoke.klang.audio_be.filters.SvfCoeffs]
+     1.9 %      25.1 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorFiltersKt.svf:127  [io.peekandpoke.klang.audio_be.ignitor.SvfIgnitor]
+
+===== song 2: Seltsamere Dinge (FULL frozen 11-03)  window 22.5 s  audio 349.1 s  samples 18485 (render 17172, 92.9 %)  truncated stacks 41
+-- areas, share of the render thread's samples
+   44.34 %   47.73 % of render  per-note stages
+   28.32 %   30.49 % of render  Katalyst stages
+   14.73 %   15.86 % of render  sources
+    7.10 %     NaN % of render  benchmark harness (outside renderBlock)
+    4.43 %    4.77 % of render  mixing (voice channel, cylinders, house stage)
+    0.71 %    0.77 % of render  build of voices and chains
+    0.20 %    0.22 % of render  scheduling
+    0.15 %    0.16 % of render  engine loop (renderer, engine, dispatcher)
+    0.01 %    0.01 % of render  other: io.peekandpoke.klang.audio_bridge.infra.KlangCommLink$Feedback$Diagnostics.<init>
+-- top 30 methods by self time inside renderBlock (share of render samples; area by caller walk)
+   1   29.28 %  io.peekandpoke.klang.audio_be.ignitor.SvfIgnitor.generate                                             per-note stages 100%
+   2   19.69 %  io.peekandpoke.klang.audio_be.filters.ResonatorBank.runBand                                           Katalyst stages 100%
+   3   12.13 %  io.peekandpoke.klang.audio_be.ignitor.AdsrIgnitor.generate                                            per-note stages 100%
+   4   10.99 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$UnisonStackIgnitor.trapezoidLoop                       sources 100%
+   5    8.17 %  io.peekandpoke.klang.audio_be.effects.Reverb.process                                                  Katalyst stages 100%
+   6    2.85 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$BrownNoiseIgnitor.generate                             sources 100%
+   7    2.07 %  io.peekandpoke.klang.audio_be.ignitor.SemitonesToRatioIgnitor.generate                                per-note stages 100%
+   8    1.48 %  io.peekandpoke.klang.audio_be.voices.Voice_channelKt.measureVoicePeak                                 mixing (voice channel, cylinders, house stage) 100%
+   9    1.36 %  io.peekandpoke.klang.audio_be.effects.Compressor.processLookahead$io_peekandpoke_klang_audio_be       mixing (voice channel, cylinders, house stage) 100%
+  10    1.23 %  io.peekandpoke.klang.audio_be.ignitor.OnePoleLowpassIgnitor.generate                                  per-note stages 100%
+  11    1.22 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$SineIgnitor.generate                                   sources 100%
+  12    1.03 %  io.peekandpoke.klang.audio_be.effects.Compressor.process                                              Katalyst stages 100%
+  13    0.78 %  io.peekandpoke.klang.audio_be.ignitor.MemoizingIgnitor.generate                                       per-note stages 100%
+  14    0.78 %  io.peekandpoke.klang.audio_be.ignitor.CoarseIgnitor.generate                                          per-note stages 100%
+  15    0.73 %  io.peekandpoke.klang.audio_be.voices.Voice_channelKt.mixIntoCylinder                                  mixing (voice channel, cylinders, house stage) 100%
+  16    0.52 %  io.peekandpoke.klang.audio_be.CrushCore.quantize                                                      per-note stages 100%
+  17    0.50 %  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw                                    build of voices and chains 100%
+  18    0.49 %  io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor.generate                                          sources 100%
+  19    0.39 %  io.peekandpoke.klang.audio_be.ignitor.TimesIgnitor.generate                                           per-note stages 100%
+  20    0.39 %  io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters$DcBlocker.process                        mixing (voice channel, cylinders, house stage) 100%
+  21    0.38 %  java.util.Arrays.fill                                                                                 Katalyst stages 58%, mixing (voice channel, cylinders, house stage) 32%, engine loop (renderer, engine, dispatcher) 11%
+  22    0.38 %  io.peekandpoke.klang.audio_be.cylinders.Cylinders.processAndMix                                       mixing (voice channel, cylinders, house stage) 100%
+  23    0.38 %  io.peekandpoke.klang.audio_be.effects.Reverb.observeTail$io_peekandpoke_klang_audio_be                Katalyst stages 100%
+  24    0.26 %  io.peekandpoke.klang.audio_be.filters.ResonatorBank.process                                           Katalyst stages 100%
+  25    0.26 %  io.peekandpoke.klang.audio_be.ignitor.Ignitors$UnisonStackIgnitor.generate                            sources 100%
+  26    0.22 %  io.peekandpoke.klang.audio_be.EnvelopeCore.prepareBlock$io_peekandpoke_klang_audio_be                 per-note stages 100%
+  27    0.20 %  io.peekandpoke.klang.audio_be.HouseStageKt.clipOutput                                                 mixing (voice channel, cylinders, house stage) 100%
+  28    0.17 %  io.peekandpoke.klang.audio_be.ignitor.ModApplyingIgnitor.generate                                     per-note stages 100%
+  29    0.13 %  io.peekandpoke.klang.audio_be.voices.VoiceScheduler.process                                           scheduling 100%
+  30    0.08 %  io.peekandpoke.klang.audio_be.katalyst.KatalystPhaserEffect.process                                   Katalyst stages 100%
+-- top 15 methods by self time OUTSIDE renderBlock on the same thread (harness, census, compile)
+          1.69 % of all  jdk.internal.math.FDBigInteger.valueOfPow52
+          0.98 % of all  java.lang.StringLatin1.hashCode
+          0.74 % of all  java.lang.String.valueOf
+          0.64 % of all  java.lang.AbstractStringBuilder.putStringAt
+          0.48 % of all  java.util.HashMap.getNode
+          0.41 % of all  jdk.internal.math.FloatingDecimal.getBinaryToASCIIConverter
+          0.21 % of all  jdk.internal.math.FloatingDecimal$BinaryToASCIIBuffer.toJavaFormatString
+          0.21 % of all  java.util.Arrays.copyOf
+          0.18 % of all  jdk.internal.math.FloatingDecimal$BinaryToASCIIBuffer.developLongDigits
+          0.14 % of all  java.util.Arrays.fill
+          0.14 % of all  io.peekandpoke.klang.sprudel.SprudelPatternEvent.copy
+          0.12 % of all  java.util.AbstractMap.toString
+          0.12 % of all  io.peekandpoke.klang.SongBenchmark.renderPass
+          0.09 % of all  io.peekandpoke.klang.common.SourceLocationChain$Companion.concat
+          0.08 % of all  java.lang.Integer.getChars
+-- allocation (JFR ObjectAllocationSample weights, an estimate): all threads 3024.5 MB, inside renderBlock 12.6 MB = 36 KB per second of audio (96 B per 128-frame block)
+-- GC in the window: 9 collections, 23.3 ms of pauses (0.103 % of the window)
+-- render allocation by area
+    66.7 %      24.0 KB/s audio  engine loop (renderer, engine, dispatcher)
+    33.3 %      12.0 KB/s audio  build of voices and chains
+-- render allocation by class, top 12
+    66.7 %      24.0 KB/s audio  io.peekandpoke.klang.audio_bridge.infra.KlangCommLink$Feedback$Diagnostics$CylinderState
+    33.3 %      12.0 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor
+-- render allocation by first engine frame, top 25
+    66.7 %      24.0 KB/s audio  io.peekandpoke.klang.audio_be.PlaybackEngineDispatcher.countDiagnostics:357  [io.peekandpoke.klang.audio_bridge.infra.KlangCommLink$Feedback$Diagnostics$CylinderState]
+    33.3 %      12.0 KB/s audio  io.peekandpoke.klang.audio_be.ignitor.IgnitorDslRuntimeKt.buildRaw:2090  [io.peekandpoke.klang.audio_be.ignitor.BuiltIgnitor]

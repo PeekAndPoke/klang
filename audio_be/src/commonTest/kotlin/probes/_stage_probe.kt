@@ -20,13 +20,15 @@ import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.common.infra.toKlangMap
-import java.lang.Double.MIN_NORMAL
 import kotlin.math.abs
 import kotlin.random.Random
 
 // The stage probe (KLANG-00420, probe 1): one stage alone under the standard signals, its facts as data. The register
 // is `audio/ref/verification.md`, "The probes". A probe is a measurement, never a gate: these functions assert nothing,
 // and a spec that guards a fixed finding calls them with a threshold of its own.
+
+/** The smallest positive normal double (the JVM's `Double.MIN_NORMAL`, 2^-1022), written out so the probe runs on Kotlin/JS too. */
+const val DOUBLE_MIN_NORMAL: Double = 2.2250738585072014E-308
 
 /**
  * Reads the facts of one output channel. [input] is the same channel of the signal that produced it (for the input
@@ -71,7 +73,7 @@ fun measureOutput(output: DoubleArray, input: DoubleArray, inputEndFrame: Int, p
             lastNonZero = i
         }
 
-        if (a > 0.0 && a < MIN_NORMAL) {
+        if (a > 0.0 && a < DOUBLE_MIN_NORMAL) {
             subnormalCount++
 
             if (firstSubnormal == NEVER) {

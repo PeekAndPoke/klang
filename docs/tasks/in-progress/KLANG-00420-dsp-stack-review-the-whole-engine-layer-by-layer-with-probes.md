@@ -243,9 +243,23 @@ the off paths are off: phaser at wet 0, gain 1, `classic()` all off and reverb s
 9. For scale: body 58, reverb 35, vowel 37, 16 passes of lowpass 63, 16x oversampled hard distort 237 (1.1 percent
    of a core per bus), superpluck 5.8 ns per voice.
 
-The Kotlin/JS half is open: the worker's smallest honest route is to move the platform-free half of the probes to
-`audio_be/src/commonTest` and run the production test bundle under node (never Karma's development bundle). The JVM
-ranking is not the browser's.
+**The Kotlin/JS half and a real song** (`stage-cost-js.txt`, `stage-cost-compare.txt`, `song-profile-jvm.txt`; node
+22, production bundle, the median of five processes; a plain sine is 4.07 ns on JS against 2.24 on the JVM):
+
+1. In the heaviest song (Der Schmetterling) the reverb is 21.7 percent of the render, about 24 single reverbs' worth
+   where the song writes six: do idle rooms ever stop (their output never reaches exact zero)? The eq is 17.9
+   percent (cheap alone, multiplied by voices, oversampling and count), the shaper's DC blocker 6.0, the half-band
+   oversampler 11.1, the plumbing nodes `MemoizingIgnitor` 5.8 and `AffineIgnitor` 1.9 (more than the filter).
+2. In Seltsamere Dinge the filter is 29.3 percent, the body 19.7, the adsr 12.1, the unison stack 11.0.
+3. Relatively dearer on JS: Katalyst `pow 3` (24 sines against 12.8), linearfold, sineshaper, fold, coarse, the
+   berlin and pink noises, the reverb (20.8 against 15.8). Relatively cheaper: the analog filter, the body, superpluck.
+4. V8 allocates per block in steady state where the JVM allocates nothing: the partial bank 48 B, the Ignitor phaser
+   32 B, the fm voice 16 B, shimmer 16 to 32 B.
+5. The voice build is 93 percent of the song's allocation: about 30 KB per note start, with `buildRaw`'s captured
+   locals among the sources. Der Schmetterling's peak block took three times its deadline (a build in the block, or
+   the harness's GC).
+
+No node song profile: the song benchmark has no node mode (`song-profile-js.txt` sets out three routes).
 
 **Hot-path lint** (30 findings, none per block): the once-per-note allocations in render code (`PhasePool.kt` 206 to
 480, `DriftLanes.kt:238`, and with `--guarded` `OversampleRegion.kt:158`, `Ignitors.kt:923` and `:2950`,

@@ -12,12 +12,12 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.common.infra.toKlangMap
-import java.lang.management.ManagementFactory
+import kotlin.concurrent.Volatile
 import kotlin.random.Random
-import com.sun.management.ThreadMXBean as HotSpotThreadMXBean
 
 // The stage cost table (KLANG-00420, probe 7): what one source or stage costs alone, in nanoseconds per sample, on the
-// JVM. A measurement, never a gate: these functions assert nothing about the numbers, and the timings come from the
+// JVM and on Kotlin/JS (the clock and the byte counter are the platform's: `nanoNow` and `allocatedBytesNow`,
+// `_probe_platform.kt`). A measurement, never a gate: these functions assert nothing about the numbers, and the timings come from the
 // machine they run on. The method (audio/ref/verification.md, "A measurement"): steady input, the pinned block,
 // a warm-up, rounds that interleave every case in a fresh order, the median and the spread, a control row.
 
@@ -78,18 +78,6 @@ fun costSignal(blocks: Int, blockFrames: Int = PROBE_BLOCK_FRAMES, seed: Int = 0
 
     return ProbeSignal(name = "noise-held", left = left, right = right, inputEndFrame = frames)
 }
-
-/** The wall clock in nanoseconds, as a Double at once (a Long only at this boundary). */
-fun nanoNow(): Double = System.nanoTime().toDouble()
-
-private val hotSpotThreads: HotSpotThreadMXBean? = (ManagementFactory.getThreadMXBean() as? HotSpotThreadMXBean)
-    ?.takeIf { it.isThreadAllocatedMemorySupported && it.isThreadAllocatedMemoryEnabled }
-
-/**
- * The bytes this thread has allocated so far (HotSpot's per-thread counter, which counts every TLAB and outside
- * allocation), as a Double at once; NaN on a JVM without the counter.
- */
-fun allocatedBytesNow(): Double = hotSpotThreads?.currentThreadAllocatedBytes?.toDouble() ?: Double.NaN
 
 /** Keeps the renders' results alive, so the JIT cannot drop a render whose output nobody reads. */
 @Volatile
