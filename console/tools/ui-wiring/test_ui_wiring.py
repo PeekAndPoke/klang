@@ -51,6 +51,8 @@ package x
 
 val version = VersionController()
 private val log = Logger()
+val Component<*>.reach: Int get() = 1
+val Tag.other: Int get() = 2
 """
 
 PAGE = """
@@ -249,6 +251,10 @@ class UiWiringTest(unittest.TestCase):
     def test_an_object_without_state_and_a_private_val_are_no_holders(self):
         self.assertNotIn("Words", self.holders)
         self.assertNotIn("log", self.holders)
+
+    def test_an_extension_value_is_no_holder(self):
+        self.assertNotIn("Component", self.holders)
+        self.assertNotIn("Tag", self.holders)
 
     def test_a_functions_locals_are_not_the_objects_state(self):
         self.assertNotIn("Commands", self.holders)

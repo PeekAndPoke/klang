@@ -101,7 +101,8 @@ DERIVED_STREAM_DECL = re.compile(r"\b(?:val|var)\s+(\w+)\s*:\s*Stream\s*<")
 COMPONENT_CLASS = re.compile(r"\bclass\s+\w+(?:<[^>]*>)?\s*\(\s*ctx\s*:")
 TOP_OBJECT = re.compile(r"^(?:(?:internal|public|private|data)\s+)*object\s+(\w+)", re.M)
 TOP_CLASS = re.compile(r"^(?:(?:internal|public|data|abstract|open|sealed|enum|value|private)\s+)*class\s+(\w+)", re.M)
-TOP_VAL = re.compile(r"^(?:(?:internal|public)\s+)?(?:val|var)\s+(\w+)\b", re.M)
+# Not an extension (val Component<*>.spine): that is a way to a holder, not a holder
+TOP_VAL = re.compile(r"^(?:(?:internal|public)\s+)?(?:val|var)\s+(\w+)\b(?!\s*[<.])", re.M)
 # A service on the Kraft app: registered with setAttribute(X.key, ...), reached by the Component<*> extensions of
 # the file that registers it, or looked up directly
 ATTRIBUTE_SET = re.compile(r"\bsetAttribute\(\s*(\w+)\.key\b")
