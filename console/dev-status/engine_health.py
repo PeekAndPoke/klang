@@ -22,7 +22,7 @@ rows and lights nothing.
 
 The rules are the functions `stage_probe_items`, `lint_items`, `knob_items` below. A verdict overrides a rule:
 verdicts.json maps "<probe>/<item id>" to {"status": "confirmed" | "accepted" | "disproved" | "fixed", "note": "...",
-"ticket": "KLANG-00000"}; confirmed is red, accepted is grey, disproved and fixed are green. A verdict whose item is
+"ticket": "KLANG-nnnnn"}; confirmed is red, accepted is grey, disproved and fixed are green. A verdict whose item is
 gone is printed as a WARNING. Standard library only.
 """
 import argparse

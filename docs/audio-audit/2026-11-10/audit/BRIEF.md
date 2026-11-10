@@ -28,7 +28,7 @@ there, with measurements in hand, and you report what is wrong, risky, slow or u
 - **Sound defects**: a click (a switch, a swap, a jump without a fade or glide), aliasing, zipper noise, DC, a
   denormal path, a tail that never ends, a level surprise.
 - **Block-framing dependence**: anything decided "once per block" that should be per sample, or at a block border
-  that should be at a sample (`docs/tasks/KLANG-00156-block-framing-invariance.md` has the two failure modes and
+  that should be at a sample (KLANG-00156 (block framing invariance) has the two failure modes and
   the ledger of known cases).
 - **Numerical safety** (`audio/ref/numerical-safety.md`): every feedback loop, divisor, `log`, `sqrt`, `pow`, table
   index and cast against NaN, infinity, huge and negative input; can one bad value poison a voice, a cylinder or the

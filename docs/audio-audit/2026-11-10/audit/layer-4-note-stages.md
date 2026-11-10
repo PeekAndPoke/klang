@@ -107,7 +107,7 @@ state matrix stays below 1; I did not prove the lower bound in general, only at 
   `pos + length`), `filters/SvfCoeffSweep.kt:65-91` (the linear coefficient steps between the two),
   `IgnitorFilters.kt:252`, `:263` and siblings (the per-sample adds). The reach: `IgnitorDslClassic.kt:448-509`
   (`classic()` hands `hpf.env`, `bpf.env`, `notch.env`, `lpf.env`), `IgnitorDslRuntime.kt:943-979` (`filterEnvDef`).
-  The stale statement: `docs/tasks/KLANG-00156-block-framing-invariance.md:268` ("latent: no production door passes
+  The stale statement: KLANG-00156 (block framing invariance), line 268 ("latent: no production door passes
   an env here").
 - **What**: with an envelope, each block computes the cutoff at its first frame and at the frame after its last,
   computes two coefficient sets and steps `a1, a2, a3` (and `g` on the saturated path) linearly between them. The
@@ -341,7 +341,7 @@ state matrix stays below 1; I did not prove the lower bound in general, only at 
 - **Severity**: minor
 - **Tag**: doc
 - **Where and what**:
-  - `docs/tasks/KLANG-00156-block-framing-invariance.md:268`: E3 "latent: no production door passes an env here".
+  - KLANG-00156 (block framing invariance), line 268: E3 "latent: no production door passes an env here".
     False since 2026-09-25 (L4-02). Its file reference `IgnitorFilters:140-171` is stale too.
   - `ignitor/IgnitorFilters.kt:558-559` and `:608`: both one-pole nodes "snapshot state into a local for the hot
     loop". The loops read and write the fields `y` and `xPrev` directly (`:579-581`, `:633-635`).
