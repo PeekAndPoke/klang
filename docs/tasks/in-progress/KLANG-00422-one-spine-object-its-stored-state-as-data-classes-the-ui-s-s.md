@@ -90,6 +90,42 @@ This ticket holds the work that follows from the map. The map itself, with every
   - **For Ultra** (to send through Mission Control): `persist(storage)` as a public operator; and a note that a
     listener which publishes from inside its own notification makes later listeners see the older value last.
 
+- **Step 3, five more sections (2026-11-10):** the workbench's layout, the output volume, what was opened last,
+  the lessons done, the metal's seed. Each is a part of the Spine that builds its own section from the stores it is
+  handed (`Workbench`, `Player`, `Recents`, `Tutorials`, `Seeds`), with a reader of its old key or keys; the five
+  storage objects with their hand-written JSON are gone, and no UI file names a tutorial or seed storage any more.
+
+  | Section | Data class | Scope | Key | Follows another tab |
+  |---|---|---|---|---|
+  | The workbench's layout | `BenchLayout` | this tab, and the machine's last | `klang-workbench` (in both storages) | no |
+  | The output volume | `AudioOutput` | this machine | `klang-output` | no, as before: a tab's volume is its own while it runs |
+  | What was opened last | `LastOpened` | the user | `klang-last-opened` | yes |
+  | The lessons done | a map, slug to done | the user | `klang-lessons-done` | yes |
+  | The random seeds | `RandomSeeds` | the user | `klang-seeds` | yes |
+
+  - **The tab's layout begins as the machine's last.** `Stored` takes a `start`: where nothing is kept under the
+    key, the section begins with it and keeps it at once, so a tab that was never arranged by hand still has its
+    own layout after a reload. Every arrangement is written twice, to the tab and as the machine's last. The
+    machine's last is merged like any section: it is the last pinning of one tab beside the last panel height of
+    another.
+  - **The bench knows nothing of storage:** `BenchLayout` is the app's class, mapped to and from
+    `KlangWorkbench.Layout` by two pure functions (`layouts/BenchLayouts.kt`). A height that is the bench's own is
+    kept as null, so a changed default of the bench reaches everyone who never dragged the panel.
+  - **The lessons done are the one section that is no data class:** the document's fields are the slugs, so the
+    merge works per lesson and two computers each keep theirs. A mark taken back is `false`, since a write cannot
+    remove a field.
+  - **The seed is written when it is made** (its default is no constant): `spine.seeds.metal` makes it when first
+    asked for.
+  - **Stricter than before on what was kept before:** an old list of recents with one entry that cannot be read is
+    not read at all (the old reader left that entry out and kept the rest); the old text stays under its key.
+  - **The storage page:** a part covers the new key and the old ones; "Reset everything" also forgets what a tab
+    keeps for itself (`Spine.resetAllStored()`), which is in no list of the browser's keys.
+  - **A part read without a listener:** Ultra's `distinct()` gives the last value it passed on, which with no
+    listener is the one it was made with, so `spine.recents.entries()` read stale. `Stored.part` now gives the
+    part as it is when asked. One more note for Ultra, with the two above.
+  - **Left for their own slices:** the keymap, the looks and the tools' switch, the songs, the MIDI play code and
+    setup (with the laptop keys' layout), and the walkthroughs, which move with `KlangGuiDance` in step 4.
+
 ## Decided (the maintainer, 2026-11-10)
 
 - **One Spine.** "There should only be one global object if at all and components will find what they need through
@@ -140,8 +176,8 @@ after.
 3. **The sections, one at a time,** each with a one-time reader of its old keys (a check that goes when the old keys
    are gone):
    - the editor's settings (`EditorSettings`, four keys), first, as the pattern: **done**;
-   - the workbench's layout, the recents, the keymap (`KeymapJson` goes), the walkthroughs (`KlangGuiDance`'s two
-     keys), the tutorials finished, the metal's seed;
+   - the workbench's layout, the output volume, the recents, the tutorials finished, the metal's seed: **done**;
+   - the keymap (`KeymapJson` goes), the walkthroughs (`KlangGuiDance`'s two keys, with step 4);
    - the looks (`LookStorage` goes into `spine.looks`, `KlangLookText` as a serializer), the tools' switch;
    - the songs (`SongStorage`, today built by the song page), the MIDI play code and setup.
 4. **The state held in the UI moves in:** `VisualsScreen`'s companion (`shown`, `open`, the tiles, the rain),
@@ -185,3 +221,7 @@ after.
   own: where they differ, a wrong value after a reload), 1 MINOR, 2 NIT. Fixed: measured from what an empty
   document reads as; the old keys kept count as chosen. Round 6 (reviewer-max): CLEAN, 2 MINOR and 2 NIT applied.
   23 of 23 mutants killed over rounds 4 to 6.
+- 2026-11-10: step 3, five more sections: the workbench's layout (the tab's, a new tab from the machine's last), the
+  output volume, what was opened last, the lessons done, the metal's seed. Review round 1 (reviewer-high): CLEAN, 4
+  MINOR and 6 NIT; applied but one (no spec draws the app's `WorkbenchLayout`, so its two lines that hand the layout
+  to the bench and back are untested, as before; the mapping itself is). 37 of 37 mutants killed.

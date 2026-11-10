@@ -17,12 +17,11 @@ import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theFourWaveformsTutorial
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
 import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Recents.Entry
-import io.peekandpoke.klang.spine.Recents.Kind
 import io.peekandpoke.klang.spine.SongDeck
 import io.peekandpoke.klang.spine.Spine
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.StorageKeys
+import io.peekandpoke.klang.state.LastOpened.Entry
+import io.peekandpoke.klang.state.LastOpened.Kind
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -32,7 +31,6 @@ import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.streams.StreamSource
-import kotlinx.browser.localStorage
 import kotlinx.html.Tag
 import kotlinx.html.div
 import org.w3c.dom.HTMLElement
@@ -97,29 +95,19 @@ class MenuPickUpSpec : StringSpec({
     }
 
     "the lesson tile's lamp is lit while one is in its track, dark elsewhere" {
-        val kept = localStorage.getItem(StorageKeys.RECENTS)
-
         val own = Spine()
 
-        try {
-            own.recents.openedTutorial(slug = filtersTutorial.slug, title = "Filters", track = soundDesignBasicsTrack.slug)
+        own.recents.openedTutorial(slug = filtersTutorial.slug, title = "Filters", track = soundDesignBasicsTrack.slug)
 
-            for ((track, lamp) in listOf(soundDesignBasicsTrack.slug to "On", theKlangPathTrack.slug to "Off", null to "Off")) {
-                TestBed.preact(appSetup = { spine(own) }, view = { MenuPickUp(currentTrackSlug = track, onOpen = {}) }) { root ->
-                    eventually {
-                        val tile = root[0].querySelector(".${KlangControlStyles.drawerLesson}") as HTMLElement
+        for ((track, lamp) in listOf(soundDesignBasicsTrack.slug to "On", theKlangPathTrack.slug to "Off", null to "Off")) {
+            TestBed.preact(appSetup = { spine(own) }, view = { MenuPickUp(currentTrackSlug = track, onOpen = {}) }) { root ->
+                eventually {
+                    val tile = root[0].querySelector(".${KlangControlStyles.drawerLesson}") as HTMLElement
 
-                        withClue("in the track $track") {
-                            tile.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe lamp
-                        }
+                    withClue("in the track $track") {
+                        tile.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe lamp
                     }
                 }
-            }
-        } finally {
-            if (kept == null) {
-                localStorage.removeItem(StorageKeys.RECENTS)
-            } else {
-                localStorage.setItem(StorageKeys.RECENTS, kept)
             }
         }
     }
@@ -179,58 +167,48 @@ class MenuPickUpSpec : StringSpec({
     }
 
     "the songs opened show with their tempo, the newest first, the one whose page is open lit; a pick leads to the song" {
-        val kept = localStorage.getItem(StorageKeys.RECENTS)
         val picked = mutableListOf<Route.Bound>()
 
         val own = Spine()
 
-        try {
-            own.recents.openedSong(id = "new", title = "My draft", rpm = 30.0)
-            own.recents.openedSong(id = "builtin-song-kokon", title = "Kokon", rpm = 19.0)
-            // A built-in song gone from the app (renamed in an update): not offered
-            own.recents.openedSong(id = "builtin-song-gone", title = "Gone song", rpm = 25.0)
+        own.recents.openedSong(id = "new", title = "My draft", rpm = 30.0)
+        own.recents.openedSong(id = "builtin-song-kokon", title = "Kokon", rpm = 19.0)
+        // A built-in song gone from the app (renamed in an update): not offered
+        own.recents.openedSong(id = "builtin-song-gone", title = "Gone song", rpm = 25.0)
 
-            TestBed.preact(
-                appSetup = { spine(own) },
-                view = { MenuPickUp(currentSongId = "builtin-song-kokon", onOpen = { picked.add(it) }) },
-            ) { root ->
-                val view = root[0]
+        TestBed.preact(
+            appSetup = { spine(own) },
+            view = { MenuPickUp(currentSongId = "builtin-song-kokon", onOpen = { picked.add(it) }) },
+        ) { root ->
+            val view = root[0]
 
-                // Other specs may have left songs in the browser's storage, which this Spine reads: the two of this spec by their titles
-                fun tile(title: String): HTMLElement? {
-                    val all = view.querySelectorAll("button")
+            fun tile(title: String): HTMLElement? {
+                val all = view.querySelectorAll("button")
 
-                    return (0 until all.length).map { all.item(it) as HTMLElement }
-                        .firstOrNull { it.textContent?.startsWith(title) == true }
-                }
-
-                fun indexOf(title: String): Int {
-                    val all = view.querySelectorAll("button")
-
-                    return (0 until all.length).indexOfFirst { (all.item(it) as HTMLElement).textContent?.startsWith(title) == true }
-                }
-
-                eventually { (tile("Kokon") != null && tile("My draft") != null) shouldBe true }
-
-                tile("Kokon")!!.textContent!! shouldContain "19 RPM"
-                withClue("the lamp of the song whose page is open lit, the others dark") {
-                    tile("Kokon")!!.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "On"
-                    tile("My draft")!!.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "Off"
-                }
-                tile("Gone song") shouldBe null
-                (indexOf("Kokon") < indexOf("My draft")) shouldBe true
-
-                tile("Kokon")!!.click()
-                tile("My draft")!!.click()
-
-                picked shouldContainExactly listOf(Nav.editSongCode("builtin-song-kokon"), Nav.newSongCode())
+                return (0 until all.length).map { all.item(it) as HTMLElement }
+                    .firstOrNull { it.textContent?.startsWith(title) == true }
             }
-        } finally {
-            if (kept == null) {
-                localStorage.removeItem(StorageKeys.RECENTS)
-            } else {
-                localStorage.setItem(StorageKeys.RECENTS, kept)
+
+            fun indexOf(title: String): Int {
+                val all = view.querySelectorAll("button")
+
+                return (0 until all.length).indexOfFirst { (all.item(it) as HTMLElement).textContent?.startsWith(title) == true }
             }
+
+            eventually { (tile("Kokon") != null && tile("My draft") != null) shouldBe true }
+
+            tile("Kokon")!!.textContent!! shouldContain "19 RPM"
+            withClue("the lamp of the song whose page is open lit, the others dark") {
+                tile("Kokon")!!.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "On"
+                tile("My draft")!!.querySelector("[data-lamp]")!!.getAttribute("data-lamp") shouldBe "Off"
+            }
+            tile("Gone song") shouldBe null
+            (indexOf("Kokon") < indexOf("My draft")) shouldBe true
+
+            tile("Kokon")!!.click()
+            tile("My draft")!!.click()
+
+            picked shouldContainExactly listOf(Nav.editSongCode("builtin-song-kokon"), Nav.newSongCode())
         }
     }
 

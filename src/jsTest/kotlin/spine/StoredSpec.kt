@@ -63,8 +63,12 @@ class StoredSpec : StringSpec({
                 store.read("sample") shouldBe """{"v":2,"data":{"name":"a","count":99}}"""
             }
 
+            val unheard = stored.part { it.count }
+
             stored.update { it.copy(count = 4) }
             stored.update { it.copy(name = "b") }
+
+            withClue("a part nobody listens to, asked for its value") { unheard() shouldBe 4 }
 
             counts.takeLast(2) shouldBe listOf(10, 4)
             store.read("sample") shouldBe """{"v":2,"data":{"name":"b","count":4}}"""
@@ -96,5 +100,39 @@ class StoredSpec : StringSpec({
 
         stored.update { it.copy(count = 2) }
         store.read("sample") shouldBe """{"v":2,"data":{"count":2}}"""
+    }
+
+    "a section with a start begins with it where nothing is kept, and keeps it at once; a reset shows the default" {
+        fun started(store: KeyValueStore, from: Sample) = Stored(
+            key = "sample",
+            version = 2,
+            serializer = Sample.serializer(),
+            default = Sample(),
+            store = store,
+            normalise = { it.copy(count = it.count.coerceAtMost(10)) },
+            start = { from },
+        )
+
+        val store = MemoryKeyValueStore()
+        val stored = started(store = store, from = Sample(name = "theirs", count = 99))
+
+        withClue("held in its range") { stored() shouldBe Sample(name = "theirs", count = 10) }
+        store.read("sample") shouldBe """{"v":2,"data":{"name":"theirs","count":10}}"""
+
+        withClue("its own from then: another start is not taken") {
+            started(store = store, from = Sample(name = "later"))() shouldBe Sample(name = "theirs", count = 10)
+        }
+
+        val same = MemoryKeyValueStore()
+
+        started(store = same, from = Sample())() shouldBe Sample()
+        withClue("a start that is the default is kept too") { same.read("sample") shouldBe """{"v":2,"data":{}}""" }
+
+        withClue("another start is not taken after that either") {
+            started(store = same, from = Sample(name = "later"))() shouldBe Sample()
+        }
+
+        stored.reset()
+        withClue("reset") { stored() shouldBe Sample() }
     }
 })

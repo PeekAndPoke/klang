@@ -30,11 +30,9 @@ import io.peekandpoke.klang.pages.docs.tutorials.firstStepsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.patternLanguageTrack
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.pages.docs.tutorials.theKlangPathTrack
-import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.Spine
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.StorageKeys
-import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.state.LastOpened
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
 import io.peekandpoke.kraft.addons.marked.marked
@@ -46,7 +44,6 @@ import io.peekandpoke.kraft.testing.TestBedScope
 import io.peekandpoke.kraft.testing.awaitUri
 import io.peekandpoke.kraft.testing.eventually
 import kotlinx.browser.document
-import kotlinx.browser.localStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import kotlinx.html.div
@@ -87,11 +84,12 @@ class LearnPagesSpec : StringSpec({
     lateinit var own: Spine
 
     suspend fun withLearn(done: Set<String> = emptySet(), test: suspend TestBedScope.(root: Element) -> Unit) {
-        allTutorials.forEach { TutorialStorage.setCompleted(it.slug, it.slug in done) }
         // The search is shared by the column and the overview: each case starts with it empty
         LearnSearch.text("")
 
+        // Its sections in memory: each case begins with nothing done but what it names
         own = Spine()
+        done.forEach { own.tutorials.setCompleted(it, true) }
 
         try {
             TestBed.preact(
@@ -111,7 +109,6 @@ class LearnPagesSpec : StringSpec({
             }
         } finally {
             window.location.hash = ""
-            allTutorials.forEach { TutorialStorage.setCompleted(it.slug, false) }
             WorkbenchSlots.clear()
             LearnSearch.text("")
         }
@@ -371,7 +368,7 @@ class LearnPagesSpec : StringSpec({
             (root.page()!!.querySelector("[data-done=stay]") as HTMLElement).click()
 
             eventually {
-                TutorialStorage.isCompleted(path[2].slug) shouldBe true
+                own.tutorials.isCompleted(path[2].slug) shouldBe true
                 root.column()!!.querySelector("[data-lesson='${path[2].slug}']")?.getAttribute("data-state") shouldBe "Done"
                 root.page()!!.querySelector("[data-next]")?.getAttribute("data-next") shouldBe patternLanguageTrack.lessons[3].slug
             }
@@ -383,7 +380,7 @@ class LearnPagesSpec : StringSpec({
             (root.page()!!.querySelector("[data-done=next]") as HTMLElement).click()
 
             eventually {
-                TutorialStorage.isCompleted(path[2].slug) shouldBe true
+                own.tutorials.isCompleted(path[2].slug) shouldBe true
                 root.page()?.querySelector("h1")?.textContent shouldBe patternLanguageTrack.lessons[3].title
             }
         }
@@ -407,39 +404,30 @@ class LearnPagesSpec : StringSpec({
     }
 
     "a lesson opened is recorded for the Motor's menu with the track it was read in, the latest first" {
-        val kept = localStorage.getItem(StorageKeys.RECENTS)
         val filters = soundDesignBasicsTrack.lessons[3]
 
-        try {
-            withLearn {
-                go("/${filters.slug}?${TutorialPage.PARAM_TRACK}=${soundDesignBasicsTrack.slug}")
+        withLearn {
+            go("/${filters.slug}?${TutorialPage.PARAM_TRACK}=${soundDesignBasicsTrack.slug}")
 
-                eventually {
-                    val last = own.recents.entries().first()
+            eventually {
+                val last = own.recents.entries().first()
 
-                    last.kind shouldBe Recents.Kind.Tutorial
-                    last.id shouldBe filters.slug
-                    last.title shouldBe filters.title
-                    last.track shouldBe soundDesignBasicsTrack.slug
-                }
-
-                go("/${path[1].slug}")
-
-                eventually {
-                    own.recents.entries().first().id shouldBe path[1].slug
-                    // Read in no track: the main path holds it
-                    own.recents.entries().first().track shouldBe theKlangPathTrack.slug
-                }
-
-                own.recents.entries().filter { it.kind == Recents.Kind.Tutorial }.take(2).map { it.id } shouldContainExactly
-                    listOf(path[1].slug, filters.slug)
+                last.kind shouldBe LastOpened.Kind.Tutorial
+                last.id shouldBe filters.slug
+                last.title shouldBe filters.title
+                last.track shouldBe soundDesignBasicsTrack.slug
             }
-        } finally {
-            if (kept == null) {
-                localStorage.removeItem(StorageKeys.RECENTS)
-            } else {
-                localStorage.setItem(StorageKeys.RECENTS, kept)
+
+            go("/${path[1].slug}")
+
+            eventually {
+                own.recents.entries().first().id shouldBe path[1].slug
+                // Read in no track: the main path holds it
+                own.recents.entries().first().track shouldBe theKlangPathTrack.slug
             }
+
+            own.recents.entries().filter { it.kind == LastOpened.Kind.Tutorial }.take(2).map { it.id } shouldContainExactly
+                listOf(path[1].slug, filters.slug)
         }
     }
 

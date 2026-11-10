@@ -480,4 +480,22 @@ class DocumentStorageSpec : StringSpec({
             store.read("doc") shouldBe """{"v":2,"data":{"count":2,"name":"mine"}}"""
         }
     }
+    "holds: whether anything is kept under the key, readable or not" {
+        val store = MemoryKeyValueStore()
+        val storage = sample(store)
+
+        storage.holds shouldBe false
+
+        storage.write(Sample())
+        withClue("a document with nothing chosen is one") { storage.holds shouldBe true }
+
+        storage.forget()
+        storage.holds shouldBe false
+
+        store.write(key = "another", text = "x")
+        withClue("another key") { storage.holds shouldBe false }
+
+        store.write(key = "doc", text = "not json at all")
+        withClue("an unreadable one") { storage.holds shouldBe true }
+    }
 })

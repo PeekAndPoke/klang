@@ -90,8 +90,8 @@ class EditorSettingsSpec : StringSpec({
                 StorageKeys.EDITOR to """{"v":1,"data":{"highlightsOn":false,"highlightsPerEvent":50,"highlightStrength":40}}"""
             )
         }
-        withClue("reset by its key, as the storage page does: the defaults at once, nothing kept") {
-            settings.reset(StorageKeys.EDITOR)
+        withClue("reset, as the storage page does through the Spine: the defaults at once, nothing kept") {
+            settings.editor.reset()
 
             settings.editor() shouldBe EditorSettings()
             store.all shouldBe emptyMap()

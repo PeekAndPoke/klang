@@ -27,7 +27,7 @@ enum class TutorialStrand(val label: String) {
 }
 
 /**
- * The user's progress through the lessons: which are [done] (their slugs, as `TutorialStorage` keeps them), and from
+ * The user's progress through the lessons: which are [done] (their slugs, as the Spine's `Tutorials` has them), and from
  * that each lesson's [LessonState] and a track's count. The main path ([path]) decides the one next lesson and which
  * stages are reached; plain state, no UI, so the overview, the column and the tutorial page agree.
  */

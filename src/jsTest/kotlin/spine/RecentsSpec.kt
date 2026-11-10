@@ -5,15 +5,14 @@
 
 package io.peekandpoke.klang.spine
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.spine.Recents.Entry
-import io.peekandpoke.klang.spine.Recents.Kind
-import io.peekandpoke.klang.spine.storage.RecentsStorage
+import io.peekandpoke.klang.spine.storage.SectionStores
+import io.peekandpoke.klang.state.LastOpened.Entry
+import io.peekandpoke.klang.state.LastOpened.Kind
 import io.peekandpoke.klang.storage.StorageKeys
-import kotlinx.browser.localStorage
-import kotlinx.serialization.json.Json
 
 /** What was opened last (KLANG-00403, step 2): the list's order, its counts per kind, and how it is kept. */
 class RecentsSpec : StringSpec({
@@ -57,49 +56,51 @@ class RecentsSpec : StringSpec({
             .map { it.kind }.toSet() shouldBe setOf(Kind.Tutorial)
     }
 
-    "the list goes into the browser and comes back as it was" {
-        val list = listOf(lesson("a", at = 3.0), song("b", at = 2.0).copy(rpm = 37.2), song("c", at = 1.0).copy(rpm = null))
+    "what was opened is kept as the user's, the newest first, and a visit after it finds it" {
+        val stores = SectionStores.inMemory()
+        val recents = Recents(stores = stores)
 
-        RecentsStorage.decode(RecentsStorage.encode(list)) shouldBe list
+        recents.openedSong(id = "spec-a", title = "A", rpm = 40.0)
+        recents.openedTutorial(slug = "spec-b", title = "B", track = null)
+        recents.openedSong(id = "spec-a", title = "A again", rpm = 41.0)
+
+        withClue("kept under the section's key, in the user's storage only") {
+            (stores.user.read(StorageKeys.LAST_OPENED) != null) shouldBe true
+            stores.machine.read(StorageKeys.LAST_OPENED) shouldBe null
+            stores.tab.read(StorageKeys.LAST_OPENED) shouldBe null
+        }
+
+        val again = Recents(stores = stores).entries()
+
+        again.map { it.id } shouldContainExactly listOf("spec-a", "spec-b")
+        again.first().title shouldBe "A again"
+        again.first().rpm shouldBe 41.0
+        again shouldBe recents.entries()
     }
 
-    "an entry that cannot be read is left out, not the list" {
-        val json = """
+    "the list kept before the section existed is read once, and its old key goes" {
+        val old = """
             [
-              {"kind": "Song", "id": "ok", "title": "Ok", "at": 1, "rpm": 30},
-              {"kind": "Picture", "id": "x", "title": "X", "at": 1},
-              {"kind": "Song", "title": "No id", "at": 1},
-              {"kind": "Song", "id": "n", "title": "Not a time", "at": "soon"},
-              {"kind": "Tutorial", "id": 5, "title": "A number for an id", "at": 1},
-              "not an entry"
+              {"kind": "Tutorial", "id": "l", "title": "Lesson", "at": 3, "track": "t"},
+              {"kind": "Song", "id": "s", "title": "Song", "at": 2, "rpm": 37.2}
             ]
         """.trimIndent()
+        val stores = SectionStores.inMemory().also { it.user.write(key = StorageKeys.RECENTS, text = old) }
 
-        RecentsStorage.decode(Json.parseToJsonElement(json)).map { it.id } shouldContainExactly listOf("ok")
-        RecentsStorage.decode(Json.parseToJsonElement("""{"kind": "Song"}""")) shouldBe emptyList()
+        Recents(stores = stores).entries() shouldContainExactly listOf(
+            Entry(kind = Kind.Tutorial, id = "l", title = "Lesson", at = 3.0, track = "t"),
+            Entry(kind = Kind.Song, id = "s", title = "Song", at = 2.0, rpm = 37.2),
+        )
+
+        withClue("the old key") { stores.user.read(StorageKeys.RECENTS) shouldBe null }
+        withClue("found again under the new key") { Recents(stores = stores).entries().map { it.id } shouldContainExactly listOf("l", "s") }
     }
 
-    "a song opened is kept in the browser, the newest first" {
-        val kept = localStorage.getItem(StorageKeys.RECENTS)
+    "an old list that cannot be read gives an empty one, and stays where it is" {
+        val old = """[{"kind": "Picture", "id": "x", "title": "X", "at": 1}]"""
+        val stores = SectionStores.inMemory().also { it.user.write(key = StorageKeys.RECENTS, text = old) }
 
-        try {
-            val recents = Recents()
-
-            recents.openedSong(id = "spec-a", title = "A", rpm = 40.0)
-            recents.openedTutorial(slug = "spec-b", title = "B", track = null)
-            recents.openedSong(id = "spec-a", title = "A again", rpm = 41.0)
-
-            val stored = RecentsStorage.load()
-
-            stored.take(2).map { it.id } shouldContainExactly listOf("spec-a", "spec-b")
-            stored.first().title shouldBe "A again"
-            stored.count { it.id == "spec-a" } shouldBe 1
-        } finally {
-            if (kept == null) {
-                localStorage.removeItem(StorageKeys.RECENTS)
-            } else {
-                localStorage.setItem(StorageKeys.RECENTS, kept)
-            }
-        }
+        Recents(stores = stores).entries() shouldBe emptyList()
+        stores.user.read(StorageKeys.RECENTS) shouldBe old
     }
 })

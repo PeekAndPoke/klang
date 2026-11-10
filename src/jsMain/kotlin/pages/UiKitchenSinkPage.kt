@@ -21,9 +21,9 @@ import io.peekandpoke.klang.midi.SourceId
 import io.peekandpoke.klang.midi.laptopKeyboardPanel
 import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.spine.Playbacks
-import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.SongDeck
 import io.peekandpoke.klang.spine.spine
+import io.peekandpoke.klang.state.LastOpened
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangBackLink
@@ -95,14 +95,14 @@ fun Tag.UiKitchenSinkPage() = comp {
 class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
 
     /** Songs as the menu's half shows them, opened a little while ago. */
-    private val sampleSongs: List<Recents.Entry> = listOf(
+    private val sampleSongs: List<LastOpened.Entry> = listOf(
         Triple("Final Synthasy VII Prelude", 40.0, 2.0),
         Triple("Kokon", 19.0, 35.0),
         Triple("Die Kirschblüte", 27.0, 60.0 * 5),
         Triple("A Synth Worth Lying For", 31.0, 60.0 * 30),
         Triple("Synthsturm", 34.0, 60.0 * 24 * 3),
     ).map { (title, rpm, minutesAgo) ->
-        Recents.Entry(kind = Recents.Kind.Song, id = title, title = title, rpm = rpm, at = Date.now() - minutesAgo * 60_000)
+        LastOpened.Entry(kind = LastOpened.Kind.Song, id = title, title = title, rpm = rpm, at = Date.now() - minutesAgo * 60_000)
     }
 
     /** A song on the deck for the menu's "Playing now": the first sample song, heard [seconds], or still starting. */
@@ -818,7 +818,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
             ) {
                 row {
                     for ((songs, learning, line) in listOf(
-                        Triple(emptyList<Recents.Entry>(), null, null),
+                        Triple(emptyList<LastOpened.Entry>(), null, null),
                         Triple(emptyList(), null, sampleSongLine(seconds = 83)),
                         Triple(sampleSongs.take(2), sampleLearning(done = 0), null),
                         Triple(sampleSongs, sampleLearning(done = 3), sampleSongLine(seconds = null)),

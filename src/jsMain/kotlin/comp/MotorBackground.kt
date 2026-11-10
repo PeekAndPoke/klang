@@ -11,7 +11,6 @@ import io.peekandpoke.klang.common.math.PerlinNoise2D
 import io.peekandpoke.klang.spine.SwingingLamp
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.klang.ui.feel.KlangLook
 import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -336,11 +335,11 @@ class MotorBackground(ctx: Ctx<Props>) : Component<MotorBackground.Props>(ctx) {
     private val look by subscribingTo(KlangTheme.look) { applyLook(it) }
 
     /**
-     * The user's seed ([SeedStorage.metal]): the title's flakes, the grain, the strokes and the turned tiles are the
+     * The user's seed (the Spine's `seeds.metal`): the title's flakes, the grain, the strokes and the turned tiles are the
      * user's own sheet of metal, the same on every visit (the maintainer, 2026-10-28: "The noise on Klangmotor looks
      * the same everytime ... seed it randomly", then "every user should get a ui-seed in the storage").
      */
-    private val seed = SeedStorage.metal
+    private val seed = spine.seeds.metal
 
     /** 2D Perlin source for the brushed-metal grain and the lamp's flicker, from this visit's [seed]. */
     private val grainNoise = PerlinNoise2D(random = Random(seed))

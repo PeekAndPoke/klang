@@ -16,6 +16,7 @@ import io.peekandpoke.klang.midi.ControlId
 import io.peekandpoke.klang.midi.LaptopKeys
 import io.peekandpoke.klang.midi.MidiPlayCode
 import io.peekandpoke.klang.midi.SourceId
+import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.klang.storage.StorageKeys
 import kotlinx.browser.localStorage
 
@@ -26,7 +27,7 @@ import kotlinx.browser.localStorage
 class MidiRigSpec : StringSpec({
 
     /** The engine every rig of this spec plays on: one, as the app has one. Never started: no case calls `startEngine()`. */
-    val engine = Player()
+    val engine = Player(stores = SectionStores.inMemory())
 
     /** This browser's own play code, to put back after a row that applies. */
     fun keptPlayCode(): String? = localStorage.getItem(StorageKeys.MIDI_PLAY_CODE)

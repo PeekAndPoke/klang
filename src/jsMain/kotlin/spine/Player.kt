@@ -19,8 +19,13 @@ import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.stdlib.ConsoleLevel
 import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import io.peekandpoke.klang.script.stdlibLib
-import io.peekandpoke.klang.spine.storage.OutputVolumeStorage
+import io.peekandpoke.klang.spine.storage.SectionStores
+import io.peekandpoke.klang.spine.storage.Stored
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import io.peekandpoke.klang.state.AudioOutput
+import io.peekandpoke.klang.storage.StorageKeys
+import io.peekandpoke.klang.workshop.storage.DocumentStorage
+import io.peekandpoke.klang.workshop.storage.KeyValueStore
 import io.peekandpoke.kraft.utils.async
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.ultra.streams.Stream
@@ -35,9 +40,23 @@ import kotlinx.coroutines.Deferred
 
 private val log = Logger(area = LogArea.Engine, source = "Player")
 
-class Player : PlaybackEngine {
+class Player(stores: SectionStores) : PlaybackEngine {
 
     companion object {
+        /**
+         * The master volume as it was kept until KLANG-00422, under a key of its own: read once into the section.
+         * Scaffolding: it goes when no browser holds the old key any more.
+         */
+        private fun outputBefore(store: KeyValueStore): DocumentStorage.Legacy<AudioOutput>? {
+            val volume = store.read(StorageKeys.MASTER_VOLUME)?.toDoubleOrNull() ?: return null
+
+            return DocumentStorage.Legacy(
+                value = AudioOutput(volume = volume),
+                keys = listOf(StorageKeys.MASTER_VOLUME),
+                chosen = setOf("volume"),
+            )
+        }
+
         /**
          * Creates a KlangScriptEngine with sprudel and stdlib registered.
          *
@@ -107,7 +126,24 @@ class Player : PlaybackEngine {
     private val _samples = StreamSource<Samples?>(null)
     val samples: Stream<Samples?> = _samples.readonly
 
-    private val _outputVolume = StreamSource(OutputVolumeStorage.load())
+    /**
+     * This machine's output as it is kept (KLANG-00422): what the volume starts from on the next visit. A tab's
+     * volume is its own while it runs, as it always was: another tab's turn of the knob is not followed.
+     */
+    private val output = Stored(
+        key = StorageKeys.OUTPUT,
+        version = 1,
+        serializer = AudioOutput.serializer(),
+        default = AudioOutput(),
+        store = stores.machine,
+        normalise = { it.inRange() },
+        legacy = ::outputBefore,
+        follows = false,
+    )
+
+    internal val sections: List<Stored<*>> = listOf(output)
+
+    private val _outputVolume = StreamSource(output().volume)
 
     /**
      * The master volume, a linear gain from 0.0 (silence) to 1.0 (the song's own level) on the browser's output
@@ -131,7 +167,7 @@ class Player : PlaybackEngine {
 
     /** Stores the master volume for the next visit; once per turn of the knob, not on every move. */
     fun rememberOutputVolume() {
-        OutputVolumeStorage.save(_outputVolume())
+        output.update { it.copy(volume = _outputVolume()) }
     }
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null

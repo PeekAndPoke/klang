@@ -16,7 +16,6 @@ import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.storage.KeymapStorage
 import io.peekandpoke.klang.storage.LookStorage
-import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -112,9 +111,9 @@ fun main() {
     // start page"); not stored, so a later first-visit look reaches everyone who never chose one
     KlangTheme.choose(LookStorage.load() ?: KlangLooks.Sun)
     // The brushed metal's tile for the parts that wear it, painted once (KLANG-00366)
-    KlangBrushedMetal.install(seed = SeedStorage.metal)
+    KlangBrushedMetal.install(seed = appSpine.seeds.metal)
     // The buttons' grain from the same seed: the user's own sheet of metal
-    KlangControlStyles.installGrain(seed = SeedStorage.metal)
+    KlangControlStyles.installGrain(seed = appSpine.seeds.metal)
 
     // Register UI tools
     registerSprudelUiTools()

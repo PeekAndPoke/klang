@@ -11,6 +11,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import io.peekandpoke.klang.comp.MotorHistoryGraphs
+import io.peekandpoke.klang.spine.storage.SectionStores
+import io.peekandpoke.klang.state.BenchLayout
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -119,6 +121,50 @@ class SpineSpec : StringSpec({
 
         own.resetStored(StorageKeys.EDITOR)
         withClue("its key") { own.settings.editor().highlightStrength shouldBe 66 }
+    }
+
+    "the workbench's key resets the tab's layout and the machine's last; every section resets at once" {
+        val stores = SectionStores.inMemory()
+        val own = Spine(stores = stores)
+
+        own.workbench.arranged(BenchLayout(pinned = setOf("tools")))
+        own.tutorials.setCompleted("a-lesson", true)
+
+        own.resetStored(StorageKeys.WORKBENCH)
+
+        withClue("the tab's") { own.workbench.layout() shouldBe BenchLayout() }
+        withClue("nothing kept in either storage") {
+            stores.tab.read(StorageKeys.WORKBENCH) shouldBe null
+            stores.machine.read(StorageKeys.WORKBENCH) shouldBe null
+        }
+        withClue("another section") { own.tutorials.isCompleted("a-lesson") shouldBe true }
+
+        own.workbench.arranged(BenchLayout(pinned = setOf("tools")))
+        own.recents.openedSong(id = "a-song", title = "A song", rpm = 30.0)
+        own.player.setOutputVolume(0.3)
+        own.player.rememberOutputVolume()
+        own.settings.editor.update { it.copy(highlightStrength = 12) }
+
+        withClue("kept before the reset") {
+            listOf(
+                stores.user.read(StorageKeys.LAST_OPENED),
+                stores.machine.read(StorageKeys.OUTPUT),
+                stores.user.read(StorageKeys.SEEDS),
+                stores.user.read(StorageKeys.EDITOR),
+            ).count { it != null } shouldBe 4
+        }
+
+        own.resetAllStored()
+
+        withClue("what was opened last") { stores.user.read(StorageKeys.LAST_OPENED) shouldBe null }
+        withClue("the output") { stores.machine.read(StorageKeys.OUTPUT) shouldBe null }
+        withClue("the seeds") { stores.user.read(StorageKeys.SEEDS) shouldBe null }
+        withClue("the editor's settings") { stores.user.read(StorageKeys.EDITOR) shouldBe null }
+
+        own.workbench.layout() shouldBe BenchLayout()
+        own.tutorials.isCompleted("a-lesson") shouldBe false
+        withClue("the tab's own storage too") { stores.tab.read(StorageKeys.WORKBENCH) shouldBe null }
+        stores.user.read(StorageKeys.LESSONS_DONE) shouldBe null
     }
 
     "the graphs draw with no pause of their own in an app with a Spine, and with one given" {

@@ -132,6 +132,9 @@ class DocumentStorage<T>(
         }
     }
 
+    /** Whether anything is kept under the key now, readable or not: false for a section nobody wrote yet. */
+    val holds: Boolean get() = store.read(key) != null
+
     /** Forgets the document: nothing is kept under the key. */
     fun forget() {
         store.remove(key)

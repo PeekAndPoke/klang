@@ -15,7 +15,7 @@ import io.peekandpoke.klang.pages.docs.tutorials.tutorialTrack
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.Recents
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.state.LastOpened
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangLamp
@@ -107,8 +107,8 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
          * The track of the lesson opened last ([entries], the newest first) with what is [done]: the track it was opened
          * in, else the main path. A lesson the app no longer has is passed over for the one before; null when none is left.
          */
-        fun continueOf(entries: List<Recents.Entry>, done: Set<String>): Continue? {
-            val (last, lesson) = entries.filter { it.kind == Recents.Kind.Tutorial }
+        fun continueOf(entries: List<LastOpened.Entry>, done: Set<String>): Continue? {
+            val (last, lesson) = entries.filter { it.kind == LastOpened.Kind.Tutorial }
                 .firstNotNullOfOrNull { entry -> allTutorials.firstOrNull { it.slug == entry.id }?.let { entry to it } }
                 ?: return null
             val track = tutorialTrack(trackSlug = last.track, tutorial = lesson) ?: return null
@@ -128,7 +128,7 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
 
     private val entries by subscribingTo(spine.recents.entries)
 
-    private val done by subscribingTo(TutorialStorage.done)
+    private val done by subscribingTo(spine.tutorials.done)
 
     private val songLine by subscribingTo(spine.playbacks.songLine)
 
@@ -136,7 +136,7 @@ class MenuPickUp(ctx: Ctx<Props>) : Component<MenuPickUp.Props>(ctx) {
         menuPickUpView(
             // A song the app no longer has (a built-in renamed or gone in an update) is not offered
             songs = entries.filter { entry ->
-                entry.kind == Recents.Kind.Song && (entry.id == Nav.NEW_SONG_ID || BuiltInSongs.songs.any { it.id == entry.id })
+                entry.kind == LastOpened.Kind.Song && (entry.id == Nav.NEW_SONG_ID || BuiltInSongs.songs.any { it.id == entry.id })
             },
             learning = continueOf(entries = entries, done = done),
             now = Date.now(),
@@ -161,7 +161,7 @@ private const val LAMP_GAP_PX = 6
  * on").
  */
 fun FlowContent.menuPickUpView(
-    songs: List<Recents.Entry>,
+    songs: List<LastOpened.Entry>,
     learning: MenuPickUp.Continue?,
     now: Double,
     songLine: Playbacks.SongLine? = null,

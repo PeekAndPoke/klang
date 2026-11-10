@@ -7,7 +7,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.appLink
-import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -33,7 +33,7 @@ class TutorialTrackPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val currentRoute by subscribingTo(router.current)
 
-    private val done by subscribingTo(TutorialStorage.done)
+    private val done by subscribingTo(spine.tutorials.done)
 
     private fun currentTrack(): TutorialTrackDef? = allTracks.find { it.slug == currentRoute.matchedRoute["slug"] }
 

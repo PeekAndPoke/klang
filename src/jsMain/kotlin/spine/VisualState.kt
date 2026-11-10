@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.spine
 
-import io.peekandpoke.klang.storage.SeedStorage
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.TickerFrame
@@ -18,7 +17,7 @@ import io.peekandpoke.ultra.streams.ops.map
  * 2026-10-29: "something like VisualState owning the lamp and the MotorBackground would get it from there and all
  * others too").
  */
-class VisualState(work: UiWork) {
+class VisualState(work: UiWork, seeds: Seeds) {
 
     companion object {
         /** The lamp's light, worked out on [frames] while anyone listens: nobody listens, no frames, no work. */
@@ -56,7 +55,7 @@ class VisualState(work: UiWork) {
     }
 
     /** The one lamp over every plate: the start page's and the visuals'. */
-    val lamp = SwingingLamp(seed = SeedStorage.metal)
+    val lamp = SwingingLamp(seed = seeds.metal)
 
     /**
      * The [lamp]'s light, a frame at a time on the UI's frames ([UiWork.frames]), only while someone listens and the UI does

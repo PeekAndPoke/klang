@@ -71,10 +71,5 @@ class Settings(stores: SectionStores) {
         legacy = ::editorBefore,
     )
 
-    private val sections: List<Stored<*>> = listOf(editor)
-
-    /** Forgets the section kept under [key], if it is one of these: it shows its default at once. */
-    fun reset(key: String) {
-        sections.filter { it.key == key }.forEach { it.reset() }
-    }
+    internal val sections: List<Stored<*>> = listOf(editor)
 }

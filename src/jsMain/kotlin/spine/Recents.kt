@@ -5,18 +5,26 @@
 
 package io.peekandpoke.klang.spine
 
-import io.peekandpoke.klang.spine.storage.RecentsStorage
+import io.peekandpoke.klang.spine.storage.SectionStores
+import io.peekandpoke.klang.spine.storage.Stored
+import io.peekandpoke.klang.state.LastOpened
+import io.peekandpoke.klang.state.LastOpened.Entry
+import io.peekandpoke.klang.state.LastOpened.Kind
+import io.peekandpoke.klang.storage.StorageKeys
+import io.peekandpoke.klang.workshop.storage.DocumentStorage
+import io.peekandpoke.klang.workshop.storage.KeyValueStore
+import io.peekandpoke.klang.workshop.storage.StoredDocument
 import io.peekandpoke.ultra.streams.Stream
-import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.serialization.builtins.ListSerializer
 import kotlin.js.Date
 
 /**
  * What the user opened last, a part of the Spine (KLANG-00403, D1): songs and tutorial lessons only (the maintainer,
  * 2026-11-01: "I would only add the Songs and Tutorial to the 'recently open'"; docs get bookmarks, KLANG-00404). A page
  * reports what it opened ([opened]); the Motor's menu shows [entries] under "Pick up where you left off". Kept in the
- * browser ([RecentsStorage]), so the list is there after a reload.
+ * user's storage as one section ([LastOpened], KLANG-00422), so the list is there after a reload, and in every tab.
  */
-class Recents {
+class Recents(stores: SectionStores) {
 
     companion object {
         /**
@@ -42,39 +50,39 @@ class Recents {
                 count < (keep[item.kind] ?: 0)
             }
         }
+
+        /**
+         * The list as it was kept until KLANG-00422, a JSON list under a key of its own: read once into the section.
+         * Scaffolding: it goes when no browser holds the old key any more.
+         */
+        private fun before(store: KeyValueStore): DocumentStorage.Legacy<LastOpened>? {
+            val text = store.read(StorageKeys.RECENTS) ?: return null
+
+            return DocumentStorage.Legacy(
+                value = LastOpened(entries = StoredDocument.json.decodeFromString(ListSerializer(Entry.serializer()), text)),
+                keys = listOf(StorageKeys.RECENTS),
+            )
+        }
     }
 
-    enum class Kind {
-        Song,
-        Tutorial,
-    }
-
-    /**
-     * One thing opened: its [kind] and [id] (a song's id, a lesson's slug), its [title] and [at] when, in milliseconds
-     * since the epoch. A song keeps its [rpm]; a lesson the [track] it was opened in (its slug), if any.
-     */
-    data class Entry(
-        val kind: Kind,
-        val id: String,
-        val title: String,
-        val at: Double,
-        val rpm: Double? = null,
-        val track: String? = null,
+    private val kept = Stored(
+        key = StorageKeys.LAST_OPENED,
+        version = 1,
+        serializer = LastOpened.serializer(),
+        default = LastOpened(),
+        // The user's: every tab's menu offers what any tab opened
+        store = stores.user,
+        legacy = ::before,
     )
 
-    private val entriesSource = StreamSource(RecentsStorage.load())
+    internal val sections: List<Stored<*>> = listOf(kept)
 
     /** What was opened, the newest first. */
-    val entries: Stream<List<Entry>> = entriesSource
+    val entries: Stream<List<Entry>> = kept.part { it.entries }
 
     /** A page opened the [entry]: it goes first, an earlier entry for the same thing goes, and the list is kept. */
     fun opened(entry: Entry) {
-        val next = record(entries = entriesSource(), entry = entry, keep = keep)
-
-        if (next != entriesSource()) {
-            entriesSource(next)
-            RecentsStorage.save(next)
-        }
+        kept.update { it.copy(entries = record(entries = it.entries, entry = entry, keep = keep)) }
     }
 
     /** A song opened now. */

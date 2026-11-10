@@ -80,8 +80,37 @@ class StorageKeysSpec : StringSpec({
         StorageKeys.GUI_DANCE_MUTED_UNTIL shouldBe "klang-gui-dance-muted-until"
     }
 
-    "the workbench's layout keeps its key" {
+    "the workbench's layout keeps its key, and the key it had before it" {
+        StorageKeys.WORKBENCH shouldBe "klang-workbench"
         StorageKeys.WORKBENCH_LAYOUT shouldBe "klang-workbench-layout"
+    }
+
+    "the sections of KLANG-00422 keep their keys, and the keys they had before" {
+        StorageKeys.OUTPUT shouldBe "klang-output"
+        StorageKeys.LAST_OPENED shouldBe "klang-last-opened"
+        StorageKeys.RECENTS shouldBe "klang-recents"
+        StorageKeys.LESSONS_DONE shouldBe "klang-lessons-done"
+        StorageKeys.SEEDS shouldBe "klang-seeds"
+        StorageKeys.SEED_METAL shouldBe "klang-seed-metal"
+    }
+
+    "every key of a section and the key it had before belong to one part of the storage page" {
+        val keys = listOf(
+            StorageKeys.OUTPUT to "Master volume",
+            StorageKeys.MASTER_VOLUME to "Master volume",
+            StorageKeys.WORKBENCH to "Workbench",
+            StorageKeys.WORKBENCH_LAYOUT to "Workbench",
+            StorageKeys.LAST_OPENED to "Last opened",
+            StorageKeys.RECENTS to "Last opened",
+            StorageKeys.LESSONS_DONE to "Lessons done",
+            StorageKeys.tutorialCompleted(slug = "first-steps") to "Lessons done",
+            StorageKeys.SEEDS to "Metal",
+            StorageKeys.SEED_METAL to "Metal",
+        )
+
+        for ((key, part) in keys) {
+            withClue(key) { StorageKeys.parts.filter { it.covers(key) }.map { it.name } shouldBe listOf(part) }
+        }
     }
 
     "what is put aside keeps its endings, and the storage page knows it as its own part" {

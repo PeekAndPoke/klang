@@ -7,7 +7,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.appLink
-import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangCheckbox
 import io.peekandpoke.klang.ui.comp.KlangSearchField
 import io.peekandpoke.kraft.components.NoProps
@@ -45,7 +45,7 @@ fun Tag.LearnTracksColumn() = comp { LearnTracksColumn(it) }
  */
 class LearnTracksColumn(ctx: NoProps) : PureComponent(ctx) {
 
-    private val done by subscribingTo(TutorialStorage.done)
+    private val done by subscribingTo(spine.tutorials.done)
 
     private val search by subscribingTo(LearnSearch.text)
 

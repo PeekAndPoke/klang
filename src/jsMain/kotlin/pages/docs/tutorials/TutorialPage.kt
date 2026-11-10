@@ -13,7 +13,6 @@ import io.peekandpoke.klang.comp.toAdsrSignals
 import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.pages.docs.lexikon.lexikonAutoLinks
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.TutorialStorage
 import io.peekandpoke.klang.ui.comp.KlangAdsrSignal
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangLamp
@@ -88,7 +87,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private val done by subscribingTo(TutorialStorage.done)
+    private val done by subscribingTo(spine.tutorials.done)
 
     /** For a picture with no example after it: nothing ever comes. */
     private val noSignals: Stream<KlangAdsrSignal?> = StreamSource(null)
@@ -340,7 +339,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                 // As in the done state: the quiet key on the left, the one to press on the right (the maintainer)
                 if (next != null) {
                     quietKey(label = "Mark as done, stay here", marker = "stay") {
-                        TutorialStorage.setCompleted(tutorial.slug, true)
+                        spine.tutorials.setCompleted(tutorial.slug, true)
                     }
                 }
 
@@ -348,7 +347,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
 
                 KlangButton(
                     onClick = {
-                        TutorialStorage.setCompleted(tutorial.slug, true)
+                        spine.tutorials.setCompleted(tutorial.slug, true)
                         goNext()
                     },
                     // The size of the done state's Next key, its lamp inline (the maintainer: the tile was "too big");
@@ -373,7 +372,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                 }
 
                 quietKey(label = "Not done after all", marker = "undo") {
-                    TutorialStorage.setCompleted(tutorial.slug, false)
+                    spine.tutorials.setCompleted(tutorial.slug, false)
                 }
 
                 div { css { put("flex", "1") } }

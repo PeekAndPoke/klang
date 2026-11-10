@@ -8,7 +8,8 @@ package io.peekandpoke.klang.storage
 import io.peekandpoke.klang.workshop.storage.DocumentStorage
 
 /**
- * Every key the app keeps in the browser's localStorage, named in one place (KLANG-00323).
+ * Every key the app keeps in the browser's storage, named in one place (KLANG-00323): in localStorage, and for the
+ * workbench's layout also in the tab's own (sessionStorage).
  *
  * The browsers of our users hold values under these keys today, their songs among them: a key that changes loses what
  * is stored under it, so `StorageKeysSpec` pins each one. They live in common code so that spec runs on the JVM; the
@@ -34,7 +35,10 @@ object StorageKeys {
     /** The laptop keys' layout chosen by hand, a layout's name; absent for "Automatic" (KLANG-00402, D9). */
     const val MIDI_KEY_LAYOUT = "klang-midi-key-layout"
 
-    /** The master volume, a linear gain from 0.0 to 1.0 (KLANG-00330). */
+    /** This machine's audio output, one document (KLANG-00422): `AudioOutput`, the master volume. */
+    const val OUTPUT = "klang-output"
+
+    /** Until KLANG-00422, read once into [OUTPUT]: the master volume, a linear gain from 0.0 to 1.0 (KLANG-00330). */
     const val MASTER_VOLUME = "klang-master-volume"
 
     /** The keys the user gave Klang's actions, over the defaults (KLANG-00325). */
@@ -68,17 +72,33 @@ object StorageKeys {
     const val GUI_DANCE_MUTED_UNTIL = "klang-gui-dance-muted-until"
 
     /**
-     * The seed the user's metal grows from: the buttons' grain, the brushed metal, the start page's sheet; made once, on
-     * the first visit, so each user has a sheet of their own and keeps it (the maintainer, 2026-10-28: "every user
-     * should get a ui-seed in the storage").
+     * The user's random seeds, one document (KLANG-00422): `RandomSeeds`, with the seed the user's metal grows from (the
+     * buttons' grain, the brushed metal, the start page's sheet), made once, on the first visit, so each user has a
+     * sheet of their own and keeps it (the maintainer, 2026-10-28: "every user should get a ui-seed in the storage").
      */
+    const val SEEDS = "klang-seeds"
+
+    /** Until KLANG-00422, read once into [SEEDS]: the metal's seed, a whole number. */
     const val SEED_METAL = "klang-seed-metal"
 
-    /** The workbench's layout: its pinned tool windows and the bottom panel, as JSON (KLANG-00349). */
+    /**
+     * The workbench's layout, one document (KLANG-00422): `BenchLayout`, the pinned tool windows and the bottom panel.
+     * Kept twice under this key: in the tab's own storage, the tab's layout, and in the browser's storage, the last
+     * layout of any tab, which a new tab begins with.
+     */
+    const val WORKBENCH = "klang-workbench"
+
+    /** Until KLANG-00422, read once into [WORKBENCH]: the layout every tab shared, as JSON (KLANG-00349). */
     const val WORKBENCH_LAYOUT = "klang-workbench-layout"
 
-    /** The songs and lessons opened last, as JSON, kept by the Spine (KLANG-00403). */
+    /** The songs and lessons opened last, one document (KLANG-00422): `LastOpened`. */
+    const val LAST_OPENED = "klang-last-opened"
+
+    /** Until KLANG-00422, read once into [LAST_OPENED]: the songs and lessons opened last, a JSON list (KLANG-00403). */
     const val RECENTS = "klang-recents"
+
+    /** The lessons done, one document (KLANG-00422): each lesson's slug with `true`, or `false` when taken back. */
+    const val LESSONS_DONE = "klang-lessons-done"
 
     /** A song's code; [version] is the app's version, [songId] the song's id (a built-in song's, or "new"). */
     fun songCode(version: String, songId: String): String = songKey(version = version, songId = songId, part = "code")
@@ -93,7 +113,7 @@ object StorageKeys {
     fun songBookmarks(version: String, songId: String): String =
         songKey(version = version, songId = songId, part = "bookmarks")
 
-    /** Whether the tutorial [slug] is completed: present with `true` when it is. */
+    /** Until KLANG-00422, read once into [LESSONS_DONE]: whether the tutorial [slug] is completed, `true` when it is. */
     fun tutorialCompleted(slug: String): String = "klang-tutorial-completed-$slug"
 
     private fun songKey(version: String, songId: String, part: String): String = "song-$version-$songId-$part"
@@ -115,7 +135,7 @@ object StorageKeys {
 
     /** The storage page's sections. */
     const val SETTINGS = "Settings"
-    const val SEEDS = "Random seeds"
+    const val RANDOM_SEEDS = "Random seeds"
 
     private fun exactly(vararg keys: String): (String) -> Boolean = { it in keys }
 
@@ -136,7 +156,7 @@ object StorageKeys {
             precious = true,
         ) { it.endsWith(DocumentStorage.UNREADABLE) || it.endsWith(DocumentStorage.NEWER) },
         Part(name = "The look worn", about = "The look you chose last", covers = exactly(LOOK)),
-        Part(name = "Master volume", about = "The Motor's output level", covers = exactly(MASTER_VOLUME)),
+        Part(name = "Master volume", about = "The Motor's output level", covers = exactly(OUTPUT, MASTER_VOLUME)),
         Part(name = "Keys", about = "The keys you gave Klang's actions", precious = true, covers = exactly(KEYMAP)),
         Part(
             name = "Editor",
@@ -157,11 +177,11 @@ object StorageKeys {
         Part(
             name = "Workbench",
             about = "Pinned tool windows and the bottom panel",
-            covers = exactly(WORKBENCH_LAYOUT),
+            covers = exactly(WORKBENCH, WORKBENCH_LAYOUT),
         ),
-        Part(name = "Last opened", about = "The songs and lessons the Motor's menu offers to pick up", covers = exactly(RECENTS)),
+        Part(name = "Last opened", about = "The songs and lessons the Motor's menu offers to pick up", covers = exactly(LAST_OPENED, RECENTS)),
         Part(name = "Lessons done", about = "The tutorials you finished") {
-            it.startsWith("klang-tutorial-completed-")
+            it == LESSONS_DONE || it.startsWith("klang-tutorial-completed-")
         },
         Part(
             name = "MIDI play code",
@@ -176,8 +196,8 @@ object StorageKeys {
         Part(
             name = "Metal",
             about = "The buttons' grain, the brushed metal and the start page's sheet grow from it",
-            section = SEEDS,
-            covers = exactly(SEED_METAL),
+            section = RANDOM_SEEDS,
+            covers = exactly(SEEDS, SEED_METAL),
         ),
     )
 }

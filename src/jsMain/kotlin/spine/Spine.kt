@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.spine
 
 import io.peekandpoke.klang.spine.storage.SectionStores
+import io.peekandpoke.klang.spine.storage.Stored
 import io.peekandpoke.kraft.KraftApp
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.getAttributeRecursive
@@ -43,22 +44,26 @@ class Spine(
     /** The user's settings, each kind a stored section. */
     val settings = Settings(stores = stores)
 
-    /** Forgets the stored section kept under [key], if there is one: it shows its default at once (the storage page). */
-    fun resetStored(key: String) {
-        settings.reset(key)
-    }
-
     /** The MIDI playground's settings: the laptop keys' layout and letters, the key bed's offset. */
     val midiSettings = MidiSettings()
 
     /** What was opened lately: the songs and the lessons the Motor's menu offers. */
-    val recents = Recents()
+    val recents = Recents(stores = stores)
+
+    /** The tutorials the user marked as done. */
+    val tutorials = Tutorials(stores = stores)
+
+    /** The user's random seeds: the metal's. */
+    val seeds = Seeds(stores = stores)
+
+    /** The workbench's layout: this tab's own. */
+    val workbench = Workbench(stores = stores)
 
     /** The work that only shows things: when it rests, and the frames it runs on. */
     val work = UiWork()
 
     /** The engine: its start, its status, the player once it runs, the samples, the output volume. */
-    val player = Player()
+    val player = Player(stores = stores)
 
     /** What plays: the song deck, the previews, the live MIDI rig, and what holds the stage. */
     val playbacks = Playbacks(engine = player)
@@ -70,7 +75,24 @@ class Spine(
     val motor = MotorReadings(work = work, player = player)
 
     /** The visuals' state: the lamp over the plate and its light, the song open on a page. */
-    val visuals = VisualState(work = work)
+    val visuals = VisualState(work = work, seeds = seeds)
+
+    /** Every stored section of the parts above. */
+    private val sections: List<Stored<*>> =
+        settings.sections + recents.sections + tutorials.sections + seeds.sections + workbench.sections + player.sections
+
+    /**
+     * Forgets the stored sections kept under [key], if there are any: each shows its default at once (the storage
+     * page). The workbench's key names two, the tab's layout and the machine's last.
+     */
+    fun resetStored(key: String) {
+        sections.filter { it.key == key }.forEach { it.reset() }
+    }
+
+    /** Forgets every stored section, in whichever storage it is kept: the tab's own too. */
+    fun resetAllStored() {
+        sections.forEach { it.reset() }
+    }
 }
 
 /** Registers the app's [Spine]. */

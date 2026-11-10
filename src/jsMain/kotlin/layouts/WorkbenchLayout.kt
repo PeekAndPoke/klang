@@ -18,7 +18,6 @@ import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.storage.LookStorage
-import io.peekandpoke.klang.storage.WorkbenchLayoutStorage
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
@@ -89,7 +88,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
      * first visit finds the Quick help open and pinned, where its empty text says what to do (the maintainer,
      * 2026-10-27: "a new user should see the quick help open and pinned", KLANG-00365).
      */
-    private val keptLayout = WorkbenchLayoutStorage.load() ?: KlangWorkbench.Layout(bottomOpen = true, bottomPinned = true)
+    private val keptLayout = benchLayoutOf(kept = spine.workbench.layout())
 
     /** The Gui-dance's lit step: the drawer lights "Songs" when it is (KLANG-00350). */
     private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
@@ -169,7 +168,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                 // (KLANG-00409)
                 bottom = BottomTools.with(pageTabs = pageBottomTabs, unseenErrors = unseenErrors),
                 layout = keptLayout,
-                onLayout = { WorkbenchLayoutStorage.save(it) },
+                onLayout = { spine.workbench.arranged(keptLayoutOf(layout = it)) },
                 // The walkthroughs' beacons on the bottom panel's key and its tabs
                 guiDance = KlangGuiDance.dance,
                 // The open menu fills the workbench: on its left, over the Motor, the Motor's last two minutes (the

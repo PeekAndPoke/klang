@@ -8,7 +8,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.appLink
-import io.peekandpoke.klang.storage.TutorialStorage
+import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangLamp
@@ -58,7 +58,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val done by subscribingTo(TutorialStorage.done)
+    private val done by subscribingTo(spine.tutorials.done)
 
     /** The Gui-dance's lit step: the First Steps panel is one. */
     private val guiDanceLit by subscribingTo(KlangGuiDance.dance.lit)
