@@ -54,8 +54,8 @@ adds its row. Status `planned` means the row is the approved proposal (maintaine
 | Click detector | The largest sample-to-sample jump, relative to the signal, while one knob jumps or one stage switches | same | planned |
 | Block-framing checker | The same notes with the onset shifted by 1 to 127 frames, aligned and compared (the property of KLANG-00156) | same | planned |
 | Stage cost table | Nanoseconds per sample for each source and stage alone, JVM and browser | same | planned |
-| Hot-path lint | A static scan of `audio_be` render code for boxed types, allocations, capturing lambdas, `fun interface` Ignitors | `console/tools/` (`/console-tools`) | planned |
-| Dead-knob finder | Every slot key a DSL writes has an engine reader, and the reverse | `console/tools/` (`/console-tools`) | planned |
+| Hot-path lint | A static scan of `audio_be` render code for boxed types, allocations, capturing lambdas, `fun interface` Ignitors; what counts as render code is the settings block at its top (`--list-hot` prints it) | `console/tools/hot-path-lint/` | built 2026-11-10; 30 findings open, none per block (KLANG-00420) |
+| Dead-knob finder | Every slot key a door writes has an engine reader, and the reverse (`--list` prints the whole key table) | `console/tools/dead-knobs/` | built 2026-11-10; clean, 13 keys no door writes (info) |
 
 How they are used (maintainer, 2026-11-10):
 

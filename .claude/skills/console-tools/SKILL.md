@@ -396,9 +396,12 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
 
 - **DSP probes** (maintainer, 2026-11-10, KLANG-00420): the engine's measuring tools are registered in ONE table,
   "The probes" in `audio/ref/verification.md`. The Kotlin probes live beside the engine's tests
-  (`audio_be/src/jvmTest/kotlin/probes/`) and are not console tools; the two static ones, the hot-path lint and the
-  dead-knob finder, are approved as klang-only tools here (`console/tools/<tool>/`) and get their own section in this
-  skill when they land. Before measuring a click, aliasing, a stage's stability or its cost by hand, look there.
+  (`audio_be/src/jvmTest/kotlin/probes/`) and are not console tools; the two static ones are klang-only tools here, no build and no lock:
+  `python3 -I console/tools/dead-knobs/dead_knobs.py [--list] [--strict]` (every slot key a door writes has an engine
+  reader, and the reverse; exit 1 on a dead knob, a near miss or a writer it cannot name; waivers with a reason in its
+  `waivers.txt`) and `python3 -I console/tools/hot-path-lint/hot_path_lint.py [--guarded] [--list-hot]` (what the
+  engine rules forbid in render code; a waiver is a `// hot-path-lint: allow <rule> <reason>` comment). Each explains
+  itself in its docstring. Neither is a build check yet: that waits until their findings are fixed or waived. Before measuring a click, aliasing, a stage's stability or its cost by hand, look there.
 
 ## Proposed upstream
 
