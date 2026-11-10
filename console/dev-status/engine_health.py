@@ -252,6 +252,39 @@ def click_items(rows):
     return items
 
 
+def framing_items(rows):
+    """One item per case and sweep, over its 128 offsets. Identical or rounding is green; a difference the records
+    call by design is grey with the quote; anything else that differs is a lead."""
+    items = []
+    for r in rows:
+        w, cls = r['worst'], r['class']
+        reasons, light = [], 'green'
+        if cls in ('small', 'audible'):
+            by_design = r['known'].startswith('by design')
+            light = 'grey' if by_design else 'yellow'
+            reasons.append(f'at offset {w["offset"]} the note differs by {fmt(w["maxRelDb"])} dB re its peak '
+                           f'({fmt(w["maxAbsDiff"])} absolute), first in the {w["region"]} block; it {w["extent"]}')
+            if r['known']:
+                reasons.append(r['known'])
+        elif cls == 'rounding':
+            reasons.append(f'rounding only: {fmt(w["maxRelDb"])} dB re the peak')
+        if r['rngDiffers']:
+            light = 'yellow'
+            reasons.append(f'the voice drew a different number of random values at {r["rngDiffers"]} offsets')
+        shown = [w] + [d for d in r['differing'] if d['offset'] != w['offset']]
+        items.append({
+            'id': f'{r["family"]}/{r["stage"]}/{r["knobs"]}/{r["sweep"]}', 'group': f'{r["family"]} {r["stage"]}',
+            'title': f'{r["sweep"]}  {r["knobs"]}', 'light': light, 'reasons': reasons,
+            'value': cls if cls in ('identical', 'rounding') else f'{fmt(w["maxRelDb"], 3)} dB',
+            'columns': ['offset', 'class', 'max dB re peak', 'max abs', 'at frame', 'from event', 'rms dB', 'first diff',
+                        'region', 'extent', 'late in the hold'],
+            'rows': [[d['offset'], d['class'], blank(d['maxRelDb']), fmt(d['maxAbsDiff']), d['maxDiffFrame'],
+                      d['maxDiffFromEvent'], blank(d['rmsRelDb']), d['firstDiffFrame'], d['region'], d['extent'],
+                      fmt(d['lateMaxAbs'])] for d in shown],
+        })
+    return items
+
+
 # ── The page ────────────────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -320,6 +353,10 @@ def main():
     if doc is not None:
         raw.append(('clicks', 'Click detector', PLANNED[1][2], click_items(doc),
                     'A 110 Hz tone, one change at a time; a 50 ms glide reads kink 2.5 and -86 dB, a hard step 3618 and -18 dB.'))
+    doc = load(run, 'framing.json')
+    if doc is not None:
+        raw.append(('framing', 'Block-framing checker', PLANNED[2][2], framing_items(doc),
+                    'The production voice path, the onset, the gate close and a cut at each of the 128 offsets in a block.'))
     probes = [probe(*r) for r in raw]
     verdicts_path = os.path.join(AUDIT, 'verdicts.json')
     verdicts = {}

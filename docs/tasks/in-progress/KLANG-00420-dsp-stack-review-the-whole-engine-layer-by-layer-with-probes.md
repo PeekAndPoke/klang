@@ -139,7 +139,7 @@ Two tiers, by the "two kinds of check" rule:
 
 ## Leads from the probes (2026-11-10, all UNVERIFIED; the audit confirms or disproves each)
 
-The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe`, `stage-cost`, `aliasing`, `clicks`,
+The tables of this run: `docs/audio-audit/2026-11-10/` (`stage-probe`, `stage-cost`, `aliasing`, `clicks`, `framing`,
 `hot-path-lint` with `--guarded`, `dead-knobs` with `--list`; each as `.txt` and `.json`). The same on a page:
 the Dev Tools' "Engine health" card (`console/dev-status/engine_health.py`).
 
@@ -167,6 +167,25 @@ the Dev Tools' "Engine health" card (`console/dev-status/engine_health.py`).
     (by design uncompensated; worth one line in its KDoc if not there).
 13. 16 passes of lowpass or highpass: the impulse response starts near 1e-38, under the Float normal range (matters
     only where a Float edge follows).
+
+**Block-framing checker** (217 cases at all 128 offsets, `framing.txt`; 182 identical, 4 rounding, 31 audible):
+
+1. **The filter envelope of `classic()` depends on where the block borders fall, audibly** (`lpf` / `hpf` / `bpf` /
+   `notch` with `env`): up to -15.6 dB re the peak at the default envelope times (worst at the attack's end), -10.8 dB
+   with segments shorter than a block, already -48 dB at an offset of one frame; after the gate a release shorter
+   than a block lands up to 0.18 off, 6 to 14 frames late (failure mode b). The law is KLANG-00156's E3 (the cutoff
+   envelope is evaluated at a block's two ends), which the ledger calls "latent: no production door passes an env
+   here". **That reach statement is out of date**: every sprudel `lpf(env = ...)` reaches it. The one finding of this
+   probe that is neither identical nor by design.
+2. By design, now with sizes: analog drift at `analog` 1 (the lanes step on the absolute block grid; saw -29.2 dB at
+   offset 127, linear in the offset, 18 cases with the analog filters) and the bus phaser (-43.5 dB, the cylinder's
+   clock, D2 and D4).
+3. Identical at every offset: all 23 sources bare and as voices at `analog` 0, every `classic()` stage without an
+   envelope, every pitch stage (accelerate rounding only, about 1e-12 where the ledger's E7 says 5.3e-15), cuts, the
+   sample voice, the bus delay (the echoes move with the note sample for sample). No voice wrote before its onset, and
+   every voice drew the same random values at every offset.
+
+Not covered: signal-rate knobs, Katalyst modulators, a voice joining a running cylinder, several voices at once.
 
 **Click detector** (217 rows, `clicks.txt`; the scale: a 50 ms glide reads kink 2.5 and burst -86 dB, a hard step
 kink 3618 and -18 dB; fader, times, div, eq, body and vowel switches, compressor and distort on/off, delay and reverb
@@ -277,3 +296,4 @@ collected here while the audit runs.
 
 - 2026-11-10: created.
 - 2026-11-10: IN PROGRESS. Started: the three small probes first (hot-path lint, dead-knob finder, stage probe).
+- 2026-11-10: all seven probes built (the cost table on the JVM only), the first run in `docs/audio-audit/2026-11-10/`, the engine health page. Next: the Kotlin/JS half of the cost table and the profiles, then the nine-layer audit on Fable 5.2 (held for the start of a budget week) and the adversarial pass.
