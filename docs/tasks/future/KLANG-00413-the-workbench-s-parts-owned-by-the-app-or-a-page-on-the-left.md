@@ -1,4 +1,4 @@
-# KLANG-00413: The workbench's parts from three places: the app, an area, a page, on the left, the right and the bottom
+# KLANG-00413: The workbench's parts, owned by the app or a page, on the left, the right and the bottom
 
 > **Status (2026-11-10): IDEA.** The mechanism agreed with the maintainer; D2 and D5 still open, D4 in part.
 
