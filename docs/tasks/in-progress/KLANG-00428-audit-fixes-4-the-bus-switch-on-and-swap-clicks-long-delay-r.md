@@ -1,6 +1,6 @@
 # KLANG-00428: Audit fixes 4: the bus (switch-on and swap clicks, long delay rings, compressor, reverb lowpass, vowel, phaser, duck order)
 
-> **Status (2026-11-10): PAUSED.** 22 of 29 findings fixed, pinned or accepted with a reason. Waiting for the maintainer: seven decisions (see Decide).
+> **Status (2026-11-10): IN PROGRESS.** Second pass: the maintainer's answers 4, 5, 6.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -203,3 +203,4 @@ root `:jvmTest` 163.
 - 2026-11-10: created.
 - 2026-11-10: IN PROGRESS. Started.
 - 2026-11-10: PAUSED. 22 of 29 findings fixed, pinned or accepted with a reason. Waiting for the maintainer: seven decisions (see Decide).
+- 2026-11-10: IN PROGRESS. Second pass: the maintainer's answers 4, 5, 6.
