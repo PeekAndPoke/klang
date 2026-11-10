@@ -1,6 +1,6 @@
 # KLANG-00429: Audit fixes 5: the Ignitor build (the fused filter's gate, instrument names, per-note buffers, the off stages' build cost)
 
-> **Status (2026-11-10): DESIGNED.** From the engine audit (KLANG-00420); maintainer, 2026-11-10: fix all findings, sound changes are fine.
+> **Status (2026-11-10): IN PROGRESS.** Started.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -50,3 +50,4 @@ run with `KLANG_PROBE=audit`), fix it, and turn the reproduction's row into an o
 ## History
 
 - 2026-11-10: created.
+- 2026-11-10: IN PROGRESS. Started.
