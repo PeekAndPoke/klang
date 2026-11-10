@@ -48,6 +48,12 @@ import kotlin.math.ceil
  * gate only to an earlier frame than the one it has. A [cutOff] with a non-finite onset is **Done** from every
  * state. `Fading` and `Done` are terminal: nothing leads out of them but `Fading` to `Done`.
  *
+ * **A voice that ends at or before its onset** (its gate ends before the onset and its release does not reach past
+ * it: a negative `legato` with `adsr(release = 0)`) is never audible. It follows the rule of a voice whose end IS
+ * its onset (a gate of 0, a release of 0): the onset block renders a zero-length window, nothing is written, and the
+ * voice is `Done` at the next block. The window is never negative (`renderStages`), so no node ever sees a negative
+ * length (audit L2-04, where one threw out of the render and ended all audio).
+ *
  * The cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the cylinder up when its gate
  * closes or it is cut ([claimsCylinder]). The states are a sealed type: `Releasing` carries the cull's silence count
  * and `Fading` the cut's fade window, each one instance created with the voice, so no transition allocates
@@ -416,7 +422,13 @@ class Voice(
      */
     private fun renderStages(ctx: RenderContext, blockEnd: Double, isReleasing: Boolean, isFading: Boolean) {
         val vStart = maxOf(ctx.blockStart, startFrame)
-        val vEnd = minOf(blockEnd, endFrame)
+        // Never before the start: a voice whose end lies BEFORE its onset (a gate that ends before the onset with a
+        // release too short to reach past it: sprudel's negative `legato`, `adsr(release = 0)`) renders the window of
+        // a voice whose end IS its onset, a zero-length one, and is `Done` at the next block; the window of the
+        // onset block would be negative otherwise, and a node that fills it (`DoubleArray.fill(x, offset,
+        // windowEnd)`) threw out of the render (audit L2-04). Every stage downstream may count on a window that is
+        // never negative. The zero-length window stays its voice's terminal block (`ZeroLengthWindowSpec`).
+        val vEnd = maxOf(vStart, minOf(blockEnd, endFrame))
         // Relative to this block / this voice — Int, and everything downstream of here is Int.
         val offset = (vStart - ctx.blockStart).toInt()
         val length = (vEnd - vStart).toInt()

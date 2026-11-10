@@ -929,7 +929,10 @@ data class SprudelVoiceData(
             ignitorParams = classicSlotParams(),
             katalystParams = katalystParams?.toKlangMap(),
             cylinder = cylinder,
-            pan = pan,
+            // A non-finite pan reads as UNSET (`/dsl-design` section 4), as the gain above: a pattern reaches one
+            // through a string atom (`pan("NaN")`), `Math.sqrt(-1)` or arithmetic (`pow(-1)` then `mul(0)`). The engine
+            // guards its own read too (`VoiceFactory`); here the wire stays sparse and says what the author meant.
+            pan = pan?.takeIf { it.isFinite() }, // NaN-guard: non-finite reads as unset
             cut = cut,
             solo = solo,
             sourceId = patternId,

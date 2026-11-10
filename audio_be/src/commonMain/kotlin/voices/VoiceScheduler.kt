@@ -304,8 +304,10 @@ class VoiceScheduler(
     }
 
     fun scheduleVoice(voice: ScheduledVoice) {
-        ensureEpoch(voice)
-        scheduled.push(voice)
+        if (!admit(voice)) {
+            return
+        }
+
         voice.data.master?.let { masterBus.prepare(it) }
         val cursor = context.clock.cursorFrame
         promoteScheduled(nowFrame = cursor, blockEnd = cursor + context.blockFrames)
@@ -407,8 +409,10 @@ class VoiceScheduler(
         for (i in 0 until voices.size) {
             val voice = voices[i]
 
-            ensureEpoch(voice)
-            scheduled.push(voice)
+            if (!admit(voice)) {
+                continue
+            }
+
             prefetchSampleSound(voice)
             // The master chain built here, between render blocks, and not in the block that lands it
             voice.data.master?.let { masterBus.prepare(it) }
@@ -488,6 +492,33 @@ class VoiceScheduler(
     // Private helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Takes [voice] into the [scheduled] heap, its playback's epoch first ([ensureEpoch]); false when it is refused.
+     *
+     * A voice whose `startTime` is not finite is refused here and counted as dropped, the count a late voice takes. It
+     * can never be placed, and in the heap a NaN start compares false both ways against every other start, so it
+     * broke the heap's order: a voice pushed after it could stay hidden under it until it was late and dropped too
+     * (audit L1-04). Nothing of it applies, its `master`, `katalyst` and `solo` included: they have no time to apply
+     * at.
+     */
+    private fun admit(voice: ScheduledVoice): Boolean {
+        ensureEpoch(voice)
+
+        if (!voice.startTime.isFinite()) { // NaN-guard: a non-finite start never enters the heap
+            val pCtx = playback
+
+            if (pCtx != null) {
+                pCtx.droppedVoices++
+            }
+
+            return false
+        }
+
+        scheduled.push(voice)
+
+        return true
+    }
+
     private fun ensureEpoch(voice: ScheduledVoice) {
         if (playback == null) {
             // Read the SHARED clock so the epoch snaps to "now" and the first voice is not judged in
@@ -495,8 +526,12 @@ class VoiceScheduler(
             // what makes this safe under no-late-voices: before B1 the clock lagged one block and
             // every playback's first note was exactly one block late.
             val nowSec = context.clock.nowSec()
-            val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
-            val pCtx = createPlaybackCtx(pid = voice.playbackId, nowSec = nowSec, epoch = voice.playbackStartTime + latency)
+            // A non-finite start asked for reads as UNSET, which here is "now": raw, a NaN or an infinity made the
+            // epoch non-finite, every voice of the playback was dropped (or, at +Infinity, never promoted) and the
+            // frontend was sent that epoch (audit L1-05).
+            val requestedSec = if (voice.playbackStartTime.isFinite()) voice.playbackStartTime else nowSec // NaN-guard
+            val latency = maxOf(0.0, nowSec - requestedSec)
+            val pCtx = createPlaybackCtx(pid = voice.playbackId, nowSec = nowSec, epoch = requestedSec + latency)
             playback = pCtx
 
             // The frontend counts the playback's time from here (KLANG-00399), not from the second it asked for

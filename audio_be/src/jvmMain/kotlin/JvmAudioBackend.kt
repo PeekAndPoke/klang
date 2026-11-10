@@ -82,17 +82,29 @@ class JvmAudioBackend(
                 // Get events
                 while (true) {
                     val cmd = commLink.control.receive() ?: break
-                    dispatcher.handle(cmd)
+
+                    // The last catch: a throw costs this command, never the loop (see [logThrow])
+                    try {
+                        dispatcher.handle(cmd)
+                    } catch (e: Throwable) {
+                        logThrow(where = "a command", e = e)
+                    }
                 }
 
                 // rendering ///////////////////////////////////////////////////////////////////////////////////////
                 // Always render — warmup voices live on the real scheduler so this exercises
                 // the actual render path for JIT / cache priming.
-                dispatcher.renderBlock(cursorFrame = currentFrame, out = out)
+                // The last catch: a throw costs this block, which goes out silent (see [logThrow]).
+                try {
+                    dispatcher.renderBlock(cursorFrame = currentFrame, out = out)
 
-                if (warmup.isWarming) {
+                    if (warmup.isWarming) {
+                        out.clear()
+                        warmup.tick()
+                    }
+                } catch (e: Throwable) {
+                    logThrow(where = "the render", e = e)
                     out.clear()
-                    warmup.tick()
                 }
 
                 // The 16-bit edge: the line takes signed 16-bit little-endian stereo
@@ -116,5 +128,22 @@ class JvmAudioBackend(
         }
 
         println("KlangPlayerBackend stopped")
+    }
+
+    /** True once [logThrow] has logged: a throw that comes back every block is logged once. */
+    private var hasLoggedThrow = false
+
+    /**
+     * The backend loop's last catch, for a throw the dispatcher's own net does not hold (it catches a throw of one
+     * playback's engine, `PlaybackEngineDispatcher`, "The net"; this is for the rest, the house stage, the warmup).
+     * Without it one throw left the loop, closed the line and ended the audio for the session (audit L8-03, L9-01).
+     * `Throwable`, as the dispatcher's net: a stack overflow in a deep tree is an `Error`, and it too must not end
+     * the session.
+     */
+    private fun logThrow(where: String, e: Throwable) {
+        if (!hasLoggedThrow) {
+            hasLoggedThrow = true
+            println("[JvmAudioBackend] $where threw, the backend plays on (logged once): $e")
+        }
     }
 }

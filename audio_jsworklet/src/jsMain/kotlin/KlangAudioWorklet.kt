@@ -92,6 +92,26 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         var cursorFrame = 0.0
 
         var isPlaying = true
+
+        /**
+         * True once the last catch ([renderInto], the port's message handler) has logged a throw: a throw that comes
+         * back every block is logged once, not 375 times a second.
+         */
+        var hasLoggedThrow = false
+
+        /**
+         * The worklet's last catch, for a throw the dispatcher's own net does not hold (the dispatcher catches a throw
+         * of one playback's engine, `PlaybackEngineDispatcher`, "The net"; this is for the rest, the house stage, the
+         * warmup). By the Web Audio rule a `process()` that throws stops the processor for good, and the main thread
+         * learns nothing but a `processorerror` event (audit L8-03, L9-01): here the throw costs one block or one
+         * command, and the browser console says so once.
+         */
+        fun logThrow(where: String, e: Throwable) {
+            if (!hasLoggedThrow) {
+                hasLoggedThrow = true
+                console.error("[WORKLET] $where threw, the worklet plays on (logged once): $e")
+            }
+        }
     }
 
     private var ctx: Ctx? = null
@@ -131,7 +151,12 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             // Listening (Receiving from Main Thread)
             port.onmessage = { message ->
                 // console.log("[WORKLET] Received cmd from main thread:", message)
-                WorkletContract.decodeCmd(message).also { cmd -> ctx.handle(cmd) }
+                // The last catch: a throw loses this one command, never the handler (see Ctx.logThrow)
+                try {
+                    WorkletContract.decodeCmd(message).also { cmd -> ctx.handle(cmd) }
+                } catch (e: Throwable) {
+                    ctx.logThrow(where = "a command", e = e)
+                }
             }
 
             // CRITICAL: Start the MessagePort on worklet side (required for Safari)
@@ -154,7 +179,22 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         parameters: dynamic,
     ): Boolean {
         // Plain calls, no lambda: a block allocates nothing here.
-        return contextFor(outputs).renderInto(outputs)
+        // The outermost catch: whatever [renderInto]'s own catch around the render does not hold (the warmup's tick,
+        // the feedback forwarding, the context's creation) costs this call only; returning true keeps the processor
+        // alive, where a throw would end it for good (audit L8-03).
+        return try {
+            contextFor(outputs).renderInto(outputs)
+        } catch (e: Throwable) {
+            val live = ctx
+
+            if (live != null) {
+                live.logThrow(where = "process()", e = e)
+            } else {
+                console.error("[WORKLET] process() threw before the worklet had its context: $e")
+            }
+
+            true
+        }
     }
 
     /** One render quantum into Web Audio's [outputs]; always true (keep the processor alive). */
@@ -175,7 +215,14 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         // 1. Render the block into our intermediate buffer, always, so the warmup voices
         // running on the real scheduler exercise the actual render path (V8 inline caches,
         // lazy allocations inside VoiceScheduler / KlangAudioRenderer).
-        renderBlock(cursorFrame, renderBuffer)
+        // The last catch (see [Ctx.logThrow]): a throw from outside an engine costs this block, which goes out silent.
+        // A `try` costs nothing on the path that does not throw.
+        try {
+            renderBlock(cursorFrame, renderBuffer)
+        } catch (e: Throwable) {
+            logThrow(where = "the render", e = e)
+            renderBuffer.clear()
+        }
 
         if (warmup.isWarming) {
             // Silence output + advance warmup state. At the final tick warmup voices are

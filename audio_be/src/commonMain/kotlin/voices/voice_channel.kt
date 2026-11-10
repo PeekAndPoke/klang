@@ -163,10 +163,13 @@ private fun measureVoicePeak(
         // NaN-guard: a NaN sample loses this compare, so it contributes nothing and a block
         // of them measures as silence. One rule covers that and the infinities below: CULL ON
         // WHAT IS MEASURABLY SILENT. A NaN has no magnitude to compare, so it leaves nothing
-        // to measure and the block reads as silent, which is how a voice that blew up in its
-        // release stops rendering and stops feeding the bus. An INFINITE sample does win this
-        // compare, and an infinite bound is a measurement that is not small, so that voice is
-        // kept (see below).
+        // to measure and the block reads as silent, which is how a HEARD voice that blew up stops
+        // rendering and stops feeding the bus: in its release after the cull window, or, when it
+        // blew up in its gate, the cull window after its gate ends (a heard voice is not measured
+        // during its gate). A voice that is NaN from its FIRST sample is never heard, and a voice
+        // never heard is never culled (`Voice.heard`): it renders to its end frame, a NaN one
+        // included (audit L6-07). An INFINITE sample does win this compare, and an infinite bound
+        // is a measurement that is not small, so that voice is kept (see below).
         if (magnitude > peak) {
             peak = magnitude
         }

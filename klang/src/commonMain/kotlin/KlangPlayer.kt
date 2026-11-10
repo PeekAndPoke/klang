@@ -245,6 +245,15 @@ class KlangPlayer(
                         }
                     }
 
+                    // The backend took a playback out of the render (audit L8-03, L9-01): it is silent from here on,
+                    // every other playback plays on. Said in the log, once per failure.
+                    is KlangCommLink.Feedback.PlaybackFailed -> {
+                        println(
+                            "[KlangPlayer] The audio backend stopped playback ${feedback.playbackId} after an error " +
+                                    "and plays on without it: ${feedback.reason}"
+                        )
+                    }
+
                     // Playback-specific messages go to the matching playback
                     else -> {
                         val playback = lock.withLock {

@@ -114,6 +114,22 @@ effects for the rest of the playback, so each reader substitutes at its own read
   (An `+Infinity` `analog` once made every sample of the voice NaN through the saturating SVF branch.)
 - **`gain`**: a non-finite wire gain reads 1.0 in `VoiceFactory`, the only production path that builds a voice;
   `Voice` stores what it is given. Guard: `VoiceGainWireSpec`.
+- **`pan`**: a non-finite wire pan reads 0.5 (the centre) in `VoiceFactory`, its one reader; sprudel's `toVoiceData`
+  sends a non-finite pan as unset too. Raw, `coerceIn` kept a NaN and the voice wrote NaN into its cylinder for its
+  whole life (audit L1-01). Guards: `VoicePanPitchWireSpec`, sprudel's `WirePanSpec`.
+- **`freqHz`**: read once at the top of `VoiceFactory.makeVoice` for both branches; non-finite reads as unset (an
+  instrument gets 0.0, a sample its own pitch). The sample's pitch RATIO is guarded too: one with no number in it
+  (0/0 from a sample whose own pitch is 0, a NaN pitch) reads 1.0. Raw, a NaN made a sample's playhead NaN and the
+  Karplus family (`pluck`, `string`, `superpluck`, `ks`) NaN from the first sample (audit L1-02). Guard:
+  `VoicePanPitchWireSpec`.
+- **The times of a scheduled voice** (`VoiceScheduler`): a non-finite `startTime` is refused before the heap and
+  counted as dropped (a NaN broke the heap's order and hid the voices after it, audit L1-04); a non-finite
+  `playbackStartTime` on a playback's first voice reads as "now" (it made the epoch non-finite, audit L1-05). A
+  non-finite `gateEndTime` becomes a gate of 0 frames in the factory (`toInt` of a NaN is 0). Guard:
+  `VoiceSchedulerNonFiniteTimesSpec`.
+- **The duck's side chain** (`Ducking.stepGain`): a NaN level reads as a full duck for that sample, as an infinity
+  does, and never enters the envelope's state (it latched the duck for its whole life and silenced every playback
+  through the shared mix, audit L7b-01). Guard: `DuckingSpec`.
 - **The gate**: a stage whose gating knob resolves non-finite is not built, which is what keeps `SLOT_UNSET`
   (NaN) out of the DSP (`audio/ref/off-values.md`). An UNGATED knob needs its own substitution: the envelope's
   sustain (`AdsrIgnitor`, `finiteOr`), and the pitch modulators' amounts (`PitchModFactories`: accelerate's and the

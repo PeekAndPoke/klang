@@ -236,6 +236,19 @@ class KlangCommLink(capacity: Int = 8192) {
             val epochSec: Double,
         ) : Feedback
 
+        /**
+         * The backend took a playback out of the render because its engine threw, in a block or in a command
+         * (audit L8-03, L9-01): the playback is silent from here on, every other playback plays on. Sent once per
+         * failure. The engine stays filed under [playbackId] and ignores every command until the playback's
+         * `Cleanup`, after which the id may start afresh. [reason] is the exception as text, for a log. With
+         * [KlangCommLink.SYSTEM_PLAYBACK_ID] it names a command that belonged to no playback (a sample upload).
+         */
+        @WireName("playback-failed")
+        data class PlaybackFailed(
+            override val playbackId: String,
+            val reason: String,
+        ) : Feedback
+
         @WireName("diagnostics")
         data class Diagnostics(
             override val playbackId: String,

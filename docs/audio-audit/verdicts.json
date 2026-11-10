@@ -5,12 +5,14 @@
   "note": "The documented ANTI_DENORMAL bias (audio-constraints); the audit found it does not keep an engine alive (layer 9)."
  },
  "stage-probe/katalyst/duck/cyl=1 depth=.8 (self-trigger)": {
-  "status": "confirmed",
-  "note": "L7b-01, critical: one NaN on the side chain latches the gain; from a pattern (pan(\"NaN\")) it silences every playback until the ducked notes end. Reproduced in AuditSafetyRepro."
+  "status": "fixed",
+  "note": "L7b-01, fixed in KLANG-00425: a NaN level reads as one sample of full ducking and never enters the state; the probe row now equals the infinity row.",
+  "ticket": "KLANG-00425"
  },
  "stage-probe/katalyst/duck/cyl=1 depth=1 release=0": {
-  "status": "confirmed",
-  "note": "L7b-01, critical: one NaN on the side chain latches the gain; from a pattern (pan(\"NaN\")) it silences every playback until the ducked notes end. Reproduced in AuditSafetyRepro."
+  "status": "fixed",
+  "note": "L7b-01, fixed in KLANG-00425: a NaN level reads as one sample of full ducking and never enters the state; the probe row now equals the infinity row.",
+  "ticket": "KLANG-00425"
  },
  "stage-probe/ignitor/highpass/freq=1000 analog=1": {
   "status": "confirmed",

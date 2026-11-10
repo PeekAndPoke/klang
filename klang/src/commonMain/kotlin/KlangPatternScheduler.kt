@@ -319,6 +319,10 @@ internal class KlangPatternScheduler(
             is KlangCommLink.Feedback.BackendReady -> {
                 // Handled at player level
             }
+
+            is KlangCommLink.Feedback.PlaybackFailed -> {
+                // Handled at player level (logged there); the branch keeps the `when` exhaustive
+            }
         }
     }
 

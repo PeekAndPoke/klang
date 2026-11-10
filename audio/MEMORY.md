@@ -13,7 +13,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Per playback.** `PlaybackEngineDispatcher` routes every `Cmd` by `playbackId` to its own `PlaybackEngine`
   (scheduler, cylinders, registry forks, `MasterBus`); the engines' outputs sum into the house stage. A
   `VoiceScheduler` serves its engine's one playback: one `PlaybackCtx`, made by the first voice, dropped by
-  `cleanup`, nothing filtered by id. File map:
+  `cleanup`, nothing filtered by id. A throw from one engine (block or command) takes only that playback out,
+  reported once as `Feedback.PlaybackFailed`; each host has a last catch (the net: `audio/ref/architecture.md`). File map:
   `docs/audio-backend-file-map.md`; data flow and isolation: `audio/ref/architecture.md`.
 - **Instrument = the voice's Ignitor tree** (phase 3, done 2026-09-28; its pitch modulations too since pitch pipeline
   steps 1 to 4, the last, `fm`, 2026-10-10; step 5 removed the empty shell in front of it). `Voice` runs its fixed stages as plain code in `render`: the tree (`ignite`), (the teardown fade), (the cut's fade), the channel (`mixIntoCylinder`); no stage list, no block context of its own (KLANG-00290 item 21). Every built-in sound is `IgnitorRegistry.builtInVoice(source)` = `source.pregain().classic()`;
@@ -73,7 +74,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `retainInOrder` (`removeDoneVoices` between blocks, and the render loop).
   Plan and steps: KLANG-00279 (voice lifecycle state machine) (steps 1 to 5b done).
 - **Channel**: `gain` is the one level word (the fader, applied once with `pan` in `mixIntoCylinder`); a frontend's
-  `velocity` is multiplied into `gain` before the wire. The cylinder is the routing.
+  `velocity` is multiplied into `gain` before the wire. The cylinder is the routing. A non-finite `gain`, `pan` or
+  `freqHz` reads as unset in `VoiceFactory` (the list of every such reader: `audio/ref/numerical-safety.md`). A voice
+  whose end lies at or before its onset renders a zero-length window and ends (`Voice` KDoc): no window is negative.
 - **Bus**: each cylinder (`Cylinder`) runs a `KatalystChain`, born with `KatalystDsl.classic` (body, vowel, delay,
   reverb, phaser, compressor, gain; duck in a cross-cylinder pass), knobs from the owner's
   `VoiceData.katalystParams`: the cylinder's bus settings are owned by the newest `Sounding` voice; a voice gives the
@@ -425,6 +428,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
+
+- 2026-11-10 The render's net, the pan, pitch and time guards, the duck's NaN, no negative window: KLANG-00425
 
 - 2026-11-06 The noise and pluck source doors answer the pattern's slots where unset (sealed constants before):
   KLANG-00417 B6

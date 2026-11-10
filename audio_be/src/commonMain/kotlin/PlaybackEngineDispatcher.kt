@@ -27,6 +27,16 @@ import io.peekandpoke.klang.common.infra.KlangMap
  * output depends on: the render order ([rendering]) and the disposal order ([ending]). The disposal order costs one
  * extra list and decides which pooled reverb or delay unit a later rent gets when several engines end in the same
  * block; it stays as it is (maintainer, 2026-10-13, Q19): that case almost never happens and is not worth simplifying.
+ *
+ * **The net** (audit L8-03, L9-01): a throw from ONE playback's engine, in its block ([renderBlock]) or in a command
+ * routed to it ([handle]), is caught here and costs that playback only ([fail]): the engine leaves the render and is
+ * disposed (its phase is `Disposed`), the frontend is told once ([KlangCommLink.Feedback.PlaybackFailed]), and every
+ * other playback plays on. The failed engine stays filed under its id, so the rest of that playback's commands find
+ * it and are ignored instead of starting a fresh engine that would replay half a song; the playback's `Cleanup`
+ * removes it, and the id may then start afresh. An attached engine is `Disposed` only this way (a stopped engine
+ * leaves [engines] before it is disposed). The normal path pays one `try` per engine per block and one per command,
+ * and nothing allocates unless something was thrown. Each host keeps a last catch of its own for a throw from
+ * outside an engine (the house stage), so the audio node itself never dies.
  */
 class PlaybackEngineDispatcher(
     private val context: AudioBackendContext,
@@ -140,10 +150,41 @@ class PlaybackEngineDispatcher(
     }
 
     /**
-     * Route a single inbound command to the engine for its `playbackId` (creating it on demand).
-     * Exhaustive `when` *expression*: a new [KlangCommLink.Cmd] subtype fails the build until handled.
+     * Route a single inbound command to the engine for its `playbackId` (creating it on demand), inside the net (the
+     * class KDoc): a throw fails that playback, and a failed playback ignores its commands until its `Cleanup`.
      */
-    fun handle(cmd: KlangCommLink.Cmd): Unit = when (cmd) {
+    fun handle(cmd: KlangCommLink.Cmd) {
+        val attached = engines[cmd.playbackId]
+
+        // A failed playback (see the class KDoc, "The net") ignores everything until its stop, which forgets it.
+        if (attached != null && attached.phase == Phase.Disposed) {
+            if (cmd is KlangCommLink.Cmd.Cleanup) {
+                engines.delete(cmd.playbackId)
+            }
+
+            return
+        }
+
+        try {
+            route(cmd)
+        } catch (e: Throwable) {
+            // The engine the command reached is the one filed under its id now (a command never reaches a detached one).
+            val engine = engines[cmd.playbackId]
+            val reason = "command ${cmd::class.simpleName}: $e"
+
+            if (engine != null) {
+                fail(engine = engine, reason = reason)
+            } else {
+                report(playbackId = cmd.playbackId, reason = reason)
+            }
+        }
+    }
+
+    /**
+     * Routes [cmd] to its engine; [handle] is the net around it. Exhaustive `when` *expression*: a new
+     * [KlangCommLink.Cmd] subtype fails the build until handled.
+     */
+    private fun route(cmd: KlangCommLink.Cmd): Unit = when (cmd) {
         is KlangCommLink.Cmd.ScheduleVoices ->
             scheduleVoices(cmd.playbackId, cmd.voices)
 
@@ -239,6 +280,11 @@ class PlaybackEngineDispatcher(
     fun cleanupHard(playbackId: String) {
         val engine = engines.delete(playbackId) ?: return
 
+        // A failed engine ([fail]) is disposed already: forgetting it is all that is left.
+        if (engine.phase == Phase.Disposed) {
+            return
+        }
+
         rendering.remove(engine)
         ending.remove(engine)
         engine.scheduler.cleanupHard()
@@ -271,8 +317,13 @@ class PlaybackEngineDispatcher(
         // processAndMix accumulates additively, so engines simply render into the same mix in turn.
         // (#11: with one engine this is a straight render into the final mix.) Per-engine master gain
         // in D6 will need a scratch buffer here for the ≥2 case.
-        for (i in 0 until rendering.size) {
-            rendering[i].renderInto(mix, cursorFrame)
+        var i = 0
+
+        while (i < rendering.size) {
+            // A failed engine leaves the list, so the next one moves into its index.
+            if (renderEngine(engine = rendering[i], cursorFrame = cursorFrame)) {
+                i++
+            }
         }
 
         house.process(mix = mix, out = out)
@@ -281,6 +332,43 @@ class PlaybackEngineDispatcher(
         // Deferred clearing of returned rings and networks, a bounded slice per block (round 3).
         context.warehouse.housekeep()
         emitDiagnostics(startMs = startMs, blockEndFrame = cursorFrame + context.blockFrames)
+    }
+
+    /**
+     * Renders [engine] into the shared mix; false when it threw and was taken out of the render ([fail]). What it
+     * added to the mix before the throw stays in this block.
+     */
+    private fun renderEngine(engine: PlaybackEngine, cursorFrame: Double): Boolean {
+        try {
+            engine.renderInto(mix, cursorFrame)
+
+            return true
+        } catch (e: Throwable) { // hot-path-lint: allow exception the net: one engine's throw costs that playback only
+            // hot-path-lint: allow alloc-string only once a throw happened, which ends this engine's render for good
+            fail(engine = engine, reason = "render: $e")
+
+            return false
+        }
+    }
+
+    /**
+     * The net's one action (the class KDoc, "The net"): [engine] threw. It leaves the render and the disposal order,
+     * the frontend is told, and it is disposed: its voices are killed and its units go back to the warehouse. An
+     * attached engine stays filed under its id, `Disposed`, until the playback's `Cleanup`; a detached one is gone.
+     * Its state after the throw is not trusted: nothing of it renders again.
+     */
+    private fun fail(engine: PlaybackEngine, reason: String) {
+        rendering.remove(engine)
+        ending.remove(engine)
+        report(playbackId = engine.playbackId, reason = reason)
+        engine.scheduler.cleanupHard()
+        engine.dispose()
+    }
+
+    /** Tells the frontend that [playbackId] failed ([KlangCommLink.Feedback.PlaybackFailed]). */
+    // hot-path-lint: cold runs once per failure, never on the path that does not throw
+    private fun report(playbackId: String, reason: String) {
+        context.commLink.feedback.send(KlangCommLink.Feedback.PlaybackFailed(playbackId = playbackId, reason = reason))
     }
 
     /**

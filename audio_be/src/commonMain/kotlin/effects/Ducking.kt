@@ -11,7 +11,6 @@ import io.peekandpoke.klang.audio_be.utils.timeConstantCoeff
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Sidechain ducking/compression processor.
@@ -135,7 +134,16 @@ class Ducking(
         // No silence gate — the formula naturally yields gain=1.0 when sidechainLevel is 0,
         // so the previous `if (level > 0.01)` short-circuit was redundant and introduced a
         // tiny snap discontinuity at the threshold crossing.
-        val targetGain = 1.0 - depthNow * min(1.0, sidechainLevel * SIDECHAIN_SENSITIVITY)
+        //
+        // The saturation is the compare `min(1.0, drive)` stands for, written so that a NaN falls into the constant
+        // arm: a NaN level (one NaN on either sidechain channel) reads as a full duck for that one sample, exactly
+        // what an infinity does, and the target, and so the stored state, stays finite. Through `min` a NaN target
+        // took the release arm below and was STORED in `currentGain`, where it stayed for the duck's whole life
+        // and silenced the ducked cylinder, and through the shared mix every playback (audit L7b-01). For every
+        // other level the two forms give the same bits.
+        val drive = sidechainLevel * SIDECHAIN_SENSITIVITY
+        val saturated = if (drive < 1.0) drive else 1.0 // NaN-guard: a NaN fails the compare and saturates
+        val targetGain = 1.0 - depthNow * saturated
         currentGain = if (targetGain < currentGain) {
             targetGain
         } else {

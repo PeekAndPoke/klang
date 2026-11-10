@@ -458,6 +458,7 @@ class KlangPlaybackSyncSpec : StringSpec({
                     is KlangCommLink.Feedback.BackendReady,
                     is KlangCommLink.Feedback.RequestSample,
                     is KlangCommLink.Feedback.SampleReceived,
+                    is KlangCommLink.Feedback.PlaybackFailed,
                     -> {}
                 }
             }

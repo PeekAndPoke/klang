@@ -228,6 +228,12 @@ class KlangOfflineRenderer(
             when (val feedback = commLink.frontend.feedback.receive() ?: break) {
                 is KlangCommLink.Feedback.PlaybackAnchored -> scheduler.handleFeedback(feedback)
 
+                // The backend caught a throw and took the playback out of the render (audit L8-03, L9-01). Live, the
+                // other playbacks play on; a render that went on would be a silent file, so the render fails loud, as
+                // it did before the backend caught the throw.
+                is KlangCommLink.Feedback.PlaybackFailed ->
+                    error("[KlangOfflineRenderer] the backend took playback ${feedback.playbackId} out: ${feedback.reason}")
+
                 is KlangCommLink.Feedback.BackendReady,
                 is KlangCommLink.Feedback.Diagnostics,
                 is KlangCommLink.Feedback.RequestSample,

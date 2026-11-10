@@ -107,9 +107,14 @@ class VoiceFactory(
         // the sample playhead, and the render context (IgniteContext.random).
         val voiceRandom = Random(playbackCtx.coreRandom.nextInt())
 
+        // The pitch, read ONCE here for both branches: a non-finite `freqHz` reads as UNSET (the rule of every wire
+        // number, `/dsl-design` section 4), the sample's own pitch on a sample voice and 0.0 on an instrument. Raw,
+        // a NaN made a sample's playhead NaN from its second frame and the Karplus family (`pluck`, `string`,
+        // `superpluck`, `ks`) NaN from its first, and that NaN reached the cylinder mix (audit L1-02).
+        val freqHz = data.freqHz?.takeIf { it.isFinite() } // NaN-guard: non-finite reads as unset
+
         // Decision: oscillator vs sample. A name that is not a registered instrument is a sample. `isOsci` and the
         // build ask the same registry, the playback's (in production the scheduler's fork, `VoiceScheduler`).
-        val freqHz = data.freqHz
         val sound = data.sound
         val isOsci = playbackCtx.ignitorRegistry.contains(sound)
         val isSample = !isOsci && sound != null
@@ -175,8 +180,16 @@ class VoiceFactory(
                 val sampleLoop = sampleBag.finiteSlotOrDefault(IgnitorDsl.Slots.sample.loop)
 
                 val baseSamplePitchHz = entry.pitchHz
-                val targetPitchHz = data.freqHz ?: baseSamplePitchHz
-                val pitchRatio = (targetPitchHz / baseSamplePitchHz).coerceIn(1.0 / 32.0, 32.0)
+                val targetPitchHz = freqHz ?: baseSamplePitchHz
+                // A ratio with no number in it (0/0: a sample whose own pitch is 0 played at 0 Hz or unset; a sample
+                // whose pitch is NaN) reads as unset, 1.0: the sample at its own rate. `coerceIn` keeps a NaN, and a
+                // NaN rate made every frame after the first NaN (audit L1-02).
+                val rawPitchRatio = targetPitchHz / baseSamplePitchHz
+                val pitchRatio = if (rawPitchRatio == rawPitchRatio) { // NaN-guard: x == x is false only for a NaN
+                    rawPitchRatio.coerceIn(1.0 / 32.0, 32.0)
+                } else {
+                    1.0
+                }
                 val loopSpeed = sampleSpeed
                 val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio * loopSpeed
                 val pcmSize = sample.pcm.size.toDouble()
@@ -360,7 +373,10 @@ class VoiceFactory(
         return Voice(
             cylinderId = cylinder,
             gain = gain,
-            pan = data.pan ?: 0.5,
+            // A non-finite pan reads as UNSET, the centre, like every other wire number (`/dsl-design` section 4); the
+            // one reader of `data.pan`. Raw, `coerceIn` kept a NaN, the pan law turned it into NaN gains, and the voice
+            // wrote NaN into its cylinder for its whole life (audit L1-01).
+            pan = data.pan?.takeIf { it.isFinite() } ?: 0.5, // NaN-guard: non-finite reads as unset
             // By reference, never a copy: the map is immutable on the wire and only the cylinder's
             // owner reads it (see Voice.katalystParams).
             katalystParams = data.katalystParams,

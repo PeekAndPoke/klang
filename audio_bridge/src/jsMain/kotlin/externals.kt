@@ -103,6 +103,9 @@ external class AnalyserNode : AudioNode {
 
 external class AudioWorkletNode(context: AudioContext, name: String, options: dynamic = definedExternally) : AudioNode {
     val port: MessagePort
+
+    /** Fired when the node's processor threw out of its constructor or its `process()`: it outputs silence for good. */
+    var onprocessorerror: ((event: dynamic) -> Unit)?
 }
 
 external interface AudioWorkletNodeOptions {

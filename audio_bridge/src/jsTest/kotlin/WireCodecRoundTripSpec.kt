@@ -395,8 +395,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // KLANG-00245 step 7f from 210338569 (the Ignitor's `Progress` and `Elapsed` joined it); KLANG-00290 item 24
         // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it), and from 1837919315 (`VoiceData.legato`
         // left it: the frontend folds it into the gate time, D6), and from 580783604 (the duck's knob `cylinder` is
-        // `cylinder`, KLANG-00418 step 2), and from -209384306 (the duck's `attack` is `release`, KLANG-00417 B1).
-        WIRE_SCHEMA_HASH shouldBe 591120935
+        // `cylinder`, KLANG-00418 step 2), and from -209384306 (the duck's `attack` is `release`, KLANG-00417 B1); KLANG-00425
+        // from 591120935 (`Feedback.PlaybackFailed` joined it: the dispatcher's net reports a failed playback).
+        WIRE_SCHEMA_HASH shouldBe -985611466
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -412,6 +413,7 @@ class WireCodecRoundTripSpec : StringSpec({
         val cases = listOf<KlangCommLink.Feedback>(
             KlangCommLink.Feedback.BackendReady(),
             KlangCommLink.Feedback.PlaybackAnchored("pb", epochSec = 1234.5),
+            KlangCommLink.Feedback.PlaybackFailed("pb", reason = "render: IllegalArgumentException: fromIndex (100) > toIndex (76)"),
             KlangCommLink.Feedback.RequestSample("pb", SampleRequest(bank = "b", sound = "s", index = 1, note = "c3")),
             KlangCommLink.Feedback.Diagnostics(
                 playbackId = "pb", sampleRate = 48000, renderHeadroom = 0.8, activeVoiceCount = 3,

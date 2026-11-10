@@ -248,4 +248,75 @@ class DuckingSpec : StringSpec({
             }
         }
     }
+
+    // ── One NaN on the side chain (audit L7b-01) ─────────────────────────────────────────────────────────────────────
+    // Through `min(1.0, x)` a NaN level made the target NaN, the release arm STORED it, and the duck's gain stayed NaN
+    // for the duck's whole life: the ducked cylinder, and through the shared mix every playback, went silent. Now a NaN
+    // level reads as a full duck for that sample, as an infinity does, and the state stays finite.
+
+    /** One block of [frames] through [ducking]'s settled loop with a sidechain of [side] on the LEFT only; the output. */
+    fun settledBlock(ducking: Ducking, side: (Int) -> Double, frames: Int = 64): Pair<AudioBuffer, AudioBuffer> {
+        val l = AudioBuffer(frames) { 1.0 }
+        val r = AudioBuffer(frames) { 1.0 }
+
+        ducking.processStereo(inputL = l, inputR = r, sidechainL = AudioBuffer(frames) { side(it) }, sidechainR = AudioBuffer(frames) { 0.0 }, blockSize = frames)
+
+        return l to r
+    }
+
+    "one NaN on the side chain ducks that sample fully, as an infinity does, and the duck does not latch" {
+        val poisoned = Ducking(sampleRate = sampleRate, releaseSeconds = 0.01, depth = 0.8)
+        val infinite = Ducking(sampleRate = sampleRate, releaseSeconds = 0.01, depth = 0.8)
+
+        val (nanL, nanR) = settledBlock(poisoned, side = { if (it == 0) Double.NaN else 0.0 })
+        val (infL, _) = settledBlock(infinite, side = { if (it == 0) Double.POSITIVE_INFINITY else 0.0 })
+
+        withClue("the NaN sample is a full duck, 1 - depth") {
+            nanL[0] shouldBe (1.0 - 0.8 plusOrMinus 1e-12)
+        }
+
+        withClue("both channels of the block are finite (one shared gain)") {
+            nanL.all { it.isFinite() } shouldBe true
+            nanR.all { it.isFinite() } shouldBe true
+        }
+
+        for (i in nanL.indices) {
+            withClue("the NaN reads exactly as an infinity, sample $i") {
+                nanL[i].toRawBits() shouldBe infL[i].toRawBits()
+            }
+        }
+
+        // The next clean block: finite, and the gain recovers toward 1
+        val (cleanL, _) = settledBlock(poisoned, side = { 0.0 })
+
+        withClue("the block after: finite, and recovering") {
+            cleanL.all { it.isFinite() } shouldBe true
+            (cleanL.last() > cleanL.first()) shouldBe true
+        }
+    }
+
+    "one NaN on the side chain does not latch the gliding loop either" {
+        val ducking = Ducking(sampleRate = sampleRate, releaseSeconds = 0.01, depth = 0.8)
+        val frames = 64
+        val l = AudioBuffer(frames) { 1.0 }
+        val r = AudioBuffer(frames) { 1.0 }
+
+        // The switch-off fade: the weight rides from 1 to 0 across the block
+        ducking.processStereoGliding(
+            inputL = l, inputR = r,
+            sidechainL = AudioBuffer(frames) { if (it == 0) Double.NaN else 0.0 }, sidechainR = AudioBuffer(frames) { 0.0 },
+            blockSize = frames, depthFrom = 0.8, depthTo = 0.8, weightFrom = 1.0, weightTo = 0.0,
+        )
+
+        withClue("the gliding block is finite") {
+            l.all { it.isFinite() } shouldBe true
+            r.all { it.isFinite() } shouldBe true
+        }
+
+        val (cleanL, _) = settledBlock(ducking, side = { 0.0 })
+
+        withClue("the settled block after it is finite") {
+            cleanL.all { it.isFinite() } shouldBe true
+        }
+    }
 })

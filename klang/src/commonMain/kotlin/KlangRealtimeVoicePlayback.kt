@@ -129,6 +129,7 @@ class KlangRealtimeVoicePlayback internal constructor(
             is KlangCommLink.Feedback.Diagnostics,
             is KlangCommLink.Feedback.SampleReceived,
             is KlangCommLink.Feedback.BackendReady,
+            is KlangCommLink.Feedback.PlaybackFailed,
             -> Unit
         }
     }

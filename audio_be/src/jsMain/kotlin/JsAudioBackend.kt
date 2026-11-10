@@ -118,6 +118,19 @@ class JsAudioBackend(
 
             console.log("JsAudioBackend AudioWorkletNode created successfully", node)
 
+            // The processor is dead for good once it throws out of `process()` (the Web Audio rule). The worklet catches
+            // every throw itself (`KlangAudioWorklet`), so this should never fire; if it does, the log says why the
+            // sound stopped instead of nothing at all (audit L8-03, L9-01).
+            node.onprocessorerror = { event ->
+                console.error("JsAudioBackend: the audio worklet's processor stopped after an error, audio is off until a reload", event)
+                commLink.feedback.send(
+                    KlangCommLink.Feedback.PlaybackFailed(
+                        playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
+                        reason = "the audio worklet's processor stopped after an error",
+                    )
+                )
+            }
+
             // The analysers for the visualisations (with a fallback if one cannot be made: that view stays dark)
             spectrumAnalyser = createAnalyserOrNull(ctx = ctx, name = "spectrum", fftSize = SPECTRUM_FFT_SIZE)
             scopeAnalyser = createAnalyserOrNull(ctx = ctx, name = "scope", fftSize = 2048)

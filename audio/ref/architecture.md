@@ -124,7 +124,15 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | `Feedback.RequestSample`    | `SampleRequest` | ask frontend to load + decode a sample                                  |
 | `Feedback.SampleReceived`   | `SampleRequest` | confirm a sample was accepted                                           |
 | `Feedback.PlaybackAnchored` | `epochSec`      | where the backend started a playback; its time counts from there        |
+| `Feedback.PlaybackFailed`   | `reason`        | the playback's engine threw; it is out of the render, the others play on |
 | `Feedback.Diagnostics`      | engine stats    | voice count, headroom, and the timeline the frontend's clock runs on    |
+
+**The net** (audit L8-03, L9-01; the `PlaybackEngineDispatcher` KDoc): a throw from one playback's engine, in a block
+or in a command, is caught by the dispatcher. That engine leaves the render and is disposed, `Feedback.PlaybackFailed`
+goes out once (the player logs it), every other playback plays on, and the failed playback ignores its commands until
+its `Cleanup`. Each host has a last catch of its own (the worklet's `process` and message handler, the JVM loop), and
+`JsAudioBackend` listens for `processorerror`, so the audio node never dies of a throw. The offline renderer fails
+loud on a `PlaybackFailed`.
 
 ## Platform Backends
 

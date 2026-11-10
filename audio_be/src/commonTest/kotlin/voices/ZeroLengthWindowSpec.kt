@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.voices
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
@@ -15,8 +16,10 @@ import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.PhasePools
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.random.Random
 
 /**
@@ -92,6 +95,78 @@ class ZeroLengthWindowSpec : StringSpec({
                 if (len == 0) {
                     (i == windows.lastIndex) shouldBe true
                 }
+            }
+        }
+    }
+
+    // ── A voice that ends BEFORE its onset (audit L2-04) ──────────────────────────────────────────────────────────
+
+    "a voice whose end lies before its onset renders a zero-length window, never a negative one, and ends" {
+        // Onset 50 frames into block 4 (blocks of 100), end 24 frames before it: the onset block's window was -24
+        val windows = renderAll(startFrame = 450.0, endFrame = 426.0)
+
+        withClue("the tree is called once, in the onset block, on a zero-length window") {
+            windows.map { it.second } shouldBe listOf(0)
+        }
+    }
+
+    "through the factory: a gate that ends before the onset with no release renders nothing and throws nothing" {
+        // The audit's measured crash (`note("c3*8").s("silence").legato(-0.001).adsr(release = 0)` and the like):
+        // `DoubleArray.fill(x, offset, windowEnd)` with windowEnd < offset threw IllegalArgumentException out of the
+        // render. One tree per kind of node that fills its window: the built-in `silence`, a `Progress` (the note
+        // clock at a gate of 0 frames or less), a constant and the `Freq` leaf; and two ordinary built-ins.
+        val registry = IgnitorRegistry().apply {
+            registerDefaults()
+            register("zlw_progress", IgnitorRegistry.builtInVoice(IgnitorDsl.Times(IgnitorDsl.Sine(), IgnitorDsl.Progress)))
+            register("zlw_constant", IgnitorRegistry.builtInVoice(IgnitorDsl.Constant(0.25)))
+            register("zlw_freq", IgnitorRegistry.builtInVoice(IgnitorDsl.Freq))
+        }
+        val sr = 48000
+        val bf = 128
+        val factory = VoiceFactory(sampleRate = sr, blockFrames = bf, scratchBuffers = ScratchBuffers(bf))
+        val playback = PlaybackCtx(playbackId = "z", ignitorRegistry = registry, phasePools = PhasePools(Random(1)))
+        val rc = VoiceTestHelpers.createContext(blockStart = 0.0, blockFrames = bf, sampleRate = sr)
+        val onset = 10 * bf + 100
+
+        // `saw` at `pregain` 0: the measured end-to-end crash, an `Affine` whose block-constant multiplier is 0 fills
+        val cases = listOf("silence", "zlw_progress", "zlw_constant", "zlw_freq", "sine", "supersaw").map { it to 1.0 } + ("saw" to 0.0)
+
+        for ((sound, pregain) in cases) {
+            val voice = factory.makeVoice(
+                scheduled = ScheduledVoice(
+                    playbackId = "z",
+                    data = VoiceData.empty.copy(
+                        sound = sound,
+                        freqHz = 220.0,
+                        ignitorParams = klangMapOf("adsr.release" to 0.0, "pregain" to pregain),
+                    ),
+                    startTime = (onset + 0.25) / sr,
+                    gateEndTime = (onset - 24 + 0.25) / sr,
+                    playbackStartTime = 0.0,
+                ),
+                backendStartTimeSec = 0.0,
+                playbackCtx = playback,
+                getSample = { null },
+            ) ?: error("null voice for $sound")
+
+            withClue("$sound: the voice ends before its onset, so the onset block's window was negative") {
+                (voice.endFrame < voice.startFrame) shouldBe true
+            }
+
+            val alive = ArrayList<Boolean>()
+
+            for (b in 10 until 13) {
+                rc.blockStart = (b * bf).toDouble()
+                rc.cylinders.clearAll()
+                alive.add(voice.render(rc))
+
+                withClue("$sound, block $b: nothing reaches the cylinder") {
+                    rc.cylinders.cylinders.all { c -> c.mixBuffer.left.all { it == 0.0 } && c.mixBuffer.right.all { it == 0.0 } } shouldBe true
+                }
+            }
+
+            withClue("$sound: it renders its onset block and is Done at the next") {
+                alive shouldBe listOf(true, false, false)
             }
         }
     }

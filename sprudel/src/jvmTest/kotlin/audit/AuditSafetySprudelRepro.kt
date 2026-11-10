@@ -48,93 +48,14 @@ class AuditSafetySprudelRepro : StringSpec({
         println("audit safety (sprudel) written to ${target.absolutePath}")
     }
 
-    "L1-01 L6-02 L1-02 the key question: what a sprudel pattern puts on the wire as pan and freqHz".config(enabled = requested) {
-        line("== the wire: SprudelPattern.compile(code), cycle 0 queried at cps 0.5, each event through toVoiceData()")
-
-        val cases = listOf(
-            // pan
-            """note("c3").pan("NaN")""",
-            """note("c3").pan("Infinity")""",
-            """note("c3").pan("nan")""",
-            """note("c3").pan(Math.sqrt(-1))""",
-            """note("c3").pan((-1) ** 0.5)""",
-            """note("c3").pan("0").pan(div(0))""",
-            """note("c3").pan("0 0.5".div(0))""",
-            """note("c3").pan("0").pan(pow(-1)).pan(mul(0))""",
-            """note("c3").pan("-1").pan(pow(0.5))""",
-            """note("c3").pan("-1").pan(log2())""",
-            """note("c3").pan(sine.range(-1, 0).pow(0.5))""",
-            """note("c3").pan(0/0)""",
-            // freq
-            """s("bd").freq("NaN")""",
-            """s("bd").freq(0)""",
-            """s("bd").freq(Math.sqrt(-1))""",
-            """note("NaN")""",
-            """note("-Infinity")""",
-            """note("Infinity")""",
-            """note(-2000)""",
-            """note("c3").freq(mul(0))""",
-            """note("c3").freq(div(0))""",
-            """n("NaN").scale("c3:major")""",
-        )
-
-        for (code in cases) {
-            val pattern = try {
-                SprudelPattern.compile(code)
-            } catch (t: Throwable) {
-                line("WIRE [$code] did not compile: ${t.javaClass.simpleName}: ${t.message?.take(80)}")
-
-                continue
-            }
-
-            if (pattern == null) {
-                line("WIRE [$code] compiled to no pattern")
-
-                continue
-            }
-
-            val wire = pattern.queryEvents(fromCycles = 0.0, toCycles = 1.0, cps = 0.5).map { it.toVoiceData() }
-
-            line("WIRE [$code] ${wire.size} events: pan ${wire.map { it.pan }.distinct()}, freqHz ${wire.map { it.freqHz }.distinct()}, sound ${wire.map { it.sound }.distinct()}")
-        }
-
-        flush()
-    }
-
-    "L1-01 L6-02 L6-01 L7b-01: the NaN pan rendered end to end, alone and on a duck's source cylinder".config(enabled = requested) {
+    "N1: a pluck through lpf(16000, 200), analog 0 and 5, rendered end to end".config(enabled = requested) {
         line("== the render: KlangOfflineRenderer at 48 kHz, cps 0.5 (2 s per cycle)")
 
+        // The rows of KLANG-00425's findings (the NaN pan and pitch, the duck) left with their fixes: their guards are
+        // `WirePanSpec` here and the engine's specs named in that ticket. The N1 rows stay for their own ticket.
         val songs = listOf(
-            Triple("A: NaN pan alone", """note("c3").s("sine").pan("NaN")""", 1),
-            Triple("A0: control, pan 0.5", """note("c3").s("sine").pan("0.5")""", 1),
-            Triple(
-                "C: one NaN kick (3.0 s) on the duck's source, the bass plays on to 8 s",
-                """stack(note("c4*4").s("sine").cylinder(1).pan("<0.5 [0.5 0.5 NaN 0.5] 0.5 0.5>"), note("c2*8").s("saw").gain(0.5).duck(1, 0.8, 0.2))""",
-                4,
-            ),
-            Triple(
-                "C0: control, pan 0.5",
-                """stack(note("c4*4").s("sine").cylinder(1).pan("0.5"), note("c2*8").s("saw").gain(0.5).duck(1, 0.8, 0.2))""",
-                4,
-            ),
-            Triple(
-                "E: the same, the bass stops at 4 s",
-                """stack(note("c4*4").s("sine").cylinder(1).pan("<0.5 [0.5 0.5 NaN 0.5] 0.5 0.5>"), note("<[c2*8] [c2*8] ~ ~>").s("saw").gain(0.5).duck(1, 0.8, 0.2))""",
-                4,
-            ),
-            Triple(
-                "F: the same, the duck's depth falls to 0 at 4 s",
-                """stack(note("c4*4").s("sine").cylinder(1).pan("<0.5 [0.5 0.5 NaN 0.5] 0.5 0.5>"), note("c2*8").s("saw").gain(0.5).duck(1, "<0.8 0.8 0 0>", 0.2))""",
-                4,
-            ),
             Triple("N1: a pluck through lpf(16000, 200) with analog(0)", """note("a3").s("pluck").lpf(16000, 200).analog(0)""", 1),
             Triple("N1: a pluck through lpf(16000, 200) with analog(5)", """note("a3").s("pluck").lpf(16000, 200).analog(5)""", 1),
-            Triple("L1-02: a pluck at note NaN", """note("NaN").s("pluck")""", 1),
-            Triple(
-                "G: no NaN literal: pan 0, pow(-1), mul(0) on the kick at 3.0 s",
-                """stack(note("c4*4").s("sine").cylinder(1).pan("<0.5 [0.5 0.5 0 0.5] 0.5 0.5>").pan(pow(-1)).pan(mul(0)), note("c2*8").s("saw").gain(0.5).duck(1, 0.8, 0.2))""",
-                4,
-            ),
         )
 
         for ((label, code, cycles) in songs) {
@@ -162,54 +83,6 @@ class AuditSafetySprudelRepro : StringSpec({
 
             line("RENDER [$label] ${trace.text()}${if (thrown != null) "; THREW $thrown" else ""}")
             line("RENDER [$label] RMS per 0.5 s: ${trace.windowRms(0.5)}")
-        }
-
-        flush()
-    }
-
-    "L2-04 L8-03 L9-01: a gate before the onset from sprudel, rendered end to end".config(enabled = requested) {
-        line("== the throw hunt from patterns: KlangOfflineRenderer, 2 cycles at cps 0.5")
-
-        val songs = listOf(
-            """note("c3*8").s("sine").legato(-0.001).adsr(release = 0)""",
-            """note("c3*8").s("sine").freq(30000).legato(-0.001).adsr(release = 0)""",
-            """note("NaN*8").s("sine").legato(-0.001).adsr(release = 0)""",
-            """note("c3*8").s("supersaw").legato(-0.001).adsr(release = 0)""",
-            """note("c3*8").sound(Ignitor.sine().mul(Ignitor.progress())).legato(-0.205)""",
-            """note("c3*8").sound(Ignitor.sine().mul(Ignitor.progress())).legato(-0.001)""",
-            """note("c3*8").s("sine").legato(-0.205)""",
-            """note("c3*8").s("silence").legato(-0.001).adsr(release = 0)""",
-            """note("c3*8").s("saw").pregain(0).legato(-0.001).adsr(release = 0)""",
-            """note("c3*8").s("saw").pregain(0).legato(-0.001)""",
-            """stack(note("c3*8").s("silence").legato(-0.001).adsr(release = 0), note("c4").s("sine"))""",
-        )
-
-        for (code in songs) {
-            val pattern = SprudelPattern.compile(code)
-
-            if (pattern == null) {
-                line("HUNT [$code] did not compile")
-
-                continue
-            }
-
-            val trace = Trace()
-            val thrown = try {
-                KlangOfflineRenderer(sampleRate = SAMPLE_RATE).render(
-                    pattern = pattern,
-                    cycles = 2,
-                    cyclesPerSecond = 0.5,
-                    tailSec = 0.5,
-                    onBlock = { out, frames -> trace.take(left = out.left, right = out.right, frames = frames) },
-                )
-                null
-            } catch (t: Throwable) {
-                val site = t.stackTrace.firstOrNull { it.className.startsWith("io.peekandpoke.klang") && !it.className.contains(".audit.") }
-
-                "${t.javaClass.simpleName}(${t.message?.take(100)}) at ${site?.className?.substringAfterLast('.')}.${site?.methodName}:${site?.lineNumber}"
-            }
-
-            line("HUNT [$code] rendered ${fmt(trace.frames / SAMPLE_RATE.toDouble())} s; ${thrown?.let { "THREW $it" } ?: "no throw"}")
         }
 
         flush()
