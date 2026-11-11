@@ -413,7 +413,9 @@ sealed interface KatalystStageDsl {
      * The knobs follow sprudel (`threshold`, `knee`, `attack`).
      *
      * A LIMITER is this stage with limiter numbers, not a stage of its own: the `limiter(...)` door on
-     * the Katalyst builder appends one (phase 3 step 12 C2), so one DSP has one wire word.
+     * the Katalyst builder appends one (phase 3 step 12 C2), so one DSP has one wire word. Without a [lookahead] it is
+     * not a brick wall: the reduction rises over the [attack], so the first milliseconds of an onset pass over the
+     * threshold.
      *
      * @param threshold ceiling in dBFS where gain reduction starts. Cylinder twin:
      *   `compressor(threshold = ...)`.
@@ -576,7 +578,8 @@ sealed interface KatalystStageDsl {
      * (`_arithmetic_laws.kt` in `audio_be`, one function per operator) to every sample of both channels, so a bus
      * sample and a voice sample that meet the same numbers come out the same, clamps included (bit for bit against
      * the authored node; an optimized voice divides by multiplying with the reciprocal, one rounding apart). The
-     * operand is a knob like every other: a `Constant` or a `Param`, read once per block. Two differences from the
+     * operand is a knob like every other: a `Constant`, a `Param` or an expression over them (a modulator included),
+     * evaluated once per block. Two differences from the
      * Ignitor, both because this is a cylinder knob and not a voice's: a moving operand GLIDES per sample over
      * `KNOB_GLIDE_SECONDS` (a divisor as its reciprocal, so a move never passes a huge gain), and a non-finite one
      * reads as unset (the operator's identity; for `Min` and `Max` the stage passes the bus).

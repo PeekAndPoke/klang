@@ -104,8 +104,10 @@ The constants live in `audio_be/src/commonMain/kotlin/utils/numerical_safety.kt`
 
 The rule on every surface is the wire's NaN rule (`/dsl-design` section 4): a non-finite value a pattern writes
 reads as UNSET. It is not a clamp: every finite value passes raw (the Motor stays raw). A NaN that gets into a
-voice multiplies through the tree and reaches the cylinder mix, where nothing scrubs it and it latches the cylinder's
-effects for the rest of the playback, so each reader substitutes at its own read, once:
+voice multiplies through the tree for as long as the voice lives and reaches the cylinder mix. The cylinder's stages
+do not latch on it (each reads a bad sample as 0 or flushes its state; the duck since KLANG-00425, below), but the mix
+itself carries it on, and through the shared mix it silences every playback while it lasts. So each reader
+substitutes at its own read, once:
 
 - **The `IgnitorDsl.Param` leaf** (`IgnitorDslRuntime`, where a slot resolves against `ignitorParams`): a non-finite
   OVERRIDE takes the slot's authored default. It does not touch the authored default itself: an instrument that
@@ -138,8 +140,10 @@ effects for the rest of the playback, so each reader substitutes at its own read
   live in its row of `audio/ref/off-values.md`). Raw, a NaN amount froze the oscillator into a DC hold. Guard: the NaN
   rows of `PitchModSafetyTest` (2026-10-07).
 - **Katalyst slots**: a non-finite knob is the stage's declared OFF state (`audio/ref/katalyst.md`).
-- **A stage that caches its config compares the substituted value**, never the raw input (NaN != NaN).
-- **Not a render path**: `GraphCensus` reads the bag unguarded; it is a benchmark diagnostic only.
+- **A stage that caches its config never rebuilds on a NaN** (NaN != NaN): it compares the substituted value, or
+  compares the arriving value with `sameKnob`, which takes two NaN as equal (`audio/ref/katalyst.md`).
+- **Not a render path**: `GraphCensus` (a benchmark diagnostic) reads the bag as the build does: a non-finite slot
+  takes the slot's default.
 
 Two things the guards do NOT cover: a q or cutoff EXPRESSION can still overflow (`Plus` and `Minus` are clamp-free
 by contract, so two 1e308 params sum to an infinity), and the Karplus family writes `filtered * decay` into its
@@ -191,9 +195,10 @@ historical reference and to make the regression-test surface obvious.
 | `utils/phase_wrap.kt::wrapPhase`                | O(N) `while (p >= period) p -= period` loop hung the audio thread when given any extreme phase (Inf/NaN, or huge phase increments from upstream pitch-mod overflow). | 2026-04-27 — O(1) modulo fallback for out-of-range; recover `0.0` for `Inf`/`NaN`. Common-case fast path preserved. |
 
 The filter, envelope, and effect runtimes were all verified correctly guarded
-in the same review (cutoffs clamped before `tan()`, IIR state has
-`flushDenormal`, feedback paths bounded by explicit clamps). No outstanding
-gaps in the audio-rate path as of this commit.
+in the same review (cutoffs clamped before `tan()`, IIR state flushed, today by
+`flushState`, feedback paths bounded by explicit clamps). No gap in the
+audio-rate path was known at that review; the ones found since are in the
+sections above.
 
 ## Why this matters — the lesson
 

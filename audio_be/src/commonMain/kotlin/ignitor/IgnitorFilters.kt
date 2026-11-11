@@ -565,8 +565,7 @@ fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Filte
  * math is `onePoleLpfCoeff` in `filters/LowPassHighPassFilters.kt`, whose header holds the review notes.
  *
  * Class form (not SAM lambda) so the integrator state lives in a class field rather
- * than a closure-captured `var` (Kotlin/JS ObjectRef). Hot loop snapshots state into
- * a local for register-fast access.
+ * than a closure-captured `var` (Kotlin/JS ObjectRef). The hot loop reads and writes the field directly.
  *
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
  *   Lower = darker/warmer, higher = more transparent. Typical: 1000–8000.
@@ -615,7 +614,7 @@ fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgni
  *
  * The canonical bilinear topology `y = b0·(x − xPrev) + a1·y`: see the header of
  * `filters/LowPassHighPassFilters.kt` for the review history and topology rationale. Class form (not SAM
- * lambda) so state stays in class fields, snapshotted into locals for the hot loop.
+ * lambda) so state stays in class fields; the hot loop reads and writes them directly.
  *
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
  *   Frequencies below this are attenuated. Typical: 30–500.

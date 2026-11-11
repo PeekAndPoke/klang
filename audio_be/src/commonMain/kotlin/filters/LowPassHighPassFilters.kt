@@ -106,8 +106,8 @@ import kotlin.math.tan
 //   wins over the 5-line dup, and an abstract `tap()` lambda would defeat inlining. (The
 //   last one, `SvfBPF`, folded into `ResonatorBank`'s band loop in engine tidy-up step 12 (a);
 //   the decision stands for any tap added back.)
-// - Kept the per-sample `when(mode)` in `Ignitor.svf` — hoisting it to 4 inner loops
-//   would re-duplicate the state-update math we just deduped via `computeSvfCoeffs`.
+// - The `when(mode)` in `Ignitor.svf` is hoisted to one loop per tap (the node's KDoc says why); the coefficient
+//   math stays shared through `computeSvfCoeffs`.
 // - A resonator band's q is fixed while its bank sounds (`ResonatorBank`); `Ignitor.svf` supports audio-rate
 //   `q: Ignitor`. Different surfaces, intentional. The retired strip pipeline only modulated
 //   cutoff, never Q.

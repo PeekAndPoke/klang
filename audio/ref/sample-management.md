@@ -5,19 +5,20 @@ All types in `audio_fe/src/`.
 ## Overview
 
 ```
-SampleRequest (bank + sound + index + note)
+SampleRequest (bank + sound + index + note, each nullable)
     ↓
-Samples.resolve(request) → URL
+Samples.get(request): Index.resolve(request) → ResolvedSample (a Sample: a URL or bytes)
     ↓
-AssetLoader.load(url) → ByteArray  (with UrlCache)
+AssetLoader.download(url) → ByteArray?  (CachingAssetLoader over a UrlCache)
     ↓
-AudioDecoder.decode(bytes) → MonoSamplePcm
+AudioDecoder.decodeMonoFloatPcm(audioBytes) → MonoSamplePcm?
     ↓
-Cmd.Sample.Complete(request, pcm) → KlangCommLink → audio_be
+Cmd.Sample.Complete(req, note, pitchHz, pcm) → KlangCommLink → audio_be  (the JS host sends it as chunks)
 ```
 
-The frontend receives `Feedback.RequestSample` from the backend, runs the pipeline above,
-then sends `Cmd.Sample.Complete` (or `Cmd.Sample.NotFound`) back.
+The frontend's `SamplePreloader` (module `klang`) runs the pipeline above for the samples a playback's voices use
+before they are sent, and again for each `Feedback.RequestSample` the backend sends, then sends
+`Cmd.Sample.Complete` (or `Cmd.Sample.NotFound`).
 
 ## Samples Registry
 
@@ -25,55 +26,43 @@ then sends `Cmd.Sample.Complete` (or `Cmd.Sample.NotFound`) back.
 
 ### Samples.Index
 
-Describes the catalogue structure. Built by the application at startup.
+Describes the catalogue structure: an immutable data class, built from the sample catalogues by
+`SampleIndexLoader` (`samples/SampleIndexLoader.kt`).
 
 ```kotlin
-class Samples.Index {
-    // Register a bank with its sound providers
-    fun addBank(bank: String, vararg providers: SoundProvider)
-
-    // Resolve a SampleRequest to a URL (null if not found)
-    fun resolve(request: SampleRequest): String?
+data class Samples.Index(
+    val banks: List<Bank>,                       // Bank(key, sounds: List<SoundProvider>)
+    val aliases: Map<String, String> = emptyMap(), // bank name → bank name
+) {
+    // The bank (aliases followed; the default sounds are the bank "") and its sound; null if not found
+    suspend fun resolve(request: SampleRequest): ResolvedSample?
 }
 ```
 
-### Samples.SoundProvider (sealed)
+### Samples.SoundProvider (an interface)
 
-| Subtype    | When to use                                |
-|------------|--------------------------------------------|
-| `Pitched`  | One sample per semitone; selects by `note` |
-| `Single`   | Single sample URL for the whole sound      |
-| `Variants` | Multiple files indexed by `soundIndex`     |
-| `Aliased`  | Redirects one sound name to another sound  |
-
-Example registration:
-
-```kotlin
-index.addBank("mdk",
-    SoundProvider.Single("bd", "https://cdn/.../bd.wav"),
-    SoundProvider.Variants("hh", listOf("hh0.wav", "hh1.wav", "hh2.wav")),
-    SoundProvider.Pitched("piano", noteToUrlMap),
-)
-```
+Each provider has a `key` (the sound's name), a `variantCount`, a `sampleType` (`SINGLE`, `PITCHED`: picked by
+`note`, `VARIANTS`: picked by `index`) and `provide(request)`. The two implementations live in `SampleIndexLoader`:
+one for a soundfont bundle and one for a generic bundle of sample files.
 
 ## AudioDecoder
 
-`audio_fe/src/commonMain/kotlin/decoders/AudioDecoder.kt`
+`audio_fe/src/commonMain/kotlin/samples/AudioDecoder.kt`
 
 ```kotlin
 interface AudioDecoder {
-    suspend fun decode(bytes: ByteArray, mimeType: String?): MonoSamplePcm
+    suspend fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm?
 }
 ```
 
-### JvmAudioDecoder (jvmMain)
+### JvmAudioDecoder (jvmMain, `decoders/`)
 
 - Detects format from magic bytes (WAV: `RIFF`, MP3: `ID3`/`0xFF 0xFB`)
 - WAV: parsed via `javax.sound.sampled.AudioSystem`
 - MP3: decoded via JLayer (`javazoom.jl.decoder`)
 - Converts to mono PCM (every channel averaged) and keeps the file's own sample rate: no resampling at decode
 
-### BrowserAudioDecoder (jsMain)
+### BrowserAudioDecoder (jsMain, `BrowserAudioDecoder.kt`)
 
 - Delegates to `decodeAudioData(buffer)` (Web Audio API) on an `OfflineAudioContext(1, 1, 48000)`, so the browser's
   own resampler converts every file to 48 kHz before the engine sees it (the fallback `AudioContext()` decodes at the
@@ -102,8 +91,9 @@ engine not at 48 kHz converts twice today), is open in KLANG-00430, "Decide".
 
 ```kotlin
 interface UrlCache {
-    suspend fun get(url: String): ByteArray?
-    suspend fun put(url: String, data: ByteArray)
+    suspend fun has(uri: String): Boolean
+    suspend fun get(uri: String): ByteArray?
+    suspend fun getOrPut(uri: String, loader: suspend () -> ByteArray?): ByteArray?
 }
 ```
 
@@ -118,36 +108,39 @@ interface UrlCache {
 
 `audio_fe/src/commonMain/kotlin/utils/AssetLoader.kt`
 
-Fetches a URL as `ByteArray`. Checks cache first; on miss, performs HTTP GET and stores result.
+Fetches a URL as `ByteArray`.
 
 ```kotlin
-class AssetLoader(private val cache: UrlCache) {
-    suspend fun load(url: String): ByteArray
+interface AssetLoader {
+    suspend fun download(uri: String): ByteArray?
 }
 ```
 
-Platform HTTP clients:
-
-- **JVM**: `java.net.URL.openStream()`
-- **JS**: `fetch()` API (Kotlin/JS extern)
+- `KtorAssetLoader` (the default, `AssetLoader.default`): an HTTP GET through a Ktor `HttpClient`, on both hosts;
+  a failed status throws.
+- `CachingAssetLoader(cache, delegate)`: asks the `UrlCache` first (`getOrPut`), and a URL already in flight is
+  loaded once.
 
 ## Sample Loading Flow in Detail
 
-1. `VoiceScheduler` needs a sample, sends `Feedback.RequestSample(SampleRequest)`
+1. The frontend's `SamplePreloader` loads the samples of the voices it is about to send; the backend's
+   `VoiceScheduler` also asks, when it schedules a sample voice whose sample it does not hold
+   (`Feedback.RequestSample`, once per sample, `SampleStore.requestIfMissing`)
 2. Frontend receives it on the KlangCommLink feedback channel
-3. `Samples.Index.resolve(request)` → URL string (or null → `Cmd.Sample.NotFound`)
-4. `AssetLoader.load(url)` → bytes (cache hit or HTTP fetch + cache put)
-5. `AudioDecoder.decode(bytes)` → `MonoSamplePcm`
-6. Frontend sends `Cmd.Sample.Complete(request, pcm)` on the command channel
-7. `VoiceScheduler` receives it, stores PCM, activates the pending sample voice
+3. `Samples.get(request)`: `Index.resolve(request)` (null → `Cmd.Sample.NotFound`)
+4. `AssetLoader.download(url)` → bytes (cache hit or HTTP fetch + cache put)
+5. `AudioDecoder.decodeMonoFloatPcm(bytes)` → `MonoSamplePcm`
+6. Frontend sends `Cmd.Sample.Complete` on the command channel (chunked on the JS host)
+7. The backend's `SampleStore` stores the PCM. There is no pending sample voice: a voice whose sample is not
+   complete at its start is dropped whole and counted soundless
 
 ## MonoSamplePcm (reminder)
 
 ```kotlin
-data class MonoSamplePcm(
+class MonoSamplePcm(
     val sampleRate: Int,
-    val pcm: FloatArray,        // always mono
-    val meta: SampleMetadata,
+    val pcm: DoubleArray,       // always mono; the decoders widen their floats once, here
+    val meta: SampleMetadata = SampleMetadata.default,
 )
 ```
 

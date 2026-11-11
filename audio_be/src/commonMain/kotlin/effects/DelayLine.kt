@@ -55,10 +55,10 @@ import kotlin.math.round
  *   flanger/comb regimes. Note: linear interpolation introduces a mild HF
  *   roll-off (~−3 dB at Nyquist) that's only audible in short-delay use cases.
  * - **Feedback** path with smooth saturation safety: rather than a hard clip,
- *   the recirculated sample is passed through [ShapingFuncs.softCap] to
+ *   the recirculated sample is passed through [ShapingFuncs.softCap] (to the [cap]) to
  *   prevent runaway accumulation when `feedback ≥ 1.0` while keeping the
  *   character musical (smooth tanh-style knee). The ring buffer is therefore
- *   always bounded to ±1, which together with the non-finite-rejecting
+ *   always bounded by the cap, which together with the non-finite-rejecting
  *   [time] / [feedback] setters means a finite input always
  *   produces a finite output — no per-sample scrub needed. Callers are
  *   expected to feed finite samples (consistent with the engine's raw style).
@@ -239,7 +239,8 @@ class DelayLine(
         }
 
     /**
-     * Ceiling the feedback path saturates toward ([ShapingFuncs.softCapTo]).
+     * Ceiling the feedback path saturates toward ([ShapingFuncs.softCapTo]'s law). Unlike `softCapTo`, whose cap at or
+     * below 0 is silence, the line reads a cap at or below 0 as 1.0 ([process]).
      *
      * The engine is raw: any [feedback] is allowed. Above 1.0 the ring grows on every lap, and this
      * decides *how loud* that runaway settles (just under the cap) rather than whether it is

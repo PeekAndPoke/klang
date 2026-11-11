@@ -18,7 +18,7 @@ import kotlin.random.Random
  * [Ignitor] source, enabling samples to flow through the same signal chain
  * as synthesized oscillators.
  *
- * When [analog] > 0, applies Perlin noise drift to the playhead advance rate,
+ * When [analog] > 0, applies the [AnalogDrift] lane (Ornstein-Uhlenbeck) to the playhead advance rate,
  * simulating wow & flutter from vinyl records and tape machines.
  *
  * Pitch is controlled via [rate] and

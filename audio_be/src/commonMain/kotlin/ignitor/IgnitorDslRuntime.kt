@@ -88,9 +88,10 @@ fun IgnitorDsl.buildExciter(
 }
 
 /**
- * The sample rate a build assumes when the caller does not say, a test/tool convenience. Only ONE
- * build-time consumer reads it: the drift lane of a filter with `humanize = true` derives its time
- * constants from it (`analogDriftStepRate`). (The Ignitor phaser builds its kernel at this rate too, but only as a
+ * The sample rate a build assumes when the caller does not say, a test/tool convenience. Several build-time
+ * consumers read it: the drift lane of a filter with `humanize = true` derives its time constants from it
+ * (`analogDriftStepRate`), the tremolo's LFO edges are sized in samples from it (`TREMOLO_EDGE_SECONDS`), the
+ * declick's settle time is counted at it, and an oversampling region's body builds at a multiple of it. (The Ignitor phaser builds its kernel at this rate too, but only as a
  * placeholder: it binds the context's rate at the first block, before the kernel runs.)
  *
  * Every path that RENDERS A VOICE passes the backend's own rate, through

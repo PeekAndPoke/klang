@@ -13,8 +13,8 @@ package io.peekandpoke.klang.audio_be
  * ([HouseStage.process] writes a clipped [StereoBuffer]). Conversions only happen at the
  * platform output boundaries (to `Float32Array` in the Web Audio worklet, to 16-bit PCM
  * bytes for `SourceDataLine` and the WAV writer through [writePcm16]) and at the
- * sample-asset playback boundary (`MonoSamplePcm.pcm: FloatArray` is widened to
- * [AudioBuffer] when read in [io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor]).
+ * sample-asset boundary (the decoders widen their floats once, into `MonoSamplePcm.pcm: DoubleArray`;
+ * [io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor] reads the doubles as they are).
  */
 typealias AudioSample = Double
 

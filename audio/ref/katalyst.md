@@ -50,9 +50,13 @@ KLANG-00238 (phase3 step12 master as katalyst).
   sleeps, not reset), and the n-th noise of a chain is seeded by its position. A slot leaf that reads a non-finite
   value unsets the whole knob, and an unset knob's clocks pause. The build-time knobs (`lookahead`, `distort`'s
   `shape`, a region's factor) are numbers, and an `eq` section takes a number or a `Kat.param` only (decision Q2, E2).
-- **A non-finite knob is the declared OFF state** (`KatalystKnob.written` is false for it). This includes a
-  non-finite `wet`, which turns the stage off for the whole cylinder: not a pure improvement over the old field path,
-  accepted so that "non-finite is unset" holds on every knob. Guard: `KatalystSlotResolverSpec`.
+- **A non-finite slot value is never a write** (`KatalystKnob.written` is false for it). A stage gated on its `wet`
+  being written is off for any non-finite `wet`, for the whole cylinder: not a pure improvement over the old field
+  path, accepted so that "non-finite is unset" holds on every wet. A knob a stage reads by its value follows that
+  stage's own rule, and +Infinity is not always off: `reverb.size` +Infinity is the largest room
+  (`Reverb.normalizeSize`, NaN is off), `delay.time` +Infinity is off, and `duck.depth` +Infinity declares the duck,
+  at depth 1 on a new one, while a reused one keeps the depth it had (`Ducking.applyKnobArgs` drops a non-finite
+  depth). Guard: `KatalystSlotResolverSpec`.
 - **Delay and reverb are insert-style**: the feed is the cylinder mix at the stage's position times the owner's one
   `wet`, the return is added to the mix, the dry stays. A stage runs when its wet is WRITTEN (a written 0 included)
   or authored above 0 (`stageAskedFor` in `KatalystChainBuilder.kt`); an authored 0 nobody writes rents nothing.
@@ -70,7 +74,7 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | stage | switch on / off | knob changes |
 |---|---|---|
 | body, vowel, cylinder EQ | `KatalystFilterSwap`: TWO banks, a linear crossfade over `BANK_CROSSFADE_SECONDS` (0.05 since 2026-10-17, by ear; 0.02 before), counted in samples. A change during a fade is refused by the swap and PARKED by the host as a config, latest wins, installed on the landing block | a changed material or vowel is a new bank (the bank in service is never retuned; the morph was rejected by ear, 2026-09-20). Body and vowel `wet` and `floor` move the blend IN PLACE (knob expressions step 5c): the dry and wet coefficients glide per sample on every bank the swap holds, over 50 ms, one block when modulated, no install; a mix at 0 bypasses once the blend has landed there, the landing zeroes the bands |
-| delay | Off, Active, Draining state machine (`KatalystDelayEffect`). EVERY off (an owner change, a `katp` time below the gate, an unset or non-finite time) stays Active while the wet glide takes the feed to 0, and the block the glide lands in drains on its own, no further off-config needed (engine follow-up 42, maintainer Q39, 2026-10-13: "fade, do not cut"; knob expressions step 5b built it for a modulated time). On an owner change the new owner's first 50 ms reach the old ring at a falling level, accepted. A return from Draining glides the wet up from 0, and so does a switch-on out of Off once a block has run since the stage's build or reset (its `fresh`; KLANG-00428, L7a-01: the snap fed the ring a step of the live mix, a click one delay time later); the first switch-on of a fresh stage snaps, except on a modulated time, whose every return, the first activation included, glides up from 0. The reset that ends a life is O(1) (`DelayLine.validFrames`: an old cell reads as zero), and a switch-off of a delay over `MAX_SCANNED_TAP_SECONDS` (1 s) starts its drain from the tail ceiling instead of a scan | `time`: `DelayLine` crossfades the old tap to the new over 50 ms, a change mid-crossfade is parked; `feedback`: glides per block and ramps per sample; `wet`: per-sample level glide |
+| delay | Off, Active, Draining state machine (`KatalystDelayEffect`). EVERY off (an owner change, a `katp` time below the gate, an unset or non-finite time) stays Active while the wet glide takes the feed to 0, and the block the glide lands in drains on its own, no further off-config needed (engine follow-up 42, maintainer Q39, 2026-10-13: "fade, do not cut"; knob expressions step 5b built it for a modulated time). On an owner change the new owner's first 50 ms reach the old ring at a falling level, accepted. A return from Draining glides the wet up from 0, and so does a switch-on out of Off once a block has run since the stage's build or reset (its `fresh`; KLANG-00428, L7a-01: the snap fed the ring a step of the live mix, a click one delay time later); the first switch-on of a fresh stage snaps, except on a modulated time, whose every return, the first activation included, glides up from 0. The reset that ends a life is O(1) (`DelayLine.validFrames`: an old cell reads as zero), and a switch-off of a delay over `MAX_SCANNED_TAP_SECONDS` (1 s) starts its drain from the tail ceiling instead of a scan | `time`: `DelayLine` crossfades the old tap to the new over 50 ms, a change mid-crossfade is parked; `feedback`: glides per block and ramps per sample; `cap`: at once; `wet`: per-sample level glide |
 | reverb | the same state machine, the delay's feed fade on every off and its glide from 0 out of Off once the bus has run (or always, for a modulated size) (`KatalystReverbEffect`) | `size` glides on the normalized 0..1 axis; `lowpass` (the damping cutoff, a real cutoff since KLANG-00428) does not glide, measured inaudible under the old law, not measured again; `wet` as the delay's |
 | compressor | a linear blend with dry over `KNOB_GLIDE_SECONDS`; ON fades a reset instance in; the instance is built with the effect, never on the audio thread | `threshold`, `ratio` (as its inverse), `knee` glide per sample (`Compressor.processGliding`) as one move when it only adds reduction (NOT with a `lookahead`: there the three apply at once and only the detector's hold, release and boxes shape the step, `Compressor.processGliding`'s KDoc; audit finding L7a-04); a move whose NET effect at 0 dBFS (a fixed loud reference, never the signal) is less reduction (threshold up, ratio down, knee narrower, or a mix that relaxes on balance) releases on the same shared fraction at the compressor's release time constant, never faster than the glide (`CompressorKnobMove`, by ear 2026-10-17); a modulated knob stays outside the move; `attack`, `release` apply at once |
 | phaser | the wet and floor coefficients glide to identity; the cascade is dropped only on the landing | `wet`, `floor` per sample; `center`, `sweep` per block with alpha continuous across the seam (`PhaserCore.prepareBlock`); `rate` at once |
@@ -96,7 +100,8 @@ The glide time itself is an open question for the maintainer's ear: KLANG-00213 
 
 ## When a cylinder may stop, and when a chain leaves
 
-- **A cylinder deactivates only when** its silence grace has run (`silentBlocksBeforeTailCheck`, 10 blocks), its
+- **A cylinder deactivates only when** its silence grace has run (`silentBlocksBeforeTailCheck`, 10 visits; `Cylinders`
+  visits one rented cylinder per block, so with N rented that is about 10 x N blocks), its
   chain reports no tail, AND no voice has checked in on it (`Cylinder.checkIn`, owner or not, tails included; one
   block of grace). A muted voice keeps its cylinder while it plays, so the fader glides and a phaser sweep continues;
   a culled voice has ended and keeps nothing.
@@ -191,8 +196,9 @@ reverb, the filter swap and the compressor copy it. What every copy must keep:
   survives Active to Draining to Active, so it lives on the effect).
 - Every door into a terminal state establishes the SAME precondition (the duck's `endLife` settles its weight at
   0 through `KnobGlide.settleAt`, whatever the door). A handover carries glide state across (`KnobGlide.carryOver`).
-- A stage that caches its config compares and stores the SUBSTITUTED values, never the raw input (a NaN is never
-  equal to itself, and a cache keyed on it rebuilds every block).
+- A stage that caches its config must not rebuild on a NaN (a NaN is never equal to itself, and a cache keyed on it
+  rebuilds every block): it either compares and stores the SUBSTITUTED values, or stores the arriving values and
+  compares them with `sameKnob`, which takes two NaN as equal (the delay, the reverb, the phaser and the compressor).
 - The permanent guards per conversion: an identity spec that counts state objects by identity (not `equals`), and
   one behaviour row per non-obvious decision (e.g. "a delay that returns mid-drain keeps the ring AND the tail
   ceiling"). Stages with no state of their own (gain, phaser, duck) use `KnobGlide` alone; do not add state classes

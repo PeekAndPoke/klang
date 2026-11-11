@@ -228,8 +228,8 @@ fun clickKatalystCases(): List<ClickCase> = buildList {
     arithmetic(stage = "plus", build = { KatalystBuilder().plus(it) }, key = "op.plus", base = mapOf("op.plus" to 0.0), far = 0.25)
     arithmetic(stage = "div", build = { KatalystBuilder().div(it) }, key = "op.div", base = mapOf("op.div" to 1.0), far = 4.0)
     arithmetic(stage = "pow", build = { KatalystBuilder().pow(it) }, key = "op.pow", base = mapOf("op.pow" to 1.0), far = 2.0)
-    arithmetic(stage = "min door (Max stage, a cap)", build = { KatalystBuilder().min(it) }, key = "op.cap", base = emptyMap(), far = 0.3)
-    arithmetic(stage = "max door (Min stage, a floor)", build = { KatalystBuilder().max(it) }, key = "op.floor", base = emptyMap(), far = -0.3)
+    arithmetic(stage = "min door (Max stage, a floor)", build = { KatalystBuilder().min(it) }, key = "op.floor", base = emptyMap(), far = 0.3)
+    arithmetic(stage = "max door (Min stage, a cap)", build = { KatalystBuilder().max(it) }, key = "op.cap", base = emptyMap(), far = -0.3)
 
     val limiter = KatalystBuilder().limiter(threshold = Kat.param(name = "limiter.threshold", default = -1.0), lookahead = 0.005).node
     addAll(jump(stage = "limiter (lookahead 5 ms)", dsl = limiter, base = emptyMap(), knob = "limiter.threshold", far = -12.0))

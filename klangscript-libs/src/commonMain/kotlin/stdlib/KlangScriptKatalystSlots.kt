@@ -147,7 +147,10 @@ internal object KlangScriptKatalystReverbSlots {
     @KlangScript.Property
     val size: KatalystKnobDsl = KatalystDsl.Slots.reverb.size
 
-    /** `reverb.lowpass`. Damping of the tail as a lowpass cutoff in Hz, default unset (undamped). */
+    /**
+     * `reverb.lowpass`. Damping of the tail: the -3 dB cutoff in Hz of the lowpass in the room's feedback, lower is
+     * darker. Default unset: the room's fixed default damping (Freeverb's pole).
+     */
     @KlangScript.Property
     val lowpass: KatalystKnobDsl = KatalystDsl.Slots.reverb.lowpass
 }

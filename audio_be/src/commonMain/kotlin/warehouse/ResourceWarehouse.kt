@@ -152,8 +152,8 @@ class ResourceWarehouse(
     val scratch: ScratchBuffers = ScratchBuffers(blockFrames).apply {
         ensureCapacity(SCRATCH_DEPTH)
         for (factor in WARM_OVERSAMPLE_FACTORS) {
-            // Creation is the whole cost: a sub-pool's constructor already holds 4 work buffers,
-            // and its real depth is 1 (see WARM_OVERSAMPLE_FACTORS). Nothing more to pre-size.
+            // Creation only: a sub-pool's constructor already holds 4 work buffers. A region nests deeper and grows
+            // its sub-pool once per engine, at its first note (see WARM_OVERSAMPLE_FACTORS).
             oversample(factor)
         }
     }
@@ -191,11 +191,11 @@ class ResourceWarehouse(
 
         /**
          * The WARMED oversample factors, not the set the DSL accepts. A region's factor
-         * knob takes any number (`Oversampler.factorOf` truncates it to a whole factor) and
-         * `Oversampler.factorToStages` floors that to a power of two, so 32× is legal; a factor
-         * outside this list builds its sub-pool on first use, inside render, and `lateAllocations`
-         * cannot see that (it counts growth, not creation). 16× is the largest anyone has authored;
-         * beyond it the trade is the user's.
+         * knob takes any number (`Oversampler.factorOf` truncates it to a whole factor),
+         * `Oversampler.factorToStages` floors that to a power of two, and a region stops at 16×
+         * (`REGION_MAX_STAGES`), so no door reaches 32× any more; a factor outside this list builds its
+         * sub-pool on first use, inside render, and `lateAllocations` cannot see that (it counts growth,
+         * not creation).
          *
          * A sub-pool is NOT pre-sized beyond its construction default (4 work buffers), and the DoubleArray half stays
          * EMPTY, since nothing on an oversampled path calls `useDouble` (only `ModApplyingIgnitor`, on the main pool).

@@ -1830,7 +1830,8 @@ object Ignitors {
 
     /**
      * The one engine behind every unison oscillator (supersaw, superramp, supersquare, supertri, supersine): a stack of
-     * detuned voices summed to mono with the super-saw character: center-dominant [sideAtten] gains, per-voice
+     * detuned voices summed to mono with the super-saw character: center-weighted [sideAtten] gains (nearly flat at the
+     * default 0.1: the edge voices at 0.9 of the middle), per-voice
      * amplitude [gainJitter], per-voice drift lanes ([DriftLanes] blended by [analogSpread]), even [detune] spacing
      * (shaped by [spreadPower]) with the **gain-weighted mean detune removed** so the pitch centroid sits exactly on the
      * note. [polarity] flips the waveform and is baked into the voice gains (no per-sample sign flip).
@@ -2484,7 +2485,7 @@ object Ignitors {
 
     /**
      * Supersine: a detuned stack of pure sines (mono) on the shared [UnisonStackIgnitor] / super-saw
-     * unison engine (center-dominant gains, per-voice drift, centroid-anchored detune; its own
+     * unison engine (center-weighted gains, per-voice drift, centroid-anchored detune; its own
      * `SUPERSINE_*` knobs, seeded to the super-saw values). Inherently band-limited, no anti-aliasing
      * needed. Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
@@ -2524,7 +2525,7 @@ object Ignitors {
 
     /**
      * Supersquare: a detuned stack of the finite-slope pulse shape (duty 0.5, mono) on the shared
-     * [UnisonStackIgnitor] / super-saw unison engine (center-dominant gains, per-voice drift,
+     * [UnisonStackIgnitor] / super-saw unison engine (center-weighted gains, per-voice drift,
      * centroid-anchored detune; its own `SUPERSQUARE_*` knobs, seeded to the super-saw values). Edges
      * are finite-slope flanks read through a box of each voice's increment, like the mono square. Voice count is read
      * lazily from the [voices] Ignitor param on the first block.
@@ -3158,8 +3159,9 @@ object Ignitors {
     // ═════════════════════════════════════════════════════════════════════════════
 
     /**
-     * Center-dominant unison gain profile for the super-saw. The least-detuned (center)
-     * voices are loudest; the most-detuned (edge) voices form a quieter halo — the
+     * Center-weighted unison gain profile for the super-saw. The least-detuned (center)
+     * voices are loudest; the most-detuned (edge) voices form a quieter halo (at the default [SUPERSAW_SIDE_ATTEN],
+     * 0.1, only slightly quieter: 0.9 of the middle, so the profile is nearly flat): the
      * JP-8000 / Szabo Super Saw character. Summing all voices flat (`1/v`) sounds uniform
      * and comb-filtered ("plastic"), and with random start phases an unlucky draw can sum
      * destructively so the note barely rings. A dominant center voice anchors the note

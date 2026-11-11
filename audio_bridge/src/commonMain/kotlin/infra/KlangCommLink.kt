@@ -139,7 +139,8 @@ class KlangCommLink(capacity: Int = 8192) {
                  * Splits the PCM for upload.
                  *
                  * [chunkFrames] counts **DoubleArray elements** (mono frames), NOT bytes: at 8
-                 * bytes each, 64 * 1024 frames is a 512 KB message. The parameter used to be
+                 * bytes each, the default 64 * 1024 frames is a 512 KB message; the one caller
+                 * (`JsAudioBackend`) asks for 128 * 1024, a 1 MB message. The parameter used to be
                  * called `chunkSizeBytes`, which read as 8× smaller than it is (64 KB believed,
                  * 512 KB actual) and made the upload look far more throttled than it was.
                  *

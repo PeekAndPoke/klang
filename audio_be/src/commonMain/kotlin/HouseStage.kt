@@ -25,7 +25,7 @@ import io.peekandpoke.klang.audio_bridge.constants.LIMITER_THRESHOLD_DB
  *
  * Extracted from [KlangAudioRenderer] so the per-playback mixdown can run it **once** on the summed
  * mix: the safety brick belongs on the final output, not per engine. See
- * KLANG-00176 (per playback engine) (D2). Behaviour is identical to the old inline post-chain.
+ * KLANG-00176 (per playback engine) (D2).
  */
 class HouseStage(
     sampleRate: Int,

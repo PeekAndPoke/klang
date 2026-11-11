@@ -27,7 +27,9 @@ Teardown fade   (applyTeardownFade, unless the tree's root is a built amplitude 
                  switches classic()'s envelope off, and the node hands on its inner's answer: the
                  instrument's own static-release envelope ends the voice only when nothing built
                  sits over it, neither a stage of the instrument's own nor a classic() stage the
-                 pattern wrote; otherwise the fade does)
+                 pattern wrote; otherwise the fade does). The fade shapes the END only: a voice
+                 without its own envelope starts as its tree starts. The start is the author's
+                 (maintainer, 2026-11-11, KLANG-00427); a soft start is the voice envelope's job
 
 The channel     (mixIntoCylinder → mixes to cylinder)
   2. pan + gain → cylinder mix
@@ -126,8 +128,8 @@ falls; one that starts at or after it never sounds and ends at once (audit L2-02
   admitted voice's first `generate()` has `voiceElapsedFrames` 0
 - A replace (`replaceVoices`) drops the resent voices a playing one covers (`dropResentDuplicates`: same start, equal
   data, 1 to 1); only the active voices of the same start are asked, sorted once per command (audit L2-09)
-- Sample resolution: when a sample voice is due but the PCM isn't loaded yet,
-  sends `Feedback.RequestSample` to frontend and delays activation
+- Sample resolution: a sample voice asks for its PCM when it is scheduled (`Feedback.RequestSample`, once per
+  sample); a voice whose sample is not complete at its start is dropped whole and counted soundless, never delayed
 - Solo: `SoloTracker` keeps per source its newest solo event ("soloed at amount a from s until t") from any event
   (control events included); a voice of a soloed source plays at `Voice.gainMultiplier` 1.0, every other voice at
   `1 - amount` of the strongest solo, reached on a 1.5 s ramp (0 only at `solo(1.0)`), and a voice that has just lost

@@ -7,16 +7,20 @@
 A single-engine render loop: the engine alone, for the benchmarks and the engine specs. What is heard, live and in an
 offline render (KLANG-00399 step 4), renders through `PlaybackEngineDispatcher`, which runs the same chain.
 
+`renderBlock(cursorFrame, out)` is the dispatcher's own block (`PlaybackEngineDispatcher.renderBlock`) over one
+engine, `PlaybackEngine.renderInto`:
+
 ```
-renderBlock(cursorFrame: Double, out: StereoBuffer)
-  1. Clear mix buffers + cylinders
-  2. VoiceScheduler.processBlock()        → voices write to voiceBuffer + cylinders
-  3. Cylinders.processAndMix()               → cylinder effects + mix to StereoBuffer
-  4. Master limiter (lookahead 5 ms, anticipating) (−1 dB threshold)     → gain reduction applied to StereoBuffer
-  5. Clip ±1.0 (no quantisation)        → StereoBuffer out (floating point; 16-bit only at the JVM/WAV edge)
+  1. VoiceScheduler.process()                → voices render and mix into their cylinders
+  2. Cylinders.processAndMix()               → cylinder chains, ducks, mix to the shared mix (or to the engine's own
+                                               bus while a master chain or a playback gain is in play)
+  3. MasterBus, PlaybackGain                 → only while in play
+  4. HouseStage, once on the sum             → DC blockers, the house limiter (lookahead 5 ms, anticipating,
+                                               −1 dB threshold, 2 dB knee), clip ±1.0 (no quantisation)
+                                             → StereoBuffer out (floating point; 16-bit only at the JVM/WAV edge)
 ```
 
-### Master Limiter Settings
+### House Limiter Settings
 
 | Parameter | Value                                                                        |
 |-----------|------------------------------------------------------------------------------|
@@ -24,24 +28,28 @@ renderBlock(cursorFrame: Double, out: StereoBuffer)
 | Ratio     | 20:1                                                                         |
 | Attack    | 5 ms — the gain-SMOOTHING length, not a one-pole (= the lookahead window)    |
 | Lookahead | 5 ms — anticipating: holds the ceiling on transients instead of chasing them |
+| Knee      | 2 dB                                                                         |
 | Release   | 100 ms                                                                       |
 
 ## Cylinders
 
 `audio_be/src/commonMain/kotlin/cylinders/Cylinders.kt`
 
-Manages up to 16 effect buses (cylinder IDs 0–15). Each voice is routed to one cylinder.
+The effect buses of one playback: up to `MAX_CYLINDERS` (255) ids, folded by `%` and keeping their sign, so 509
+distinct cylinders, each rented on first use and kept in an array by id and in a list in rent order (the mix order).
+Each voice is routed to one cylinder.
 
 ### processAndMix() order
 
 ```
-1. For each active cylinder:
-     cylinder.processEffects()           → delay, reverb, phaser applied in-place
-2. For each active cylinder:
-     ducking.applySidechain(...)      → cross-cylinder sidechain compression
+1. For each rented cylinder:
+     commitOwner, pollPendingChain, processEffects()   → the cylinder's Katalyst chain, in place
+2. For each cylinder with a duck:
+     its duck reads its source's mix as that source's chain left it, before any duck writes
 3. For each active cylinder:
-     mix cylinder stereo buffer → master StereoBuffer (with cylinder gain)
-4. Round-robin: deactivate one stale cylinder per block
+     add its stereo buffer into the mix, no gain (the fader is the chain's `gain` stage)
+4. Round-robin: visit (`tryDeactivate`) one rented cylinder per block, so each is visited about once every N blocks
+   for N rented
 ```
 
 ### offer(cylinderId, voice, blockStart) and checkIn(cylinderId, blockStart)
@@ -82,7 +90,7 @@ slots (pitch pipeline step 1), the vibrato as its `vibrato.*` slots (step 2), `a
 | `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
 | `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
 | `KatalystDuckEffect`       | `Ducking`       | `duck.cylinder` names a source and `duck.depth` above 0             |
-| `KatalystDistortEffect`    | `DistortionCore` (one per channel, the house DC pole) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
+| `KatalystDistortEffect`    | `DistortionCore` (one per channel, the fixed house DC pole 0.999, its corner moving with the rate) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
 
 How each stage switches and glides, when a cylinder may deactivate, the chain swap and the output host (`MasterBus`):
 `audio/ref/katalyst.md`.
@@ -130,12 +138,13 @@ Sidechain-triggered gain reduction across cylinders.
 
 ### DelayLine
 
-Fixed-size circular buffer delay with feedback and multi-tap mixing.
+A circular buffer delay with feedback, its ring rented from the warehouse and grown when a longer time needs it. One
+tap, two during the 50 ms crossfade of a time change.
 
 | Slot             | Meaning                                           |
 |------------------|---------------------------------------------------|
 | `delay.time`     | Delay time in seconds                             |
-| `delay.feedback` | Feedback coefficient (0-1)                        |
+| `delay.feedback` | Feedback coefficient, raw: above 1 the ring grows each lap, the cap decides how loud it settles |
 | `delay.cap`      | Ceiling the feedback saturates toward             |
 | `delay.wet`      | How much of the cylinder mix feeds the line (insert) |
 

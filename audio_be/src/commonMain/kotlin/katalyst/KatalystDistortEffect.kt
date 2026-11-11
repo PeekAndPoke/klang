@@ -30,9 +30,11 @@ import kotlin.math.min
  * ([DistortionCore.drive]): the drive and the shaper, the DC blocker after, no soft cap, at the rate of the bus it
  * is in (inside an oversampling region, the region's; its own oversampling factor retired with KLANG-00214
  * (oversampling regions) step 4, and with it its latency and phase twins). One
- * deliberate difference: the DC blocker's pole is the house stage's ([HOUSE_DC_BLOCK_COEFF], a knee near 7 Hz)
+ * deliberate difference: the DC blocker's pole is the house pole ([HOUSE_DC_BLOCK_COEFF], a knee near 7 Hz)
  * instead of the voice's (near 35 Hz), because a bus carries the whole low end of a mix (measured 2026-10-09: the
- * voice's pole takes about 2.5 dB off 40 Hz).
+ * voice's pole takes about 2.5 dB off 40 Hz). It is the FIXED coefficient 0.999, so its corner moves with the
+ * sample rate (7.6 Hz at 48 kHz, 7.0 Hz at 44.1 kHz, 15.3 Hz at 96 kHz), while the house stage holds 7.64 Hz at
+ * every rate since KLANG-00432 (`houseDcBlockCoeff`); whether this stage follows is open (KLANG-00433, Decide).
  *
  * **How it switches**, the compressor's law ([KatalystCompressorEffect]): every edge fades over
  * [KNOB_GLIDE_SECONDS], linearly, between the distorted mix and the DRY mix, `out = dry + w * (distorted - dry)`.

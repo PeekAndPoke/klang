@@ -113,8 +113,7 @@ data class VoiceData(
      * at that note's onset and still sounds the note. An event that carries *only* a Katalyst is
      * marked [control].
      *
-     * The backend registers the chain but does not read it yet (Katalyst step 1, 2026-09-17); the
-     * cylinder starts running declared chains in step 2.
+     * The backend reads it when it promotes the voice: the voice's cylinder runs the named chain from then on.
      */
     val katalyst: String? = null,
 

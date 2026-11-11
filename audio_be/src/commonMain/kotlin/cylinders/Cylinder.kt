@@ -239,7 +239,9 @@ class Cylinder(
      * | **SilentGrace** | SilentGrace | **Sounding** | SilentGrace (counts on) | **Sounding** | **Held** | **Inactive** | **Inactive** |
      * | **Held** | Held | **Sounding** | (never: the grace is over) | **Sounding** | Held | **Inactive** | **Inactive** |
      *
-     * A visit is [tryDeactivate], once per block. "Grace over" means the silent visits, this one included, reach
+     * A visit is [tryDeactivate]: `Cylinders` visits ONE rented cylinder per block, round-robin, so each is visited
+     * about once every N blocks for N rented cylinders (the grace in blocks is about N times the grace in visits).
+     * "Grace over" means the silent visits, this one included, reach
      * [silentBlocksBeforeTailCheck]; a grace of 1 or less is over at the first silent visit. A tail or a running
      * swap restarts the grace (Sounding); a voice still playing holds it at its end (Held), so the cylinder goes at the
      * first silent visit after the voice's last check-in grace. Wrap-safe by construction (audit leftovers §3): the

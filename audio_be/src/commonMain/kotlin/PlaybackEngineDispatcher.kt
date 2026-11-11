@@ -324,8 +324,8 @@ class PlaybackEngineDispatcher(
     private fun renderBlockAt(cursorFrame: Double, out: StereoBuffer, startMs: Double) {
 
         // processAndMix accumulates additively, so engines simply render into the same mix in turn.
-        // (#11: with one engine this is a straight render into the final mix.) Per-engine master gain
-        // in D6 will need a scratch buffer here for the ≥2 case.
+        // (#11: with one engine this is a straight render into the final mix.) An engine with a master chain or a
+        // gain that is not 1 renders into its own bus first and adds that (`PlaybackEngine.renderInto`).
         var i = 0
 
         while (i < rendering.size) {

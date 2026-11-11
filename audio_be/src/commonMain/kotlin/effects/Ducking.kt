@@ -222,7 +222,7 @@ class Ducking(
     /**
      * Calculate time constant coefficient for the release envelope. Higher values =
      * faster response. Non-finite or sub-millisecond inputs fall back to a 1ms minimum
-     * (matches `Compressor.updateCoefficients`).
+     * (the compressor's floor is 0.1 ms, `Compressor.MIN_TIME_SECONDS`).
      *
      * Kotlin `inline`, with `isFiniteInline` (the stdlib `isFinite()`'s exact twin), so on the per-block path of a
      * moving release ([applyKnobArgs]) no double crosses a call (engine follow-up 45): as a plain function it took the

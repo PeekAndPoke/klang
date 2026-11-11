@@ -902,7 +902,7 @@ class ExcitersTest : StringSpec({
         buf.peakAmplitude() shouldBeLessThan 1.1
     }
 
-    "supersaw - more voices increases energy" {
+    "supersaw - one voice and five voices both sound" {
         val buf1 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0), rng = testRandom), freqHz = 440.0)
         val buf5 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 5.0), rng = testRandom), freqHz = 440.0)
         // Both should produce output

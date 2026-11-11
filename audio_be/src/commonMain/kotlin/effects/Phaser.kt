@@ -20,8 +20,8 @@ import io.peekandpoke.klang.audio_bridge.constants.PHASER_WET
  * **Output**: the shared C4 wet/dry law, correlated branch (p = 2), with a [floor]ed dry —
  * `output = max(floor, cos²(depth·π/2)) · dry + sin²(depth·π/2) · wet`. At the default
  * `floor = 1.0` this is purely ADDITIVE (`dry + wet · sin²`): at `depth = 0.5` you get the
- * dry plus half-amplitude wet (≈ +3 dB louder than dry; the allpass cascade has unit
- * magnitude so the wet sample magnitude tracks the dry, modulated by the swept notches),
+ * dry plus half-amplitude wet (≈ +3 dB louder than dry; the cascade runs with feedback 0.5, so the wet's
+ * magnitude follows the dry's within about +6 and -3.5 dB, modulated by the swept notches),
  * at `depth = 1.0` dry + full wet: the cylinder-bus convention where the wet (`phaser.wet`) adds
  * an effect on top of the source. Lowering the floor (`phaser.floor`) turns the same knob
  * into a crossfade; the phaser processes its cylinder mix in place, so unlike the reverb
@@ -95,9 +95,9 @@ class Phaser(sampleRate: Int) {
      * Minimum dry coefficient of the C4 law. 1.0 (default) = purely additive. Stored RAW:
      * [WetDryMix.dryCoeff] owns the domain coercion (non-finite -> 0.0, clamp to [0, 1]),
      * so every consumer of the knob resolves a bad value the SAME way (one knob, one law).
-     * NOTE: patterning this knob (or [depth] once the floor is below 1) steps the dry gain
-     * of the whole cylinder mix at block boundaries with no smoothing - raw engine, no
-     * hidden ramps; expect zipper on fast patterns.
+     * Patterning this knob (or [depth] once the floor is below 1) moves the dry gain of the whole cylinder mix: the
+     * dry and wet coefficients ramp per sample across the block ([process], `KatalystPhaserEffect`'s glide, Katalyst
+     * 5c-9).
      */
     var floor: Double = PHASER_FLOOR
 

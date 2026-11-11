@@ -35,6 +35,10 @@ import kotlin.math.floor
  *
  * It runs after the whole tree, so it guarantees silence at the voice's output (only the cut's fade and the channel follow).
  *
+ * It fades the voice's END, never its start: a voice without its own envelope starts as its tree starts. The start is
+ * the author's (maintainer, 2026-11-11, KLANG-00427, audit L2-05); an author who wants a soft start uses the voice
+ * envelope (`adsr`).
+ *
  * An envelope that ends the voice ends it on an exact 0 too, de-click included: its tail runs on past the release
  * until the de-click one-pole has been flushed to 0 (`ENV_DECLICK_SETTLE_TIME_CONSTANTS`, audit L2-01; before it
  * the voice was cut on the one-pole's lag, about 3.3e-3 on the last frame at a 50 ms release).

@@ -39,9 +39,10 @@ class VoiceScheduler(
 ) {
     companion object {
         /**
-         * Upper bound of the held-voice gate horizon ([RealtimeVoice.gateDurSec] == null) — 10 h,
-         * far longer than any session. The EFFECTIVE horizon is [heldGateHorizonSec], which caps
-         * this by sample rate so Int frame counts cannot overflow.
+         * Upper bound of the held-voice gate horizon ([RealtimeVoice.gateDurSec] == null), 10 h. The EFFECTIVE
+         * horizon is [heldGateHorizonSec], `Int.MAX_VALUE / 2` frames so Int frame counts cannot overflow, which is
+         * shorter at every common rate (6.8 h at 44.1 kHz, 6.2 h at 48 kHz): this bound applies only below about
+         * 29.8 kHz.
          */
         const val REALTIME_HELD_GATE_SEC: Double = 36_000.0
 
@@ -322,8 +323,7 @@ class VoiceScheduler(
         // Invariant: control-only events never reach voice creation (same rule as the timeline path).
         if (voice.data.control == true) return
 
-        // The cursor still points at the block ALREADY rendered — commands drain BETWEEN blocks
-        // (see the promotion convention comment in VoiceFactory). Between renders the clock IS
+        // Commands drain BETWEEN blocks (see the promotion convention comment in VoiceFactory). Between renders the clock IS
         // the first frame that can still be rendered (RenderClock.cursorFrame, block-framing B1),
         // so stamping "now" there lets the attack enter its curve at position 0 instead of
         // silently losing its first block (audit R1). This used to add a block to compensate for

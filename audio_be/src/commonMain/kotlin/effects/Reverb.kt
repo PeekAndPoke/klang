@@ -201,9 +201,10 @@ class Reverb(
      * health: any non-finite cell returns [Double.POSITIVE_INFINITY] (a NaN spreads through the
      * LPF store and an Inf never decays, and `NaN > peak` is false, so a plain magnitude scan
      * would be BLIND to a NaN-poisoned network and let it drain garbage into the mix — review
-     * round 2). Comb-only stays sufficient for that too: the allpass chain is fed from comb
-     * reads, so allpass poison implies a poisoned comb cell first, and comb poison persists
-     * until a reset.
+     * round 2). Comb-only stays sufficient for that below about 1e307: the allpass chain is fed
+     * from comb reads, so allpass poison implies a poisoned comb cell first, and comb poison
+     * persists until a reset. Near the double range it does not hold: eight finite comb outputs
+     * of about 2.3e307 sum to an infinity that an all-pass stores for good, the combs finite.
      *
      * **Cost**: one O(all comb cells) scan (~22k samples at 44.1 kHz), intended for the
      * off-transition (at most once per owner change), never per block.
@@ -454,7 +455,8 @@ class Reverb(
             // ~+11%/sample and reverted 2026-05-19), so they have no per-store guard of their
             // own — but they do not need one: the comb/allpass network is a stable linear
             // system (|feedback| < 1 via normalizeSize, damping in [0,1], coefficients
-            // guarded at configure), so a FINITE input can never drive the state non-finite.
+            // guarded at configure), so a FINITE input can never drive the state non-finite, below about 1e307: eight
+            // comb outputs near 2.3e307 sum to an infinity in the all-pass chain (no input in use comes near).
             // Guarding the input is therefore equivalent and 12x cheaper. Without it, one Inf
             // sample latched every comb and allpass for the life of the cylinder.
             // `finiteOrZero` rejects Inf AND NaN in one compare and leaves no branch on the data.
@@ -713,9 +715,10 @@ class Reverb(
          * Anti-denormal injection — a tiny DC bias added to every IIR state update.
          * Keeps the state magnitude above the FPU subnormal threshold (≈ 2.2e-308)
          * during silence, preventing ~50–100 cycle stalls on denormal arithmetic.
-         * The resulting steady-state DC bias is `~1.7e-18 / (1 − damping) ≈ 2.8e-18`
-         * for the comb LPF and `~2e-18` for the allpass — both ~250 dB below the
-         * noise floor, inaudible. Canonical Freeverb approach.
+         * The resulting steady-state DC bias, with the comb's feedback loop counted, is
+         * `1e-18 / ((1 - damping)(1 - feedback))` in the comb's store: about 7.8e-18 at size 5 and
+         * 6.3e-17 at size 10 at the default damping (the output on silence: 9.1e-19 and 7.5e-18), and `~2e-18` for the
+         * allpass, all far below the noise floor, inaudible. Canonical Freeverb approach.
          */
         private const val ANTI_DENORMAL: Double = 1e-18
     }

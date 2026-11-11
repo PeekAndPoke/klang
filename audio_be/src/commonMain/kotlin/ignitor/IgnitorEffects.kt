@@ -402,6 +402,9 @@ fun Ignitor.coarse(factor: Double): Ignitor {
 /**
  * 4-stage all-pass cascade phaser with sine LFO modulation. Processes per-sample.
  *
+ * The cascade runs with [PhaserCore]'s default feedback, 0.5, which no door sets or switches off: the phased path is
+ * not unit-magnitude, it peaks at about +6 dB and dips to about -3.5 dB.
+ *
  * Sweeps a series of notch filters through the spectrum, creating the classic
  * "whooshing" or "jet" effect. All params read once per block (control rate).
  * Bypasses when wet <= 0 — the LFO clock keeps running through a bypass, so a wet gap never
@@ -503,8 +506,8 @@ private class PhaserIgnitor(
                 stateDirty = true
             }
 
-            // C4 (filter unification): the shared wet/dry law, correlated branch (p = 2) —
-            // an allpass cascade is unit-magnitude and fully correlated, so amplitudes add.
+            // C4 (filter unification): the shared wet/dry law, correlated branch (p = 2): the phased path is
+            // correlated with the dry, so amplitudes add (with the core's feedback 0.5 it is not unit-magnitude).
             // floor passed RAW: WetDryMix owns the domain coercion (incl. non-finite -> 0.0),
             // so every door resolves a bad floor the SAME way (bus/strip store raw too)
             val dryC = WetDryMix.dryCoeff(wetVal, floor = floorVal, p = 2)

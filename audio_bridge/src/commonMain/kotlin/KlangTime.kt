@@ -7,12 +7,13 @@ package io.peekandpoke.klang.audio_bridge
 
 /**
  * High-precision time source for audio timing.
- * Not epoch-based - just a steady, monotonic clock for relative timing.
+ * Seeded with the wall clock (epoch milliseconds) at creation, then advanced by a steady, monotonic source, so it
+ * never jumps with the wall clock.
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class KlangTime {
     /**
-     * Returns current time in milliseconds (relative to start, not epoch)
+     * Returns current time in milliseconds: the epoch milliseconds at creation plus the monotonic time elapsed since
      */
     fun internalMsNow(): Double
 

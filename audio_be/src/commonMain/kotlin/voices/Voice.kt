@@ -148,8 +148,8 @@ class Voice(
 
     /**
      * Voice death frame (gate end + release tail). Rewritten by a realtime note-off
-     * ([releaseGate]): earlier in every real case; an authored NEGATIVE release (raw-Motor,
-     * passes through unclamped) can nudge it later by under a block, with no audible effect.
+     * ([releaseGate]): never later. `VoiceFactory` floors the lifetime past the gate at 0 (`treeLifetime`), so
+     * `endFrame >= gateEndFrame` for every voice it builds.
      */
     val endFrame: Double get() = limits.endFrame
 
@@ -284,9 +284,9 @@ class Voice(
             return
         }
 
-        // Raw-Motor: an authored NEGATIVE release passes through resolve() unclamped, making
-        // endFrame < gateEndFrame. A note-off must still STOP such a voice (ignoring it would
-        // strand it at the held horizon — audit R5), so the span clamps to 0 and it hard-stops
+        // `VoiceFactory` floors the lifetime past the gate at 0 (`treeLifetime`), so for a voice it builds the span is
+        // never negative; the floor below holds for a `Voice` a spec builds by hand. A note-off must still STOP a
+        // voice with a span of 0 (ignoring it would strand it at the held horizon, audit R5): it hard-stops
         // exactly like release-0: endFrame lands on atFrame and the voice is dropped between
         // blocks WITHOUT rendering another sample — the same outcome a timeline release-0 note
         // gets at its gate (audit R9: no de-click runs on this path; none is needed, nothing

@@ -182,8 +182,9 @@ class IgnitorRegistry(
         phasePools: PhasePools? = null,
         /** The voice's random stream (seeded-voice-rng; see IgniteContext.random). */
         random: Random,
-        /** The backend's sample rate and block size. Read only by a `humanize` filter's drift
-         *  lane, whose time constants follow the rate it is stepped at. */
+        /** The backend's sample rate and block size. Read by the build where a stage is sized in samples or stepped
+         *  per block: a `humanize` filter's drift lane, the tremolo's LFO edges, the declick's settle, a region's
+         *  rate (see [DEFAULT_BUILD_SAMPLE_RATE]). */
         sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
         blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
     ): BuiltIgnitor? {

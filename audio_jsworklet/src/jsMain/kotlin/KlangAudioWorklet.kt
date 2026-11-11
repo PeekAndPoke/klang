@@ -91,8 +91,6 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         // per block per voice — see RenderClock.cursorFrame.
         var cursorFrame = 0.0
 
-        var isPlaying = true
-
         /**
          * True once the last catch ([renderInto], the port's message handler) has logged a throw: a throw that comes
          * back every block is logged once, not 375 times a second.
@@ -199,8 +197,6 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
     /** One render quantum into Web Audio's [outputs]; always true (keep the processor alive). */
     private fun Ctx.renderInto(outputs: Array<Array<Float32Array>>): Boolean {
-        if (!isPlaying) return true
-
         // Update KlangTime with current frame for accurate timing
         klangTime.updateCurrentFrame(cursorFrame)
 
@@ -214,7 +210,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
         // 1. Render the block into our intermediate buffer, always, so the warmup voices
         // running on the real scheduler exercise the actual render path (V8 inline caches,
-        // lazy allocations inside VoiceScheduler / KlangAudioRenderer).
+        // lazy allocations inside VoiceScheduler / PlaybackEngineDispatcher).
         // The last catch (see [Ctx.logThrow]): a throw from outside an engine costs this block, which goes out silent.
         // A `try` costs nothing on the path that does not throw.
         try {
@@ -233,7 +229,8 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             }
             warmup.tick()
         } else {
-            // 2. Copy the engine's floats straight into Web Audio's output channels (no 16-bit step).
+            // 2. Copy the engine's floats straight into Web Audio's output channels (no 16-bit step). With one output
+            // channel only the left is written: the right is dropped, not mixed down (`JsAudioBackend` asks for two).
             val left = renderBuffer.left
 
             for (i in 0 until blockFrames) {

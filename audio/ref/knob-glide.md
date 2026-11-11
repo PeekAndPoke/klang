@@ -309,7 +309,9 @@ ratio itself, measured on a 2 to 8 sweep only, and a 20 to 1 or 100 to 1 swing s
 -41 to -56 dB (review round 1); gliding `1/ratio` puts every swing at its floor. A rising threshold
 swing of 40 dB still read -62 to -65 dB (25 dB of release in 50 ms), accepted then as a safety net; the ear
 did not accept the swell itself (below, 2026-10-17). Attack and release are time constants of the smoothed envelope
-and measured at the floor: no glide. Lesson: a knob feeding a memoryless gain law is a LEVEL knob.
+and apply at once, no glide: the follower's state stays continuous, only its equilibrium moves. The release measured
+at the floor; an attack jump does not (0.1 to 0.003 s read -65 dB, about 14 dB above the threshold glide's row, in the
+KLANG-00420 clicks probe, lead 4a). Lesson: a knob feeding a memoryless gain law is a LEVEL knob.
 
 **2026-10-17, the compressor's relaxing moves release** (KLANG-00316 (knob glide listening), item 2). The
 gain computer has no memory, so whatever moves its knobs moves the gain at once: a 40 dB threshold rise brought 32.2 dB

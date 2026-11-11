@@ -58,8 +58,7 @@ import kotlin.math.max
  *   2. The house brickwall limiter in `HouseStage`.
  *
  * **Round 5 review (2026-04-30)** kept the topology and applied a code-quality cleanup pass.
- * Deferred-but-known items live in the user's memory at
- * `~/.claude/projects/-opt-dev-peekandpoke-klang/memory/project_filter_review.md`:
+ * Deferred-but-known items (no ticket holds them yet):
  *   - Linear-domain rewrite (would eliminate 2 `exp`/`ln` per sample on top of the constant
  *     caching done here; deferred to the future dedicated `MasterLimiter` work).
  *   - Peak-detector RMS smoothing (secondary britzeling fix; deferred).

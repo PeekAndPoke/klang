@@ -39,9 +39,10 @@ AUDIO BACKEND (audio thread)
   └─ Every block (128 frames, pinned):
        VoiceScheduler.processBlock()
          ├─ Activate due voices → a Voice running its Ignitor tree
-         │    (requests MonoSamplePcm from audio_fe if needed)
+         │    (a sample voice's PCM is asked for at schedule time, Feedback.RequestSample; a sample
+         │     not complete at the voice's start drops the voice, counted soundless)
          ├─ Call voice.render(ctx) for each active voice
-         │    └─ Voice writes into ctx.voiceBuffer (FloatArray)
+         │    └─ Voice writes into its block buffer (an AudioBuffer, a DoubleArray)
          └─ Mix voice output into its Cylinder (ctx.cylinders[cylinderId])
 
        Cylinders.processAndMix()
@@ -54,8 +55,10 @@ AUDIO BACKEND (audio thread)
          └─ The playback's master: a KatalystChain on the summed cylinders, swapped by ChainSwap
             (phase 3 step 12; `master(Katalyst(k => ...))`)
 
-       HouseStage (in PlaybackEngineDispatcher, live and offline)
-         ├─ Apply DC blockers, then master limiter (−1 dB, 20:1, 5 ms lookahead)
+       PlaybackGain   (only while the playback's gain is not 1: `Cmd.SetGain` and its ramp)
+
+       HouseStage (in PlaybackEngineDispatcher, live and offline, once on the sum of every playback)
+         ├─ Apply DC blockers, then the house limiter (−1 dB, 20:1, 2 dB knee, 5 ms lookahead)
          ├─ Clip ±1.0 into the floating-point output (a StereoBuffer, no quantisation)
          └─ Send to platform audio output (Web Audio takes the floats; the JVM line and the
             WAV writer convert to 16-bit bytes at their edge, `writePcm16`)
@@ -71,7 +74,8 @@ disposed once idle.
 Each `PlaybackEngine` owns its **entire render state**:
 
 - its own `VoiceScheduler` (the scheduled min-heap + the active-voice list),
-- its own `Cylinders` (the 16 cylinders and their effects),
+- its own `Cylinders` (up to `MAX_CYLINDERS` = 255 ids, folded by `%` and keeping their sign, so 509 distinct
+  cylinders, each rented on first use, and their effects),
 - its own **forks** of the ignitor and Katalyst registries: the inline instruments and chains
   registered for that playback live there, not on the shared parents, so they die with the engine (the
   pipeline fork retired with the Pipeline DSL, phase 3 step 9). The one Katalyst fork serves the cylinders AND the
@@ -109,10 +113,13 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 |-----------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
 | `Cmd.ScheduleVoices`  | `List<ScheduledVoice>`                  | enqueue voices for future playback, one time snapshot for the batch                             |
 | `Cmd.ReplaceVoices`   | `List<ScheduledVoice>` + `afterTimeSec` | live update: drop scheduled voices past a grace cutoff, reschedule, dedup vs still-active voices; ignored by a stopped engine |
-| `Cmd.Cleanup`         | —                                       | stop all voices, reset state                                                                     |
+| `Cmd.Cleanup`         | (none)                                  | stop the playback: its scheduled voices are dropped, its held live notes released, playing voices ring out; the engine is disposed once idle |
+| `Cmd.StartRealtimeVoice` | `RealtimeVoice`                      | start a live note now: no start time on the wire, straight to active                             |
+| `Cmd.StopRealtimeVoice`  | `liveId`                             | release the gate of every live note with that id (a note-off, not a cut)                         |
+| `Cmd.SetGain`         | `gain` + `rampSec`                      | move the playback's output gain over a ramp (`PlaybackGain`)                                     |
 | `Cmd.RegisterIgnitor` | name + `IgnitorDsl`                     | register an inline instrument on the playback's ignitor fork                                    |
 | `Cmd.RegisterKatalyst`| name + `KatalystDsl`                    | register a chain on the playback's Katalyst fork (for `katalyst(...)` and `master(...)`)        |
-| `Cmd.Sample.Complete` | `SampleRequest` + PCM bytes             | deliver decoded sample to backend                                                                |
+| `Cmd.Sample.Complete` | `SampleRequest` + note, pitch, `MonoSamplePcm` (doubles) | deliver decoded sample to backend (the JS host sends it as chunks) |
 | `Cmd.Sample.NotFound` | `SampleRequest`                         | signal that a sample could not be decoded                                                        |
 | `Cmd.Sample.Chunk`    | partial PCM data                        | streaming delivery for large samples                                                             |
 
@@ -152,7 +159,8 @@ instrument, not an unset sound.
 - Format: 16-bit signed PCM, stereo, little-endian; the engine's float output is converted at this edge by
   `writePcm16` (`audio_be/src/commonMain/kotlin/_pcm16_edge.kt`, the one home of the 16-bit conversion)
 - Buffer: ~250 ms for glitch-free playback
-- `KlangTime.internalMsNow()` → `System.nanoTime() / 1_000_000L`
+- `KlangTime.internalMsNow()` → the wall clock at creation (`System.currentTimeMillis()`) plus the `System.nanoTime()`
+  elapsed since, in ms: epoch milliseconds that run on a monotonic source
 
 ### JS (`audio_be/src/jsMain/`)
 
@@ -161,7 +169,8 @@ instrument, not an unset sound.
 - Latency hint: `"playback"` (stability over low latency)
 - AudioContext auto-resumes on first voice (no user-gesture gate needed)
 - ES2015 class output required for AudioWorkletProcessor inheritance
-- `KlangTime.internalMsNow()` → `performance.now()`
+- `KlangTime.internalMsNow()` → `Date.now()` at creation plus the `performance.now()` elapsed since, in ms (in the
+  worklet: plus the frames it was given, read once at start-up)
 
 ### audio_jsworklet (`src/jsMain/`)
 
@@ -175,7 +184,7 @@ instrument, not an unset sound.
 
 | Constant             | Value                                        | Location             |
 |----------------------|----------------------------------------------|----------------------|
-| Max cylinders           | 16                                           | `Cylinders`          |
+| Max cylinders        | 255 ids (`MAX_CYLINDERS`), signed: 509 per playback | `Cylinders`          |
 | Limiter threshold    | −1 dB                                        | `MasterLimiterDefaults.kt`, used by `HouseStage` |
 | Limiter ratio        | 20:1                                         | `MasterLimiterDefaults.kt`, used by `HouseStage` |
 | Limiter attack       | 5 ms: gain-SMOOTHING length, not a one-pole | `HouseStage`        |

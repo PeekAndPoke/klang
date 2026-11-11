@@ -10,7 +10,8 @@ package io.peekandpoke.klang.audio_bridge
  *
  * MVP:
  * - mono PCM at the engine's canonical sample type (Double on JVM and JS)
- * - sampleRate matches renderer sampleRate (resampling can be added later)
+ * - [sampleRate] is the sample's own rate: the playhead converts it, at the rate `VoiceFactory` computes (the PCM's rate
+ *   over the engine's, times pitch and speed), and nothing resamples at decode on the JVM
  *
  * The engine canonical sample type is Double to keep the audio hot path free
  * of Float↔Double conversions (which are real `d2f`/`f2d` ops on JVM, no-ops on JS).

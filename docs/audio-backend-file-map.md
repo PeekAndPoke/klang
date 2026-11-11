@@ -49,8 +49,8 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Voices: scheduling + per-voice render
 
-- `voices/VoiceScheduler.kt` **[changed]** — scheduled heap, active voices, solo/mute, epoch, promote loop, diagnostics
-  emit.
+- `voices/VoiceScheduler.kt` **[changed]**: scheduled heap, active voices, solo/mute, epoch, promote loop, the
+  counts the diagnostics read (the dispatcher emits them).
 - `voices/VoiceFactory.kt` **[changed]**: builds a `Voice` (the instrument's Ignitor tree and the stages after it)
   from `VoiceData`.
 - `voices/Voice.kt` — running voice + `RenderContext` (per-engine scratch + cylinders) + per-block render.
@@ -64,7 +64,8 @@ Cmd → PlaybackEngineDispatcher.handle
 
 ## Cylinders and the master: the Katalyst hosts
 
-- `cylinders/Cylinders.kt` **[changed]**: `Map<cylinderId, Cylinder>`, additive `processAndMix`, round-robin cleanup.
+- `cylinders/Cylinders.kt` **[changed]**: an array by cylinder id (up to `MAX_CYLINDERS` = 255 ids, signed) and a list
+  in rent order (the mix order), additive `processAndMix`, round-robin cleanup (one visit per block).
 - `cylinders/Cylinder.kt`: one cylinder: its `KatalystChain` (the born-with `Katalyst.classic`, or a declared one),
   its owner (the newest `Sounding` voice: `offer`, `commitOwner`), the check-in, its `ChainHost` (the chain cache and the swap),
   `tryDeactivate` (tail check).
@@ -95,7 +96,8 @@ Cmd → PlaybackEngineDispatcher.handle
 
 - core: `Ignitor.kt`, `Ignitors.kt`, `IgnitorRegistry.kt`, `IgnitorDslRuntime.kt`, `IgnitorDefaults.kt`.
 - synthesis: `FreqIgnitor`, `ConstantIgnitor`, `ParamIgnitor`, `SampleIgnitor`, `MemoizingIgnitor`,
-  `ModApplyingIgnitor`, `WaveVoiceState`, `OscillatorTuning`, `PitchModFactories`.
+  `ModApplyingIgnitor`, `WaveVoiceState`, `PitchModFactories`; the oscillators' character constants are in
+  `audio_bridge/.../constants/OscillatorTuning.kt`.
 - character: `AnalogDrift` + `AnalogDriftCoeffs`, `DriftLanes`, `IgnitorEnvelopes`, `IgnitorEffects`,
   `IgnitorFilters`, `IgniteContext`, `ScratchBuffers.kt` (per-engine scratch pool).
 

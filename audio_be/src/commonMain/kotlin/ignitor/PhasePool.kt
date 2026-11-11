@@ -119,7 +119,8 @@ class PhasePools(private val rng: Random) {
          *  simultaneously live (not swept), every note-on reconstructs a prefix (~7× a stateless
          *  note at the deepest default, up to ~35× at a warmup-32 config — work-budget-bound
          *  vs warmup-bound) plus a fresh poolSize-slot backing array, and no vocabulary
-         *  ever accumulates. Bounded (≤ ~4k trig-loop iterations per note), pathological, and
+         *  ever accumulates. Bounded (the prefix's [PhasePool.PREFIX_WORK_BUDGET] of 2048 trig-loop iterations plus
+         *  at least one top-up of `tries × voices`, up to 16384 at the knob caps, per note), pathological, and
          *  preferable to punishing the common sweep case. */
         const val MAX_POOLS = 64
     }

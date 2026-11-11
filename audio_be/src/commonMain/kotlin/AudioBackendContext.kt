@@ -21,9 +21,6 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * `Cylinders` map is its own, but the cylinders in it come from the warehouse's shelf and go back
  * there when the engine is disposed. Per-engine state (that map, the scheduling timeline) is NOT
  * here. See KLANG-00176 (per playback engine).
- *
- * Note: `performanceTimeMs` is transitional — once diagnostics emission moves up to the dispatcher
- * (D5), the per-scheduler wall-clock read leaves this context.
  */
 class AudioBackendContext(
     val sampleRate: Int,

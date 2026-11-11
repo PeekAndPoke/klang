@@ -163,6 +163,10 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
      * Appends a limiter: a [KatalystStageDsl.Compressor] with the limiter numbers as its defaults (the preset lives
      * HERE, once, for both doors; `constants/MasterLimiterDefaults.kt`). The stage does not know it was a limiter
      * (script knob `limiter`).
+     *
+     * Without a [lookahead] (the default, 0) it is not a brick wall: the reduction rises over the [attack] (1 ms by
+     * default), so the first milliseconds of an onset pass over the threshold. A lookahead closes the gain before the
+     * onset arrives, and makes the cylinder or the playback late by that much, uncompensated.
      */
     fun limiter(
         threshold: KatalystKnobDsl = LIMITER_THRESHOLD_DB.kat,

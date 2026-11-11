@@ -120,8 +120,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **Block size 128, pinned everywhere** (`AudioBackendContext.RENDER_QUANTUM_FRAMES`, whose KDoc lists what
   depends on it): it is a tone parameter; never change it to speed a render.
 - **One clock, the backend's frames** (KLANG-00399): the timeline is the backend's start plus the frames rendered;
-  `Diagnostics.backendNowMs` carries it, one report per 20 ms of audio (`DIAGNOSTICS_EVERY_SEC`, counted in frames,
-  never wall time); `Feedback.PlaybackAnchored` tells where a playback started (`max(asked, now)`), and its voices
+  `Diagnostics.backendNowMs` carries it, one report at the first block end at or past 20 ms of audio
+  (`DIAGNOSTICS_EVERY_SEC`, counted in frames, never wall time; the count restarts at 0, so every 8 blocks, 21.3 ms, at
+  48 kHz); `Feedback.PlaybackAnchored` tells where a playback started (`max(asked, now)`), and its voices
   count from there. The frontend's `PlaybackClock` runs on the reports (at most 0.5 s past the last, never backwards),
   the scheduler is asked `tick(now)` with it, looks ahead at least 1.5 s (`LOOKAHEAD_MIN_SEC`), skips what a long
   stall let go by but keeps its `master`, `katalyst` and running solo controls (at their own times), and puts the UI's
@@ -473,6 +474,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 Docs and KDoc that said what the code does not do, made true (the wire, the shell, the cylinders, the samples, the ref pages); the worklet's dead `isPlaying` flag removed: KLANG-00433
 - 2026-11-11 The per-note stages and the house stage: no negative damping in the analog SVF, the coarse hold and the shimmer ring store no non-finite sample, `expClip`/`stompBox` skip `pow` when saturated, the house DC pole per rate, "poison seen" in the diagnostics: KLANG-00432
 - 2026-11-11 The shell and the wire: nothing after a stop's `Cleanup`, a restart's gain and inline DSLs, no sample requests for synth voices, an edit's samples at once, the JVM's output latency, enum entries in the schema hash: KLANG-00431
 - 2026-11-10 The sources: the saw and square through a one-sample box, the impulse's backward phase silent, the cubic read for samples and the pluck, a sample's last frame and loop seam, stereo files averaged in the browser: KLANG-00430

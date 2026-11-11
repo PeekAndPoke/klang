@@ -38,6 +38,8 @@ import com.google.devtools.ksp.validate
  * Anything else (e.g. other typed arrays, `Map` with non-String/Double, a type with no primary constructor) is an
  * ERROR: the processor reports it via `logger.error` (failing the build) with the exact field/subtype path. It never
  * silently skips a type — that would drop data from the wire protocol. To add a wire type, extend the emitter here.
+ * One exception: `kotlin.Long` is in `SCALARS` and passes through unrefused, although a Kotlin/JS `Long` is an object
+ * the structured clone would strip. No wire type has one, and the stone rule bans `Long` on the wire.
  */
 class WireCodecProcessor(
     environment: SymbolProcessorEnvironment,
