@@ -67,6 +67,17 @@ Filled by the fixer (2026-11-10). The rest of the ticket landed without these.
   more than a few lines in the app, which another session is working in. Recommendation: do it with KLANG-00407 (the
   frontend's logger and its console tab).
 
+### Decided (maintainer, 2026-11-11)
+
+"All as you suggest. We make the failures visible but keep the motor raw."
+
+- **L6-01:** (a), nothing more between a voice and the house limiter.
+- **L8-04:** (c), the house stage counts the non-finite samples its limiter already sterilises and the diagnostics
+  carry the count ("poison seen"). Owed; it waits for KLANG-00431, which is working in the diagnostics.
+- **N2:** (a), no clamp and no per-sample guard. `audio/ref/numerical-safety.md` names the four values that end in
+  NaN. Owed, with the docs of KLANG-00433.
+- **A failed playback in the UI:** with KLANG-00407. The "poison seen" count is shown there too.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.
