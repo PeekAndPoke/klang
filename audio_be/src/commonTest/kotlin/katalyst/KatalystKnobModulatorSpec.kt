@@ -27,7 +27,6 @@ import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.klang.common.math.PerlinNoise
 import kotlin.math.PI
-import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -55,7 +54,7 @@ class KatalystKnobModulatorSpec : StringSpec({
     /** An eighth of a cycle per block: `dt = 2^-10`. */
     val eighth = EIGHTH_HZ
 
-    /** One sample's phase at [eighth]: the saw's flyback, half the pulse's minimum flank. */
+    /** One sample's phase at [eighth]: the saw's flyback and the pulse's minimum flank. */
     val dt = EIGHTH_DT
 
     fun c(v: Double) = KatalystKnobDsl.Constant(v)
@@ -175,10 +174,12 @@ class KatalystKnobModulatorSpec : StringSpec({
     }
 
     "hand values that pin the edges: the square's rise, its duty, the saw's flyback, the triangle's peak" {
-        // Written out, not computed: the middle of a two-sample rise is 0, the middle of a one-sample flyback is 0.
+        // Written out, not computed: the middle of the square's one-sample rise is 0 (its minimum flank, the saw's edge
+        // width since 2026-11-11; it was two samples), the middle of a one-sample flyback is 0.
         fun at(node: KatalystKnobDsl, tick: Int): Double = program(node).ticks(tick + 1)[tick]
 
-        at(KatalystKnobDsl.Square(freq = c(eighth), duty = c(0.4), phase = c(dt)), tick = 0) shouldBe 0.0
+        at(KatalystKnobDsl.Square(freq = c(eighth), duty = c(0.4), phase = c(dt / 2.0)), tick = 0) shouldBe 0.0
+        at(KatalystKnobDsl.Square(freq = c(eighth), duty = c(0.4), phase = c(dt)), tick = 0) shouldBe 1.0
         at(KatalystKnobDsl.Square(freq = c(eighth), duty = c(0.4), phase = c(0.2)), tick = 1) shouldBe 1.0
         // Tick 2 is phase 0.45: past a duty of 0.4, inside one of 0.5.
         at(KatalystKnobDsl.Square(freq = c(eighth), duty = c(0.4), phase = c(0.2)), tick = 2) shouldBe -1.0
@@ -284,8 +285,8 @@ class KatalystKnobModulatorSpec : StringSpec({
         )
 
         // The square read on its rising edge (phase 2^-8), at 375 Hz and then 750 Hz (the clock stays at 0 again). The
-        // edge is two samples: 2^-6 of a cycle, then 2^-5, so the same phase is a quarter and then an eighth of the way
-        // up: -0.5, then -0.75.
+        // edge is one sample (the saw's edge width since 2026-11-11; two samples before): 2^-7 of a cycle, then 2^-6, so
+        // the same phase is half and then a quarter of the way up: 0, then -0.5.
         val rising = program(
             KatalystKnobDsl.Square(freq = KatalystKnobDsl.Param("f", 0.0), duty = c(0.4), phase = c(1.0 / 256.0)),
         )
@@ -293,10 +294,10 @@ class KatalystKnobModulatorSpec : StringSpec({
 
         rising.registers[rf] = 375.0
         rising.tick()
-        rising.value() shouldBe -0.5
+        rising.value() shouldBe 0.0
         rising.registers[rf] = 750.0
         rising.tick()
-        rising.value() shouldBe -0.75
+        rising.value() shouldBe -0.5
         shouldBeSameBits(
             actual = rising.value(),
             expected = ignitorAt(shape = shapes[4], freq = 750.0, phase = 1.0 / 256.0),
@@ -494,29 +495,27 @@ class KatalystKnobModulatorSpec : StringSpec({
         }
     }
 
-    "a perlin clock wrapped by 256 reads the same value as the unwrapped one, bit for bit" {
-        // The law's periodicity, on which the clock's wrap rests: the permutation repeats every 256 cells and each fBm
-        // octave scales by a power of two, and both `x - 256 k` and the fractional parts are exact in doubles.
+    "a perlin has no period of 256 cells, so its clock may not wrap there: the walk 256 cells on is another (L3-09)" {
+        // The law's lattice is hashed since KLANG-00430 (audit finding L3-09); its old permutation repeated every 256
+        // cells, and the knob's clock wrapped there. Now it wraps at `NOISE_CLOCK_SPAN`, the berlin's 2^23.
         val noise = PerlinNoise(Random(KATALYST_KNOB_NOISE_SEED))
-        val positions = doubleArrayOf(256.0, 300.125, 511.999, 1000.37, 65_536.5, 123_456.789, 999_999.001)
+        val positions = doubleArrayOf(0.5, 44.125, 255.999, 1000.37, 65_536.5, 123_456.789, 999_999.001)
+        var differ = 0
 
         for (x in positions) {
-            val wrapped = x - 256.0 * floor(x / 256.0)
-
-            for (octaves in 1..8) {
-                shouldBeSameBits(
-                    actual = noise.fbm(x = wrapped, octaves = octaves, persistence = 0.6),
-                    expected = noise.fbm(x = x, octaves = octaves, persistence = 0.6),
-                    clue = "x $x, octaves $octaves",
-                )
+            if (noise.fbm(x = x, octaves = 3, persistence = 0.6) != noise.fbm(x = x + 256.0, octaves = 3, persistence = 0.6)) {
+                differ++
             }
         }
+
+        differ shouldBe positions.size
+        NOISE_CLOCK_SPAN shouldBe 8388608.0
     }
 
-    "a fast perlin wraps its clock every few blocks and still samples the Ignitor's unwrapped walk" {
-        // Rate 100: 38.4 cells a block, so the clock passes 256 every seventh block. The Ignitor's walk is never
-        // wrapped; the two differ only by the rounding of their positions (about 1e-13 here) times the walk's slope
-        // (at most about 60 per cell with three octaves), well inside 1e-7. A wrong period is off by order 1.
+    "a fast perlin samples the Ignitor's walk: 38.4 cells a block, past the old period of 256 every seventh block" {
+        // Rate 100: 38.4 cells a block. The Ignitor's walk is never wrapped, nor is the knob's this side of 2^23 cells;
+        // the two differ only by the rounding of their positions (about 1e-13 here) times the walk's slope (at most
+        // about 60 per cell with three octaves), well inside 1e-7. A clock wrapped at 256 is off by order 1 from tick 7.
         val values = program(
             KatalystKnobDsl.PerlinNoise(rate = c(100.0), octaves = c(3.0), persistence = c(0.6)),
         ).ticks(64)
@@ -548,9 +547,9 @@ class KatalystKnobModulatorSpec : StringSpec({
         }
     }
 
-    "a perlin driven far past 2^24 cells reads the law at its position modulo 256, bit for bit: its clock wraps" {
-        // Rate 1e6: 384,000 cells a block, past 2^24 by block 44 and past 1e8 by block 300. The oracle is the law
-        // itself at the position kept modulo 256 here: the generator and the start drawn from one `Random(seed)` in the
+    "a perlin driven far past 2^24 cells reads the law at its position modulo 2^23, bit for bit: its clock wraps" {
+        // Rate 1e6: 384,000 cells a block, past 2^23 every 22 blocks and past 1e8 by block 300. The oracle is the law
+        // itself at the position kept modulo 2^23 here: the generator and the start drawn from one `Random(seed)` in the
         // Ignitor's order, the per-block step written out (1e6 * 0.003 per sample, 128 samples). Both the knob's wrap
         // and `%` are exact for a positive position, so they agree bit for bit. Unwrapped, the position loses its
         // fractional bits to its magnitude and the top octave's `toInt()` saturates.
@@ -568,7 +567,7 @@ class KatalystKnobModulatorSpec : StringSpec({
                 clue = "tick $k at position $position",
             )
 
-            position = (position + 1e6 * 0.003 * 128.0) % 256.0
+            position = (position + 1e6 * 0.003 * 128.0) % 8388608.0
         }
     }
 

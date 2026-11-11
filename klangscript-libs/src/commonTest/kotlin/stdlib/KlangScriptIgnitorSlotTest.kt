@@ -58,8 +58,9 @@ class KlangScriptIgnitorSlotTest : StringSpec({
         evalIgnitorDsl("Ignitor.slot.brightness") shouldBe IgnitorDsl.Param("brightness", 0.5)
     }
 
-    "Ignitor.slot.pickPosition → Param(\"pickPosition\", 0.5)" {
-        evalIgnitorDsl("Ignitor.slot.pickPosition") shouldBe IgnitorDsl.Param("pickPosition", 0.5)
+    "Ignitor.slot.pickPosition → Param(\"pickPosition\", 0.28)" {
+        // The default moved from 0.5 to 0.28 with the real pick position (KLANG-00426, audit finding L3-08).
+        evalIgnitorDsl("Ignitor.slot.pickPosition") shouldBe IgnitorDsl.Param("pickPosition", 0.28)
     }
 
     "Ignitor.slot.stiffness → Param(\"stiffness\", 0.0)" {

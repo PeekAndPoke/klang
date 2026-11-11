@@ -305,7 +305,7 @@ private fun applySndBrown(source: SprudelPattern): SprudelPattern =
 /**
  * Sets the sound to brown noise (Brownian/red noise).
  *
- * @param leak Per-sample white leak (default 0.02): lower is deeper and slower, higher is brighter.
+ * @param leak The white leak per sample at 48 kHz, the same corner at every rate (default 0.02): lower is deeper and slower, higher is brighter.
  * @return A new pattern with sound set to "brownnoise".
  * @category tonal
  * @tags noise, brownnoise, brown, snd

@@ -18,7 +18,7 @@ import kotlin.random.Random
  * **A pluck's tail carries no DC** (KLANG-00426, audit finding L3-06). The loop passes DC at the feedback gain alone
  * (the one-pole and the allpass have unity gain at 0 Hz), so a burst whose random mean stayed in the line outlived its
  * tone: after 1.9 s the mean was 0.08 to 1.84 times the AC level left (the pluck at 220 Hz, 8 voice seeds), 0.27 to
- * 4.26 (the superpluck). The burst is now written with its mean taken out (`KarplusString.excite`).
+ * 4.26 (the superpluck). The excitation is now free of DC: its pick comb sums to zero over the string (`KarplusString.excite`).
  *
  * The measurement of the audit's reproduction: the bare node at 220 Hz with its defaults, analog 0, 2 s, the mean and
  * the AC level over 1.9 to 2.0 s, for 8 voice seeds.
@@ -78,17 +78,21 @@ class PluckDcSpec : StringSpec({
                 ac shouldBeGreaterThan 1e-4
             }
 
+            // The window's own floor: a decaying tone's mean over 0.1 s is not zero. With the pick comb's excitation
+            // (KLANG-00426, L3-08; its sum over the string is zero by construction, `KarplusStringSpec`) it reaches 0.017
+            // (the superpluck, seed 6), where the burst stayed under 0.01; the DC the loop kept before L3-06 read 0.08 to
+            // 4.26. The bound sits between the two.
             withClue("$name, seed $seed: |mean| over the AC level in the tail") {
-                abs(mean) / ac shouldBeLessThan 0.01
+                abs(mean) / ac shouldBeLessThan 0.04
             }
         }
     }
 
-    "the pluck's tail after 1.9 s is AC: its mean is under a hundredth of its level, 8 seeds" {
+    "the pluck's tail after 1.9 s is AC: its mean is under 4 percent of its level, 8 seeds" {
         checkTail(name = "pluck") { rng -> Ignitors.karplusStrong(analog = ConstantIgnitor(0.0), rng = rng) }
     }
 
-    "the superpluck's tail after 1.9 s is AC: its mean is under a hundredth of its level, 8 seeds" {
+    "the superpluck's tail after 1.9 s is AC: its mean is under 4 percent of its level, 8 seeds" {
         checkTail(name = "superpluck") { rng -> Ignitors.superKarplusStrong(analog = ConstantIgnitor(0.0), rng = rng) }
     }
 })

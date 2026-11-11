@@ -53,7 +53,8 @@ const val RAMP_SHAPE_MAX: Double = SAW_SHAPE_MAX
 
 // ── Super-saw (unison) ───────────────────────────────────────────────────────────────────────────
 
-/** Center-dominant gain falloff: 0 = all voices equal (flat), 1 = only the center voice. */
+/** Center-weighted gain falloff: 0 = all voices equal (flat), 1 = falling linearly from the center to 0 at the
+ *  outermost voices; at 0.1 (here) the outermost voices are 0.9 of the middle's, nearly flat. */
 const val SUPERSAW_SIDE_ATTEN: Double = 0.1
 
 /**
@@ -65,7 +66,8 @@ const val SUPERSAW_SIDE_ATTEN: Double = 0.1
 const val SUPERSAW_GAIN_JITTER: Double = 0.15
 
 /**
- * How much of [SUPERSAW_GAIN_JITTER] the on-pitch CENTER voice receives (`0.0`..`1.0`).
+ * How much of [SUPERSAW_GAIN_JITTER] the on-pitch CENTER voice receives (`0.0`..`1.0`); at an even count, where no
+ * voice sits at the centre, both middle voices receive it (KLANG-00430, audit finding L3-12).
  * `0.0` = center perfectly stable → always rings, but flatter/"boring"; `1.0` = center jittered like the
  * sides → max liveliness but the "won't ring" lottery returns. Dial by ear (the loud center voice carries
  * the perceived pitch, so a little goes a long way). Applies to all super-* unison families.
@@ -112,7 +114,7 @@ const val SUPERSAW_WARMUP: Double = 16.0
 // The super-ramp is a negated super-saw; these are its OWN unison knobs, seeded to the super-saw
 // values for now. Change these literals to give the unison ramp its own character.
 
-/** Super-ramp center-dominant gain falloff. Starts equal to the super-saw. */
+/** Super-ramp center-weighted gain falloff. Starts equal to the super-saw. */
 const val SUPERRAMP_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
 
 /** Super-ramp per-voice amplitude jitter. Starts equal to the super-saw. */
@@ -138,7 +140,7 @@ const val SUPERRAMP_WARMUP: Double = SUPERSAW_WARMUP
 // The super-square stacks the pulse shape (duty 0.5) on the shared super-saw unison engine; these are
 // its OWN knobs, seeded to the super-saw values. Change these literals to give it its own character.
 
-/** Super-square center-dominant gain falloff. Starts equal to the super-saw. */
+/** Super-square center-weighted gain falloff. Starts equal to the super-saw. */
 const val SUPERSQUARE_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
 
 /** Super-square per-voice amplitude jitter. Starts equal to the super-saw. */
@@ -164,7 +166,7 @@ const val SUPERSQUARE_WARMUP: Double = SUPERSAW_WARMUP
 // The super-triangle stacks the pulse shape with fully-open flanks (1.0/1.0); its own unison knobs,
 // seeded to the super-saw values.
 
-/** Super-triangle center-dominant gain falloff. Starts equal to the super-saw. */
+/** Super-triangle center-weighted gain falloff. Starts equal to the super-saw. */
 const val SUPERTRI_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
 
 /** Super-triangle per-voice amplitude jitter. Starts equal to the super-saw. */
@@ -193,7 +195,7 @@ const val SUPERTRI_WARMUP: Double = SUPERSAW_WARMUP
 // The super-sine stacks pure sines on the shared super-saw unison engine; its own knobs, seeded to
 // the super-saw values.
 
-/** Super-sine center-dominant gain falloff. Starts equal to the super-saw. */
+/** Super-sine center-weighted gain falloff. Starts equal to the super-saw. */
 const val SUPERSINE_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
 
 /** Super-sine per-voice amplitude jitter. Starts equal to the super-saw. */
@@ -228,9 +230,10 @@ const val SUPERSINE_WARMUP: Double = SUPERSAW_WARMUP
 
 /** Minimum flank length in **samples** (a floor on every edge, like the saw: edges are never truly
  *  instant and high notes soften with pitch). The rounded pulse reads it through a one-sample box, so the
- *  edge's kernel is this flank times one sample (2 samples: a trapezoid kernel 3 samples wide; 1 would be the
- *  two-point PolyBLEP's). Tune by ear. */
-const val PULSE_MIN_FLANK_SAMPLES: Double = 2.0
+ *  edge's kernel is this flank times one sample: at 1 sample it is the saw's, the two-point PolyBLEP's (the
+ *  maintainer, 2026-11-11: "let the square have the same edge width as the saw"; it was 2 samples, a trapezoid
+ *  kernel 3 samples wide and duller at the top, KLANG-00430). The Katalyst's square knob LFO reads it too. */
+const val PULSE_MIN_FLANK_SAMPLES: Double = 1.0
 
 /** Pulse rising-edge flank fraction of its plateau (0 = sharpest / min floor, 1 = full ramp). */
 const val PULSE_RISE_FLANK: Double = 0.0
@@ -262,11 +265,24 @@ const val CRACKLE_DC_POLE: Double = 0.995
 /** Default tilt (0 = flat white, filter bypassed). */
 const val NOISE_TILT_DEFAULT: Double = 0.0
 
-/** One-pole LP coefficient for the tilt pivot (`g` in `lp += g·(x−lp)`; ≈1 kHz pivot @ 44.1k). Tune by ear. */
+/**
+ * One-pole LP coefficient for the tilt pivot (`g` in `lp += g·(x−lp)`) at [NOISE_COEFF_REFERENCE_RATE]: a corner near
+ * 1.24 kHz. The engine scales it to the device's rate, `1 - (1 - g)^(48000 / fs)`, so the corner is the same at every
+ * rate (KLANG-00430, audit finding L3-10). Tune by ear.
+ */
 const val NOISE_TILT_LP_COEF: Double = 0.15
 
+/**
+ * The rate at which the white tilt's [NOISE_TILT_LP_COEF] and brown noise's `leak` are given: their per-sample values
+ * hold at 48 kHz, and the engine scales each to the device's rate so its corner stays where it is at 48 kHz.
+ */
+const val NOISE_COEFF_REFERENCE_RATE: Double = 48000.0
+
 // ── Brown noise ──────────────────────────────────────────────────────────────────────────────────
-/** Per-sample white-leak `k` in `out = (out + k·white)/(1+k)`. Lower = deeper/slower brown. */
+/**
+ * The white leak `k` in `out = (out + k·white)/(1+k)` per sample at [NOISE_COEFF_REFERENCE_RATE]. Lower = deeper/slower
+ * brown. The engine scales it to the device's rate (the pole `1/(1+k)` to the power `48000 / fs`), so the corner stays.
+ */
 const val BROWN_LEAK_DEFAULT: Double = 0.02
 
 // ── Dust ─────────────────────────────────────────────────────────────────────────────────────────

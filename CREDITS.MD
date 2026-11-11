@@ -72,7 +72,8 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
 - **Karplus–Strong** (Kevin Karplus & Alexander Strong) — plucked-string synthesis
 - **The plucked string in tune** after David A. Jaffe and Julius O. Smith, *"Extensions of the Karplus-Strong
   Plucked-String Algorithm"* (Computer Music Journal, 1983): the loop filters' phase delay at the note is taken out of
-  the delay line, so the pluck plays its note at every brightness and stiffness
+  the delay line, so the pluck plays its note at every brightness and stiffness; and the pick position from the same
+  paper, the comb `x[n] - x[n - beta N]` on the excitation that takes out the harmonics with a node at the pick
 - **PolyBLEP** (Välimäki et al.) — band-limited oscillator anti-aliasing
 - **Lagrange fractional delay** after Timo I. Laakso, Vesa Välimäki, Matti Karjalainen and Unto K. Laine,
   *"Splitting the Unit Delay"* (IEEE Signal Processing Magazine, 1996): the four-point cubic read of the sample
@@ -91,7 +92,8 @@ Beyond the filters, Klang's voices and effects build on well-known DSP algorithm
   `2^(x·log2 e)`; the range reduction of William J. Cody and William Waite, *Software Manual for the
   Elementary Functions* (Prentice-Hall, 1980); the coefficients were fitted for Klang (Remez
   exchange), no third-party code
-- **Perlin noise** (Ken Perlin) — organic drift and noise textures
+- **Perlin noise** (Ken Perlin): organic drift and noise textures; its lattice gradients picked by the 32-bit
+  finalizer of Austin Appleby's MurmurHash3 (public domain), as the berlin noise's values, so the walk has no period
 - **Berlin noise** (James Coyne and Jade Rowland, from Strudel's `berlin`): Perlin's drift with straight segments.
   Klang joins hashed random values with straight lines, its hash the 32-bit finalizer of Austin Appleby's MurmurHash3
   (public domain); sprudel's `berlin` signal, the Ignitor's `berlin` and the Katalyst's `Kat.berlin`

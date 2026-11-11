@@ -171,6 +171,40 @@ changed (the noise `uid` stays on the wire; only the name's key drops it), so th
 **Reproductions deleted:** L5-01 (`AuditSoundStagesRepro`), L5-02 and L5-07 (`AuditRealtimeRepro`). The build and
 burst test stays: it carries L2-06 (KLANG-00427) and the open L5-03.
 
+
+## Decisions pass (2026-11-11)
+
+**L5-03 built for the shimmer (option (b)).** `shimmerRingFrames` (`IgnitorEffects.kt`) sizes the grain ring at the
+build from the pitch list and the build's rate (the region's inside one): a grain at the rate `r` reads back
+`max(r, 1)` grain lengths (150 ms), so the ring holds the largest of these plus two frames, 14,402 frames at the default
+`[0, 7, 12]` at 48 kHz (115 KB) where it held 96,000 (768 KB). The pitch list is fixed per node and no grain reads a
+run-time pitch, so the build knows the worst case and nothing is clamped; a list whose reach is at or past today's ring
+(a pitch above about +44.8 semitones) keeps today's ring, so the sizing never grows one. `GraphCensus` sizes it the same
+way (at 48 kHz). The Karplus lines are not touched. Sound: the read positions round differently in their last bits (the
+ring's length enters the modulo of a grain's start); no corpus song has a shimmer.
+
+Guards: `ShimmerRingSizeSpec` (the size law at eleven pitch lists, a 2x region, a non-finite and a huge pitch; a sized
+ring renders the full ring's output within 1e-7 for four pitch lists with feedback 0 and 0.9; the control: a ring 300
+frames short differs by more than 1e-3), `ShimmerBuildBytesSpec` (JVM: 117,304 B per build of a saw under a shimmer, the
+bound 250 KB; 774,520 B before). Mutants KILLED: the reach without its floor of 1, the headroom taken away, the build
+site passing today's ring. Cost probe: the shimmer rows' `build_us` 49.8 to 12.8 and 42.4 to 13.3; `net_ns` unchanged
+within the run's drift.
+
+**L5-11 (ii) built: a non-finite `drive` amount reads as unset at `DriveIgnitor`'s read** (unset is off for the drive,
+its gate row): `!(amt > 0.0) || amt - amt != 0.0` passes the input through, so `x.drive(Ignitor.param("d", NaN).add(0))`
+no longer renders all NaN and an infinite amount no longer an infinite gain. A one-line read guard, not a clamp: every
+finite amount drives as before. Guard: `DriveAmountNonFiniteSpec` (NaN, +-Infinity pass the input bit for bit; 0.5 drives
+by `DistortionCore.drive`). Mutants: the original read `amt <= 0.0` KILLED (the NaN row), the infinity half taken out
+KILLED; a first mutant that kept `amt - amt != 0.0` was equivalent (that half alone catches a NaN too) and SURVIVED, as it
+must. `audio/ref/numerical-safety.md` and the `drive` row of `audio/ref/off-values.md` say it. No song moves.
+
+**L5-11 (i) not built.** Looking through `Variants` and `OptimizerHint` needs the sound index in all six gate queries
+(`gatedOff`, `gatedOffWhenUnset`, `gatedOffInner`, `gatedOffWhenFinite`, `gatedOffAtUnity`, `switchedOff`) and their
+call sites, and the optimizer's `mayBeUnset` (`audio_bridge`) must look through both too, or an unset cutoff behind a
+`Variants` fuses where the plain build gates it, which breaks the optimizer's parity. Two modules and a parity
+contract for trees no corpus song has: more than the small local change the maintainer allowed. On KLANG-00437's list.
+`IgnitorGateSpec`'s pin row stays.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

@@ -15,7 +15,7 @@ import kotlin.math.sin
 /** An eighth of a cycle per 128-frame block at 48 kHz. */
 internal const val EIGHTH_HZ: Double = 46.875
 
-/** One sample's phase at [EIGHTH_HZ]: the saw's flyback, half the pulse's minimum flank. */
+/** One sample's phase at [EIGHTH_HZ]: the saw's flyback and the pulse's minimum flank (one sample since 2026-11-11). */
 internal const val EIGHTH_DT: Double = 1.0 / 1024.0
 
 internal fun handSine(p: Double): Double = sin(2.0 * PI * p)
@@ -30,9 +30,12 @@ internal fun handSaw(p: Double): Double {
 /** Duty 0.5, both flanks fully open: up over half a cycle, down over the other. */
 internal fun handTri(p: Double): Double = if (p < 0.5) -1.0 + 4.0 * p else 1.0 - 4.0 * (p - 0.5)
 
-/** A two-sample rise, high to [duty], a two-sample fall, low to the end. */
+/**
+ * A one-sample rise, high to [duty], a one-sample fall, low to the end: the saw's edge width (the pulse's minimum flank
+ * was two samples until KLANG-00430's decisions pass, 2026-11-11).
+ */
 internal fun handSquare(p: Double, duty: Double): Double {
-    val flank = 2.0 * EIGHTH_DT
+    val flank = 1.0 * EIGHTH_DT
 
     return when {
         p < flank -> -1.0 + p * 2.0 / flank

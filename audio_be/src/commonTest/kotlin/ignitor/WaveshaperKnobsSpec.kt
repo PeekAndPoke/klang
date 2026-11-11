@@ -187,7 +187,7 @@ class WaveshaperKnobsSpec : StringSpec({
     // ── The rng stream ───────────────────────────────────────────────────────────────────────────
 
     "a build-time knob that is not a leaf is not built, so it moves no draw" {
-        // `perlin` builds a permutation table and a start position AT CONSTRUCTION, off the voice's
+        // `perlin` draws its noise's seed and a start position AT CONSTRUCTION, off the voice's
         // stream; the white noise draws AT GENERATE, off the same stream. A perlin that got built
         // would shift every white-noise sample after it.
         val noise = IgnitorDsl.WhiteNoise()

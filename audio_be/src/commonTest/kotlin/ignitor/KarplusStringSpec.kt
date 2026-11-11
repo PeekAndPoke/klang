@@ -18,14 +18,16 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
+import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * A stream that serves `0.0, 0.01, 0.02, ...` from [nextDouble] and counts the draws; every other draw fails, so a
- * burst that drew anything else would show.
+ * A stream that serves `0.0, 0.01, 0.02, ...` from [nextDouble] and counts the draws; every other draw fails, so an
+ * excitation that drew anything else would show.
  */
 private class CountingRandom : Random() {
     var draws: Int = 0
@@ -38,43 +40,45 @@ private class CountingRandom : Random() {
 /**
  * The string core of both pluck nodes (engine tidy-up step 11). The node renders are pinned bit for bit elsewhere
  * (`BuiltInVoiceMatrixSpec`, the pluck rows) and their pitch by `PluckPitchSpec`; these rows pin the core's own
- * contract: the burst's draws and its DC-free excitation, the filter state a re-pluck keeps, the plain write at gain 1,
+ * contract: the excitation's draws, its pick comb, its level and its DC-free sum, the filter state a re-pluck keeps, the plain write at gain 1,
  * and the loop delay taken out of the read.
  */
 class KarplusStringSpec : StringSpec({
 
-    "the burst draws exactly burstLen values, in index order, and writes them with their mean taken out" {
-        // (line delay, pick position) -> (delay length, burst length, burst start), worked out by hand from the law:
-        // burstLen = max(1, (delayLen * (0.1 + 0.9 * pp)).toInt()), burstStart = ((delayLen - burstLen) * pp).toInt().
-        // The line holds the burst and the zeros around it, each less their mean over the delay length (L3-06).
+    "the pick draws one value per sample of the string, in index order, and writes the pick comb of them (L3-08)" {
+        // (line delay, pick position) -> (string length L, comb distance d), worked out by hand from the law:
+        // L = lineDelay clamped to the line, whole; d = max(1, (0.5 * pp * L + 0.5).toInt()), pp clamped to 0..1.
+        // The line holds y[j] = (x[j] - x[(j - d) mod L]) / sqrt(2), x the draws; written here as a plain modular
+        // formula, not the cycle walk the class runs. The distances cover one cycle (gcd 1), several (gcd 5, 9) and half
+        // the string (gcd 50).
         val cases = listOf(
-            Triple(100.0, 0.0, Triple(100, 10, 0)),
-            Triple(100.0, 0.3, Triple(100, 37, 18)),
-            Triple(100.0, 1.0, Triple(100, 100, 0)),
-            Triple(37.9, 0.5, Triple(37, 20, 8)),
-            Triple(100.0, -3.0, Triple(100, 10, 0)),
-            Triple(100.0, 7.0, Triple(100, 100, 0)),
-            Triple(0.5, 1.0, Triple(2, 2, 0)),
+            Triple(100.0, 0.0, Pair(100, 1)),
+            Triple(100.0, 0.28, Pair(100, 14)),
+            Triple(100.0, 0.3, Pair(100, 15)),
+            Triple(100.0, 1.0, Pair(100, 50)),
+            Triple(37.9, 0.5, Pair(37, 9)),
+            Triple(36.0, 0.5, Pair(36, 9)),
+            Triple(100.0, -3.0, Pair(100, 1)),
+            Triple(100.0, 7.0, Pair(100, 50)),
+            Triple(100.0, Double.NaN, Pair(100, 1)),
+            Triple(0.5, 1.0, Pair(2, 1)),
         )
 
         for ((lineDelay, pick, expected) in cases) {
-            val (delayLen, burstLen, burstStart) = expected
+            val (len, distance) = expected
             val rng = CountingRandom()
             val s = KarplusString()
 
             s.delayLine.fill(9.0)
             s.excite(lineDelay = lineDelay, pickPos = pick, rng = rng)
 
-            rng.draws shouldBe burstLen
-            s.writePos shouldBe delayLen
+            rng.draws shouldBe len
+            s.writePos shouldBe len
 
-            val raw = DoubleArray(delayLen) { j ->
-                if (j < burstStart || j >= burstStart + burstLen) 0.0 else (j - burstStart) * 0.01 * 2.0 - 1.0
-            }
-            val mean = raw.sum() / delayLen
+            val x = DoubleArray(len) { j -> j * 0.01 * 2.0 - 1.0 }
 
             for (j in 0 until KarplusString.MAX_DELAY) {
-                val want = if (j >= delayLen) 9.0 else raw[j] - mean
+                val want = if (j >= len) 9.0 else (x[j] - x[(j - distance).mod(len)]) / sqrt(2.0)
 
                 withClue("line delay $lineDelay, pick $pick, index $j") {
                     s.delayLine[j] shouldBe (want plusOrMinus 1e-12)
@@ -83,7 +87,72 @@ class KarplusStringSpec : StringSpec({
         }
     }
 
-    "the excitation carries no DC: the line's excited samples sum to zero, whatever the burst and the seed (L3-06)" {
+    "the pick position shapes the spectrum: every harmonic is the noise's times the comb 2 sin(pi k d / L) / sqrt(2) (L3-08)" {
+        // The default 0.28 on a string of 100 picks at d = 14: the 7th harmonic keeps 0.09 of the noise's level
+        // (2 sin(0.98 pi) / sqrt(2)), the first one the comb takes nearly out; 1.0 (d = 50) takes out every even one.
+        val len = 100
+
+        for (pick in listOf(0.0, 0.28, 0.5, 1.0)) {
+            val distance = maxOf(1, (0.5 * pick * len + 0.5).toInt())
+            val s = KarplusString()
+            val draws = Random(17)
+            val x = DoubleArray(len) { draws.nextDouble() * 2.0 - 1.0 }
+
+            s.excite(lineDelay = len.toDouble(), pickPos = pick, rng = Random(17))
+
+            for (k in 1 until len / 2) {
+                var xr = 0.0
+                var xi = 0.0
+                var yr = 0.0
+                var yi = 0.0
+
+                for (j in 0 until len) {
+                    val a = 2.0 * PI * k * j / len
+
+                    xr += x[j] * cos(a)
+                    xi -= x[j] * sin(a)
+                    yr += s.delayLine[j] * cos(a)
+                    yi -= s.delayLine[j] * sin(a)
+                }
+
+                val comb = 2.0 * abs(sin(PI * k * distance / len)) / sqrt(2.0)
+                val want = sqrt(xr * xr + xi * xi) * comb
+
+                withClue("pick $pick, harmonic $k") {
+                    sqrt(yr * yr + yi * yi) shouldBe (want plusOrMinus 1e-9)
+                }
+            }
+        }
+    }
+
+    "the level stays the same at every pick position: the comb's 1 / sqrt(2) holds the noise's power (L3-08)" {
+        // The burst knob it replaced moved the level by about 10 dB (a short burst carries less energy). Mean energy per
+        // sample over 400 seeds, against the plain noise's 1/3; within 0.25 dB at every position.
+        val len = 436
+
+        for (pick in listOf(0.0, 0.1, 0.28, 0.5, 0.77, 1.0)) {
+            var energy = 0.0
+
+            for (seed in 1..400) {
+                val s = KarplusString()
+
+                s.excite(lineDelay = len.toDouble(), pickPos = pick, rng = Random(seed))
+
+                for (j in 0 until len) {
+                    energy += s.delayLine[j] * s.delayLine[j]
+                }
+            }
+
+            val perSample = energy / (400.0 * len)
+            val db = 10.0 * log10(perSample * 3.0)
+
+            withClue("pick $pick: the level re plain noise, $db dB") {
+                abs(db) shouldBeLessThan 0.25
+            }
+        }
+    }
+
+    "the excitation carries no DC: the line's excited samples sum to zero, whatever the pick and the seed (L3-06)" {
         for (seed in 1..8) {
             for (pick in listOf(0.0, 0.25, 0.5, 1.0)) {
                 for (lineDelay in listOf(21.7, 109.1, 436.4)) {
@@ -99,7 +168,7 @@ class KarplusStringSpec : StringSpec({
                         energy += s.delayLine[j] * s.delayLine[j]
                     }
 
-                    withClue("seed $seed, pick $pick, line delay $lineDelay: the burst is not silent") {
+                    withClue("seed $seed, pick $pick, line delay $lineDelay: the excitation is not silent") {
                         energy shouldBeGreaterThan 1e-6
                     }
 

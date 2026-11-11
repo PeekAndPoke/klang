@@ -79,20 +79,13 @@ internal enum class KatalystKnobModulator {
 internal const val KATALYST_KNOB_NOISE_SEED: Int = 0x6B6E6F62
 
 /**
- * The perlin walk's period: its permutation repeats every 256 cells and every fBm octave scales the position by a
- * power of two, so the walk wrapped by 256 is the same walk. A clock subtracted down from `[256, 512)` is exact, and
- * the value at it is the unwrapped value bit for bit (`KatalystKnobModulatorSpec`); a backward walk's wrap adds 256 to
- * a negative position and rounds once, by at most half an ulp of 256. Without the wrap the position grows without end
- * and `PerlinNoise.noise`'s `toInt()` saturates (about 32 hours at rate 1 with 8 octaves, 19 minutes at rate 100).
+ * Where a noise walk's clock wraps, perlin and berlin alike: 2^23 cells, so the top octave (2^7 times the clock) stays
+ * below 2^31, where `noise`'s `toInt()` would saturate (and berlin's value leave `[-1, 1]` without bound). Neither law
+ * has a period (the perlin's since KLANG-00430, audit finding L3-09: its lattice is hashed as the berlin's; it wrapped
+ * at its old period of 256 cells before), so the wrap is one step in the value: once per 2^23 cells either way, about 16
+ * hours at rate 1.
  */
-internal const val PERLIN_CLOCK_PERIOD: Double = 256.0
-
-/**
- * Where the berlin walk's clock wraps: 2^23 cells, so its top octave (2^7 times the clock) stays below 2^31, where
- * `BerlinNoise.noise`'s `toInt()` would saturate and its value leave `[-1, 1]` without bound. The berlin hash has no
- * period, so the wrap is one step in the value: once per 2^23 cells either way, about 16 hours at rate 1.
- */
-internal const val BERLIN_CLOCK_SPAN: Double = 8388608.0
+internal const val NOISE_CLOCK_SPAN: Double = 8388608.0
 
 /**
  * The running count of the noise modulators of ONE chain, in build order: the chain builder hands the same counter to
@@ -142,7 +135,7 @@ internal class KatalystNoiseOrdinals {
  *   `dt = freq / sampleRate` (the Ignitor's own per-sample increment), wrapped with [wrapPhase], whose modulo branch
  *   takes a block that steps two cycles or more; a noise by `rate * perlinStep * blockFrames`, the Ignitor's
  *   per-sample step (`PERLIN_UNITS_PER_SECOND / sampleRate`, divided first) times the block, wrapped by
- *   [PERLIN_CLOCK_PERIOD] (the same walk) or [BERLIN_CLOCK_SPAN] (one step per many hours). The advance reads the operands of the run just done, so a slot that moved the `freq` before a
+ *   [NOISE_CLOCK_SPAN] (one step per many hours). The advance reads the operands of the run just done, so a slot that moved the `freq` before a
  *   tick sets that tick's advance.
  * - The clock starts at 0 when the program is compiled (a noise at its seeded start: the seed of its position in the
  *   chain, [KATALYST_KNOB_NOISE_SEED] and [KatalystNoiseOrdinals]) and moves only by [tick]: over the blocks the chain
@@ -276,7 +269,7 @@ internal class KatalystKnobProgram private constructor(
                     // finite `x - x` is 0, a non-finite one NaN; no `isFinite` call, a stdlib call on Kotlin/JS).
                     // The Ignitor's walk would keep the NaN for good; the knob's holds until the rate is finite.
                     if (next - next == 0.0) {
-                        clocks[m] = wrapNoiseClock(m = m, x = next)
+                        clocks[m] = wrapNoiseClock(x = next)
                     }
                 }
             }
@@ -284,12 +277,12 @@ internal class KatalystKnobProgram private constructor(
     }
 
     /**
-     * The noise clock [x] of modulator [m] back inside its span: [PERLIN_CLOCK_PERIOD] for a perlin (the same walk),
-     * [BERLIN_CLOCK_SPAN] for a berlin (one step); a clock already inside comes back unchanged.
+     * The noise clock [x] back inside [NOISE_CLOCK_SPAN] (one step in the walk's value); a clock already inside comes
+     * back unchanged.
      */
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun wrapNoiseClock(m: Int, x: Double): Double {
-        val span = if (modKinds[m] == KatalystKnobModulator.PERLIN) PERLIN_CLOCK_PERIOD else BERLIN_CLOCK_SPAN
+    private inline fun wrapNoiseClock(x: Double): Double {
+        val span = NOISE_CLOCK_SPAN
 
         if (x >= span || x < 0.0) {
             return x - span * floor(x / span)

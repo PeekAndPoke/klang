@@ -87,8 +87,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         /** A plucked string's ring: both string engines allocate 2 500 doubles per string, whatever the pitch. */
         private const val STRING_BYTES = 2_500 * 8
 
-        /** The shimmer's ring: 96 000 doubles, two seconds at 48 kHz. */
-        private const val SHIMMER_BYTES = 96_000 * 8
+        /** The rate the census sizes a shimmer's ring at (`shimmerRingFrames`): the engine's usual 48 kHz. */
+        private const val SHIMMER_CENSUS_SAMPLE_RATE = 48_000
 
         /** The shimmer's loop per sample: the input, the ring write, up to eight grains reading two taps each, the output. */
         private const val SHIMMER_TRAFFIC = 19
@@ -680,7 +680,12 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
                 source() + inPlace() + inPlace() + GraphCensus(passes = 1, traffic = 2 + 2, bytes = 0) + GraphCensus(passes = 1, traffic = 3, bytes = 0)
             }
             is IgnitorDsl.Phaser -> inPlace(4 * 16 + 32)
-            is IgnitorDsl.Shimmer -> GraphCensus(passes = 1, traffic = SHIMMER_TRAFFIC, bytes = SHIMMER_BYTES)
+            is IgnitorDsl.Shimmer -> GraphCensus(
+                passes = 1,
+                traffic = SHIMMER_TRAFFIC,
+                // The ring sized to the pitches (KLANG-00429, L5-03): 14,402 doubles at the default, at most 96,000.
+                bytes = shimmerRingFrames(pitches = node.pitches, sampleRate = SHIMMER_CENSUS_SAMPLE_RATE, maxFrames = SHIMMER_RING_FRAMES) * 8,
+            )
 
             // pitch modulation, nothing when gated: the mod ([vibratoMod] for the vibrato), then its memo and the memo's
             // readers ([pitchMemo]; the ratio loop and the read of the ratio belong to each pitched source under the node).

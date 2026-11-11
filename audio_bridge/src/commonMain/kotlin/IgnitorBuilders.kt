@@ -240,7 +240,7 @@ data class OscSuperSawBuilder(val node: IgnitorDsl.SuperSaw) {
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperSawBuilder = copy(node = node.copy(spreadPower = spreadPower))
 
-    /** Center-dominant gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
+    /** Center-weighted gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
     fun sideAtten(sideAtten: Double): OscSuperSawBuilder = copy(node = node.copy(sideAtten = sideAtten))
 
     /** Per-voice random amplitude offset; the text is on the script knob `gainJitter` (`scriptGainJitter` in `klangscript-libs`). */
@@ -299,7 +299,7 @@ data class OscSuperSineBuilder(val node: IgnitorDsl.SuperSine) {
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperSineBuilder = copy(node = node.copy(spreadPower = spreadPower))
 
-    /** Center-dominant gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
+    /** Center-weighted gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
     fun sideAtten(sideAtten: Double): OscSuperSineBuilder = copy(node = node.copy(sideAtten = sideAtten))
 
     /** Per-voice random amplitude offset; the text is on the script knob `gainJitter` (`scriptGainJitter` in `klangscript-libs`). */
@@ -358,7 +358,7 @@ data class OscSuperSquareBuilder(val node: IgnitorDsl.SuperSquare) {
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperSquareBuilder = copy(node = node.copy(spreadPower = spreadPower))
 
-    /** Center-dominant gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
+    /** Center-weighted gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
     fun sideAtten(sideAtten: Double): OscSuperSquareBuilder = copy(node = node.copy(sideAtten = sideAtten))
 
     /** Per-voice random amplitude offset; the text is on the script knob `gainJitter` (`scriptGainJitter` in `klangscript-libs`). */
@@ -417,7 +417,7 @@ data class OscSuperTriBuilder(val node: IgnitorDsl.SuperTri) {
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperTriBuilder = copy(node = node.copy(spreadPower = spreadPower))
 
-    /** Center-dominant gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
+    /** Center-weighted gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
     fun sideAtten(sideAtten: Double): OscSuperTriBuilder = copy(node = node.copy(sideAtten = sideAtten))
 
     /** Per-voice random amplitude offset; the text is on the script knob `gainJitter` (`scriptGainJitter` in `klangscript-libs`). */
@@ -476,7 +476,7 @@ data class OscSuperRampBuilder(val node: IgnitorDsl.SuperRamp) {
     /** Detune spacing shape; the text is on the script knob `spreadPower` (`scriptSpreadPower` in `klangscript-libs`). */
     fun spreadPower(spreadPower: Double): OscSuperRampBuilder = copy(node = node.copy(spreadPower = spreadPower))
 
-    /** Center-dominant gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
+    /** Center-weighted gain falloff; the text is on the script knob `sideAtten` (`scriptSideAtten` in `klangscript-libs`). */
     fun sideAtten(sideAtten: Double): OscSuperRampBuilder = copy(node = node.copy(sideAtten = sideAtten))
 
     /** Per-voice random amplitude offset; the text is on the script knob `gainJitter` (`scriptGainJitter` in `klangscript-libs`). */
@@ -523,7 +523,7 @@ data class OscPluckBuilder(val node: IgnitorDsl.Pluck) {
     /** The string loop's lowpass; the text is on the script knob `brightness` (`scriptBrightness` in `klangscript-libs`). */
     fun brightness(brightness: IgnitorDsl): OscPluckBuilder = copy(node = node.copy(brightness = brightness))
 
-    /** The pluck's noise burst; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
+    /** Where the string is picked; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
     fun pickPosition(pickPosition: IgnitorDsl): OscPluckBuilder = copy(node = node.copy(pickPosition = pickPosition))
 
     /** String stiffness; the text is on the script knob `stiffness` (`scriptStiffness` in `klangscript-libs`). */
@@ -550,7 +550,7 @@ data class OscSuperPluckBuilder(val node: IgnitorDsl.SuperPluck) {
     /** The string loop's lowpass; the text is on the script knob `brightness` (`scriptBrightness` in `klangscript-libs`). */
     fun brightness(brightness: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(brightness = brightness))
 
-    /** The pluck's noise burst; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
+    /** Where the string is picked; the text is on the script knob `pickPosition` (`scriptPickPosition` in `klangscript-libs`). */
     fun pickPosition(pickPosition: IgnitorDsl): OscSuperPluckBuilder = copy(node = node.copy(pickPosition = pickPosition))
 
     /** String stiffness; the text is on the script knob `stiffness` (`scriptStiffness` in `klangscript-libs`). */

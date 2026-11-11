@@ -259,7 +259,12 @@ sealed interface IgnitorDsl {
 
         val octaves: IgnitorDsl = Param(name = "octaves", default = 1.0)
         val persistence: IgnitorDsl = Param(name = "persistence", default = 0.5)
-        val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.5)
+        /**
+         * Where the pluck picks its string, as a fraction of half the string: 0 at the bridge (thin), 1 at the middle
+         * (hollow, every even harmonic gone). The default 0.28 picks at about a seventh of the string, where a guitar
+         * is picked: the 7th harmonic is the first that goes weak (KLANG-00426, audit finding L3-08).
+         */
+        val pickPosition: IgnitorDsl = Param(name = "pickPosition", default = 0.28)
 
         /**
          * How hard the sound is played INTO the instrument: the level at which the signal meets
@@ -622,7 +627,7 @@ sealed interface IgnitorDsl {
         val freq: IgnitorDsl = Freq,
         val duty: IgnitorDsl = Slots.duty,
         val analog: IgnitorDsl = Slots.analog,
-        /** Minimum flank length in samples (a floor on every edge → softens with pitch). Default 2.0. */
+        /** Minimum flank length in samples (a floor on every edge → softens with pitch). Default 1.0, the saw's edge width. */
         val flankSamples: Double = PULSE_MIN_FLANK_SAMPLES,
         /** Rising-edge flank fraction of the plateau (0 = sharpest/min floor, 1 = full ramp). Default 0.0. */
         val riseFlank: Double = PULSE_RISE_FLANK,
@@ -664,8 +669,9 @@ sealed interface IgnitorDsl {
     /**
      * Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope.
      *
-     * [leak] is the per-sample white-leak coefficient `k` in `out = (out + k·white)/(1+k)`: lower =
-     * deeper / slower-walking brown (default 0.02); higher = brighter (more white mixed in each sample).
+     * [leak] is the white-leak coefficient `k` in `out = (out + k·white)/(1+k)` per sample at 48 kHz: lower =
+     * deeper / slower-walking brown (default 0.02); higher = brighter (more white mixed in each sample). The engine
+     * scales it to the device's rate, so the corner is the same at every rate (KLANG-00430, audit finding L3-10).
      *
      * See [WhiteNoise] for the [uid] instance-discriminator story.
      */
@@ -786,7 +792,7 @@ sealed interface IgnitorDsl {
         val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERSAW_SPREAD_POWER,
-        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        /** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
         val sideAtten: Double = SUPERSAW_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
         val gainJitter: Double = SUPERSAW_GAIN_JITTER,
@@ -845,7 +851,7 @@ sealed interface IgnitorDsl {
         val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERSINE_SPREAD_POWER,
-        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        /** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
         val sideAtten: Double = SUPERSINE_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
         val gainJitter: Double = SUPERSINE_GAIN_JITTER,
@@ -906,7 +912,7 @@ sealed interface IgnitorDsl {
         val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERSQUARE_SPREAD_POWER,
-        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        /** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
         val sideAtten: Double = SUPERSQUARE_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
         val gainJitter: Double = SUPERSQUARE_GAIN_JITTER,
@@ -965,7 +971,7 @@ sealed interface IgnitorDsl {
         val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERTRI_SPREAD_POWER,
-        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        /** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
         val sideAtten: Double = SUPERTRI_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
         val gainJitter: Double = SUPERTRI_GAIN_JITTER,
@@ -1025,7 +1031,7 @@ sealed interface IgnitorDsl {
         val analogSpread: IgnitorDsl = Constant(1.0),
         /** Detune spacing shape: 1 = even, >1 concentrates toward center, <1 spreads outward. */
         val spreadPower: Double = SUPERRAMP_SPREAD_POWER,
-        /** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+        /** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
         val sideAtten: Double = SUPERRAMP_SIDE_ATTEN,
         /** Per-voice random amplitude offset (±fraction); 0 = off. */
         val gainJitter: Double = SUPERRAMP_GAIN_JITTER,
@@ -1103,6 +1109,7 @@ sealed interface IgnitorDsl {
         /** The loop feedback per pass, 0.9 to 0.999 (default 0.996): higher rings longer. Not a time. */
         val feedback: IgnitorDsl = Slots.feedback,
         val brightness: IgnitorDsl = Slots.brightness,
+        /** The pick position, 0 (the bridge) to 1 (the middle of the string), default 0.28: see [Slots.pickPosition]. */
         val pickPosition: IgnitorDsl = Slots.pickPosition,
         val stiffness: IgnitorDsl = Slots.stiffness,
         val analog: IgnitorDsl = Slots.analog,

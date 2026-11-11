@@ -5,11 +5,16 @@
 
 package io.peekandpoke.klang.common.math
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeBetween
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeBetween
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import kotlin.math.abs
+import kotlin.math.floor
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 class PerlinNoiseSpec : StringSpec({
@@ -150,6 +155,124 @@ class PerlinNoiseSpec : StringSpec({
         val noise = PerlinNoise(Random(0))
         for (i in 0..2000) {
             noise.fbm(i * 0.05, octaves = 5, persistence = 0.6).shouldBeBetween(-1.0, 1.0, 0.01)
+        }
+    }
+
+    // ── No period (KLANG-00430, audit finding L3-09) ─────────────────────────────────────────────────────────────
+
+    "PerlinNoise has no period: 256 lattice units on (and 512, 65536) the curve is another one (L3-09)" {
+        // The 256-entry permutation table repeated every curve every 256 units, value for value: 1.78 s at the engine's
+        // rate 1. The hashed lattice repeats nowhere; a few points may agree by chance (both gradients the same).
+        val noise = PerlinNoise(Random(11))
+
+        for (shift in listOf(256.0, 512.0, 1024.0, 65536.0)) {
+            var same = 0
+
+            for (i in 0 until 2000) {
+                val x = i * 0.137
+
+                if (noise.noise(x) == noise.noise(x + shift)) {
+                    same++
+                }
+            }
+
+            withClue("shift $shift: $same of 2000 points repeat") {
+                (same < 200) shouldBe true
+            }
+        }
+    }
+
+    "PerlinNoise takes one value from its random stream: the seed, one nextInt (it took 255 for the table)" {
+        var draws = 0
+        val counting = object : Random() {
+            override fun nextBits(bitCount: Int): Int {
+                draws++
+                return 0x2468ACE
+            }
+        }
+
+        PerlinNoise(counting)
+
+        draws shouldBe 1
+    }
+
+    "PerlinNoise is the hashed-lattice law, the same on every host: an oracle in 64-bit arithmetic (L3-09)" {
+        // The law written again without the Int multiply's wrap: every product in Long, masked to 32 bits. A host whose
+        // Int arithmetic meant something else (a multiply that did not wrap, a sign that did not shift) fails here; the
+        // spec runs on the JVM and in JS alike.
+        val mask = 0xFFFFFFFFL
+
+        fun mul(a: Long, b: Long): Long = (a * b) and mask
+
+        fun hash(seed: Int, index: Int): Int {
+            var h = (seed.toLong() and mask) xor mul(index.toLong() and mask, 0x9E3779B1L)
+            h = mul(h xor (h ushr 16), 0x85EBCA6BL)
+            h = mul(h xor (h ushr 13), 0xC2B2AE35L)
+            return (h xor (h ushr 16)).toInt()
+        }
+
+        fun grad(h: Int, x: Double): Double {
+            val g = 1.0 + (h and 7)
+
+            return if ((h and 8) != 0) -g * x else g * x
+        }
+
+        fun oracle(seed: Int, x: Double): Double {
+            val i = floor(x).toInt()
+            val f = x - floor(x)
+            val u = f * f * f * (f * (f * 6 - 15) + 10)
+            val a = grad(hash(seed, i), f)
+            val b = grad(hash(seed, i + 1), f - 1.0)
+
+            return (a + u * (b - a)) * 0.25
+        }
+
+        for (seed in listOf(1, 42, -7, 123456)) {
+            val noise = PerlinNoise(Random(seed))
+            val drawn = Random(seed).nextInt()
+
+            for (x in listOf(0.0, 0.3, 1.5, 255.75, 256.25, -3.2, 1.0e6 + 0.4, -2.0e9, 2.1e9)) {
+                withClue("seed $seed, x $x") {
+                    noise.noise(x) shouldBe (oracle(drawn, x) plusOrMinus 1e-15)
+                }
+            }
+        }
+    }
+
+    "PerlinNoise keeps the table's statistics: the RMS of the 16 equally weighted gradients through the fade (L3-09)" {
+        // E[res^2] = 25.5 (E[g^2] over +-1 .. +-8) times the mean over the fraction f of (1 - u)^2 f^2 + u^2 (1 - f)^2,
+        // the two lattice gradients independent; times 0.25^2. Measured over 200,000 points of one seed, within 3 percent.
+        var integral = 0.0
+        val steps = 100_000
+
+        for (k in 0 until steps) {
+            val f = (k + 0.5) / steps
+            val u = f * f * f * (f * (f * 6 - 15) + 10)
+
+            integral += (1 - u) * (1 - u) * f * f + u * u * (1 - f) * (1 - f)
+        }
+
+        val want = sqrt(25.5 * (integral / steps) * 0.0625)
+        val noise = PerlinNoise(Random(5))
+        var sum = 0.0
+        var sumSq = 0.0
+        val n = 200_000
+
+        for (i in 0 until n) {
+            val v = noise.noise(i * 0.0731)
+
+            sum += v
+            sumSq += v * v
+        }
+
+        val rms = sqrt(sumSq / n)
+
+        withClue("RMS $rms against $want") {
+            (abs(rms / want - 1.0) < 0.03) shouldBe true
+        }
+
+        withClue("mean ${sum / n}") {
+            (abs(sum / n) < 0.01) shouldBe true
         }
     }
 })

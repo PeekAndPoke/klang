@@ -97,6 +97,49 @@ Recommendation: 1, with the default decided by ear (0.5 keeps every song's numbe
   around the flat pluck (IrishLament's `detune(0.05)` is a second string for width, not a correction); none was edited.
 - L3-07 and L3-08: see "Decide".
 
+
+## Decisions pass (2026-11-11)
+
+**L3-08 built: a real pick position, default 0.28** (option 1, the second round's default). `KarplusString.excite` fills
+the whole string `L` with white noise (one `nextDouble` per sample, so a pluck now draws `L` values at every pick
+position) and runs the comb `y[j] = (x[j] - x[(j - d) mod L]) / sqrt(2)`, `d = max(1, round(0.5 * pickPosition * L))`,
+in place and allocation free (the circle walked in `gcd(L, d)` cycles). 0 is the bridge (thin), 1 the middle (every even
+harmonic gone); 0.28 picks at about a seventh of the string. A comb of white noise doubles its power at every `d`, so
+the level no longer moves with the knob (it moved by about 10 dB as a burst length). The comb's circular sum is zero, so
+the excitation carries no DC (L3-06 holds by construction; the separate mean pass is gone). The tuning (L3-01) is
+untouched: `PluckPitchSpec` green.
+
+The default moved in every place that states it: `IgnitorDsl.Slots.pickPosition` (the one home; the node, the Kotlin
+door, `IgnitorDefaults` and the script slot read it), the KDoc of the Kotlin and script builders, `Ignitor.slot`, the
+sprudel doors (`sndPluck`, `sndSuperPluck`: the `@param` and the overview bullet) and the two sprudel editor tools'
+fallback for an absent argument (0.5 to 0.28; their named presets keep their own values). `audio/ref/voice-synthesis.md`
+and `audio/MEMORY.md` say the new meaning.
+
+Guards: `KarplusStringSpec` (the draws and the comb against a plain modular formula at ten (L, pick) pairs, NaN and out
+of range included; the spectrum is the noise's times `2 sin(pi k d / L) / sqrt(2)` harmonic by harmonic at four picks;
+the level within 0.25 dB of plain noise at six picks; the DC row renamed), `KlangScriptIgnitorSlotTest` (the default
+0.28, moved from 0.5). `PluckDcSpec`'s bound moved from 0.01 to 0.04 with its reason in the spec: the measurement's own
+floor (a decaying tone's mean over 0.1 s) reaches 0.017 on one superpluck seed with the new excitation; the DC it guards
+read 0.08 to 4.26. Mutants (all KILLED for the expected reason): the comb taken out, the comb's gain 1, the distance over
+the whole string instead of half, the comb not circular (DC), the default back to 0.5.
+
+Pinned renders moved by this change: `BuiltInVoiceMatrixSpec` `pluck`, `ks`, `string`, `superpluck` (both rows each)
+and both stiffness pins.
+
+Probes: the click probe's pluck rows (the onset is the excitation itself, a hard noise attack by nature) read the
+level after onset 0.0100 to 0.0224 (pluck) and 0.0072 to 0.0103 (superpluck): the default pluck is louder, about +7
+dB at its onset (the whole string carries noise now). Cost: pluck 5.56 to 5.05 ns, superpluck 8 strings 46.7 to 43.5
+(the whole after run was 10 to 20 percent faster on unchanged rows; ratio to the sine 2.32 to 2.27, 19.5 to 19.6).
+
+The corpus, my own before (the tree as found, `5e39f1c12`, before the first edit) against after (`runSongBenchmark
+--args=corpus`, 48 kHz, a temporary RMS print in a throwaway worktree's `CorpusCheck`); no song text changed between the
+runs. Each move is attributed by five more runs, each with ONE change of the pass taken out (the pick, the flank, the
+perlin hash, the noise rate scaling, the jitter rule): a change is named where taking it out moves the song's hash. Songs moved by this change: Drunken Synthlor (by it alone; RMS -19.752 to -18.926 dB, peak 0.8459 to
+0.8806), Die Kirschblüte (with the perlin and the noise rounding; -20.423 to -20.182, peak 0.7467 to 0.7651), Greensleeves
+Chant (with the perlin and the noise rounding; -24.040 to -23.917, peak 0.4530 to 0.4758), The Synthsale Piper's Farewell
+(with the perlin and the noise rounding; -27.840 to -27.582, peak 0.3498 to 0.3545). The full table is in KLANG-00430's
+section of this pass.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

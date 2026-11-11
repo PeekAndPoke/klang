@@ -257,7 +257,7 @@ internal object KlangScriptIgnitor {
 
     /**
      * Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance.
-     * @param leak per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter.
+     * @param leak the white leak per sample at 48 kHz, the same corner at every rate (default 0.02): lower = deeper/slower brown, higher = brighter.
      */
     @KlangScript.Method
     fun brownnoise(leak: IgnitorDslLike? = null): IgnitorDsl =

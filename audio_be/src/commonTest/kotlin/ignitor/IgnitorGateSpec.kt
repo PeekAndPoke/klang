@@ -1068,8 +1068,8 @@ class IgnitorGateSpec : StringSpec({
     // ── The rng stream ───────────────────────────────────────────────────────────────────────
 
     "the gate query builds nothing, so a voice's build-time draws stay in place" {
-        // `crackle` seeds its chaotic map with two draws AT CONSTRUCTION and `perlin` builds a
-        // permutation table plus a start position the same way, so the ORDER in which the build
+        // `crackle` seeds its chaotic map with two draws AT CONSTRUCTION and `perlin` draws its
+        // noise's seed plus a start position the same way, so the ORDER in which the build
         // reaches them is audible. The arm builds the inner first and the knob second; a query
         // that built the knob in order to ask it would swap that, and the crackle would start
         // from a different pair of numbers for the rest of the note.

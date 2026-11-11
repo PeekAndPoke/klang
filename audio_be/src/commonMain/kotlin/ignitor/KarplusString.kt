@@ -17,9 +17,9 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * One Karplus-Strong string: a delay line excited by a noise burst, read with a four-point (cubic Lagrange)
- * interpolation, its feedback filtered by a brightness one-pole and an optional stiffness allpass, then scaled by the
- * feedback coefficient.
+ * One Karplus-Strong string: a delay line excited by white noise through a pick-position comb ([excite]), read with a
+ * four-point (cubic Lagrange) interpolation, its feedback filtered by a brightness one-pole and an optional stiffness
+ * allpass, then scaled by the feedback coefficient.
  *
  * **The read** (KLANG-00430, audit finding L3-07): the fractional delay sits inside the loop, so its gain is paid on
  * every trip. A linear read's gain is 1 at a fraction of 0 and `cos(w / 2)` at 0.5 (0.71 at 12 kHz), so two notes 2 Hz
@@ -38,7 +38,7 @@ import kotlin.random.Random
  * cadence), their drift (one [AnalogDrift], or [DriftLanes]), their draw order, the unison detune of the base delay
  * and the voice gain.
  *
- * [excite] writes the burst and [writePos] and nothing else: a superpluck string that comes back after a shrink is
+ * [excite] writes the excitation and [writePos] and nothing else: a superpluck string that comes back after a shrink is
  * plucked again, and its filter state ([lpState], [apPrevIn], [apPrevOut]) carries over. [excited] belongs to the
  * node, which sets it before it plucks and clears it to pluck again.
  */
@@ -62,41 +62,82 @@ internal class KarplusString {
     var apPrevOut: Double = 0.0
 
     /**
-     * Plucks the string: a noise burst over the first `lineDelay.toInt()` samples of the delay line (the read delay,
-     * [lineDelay] clamped to the line as [render] clamps it), placed by [pickPos] (0 a short burst at the start, 1 the
-     * whole length), one `rng.nextDouble() * 2 - 1` per burst sample in index order and zeros elsewhere; then the mean
-     * of those samples is taken out of each of them, so the excitation carries no DC into the loop (audit finding L3-06:
-     * the loop passes DC at the feedback gain alone, so a burst's random mean outlived its tone); then [writePos]. The
-     * draws are the same in count and order as without the mean's removal. The filter state is left as it is.
+     * Plucks the string at a pick position (KLANG-00426, audit finding L3-08): white noise over the first
+     * `lineDelay.toInt()` samples of the delay line, the whole string `L` (the read delay, [lineDelay] clamped to the
+     * line as [render] clamps it), one `rng.nextDouble() * 2 - 1` per sample in index order, then the pick's comb
+     * `y[j] = (x[j] - x[j - d]) / sqrt(2)`, circular over those `L` samples, with `d = round(0.5 * pickPos * L)`
+     * floored at one sample. [pickPos] is the place along the string as a fraction of half of it: 0 at the bridge
+     * (`d` one sample, a thin tone), 1 at the middle (`d = L / 2`, every even harmonic gone, hollow); the default 0.28
+     * picks at about a seventh of the string, where the 7th harmonic is the first that goes weak. A comb of white noise
+     * doubles its power at every `d`, so the fixed `1 / sqrt(2)` keeps the level the same at every pick position.
+     *
+     * The comb's sum over the circle is zero (every `x` is added once and taken away once), so the excitation carries
+     * no DC into the loop (audit finding L3-06: the loop passes DC at the feedback gain alone, so a burst's random mean
+     * outlived its tone). Then [writePos]. The filter state is left as it is.
+     *
+     * The comb runs in place, allocation free: the circle `j -> j + d` falls into `gcd(L, d)` cycles, each walked once
+     * with the one sample it overwrites held in a local.
      */
     fun excite(lineDelay: Double, pickPos: Double, rng: Random) {
         val delayLen = lineDelay.coerceIn(2.0, (MAX_DELAY - 1.0)).toInt()
-        val pp = pickPos.coerceIn(0.0, 1.0)
-        val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
-        val burstStart = ((delayLen - burstLen) * pp).toInt()
-        var sum = 0.0
 
         for (j in 0 until delayLen) {
-            val v = if (j >= burstStart && j < burstStart + burstLen) {
-                (rng.nextDouble() * 2.0 - 1.0)
-            } else {
-                0.0
-            }
-
-            delayLine[j] = v
-            sum += v
+            delayLine[j] = rng.nextDouble() * 2.0 - 1.0
         }
 
-        // A NaN line delay leaves delayLen at 0: nothing was written, and nothing is to be taken out.
+        // A NaN line delay leaves delayLen at 0: nothing was written, and there is no comb to run.
         if (delayLen > 0) {
-            val mean = sum / delayLen
+            // NaN-guard: a NaN pick position fails both bounds of `coerceIn` and stays NaN; `toInt()` reads it as 0,
+            // so the comb's distance takes its floor, one sample.
+            val pp = pickPos.coerceIn(0.0, 1.0)
+            val d = maxOf(1, (0.5 * pp * delayLen + 0.5).toInt())
 
-            for (j in 0 until delayLen) {
-                delayLine[j] = delayLine[j] - mean
-            }
+            pickComb(len = delayLen, distance = d)
         }
 
         writePos = delayLen % MAX_DELAY
+    }
+
+    /**
+     * `y[j] = (x[j] - x[(j - distance) mod len]) / sqrt(2)` over the first [len] samples of [delayLine], in place. The
+     * map `j -> j + distance` splits the circle into `gcd(len, distance)` cycles; each is walked forward from its start
+     * `s`, every step holding the original of the sample it overwrites, and the start takes the last original at the
+     * end. [distance] is in `1 until len` (at most `round(len / 2)`, and `len` at least 2).
+     */
+    private fun pickComb(len: Int, distance: Int) {
+        var a = len
+        var b = distance
+
+        while (b != 0) {
+            val t = a % b
+            a = b
+            b = t
+        }
+
+        val cycles = a
+
+        for (s in 0 until cycles) {
+            val first = delayLine[s]
+            var prev = first
+            var j = s + distance
+
+            if (j >= len) {
+                j -= len
+            }
+
+            while (j != s) {
+                val cur = delayLine[j]
+                delayLine[j] = (cur - prev) * PICK_COMB_GAIN
+                prev = cur
+                j += distance
+
+                if (j >= len) {
+                    j -= len
+                }
+            }
+
+            delayLine[s] = (first - prev) * PICK_COMB_GAIN
+        }
     }
 
     /**
@@ -233,6 +274,9 @@ internal class KarplusString {
     companion object {
         /** The delay line's length: down to about 20 Hz at 48 kHz (2400 samples). */
         const val MAX_DELAY: Int = 2500
+
+        /** The pick comb's level: `1 / sqrt(2)`, since the comb doubles the power of white noise at every distance. */
+        const val PICK_COMB_GAIN: Double = 0.7071067811865476
 
         /** The base delay in samples of a string at [freqHz], clamped to the line: one period of the note. */
         fun baseDelayOf(sampleRate: Double, freqHz: Double): Double = (sampleRate / freqHz).coerceIn(2.0, (MAX_DELAY - 1.0))

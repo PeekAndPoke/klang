@@ -9,25 +9,26 @@ import kotlin.math.floor
 import kotlin.random.Random
 
 /**
- * 1D Perlin Noise implementation with runtime permutation generation.
+ * 1D Perlin noise: a gradient at every whole lattice point, picked by hashing the lattice index with a seed, and a
+ * quintic fade between the two around `x`.
+ *
+ * **No period** (KLANG-00430, audit finding L3-09, the maintainer's option 2 of 2026-11-11): the gradient comes from an
+ * Int hash of the index, the idiom of [BerlinNoise] (a MurmurHash3-style 32-bit finalizer), not from a 256-entry
+ * permutation table, so the walk never repeats. The table made every curve repeat every 256 lattice units: 1.78 s at
+ * the engine's `rate` 1. The statistics are the table's: the hash's low four bits pick one of the same 16 gradients
+ * (+-1 to +-8) with the same equal weight, the fade and the scale are unchanged; every curve is another one. The seed
+ * is ONE draw of [random] (`nextInt`), where the table took 255; the curve is the same for the same seed on the JVM and
+ * in JS (Int arithmetic only: Kotlin's `Int` multiply wraps alike on both, `Math.imul` in JS).
  */
 class PerlinNoise(random: Random = Random(0)) {
-    private val p = IntArray(512)
+    private val seed = random.nextInt()
 
-    init {
-        val permutation = IntArray(256) { it }
-        // Shuffle using the provided random to make the noise unique to the seed
-        for (i in 255 downTo 1) {
-            val j = random.nextInt(i + 1)
-            val temp = permutation[i]
-            permutation[i] = permutation[j]
-            permutation[j] = temp
-        }
-
-        for (i in 0..255) {
-            p[i] = permutation[i]
-            p[256 + i] = permutation[i]
-        }
+    /** The lattice point's hash, Int only (no Long, boxed in Kotlin/JS): [BerlinNoise]'s finalizer, its constants. */
+    private fun hashAt(index: Int): Int {
+        var h = seed xor (index * 0x9E3779B1.toInt())
+        h = (h xor (h ushr 16)) * 0x85EBCA6B.toInt()
+        h = (h xor (h ushr 13)) * 0xC2B2AE35.toInt()
+        return h xor (h ushr 16)
     }
 
     private fun fade(t: Double): Double = t * t * t * (t * (t * 6 - 15) + 10)
@@ -51,12 +52,14 @@ class PerlinNoise(random: Random = Random(0)) {
      * Result is in range [-1.0, 1.0].
      */
     fun noise(x: Double): Double {
-        val xi = floor(x).toInt() and 255
+        // A lattice index past the Int range saturates (`toInt`) and a NaN reads as 0 (NaN-guard, nothing throws); the
+        // index after `Int.MAX_VALUE` wraps, the hash does not mind.
+        val xi = floor(x).toInt()
         val xf = x - floor(x)
         val u = fade(xf)
 
-        val a = p[xi]
-        val b = p[xi + 1]
+        val a = hashAt(xi)
+        val b = hashAt(xi + 1)
 
         val res = lerp(u, grad(a, xf), grad(b, xf - 1.0))
 

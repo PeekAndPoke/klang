@@ -426,7 +426,7 @@ internal fun OscSuperSawBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike)
 internal fun OscSuperSawBuilder.scriptSpreadPower(spreadPower: Double): OscSuperSawBuilder =
     this.spreadPower(spreadPower = spreadPower)
 
-/** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+/** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
 @KlangScript.Function(name = "sideAtten")
 internal fun OscSuperSawBuilder.scriptSideAtten(sideAtten: Double): OscSuperSawBuilder =
     this.sideAtten(sideAtten = sideAtten)
@@ -535,7 +535,7 @@ internal fun OscSuperSineBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike
 internal fun OscSuperSineBuilder.scriptSpreadPower(spreadPower: Double): OscSuperSineBuilder =
     this.spreadPower(spreadPower = spreadPower)
 
-/** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+/** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
 @KlangScript.Function(name = "sideAtten")
 internal fun OscSuperSineBuilder.scriptSideAtten(sideAtten: Double): OscSuperSineBuilder =
     this.sideAtten(sideAtten = sideAtten)
@@ -645,7 +645,7 @@ internal fun OscSuperSquareBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLi
 internal fun OscSuperSquareBuilder.scriptSpreadPower(spreadPower: Double): OscSuperSquareBuilder =
     this.spreadPower(spreadPower = spreadPower)
 
-/** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+/** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
 @KlangScript.Function(name = "sideAtten")
 internal fun OscSuperSquareBuilder.scriptSideAtten(sideAtten: Double): OscSuperSquareBuilder =
     this.sideAtten(sideAtten = sideAtten)
@@ -753,7 +753,7 @@ internal fun OscSuperTriBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike)
 internal fun OscSuperTriBuilder.scriptSpreadPower(spreadPower: Double): OscSuperTriBuilder =
     this.spreadPower(spreadPower = spreadPower)
 
-/** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+/** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
 @KlangScript.Function(name = "sideAtten")
 internal fun OscSuperTriBuilder.scriptSideAtten(sideAtten: Double): OscSuperTriBuilder =
     this.sideAtten(sideAtten = sideAtten)
@@ -863,7 +863,7 @@ internal fun OscSuperRampBuilder.scriptAnalogSpread(analogSpread: IgnitorDslLike
 internal fun OscSuperRampBuilder.scriptSpreadPower(spreadPower: Double): OscSuperRampBuilder =
     this.spreadPower(spreadPower = spreadPower)
 
-/** Center-dominant gain falloff: 0 = all voices equal, 1 = only the center voice. */
+/** Center-weighted gain falloff: 0 = all voices equal, 1 = falling linearly from the center to 0 at the outermost voices. */
 @KlangScript.Function(name = "sideAtten")
 internal fun OscSuperRampBuilder.scriptSideAtten(sideAtten: Double): OscSuperRampBuilder =
     this.sideAtten(sideAtten = sideAtten)
@@ -935,15 +935,16 @@ internal fun OscPluckBuilder.scriptFeedback(feedback: IgnitorDslLike): OscPluckB
 
 /**
  * The string loop's lowpass (default 0.5): a one-pole in the feedback path, so it sets how fast the highs die, not
- * the burst. 0 = dark (floored at 0.01), 1 = bright (no lowpass in the loop).
+ * the excitation. 0 = dark (floored at 0.01), 1 = bright (no lowpass in the loop).
  */
 @KlangScript.Function(name = "brightness")
 internal fun OscPluckBuilder.scriptBrightness(brightness: IgnitorDslLike): OscPluckBuilder =
     this.brightness(brightness = brightness.toIgnitorDsl())
 
 /**
- * The pluck's noise burst (default 0.5): 0 a short burst (a tenth of the string) at its start, the bridge; 1 a burst
- * over the whole string. In between, the burst widens and moves along the string.
+ * Where the string is picked (default 0.28): 0 at the bridge, a thin tone; 1 at the middle of the string, hollow, every
+ * even harmonic gone. The default picks at about a seventh of the string, as a guitar is picked: the 7th harmonic is
+ * the first that goes weak. The level stays the same at every position.
  */
 @KlangScript.Function(name = "pickPosition")
 internal fun OscPluckBuilder.scriptPickPosition(pickPosition: IgnitorDslLike): OscPluckBuilder =
@@ -978,15 +979,16 @@ internal fun OscSuperPluckBuilder.scriptFeedback(feedback: IgnitorDslLike): OscS
 
 /**
  * The string loop's lowpass (default 0.5): a one-pole in the feedback path, so it sets how fast the highs die, not
- * the burst. 0 = dark (floored at 0.01), 1 = bright (no lowpass in the loop).
+ * the excitation. 0 = dark (floored at 0.01), 1 = bright (no lowpass in the loop).
  */
 @KlangScript.Function(name = "brightness")
 internal fun OscSuperPluckBuilder.scriptBrightness(brightness: IgnitorDslLike): OscSuperPluckBuilder =
     this.brightness(brightness = brightness.toIgnitorDsl())
 
 /**
- * The pluck's noise burst (default 0.5): 0 a short burst (a tenth of the string) at its start, the bridge; 1 a burst
- * over the whole string. In between, the burst widens and moves along the string.
+ * Where the string is picked (default 0.28): 0 at the bridge, a thin tone; 1 at the middle of the string, hollow, every
+ * even harmonic gone. The default picks at about a seventh of the string, as a guitar is picked: the 7th harmonic is
+ * the first that goes weak. The level stays the same at every position.
  */
 @KlangScript.Function(name = "pickPosition")
 internal fun OscSuperPluckBuilder.scriptPickPosition(pickPosition: IgnitorDslLike): OscSuperPluckBuilder =

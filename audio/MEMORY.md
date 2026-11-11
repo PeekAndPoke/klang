@@ -251,10 +251,18 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The pluck is in tune** (`KarplusString`, KLANG-00426): the read delay is the note's period less the loop filters'
   phase delay at the note (`loopDelayOf`: the brightness one-pole plus the stiffness allpass), computed per note and
   again only when the pitch, brightness or stiffness moves, taken off after the pitch modulation divides the delay;
-  within 1 cent from A1 to C7 wherever the tone has a pitch (`PluckPitchSpec`). The burst is written with its mean taken
-  out, so no DC circulates (`PluckDcSpec`). `pickPosition` is still the burst's length and place, not a pick position.
+  within 1 cent from A1 to C7 wherever the tone has a pitch (`PluckPitchSpec`). The excitation is white noise over the
+  whole string through the pick comb `(x[j] - x[j - d]) / sqrt(2)`, `d = round(0.5 * pickPosition * L)`: a real pick
+  position, 0 the bridge, 1 the middle, default 0.28 (a seventh of the string), the level steady at every position, its
+  sum zero so no DC circulates (`KarplusStringSpec`, `PluckDcSpec`; KLANG-00426, L3-08).
   The line is read by a cubic Lagrange interpolation (`lagrange4`, KLANG-00430), its delay counted in `loopDelayOf`, so
   the highs damp nearly alike from note to note (`PluckReadSpec`).
+- **The sources' edges and noises** (KLANG-00430): the saw, ramp and rounded pulse read their shape through a box one
+  sample wide; the square's flank floor is one sample, so its edge is the saw's (`PULSE_MIN_FLANK_SAMPLES`, the
+  Katalyst's square knob too). A unison stack's middle voice takes the centre's jitter scale, both middle voices at an
+  even count. `perlin` has no period (a hashed lattice, `PerlinNoise` in `common`: the Ignitor, the Katalyst and
+  sprudel's `perlin` signal). White's tilt and brown's leak are given at 48 kHz and keep their corner at every rate;
+  pink and crackle follow the rate. `audio/ref/voice-synthesis.md`, the source table.
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -466,14 +474,16 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   maintainer first.
 - **Never measured alone**: the build-time cost of the gate's ON path (the per-block numbers are in the history's gate
   entry; every classic stage on builds in 19.8 us through `VoiceFactory`, `AuditRealtimeRepro`, KLANG-00429).
-- **Per-note rings, not pooled** (KLANG-00429, Decide): a built shimmer allocates its 96,000-sample grain ring, a
-  pluck string 2,500 samples, a superpluck one per string, at every note on the audio thread.
+- **Per-note rings, not pooled** (KLANG-00429; the rental is KLANG-00437's): a built shimmer allocates its grain ring
+  sized to its pitches (`shimmerRingFrames`: 14,402 samples at the default at 48 kHz, at most 96,000), a pluck string
+  2,500 samples, a superpluck one per string, at every note on the audio thread.
 
 ## History
 
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 Decisions pass A: the pluck's real pick position (default 0.28), the square's one-sample edge, perlin without a period, white and brown rate-scaled, both middle voices' jitter, the shimmer ring sized, a non-finite drive amount unset: KLANG-00426, KLANG-00429, KLANG-00430
 - 2026-11-11 Docs and KDoc that said what the code does not do, made true (the wire, the shell, the cylinders, the samples, the ref pages); the worklet's dead `isPlaying` flag removed: KLANG-00433
 - 2026-11-11 The per-note stages and the house stage: no negative damping in the analog SVF, the coarse hold and the shimmer ring store no non-finite sample, `expClip`/`stompBox` skip `pow` when saturated, the house DC pole per rate, "poison seen" in the diagnostics: KLANG-00432
 - 2026-11-11 The shell and the wire: nothing after a stop's `Cleanup`, a restart's gain and inline DSLs, no sample requests for synth voices, an edit's samples at once, the JVM's output latency, enum entries in the schema hash: KLANG-00431

@@ -23,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.constants.CRACKLE_DC_POLE
 import io.peekandpoke.klang.audio_bridge.constants.DUST_BIPOLAR_DEFAULT
 import io.peekandpoke.klang.audio_bridge.constants.DUST_TAIL_DEFAULT
 import io.peekandpoke.klang.audio_bridge.constants.NOISE_TILT_DEFAULT
+import io.peekandpoke.klang.audio_bridge.constants.NOISE_COEFF_REFERENCE_RATE
 import io.peekandpoke.klang.audio_bridge.constants.NOISE_TILT_LP_COEF
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_FALL_FLANK
 import io.peekandpoke.klang.audio_bridge.constants.PULSE_MIN_FLANK_SAMPLES
@@ -1256,7 +1257,9 @@ object Ignitors {
      * White noise with an optional first-order spectral tilt ([color]). `color == 0` → flat white with
      * the filter bypassed (the per-sample cost is exactly today's pure-rng loop — perf-neutral default).
      * `color < 0` crossfades toward a one-pole LP (darken); `color > 0` toward the complementary HP
-     * (brighten). [color] is read control-rate (once per block).
+     * (brighten). [color] is read control-rate (once per block). The one-pole's coefficient is given at 48 kHz
+     * ([NOISE_TILT_LP_COEF]) and scaled to the block's rate, so the pivot is the same at every rate (KLANG-00430, audit
+     * finding L3-10; it followed the rate before: 1.24 kHz at 48 kHz, 2.5 at 96).
      */
     fun whiteNoise(rng: Random, color: Ignitor = colorDefault): Ignitor = WhiteNoiseIgnitor(rng, color)
 
@@ -1278,11 +1281,13 @@ object Ignitors {
             } else {
                 val darken = if (c < 0.0) -c else 0.0 // crossfade white→lp
                 val brighten = if (c > 0.0) c else 0.0 // crossfade white→hp
+                // The 48 kHz coefficient at this rate: the pole `1 - g` to the power `48000 / fs`, the same corner.
+                val g = 1.0 - (1.0 - NOISE_TILT_LP_COEF).pow(NOISE_COEFF_REFERENCE_RATE / ctx.sampleRateD)
 
                 for (i in ctx.offset until end) {
                     val white = rng.nextDouble() * 2.0 - 1.0
 
-                    lp += NOISE_TILT_LP_COEF * (white - lp)
+                    lp += g * (white - lp)
 
                     val hp = white - lp
 
@@ -1531,10 +1536,11 @@ object Ignitors {
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
     /**
-     * Brown (random-walk) noise. [leak] is the per-sample white-leak `k` in `out = (out + k·white)/(1+k)`
-     * (read control-rate). `leak = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte. A per-sample
-     * coefficient: the corner follows the device's rate (154 Hz at 48 kHz, 309 at 96; audit finding L3-10, open in
-     * KLANG-00430).
+     * Brown (random-walk) noise. [leak] is the white leak `k` in `out = (out + k·white)/(1+k)` per sample at 48 kHz
+     * (read control-rate), scaled to the block's rate so the corner is the one it has at 48 kHz at every rate: the pole
+     * `1/(1+k)` to the power `48000 / fs`, the leak `(1+k)^(48000 / fs) - 1` (KLANG-00430, audit finding L3-10; the
+     * corner followed the rate before, twice as high at 96 kHz). At 48 kHz the walk is the original `/1.02` one up to
+     * the rounding of the leak (`1.02 - 1` is not `0.02` in binary).
      */
     fun brownNoise(rng: Random, leak: Ignitor = brownLeakDefault): Ignitor = BrownNoiseIgnitor(rng = rng, leak = leak)
 
@@ -1543,13 +1549,15 @@ object Ignitors {
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val k = readParam(leak, freqHz, ctx).coerceAtLeast(0.0)   // real freqHz: ledger O6
-            val denom = 1.0 + k
+            // The 48 kHz leak at this rate: the pole `1 / (1 + k)` to the power `48000 / fs`, the same corner.
+            val denom = (1.0 + k).pow(NOISE_COEFF_REFERENCE_RATE / ctx.sampleRateD)
+            val kRate = denom - 1.0
             val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
                 val white = rng.nextDouble() * 2.0 - 1.0
 
-                out = (out + k * white) / denom
+                out = (out + kRate * white) / denom
                 buffer[i] = out
             }
         }
@@ -1557,7 +1565,8 @@ object Ignitors {
 
     /**
      * Pink noise (1/f spectrum via Paul Kellet's IIR cascades). Kellet's coefficients are per sample, fitted at 44.1 kHz,
-     * so the 1/f band follows the device's rate (audit finding L3-10, open in KLANG-00430).
+     * so the 1/f band follows the device's rate (audit finding L3-10: kept and documented, the maintainer 2026-11-11;
+     * a fixed band would need the seven poles refitted per rate, KLANG-00430).
      */
     fun pinkNoise(rng: Random): Ignitor = PinkNoiseIgnitor(rng)
 
@@ -1592,9 +1601,9 @@ object Ignitors {
     }
 
     /**
-     * Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. Periodic: the gradient table has 256
-     * entries, so the walk repeats every 256 lattice units, `256 / (PERLIN_UNITS_PER_SECOND * rate)` seconds (1.78 s at
-     * `rate` 1; audit finding L3-09, open in KLANG-00430). [berlinNoise] has no period.
+     * Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. No period: the lattice's gradients
+     * come from a hash of the lattice index (`PerlinNoise`, KLANG-00430, audit finding L3-09); a 256-entry table made the
+     * walk repeat every 1.78 s at `rate` 1 until 2026-11-11. Two draws at construction: the noise's seed, then the start.
      */
     fun perlinNoise(
         rng: Random,
@@ -1720,7 +1729,9 @@ object Ignitors {
     /**
      * Crackle: a chaotic recurrence (SuperCollider's Crackle map), DC-blocked to bipolar pops.
      * `y[n] = |chaos·y[n-1] − y[n-2] − CRACKLE_C|`; [chaos] ≈1.0 sparse … 2.0 dense/noisy. Uses no PRNG
-     * for the signal — the rng only seeds the map away from the (0,0) fixed point.
+     * for the signal: the rng only seeds the map away from the (0,0) fixed point. The map and its DC pole are per
+     * sample by nature, so the pops' rate and colour follow the device's rate (audit finding L3-10: kept and documented,
+     * the maintainer 2026-11-11, KLANG-00430).
      */
     fun crackle(rng: Random, chaos: Ignitor = chaosDefault): Ignitor = CrackleIgnitor(rng, chaos)
 
@@ -2343,14 +2354,18 @@ object Ignitors {
         }
 
         /**
-         * Center-dominant base gains × per-voice amplitude jitter, renormalized to sum 1, with
-         * [polarity] folded in (negated for the ramp) so the hot loop needs no per-sample sign flip.
+         * Center-weighted base gains (nearly flat at the default side attenuation 0.1) × per-voice amplitude jitter,
+         * renormalized to sum 1, with [polarity] folded in (negated for the ramp) so the hot loop needs no per-sample
+         * sign flip.
          *
          * The CENTER voice (detune ≈ 0 → carries the perceived pitch / the "ring") gets a **scaled-down**
          * share of the jitter ([SUPERSAW_CENTER_JITTER_SCALE]): a big jitter draw on it would weaken the
          * on-pitch fundamental and make that note "won't ring", but fully exempting it (scale 0) flattens
-         * the liveliness. `0.0` = stable center, `1.0` = jittered like the sides. Sides always get full
-         * jitter; phases are untouched (random), so this trades only ring-stability vs liveliness, not timbre.
+         * the liveliness. `0.0` = stable center, `1.0` = jittered like the sides. At an even count there is no
+         * centre voice: the two middle voices (`(v - 1) / 2` and `v / 2`, about +-1 cent at 8 voices) carry the pitch
+         * together, and both get the centre's scale (KLANG-00430, audit finding L3-12; only the lower one did before).
+         * Sides always get full jitter; phases are untouched (random), so this trades only ring-stability vs
+         * liveliness, not timbre.
          */
         /** Draws gain-jitter for indices [from] until `v` — new voices only at a mid-note change,
          *  everyone at note-on (from = 0), keeping the legacy draw order bit-exact there. */
@@ -2365,11 +2380,13 @@ object Ignitors {
 
             superSawVoiceGainsInto(v = v, sideAtten = sideAtten, gains = base)
 
-            val center = (v - 1) / 2
+            // The middle voice, or the two middle voices at an even count (one and the same at an odd count).
+            val centerLow = (v - 1) / 2
+            val centerHigh = v / 2
             var s = 0.0
 
             for (n in 0 until v) {
-                val scale = if (n == center) centerJitterScale else 1.0
+                val scale = if (n == centerLow || n == centerHigh) centerJitterScale else 1.0
                 val jit = 1.0 + (voiceStates[n].jitDraw - 0.5) * 2.0 * gainJitter * scale
                 val g = (base[n] * jit).coerceAtLeast(0.0)
 
@@ -2649,8 +2666,8 @@ object Ignitors {
     )
 
     /**
-     * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
-     * Extended with a placed burst (`pickPosition` sets the burst's length and place, [KarplusString.excite]) and
+     * Karplus-Strong plucked string synthesis via a noise-excited delay line with filtered feedback.
+     * Extended with a pick position (`pickPosition`, the comb on the excitation, [KarplusString.excite]) and
      * allpass stiffness filtering. One [KarplusString], tuned with the loop filters' delay taken out
      * ([KarplusString.loopDelayOf]).
      */
@@ -3164,12 +3181,12 @@ object Ignitors {
      * 0.1, only slightly quieter: 0.9 of the middle, so the profile is nearly flat): the
      * JP-8000 / Szabo Super Saw character. Summing all voices flat (`1/v`) sounds uniform
      * and comb-filtered ("plastic"), and with random start phases an unlucky draw can sum
-     * destructively so the note barely rings. A dominant center voice anchors the note
-     * (always rings) while the quiet detuned halo only adds shimmer.
+     * destructively so the note barely rings. The middle voices (one at an odd count, two at an even one) carry the pitch
+     * and take a smaller share of the gain jitter, which anchors the note while the detuned halo adds shimmer.
      *
      * Triangular falloff with distance-from-center, normalised to sum to 1 (same overall
-     * level as the old flat `1/v`). [sideAtten] tunes the falloff: 0 = flat/equal, 1 = only the
-     * center voice (defaults to [SUPERSAW_SIDE_ATTEN]; the super-ramp passes its own). Tune by ear.
+     * level as the old flat `1/v`). [sideAtten] tunes the falloff: 0 = flat/equal, 1 = falling to 0 at the outermost
+     * voices (defaults to [SUPERSAW_SIDE_ATTEN]; the super-ramp passes its own). Tune by ear.
      */
     internal fun superSawVoiceGains(v: Int, sideAtten: Double = SUPERSAW_SIDE_ATTEN): DoubleArray {
         val gains = DoubleArray(if (v > 0) v else 0)

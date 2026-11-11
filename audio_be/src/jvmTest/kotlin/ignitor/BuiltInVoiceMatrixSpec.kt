@@ -155,6 +155,13 @@ class BuiltInVoiceMatrixSpec : StringSpec({
     }
 })
 
+/**
+ * The pins. Regenerated for the decisions pass of 2026-11-11 (sound changes the maintainer decided, each row by its
+ * change): the square family and `sgbuzz` (the square's one-sample flank, KLANG-00430 L3-02), the even-count stacks
+ * `supersaw`, `superramp`, `supersine`, `supertri` (both middle voices' jitter scale, L3-12; the supersquare family by
+ * both), `brown` (its leak rate-scaled: rounding at 48 kHz, L3-10), `perlin` (the hashed lattice, L3-09) and the Karplus
+ * rows (the real pick position and its default 0.28, KLANG-00426 L3-08).
+ */
 private val BASELINE: Map<String, String> = mapOf(
     "sine | untouched" to "62f1c90e075ecde9",
     "sine | analog 2, lpf 1200: one filter" to "75697152a8a421c9",
@@ -164,12 +171,12 @@ private val BASELINE: Map<String, String> = mapOf(
     "sawtooth | analog 2, lpf 1200: one filter" to "f347875e29330c89",
     "saw | untouched" to "21c75446c8c77ca7",
     "saw | analog 2, lpf 1200: one filter" to "f347875e29330c89",
-    "square | untouched" to "24b3906e92f86d6d",
-    "square | analog 2, lpf 1200: one filter" to "0dd3d77a391a467f",
-    "sqr | untouched" to "24b3906e92f86d6d",
-    "sqr | analog 2, lpf 1200: one filter" to "0dd3d77a391a467f",
-    "pulse | untouched" to "24b3906e92f86d6d",
-    "pulse | analog 2, lpf 1200: one filter" to "0dd3d77a391a467f",
+    "square | untouched" to "865d1fc16d85f252",
+    "square | analog 2, lpf 1200: one filter" to "3c117a2fffb7006c",
+    "sqr | untouched" to "865d1fc16d85f252",
+    "sqr | analog 2, lpf 1200: one filter" to "3c117a2fffb7006c",
+    "pulse | untouched" to "865d1fc16d85f252",
+    "pulse | analog 2, lpf 1200: one filter" to "3c117a2fffb7006c",
     "pulze | untouched" to "ca3cd2328019ff5f",
     "pulze | analog 2, lpf 1200: one filter" to "cc2e12216fd05de2",
     "triangle | untouched" to "51c68cbcfbd8f60b",
@@ -188,36 +195,36 @@ private val BASELINE: Map<String, String> = mapOf(
     "impulse | analog 2, lpf 1200: one filter" to "71aaaf289cd32a31",
     "silence | untouched" to "91a125c50dc05500",
     "silence | analog 2, lpf 1200: one filter" to "91a125c50dc05500",
-    "supersaw | untouched" to "ef18e6b41c0d93fd",
-    "supersaw | analog 2, lpf 1200: one filter" to "cf7f20416a54a74e",
-    "supersine | untouched" to "6dfeaf57eb47f744",
-    "supersine | analog 2, lpf 1200: one filter" to "f236dd660be07207",
-    "supersquare | untouched" to "885907f856949abf",
-    "supersquare | analog 2, lpf 1200: one filter" to "a64097237464c0aa",
-    "supersqr | untouched" to "885907f856949abf",
-    "supersqr | analog 2, lpf 1200: one filter" to "a64097237464c0aa",
-    "superpulse | untouched" to "885907f856949abf",
-    "superpulse | analog 2, lpf 1200: one filter" to "a64097237464c0aa",
-    "supertri | untouched" to "fabe16faa39f2565",
-    "supertri | analog 2, lpf 1200: one filter" to "57e384376183f6fc",
-    "superramp | untouched" to "ef18e6b41c0d93fd",
-    "superramp | analog 2, lpf 1200: one filter" to "f4b5098948e239b8",
+    "supersaw | untouched" to "f4bf7822738d61a7",
+    "supersaw | analog 2, lpf 1200: one filter" to "89fecead5731fc66",
+    "supersine | untouched" to "5eb541415b6ad2be",
+    "supersine | analog 2, lpf 1200: one filter" to "e2c8b629c4f45804",
+    "supersquare | untouched" to "63649dd1a162e1ec",
+    "supersquare | analog 2, lpf 1200: one filter" to "51be4cc08407a473",
+    "supersqr | untouched" to "63649dd1a162e1ec",
+    "supersqr | analog 2, lpf 1200: one filter" to "51be4cc08407a473",
+    "superpulse | untouched" to "63649dd1a162e1ec",
+    "superpulse | analog 2, lpf 1200: one filter" to "51be4cc08407a473",
+    "supertri | untouched" to "6cb932789c6db7fb",
+    "supertri | analog 2, lpf 1200: one filter" to "8d898bc16de6af28",
+    "superramp | untouched" to "f4bf7822738d61a7",
+    "superramp | analog 2, lpf 1200: one filter" to "6557b1d011151da5",
     "whitenoise | untouched" to "a56631ea03d23763",
     "whitenoise | analog 2, lpf 1200: one filter" to "50adcb4ac8d0a779",
     "white | untouched" to "a56631ea03d23763",
     "white | analog 2, lpf 1200: one filter" to "50adcb4ac8d0a779",
-    "brownnoise | untouched" to "d98ff3e360fc3d8a",
-    "brownnoise | analog 2, lpf 1200: one filter" to "d360f396014198a9",
-    "brown | untouched" to "d98ff3e360fc3d8a",
-    "brown | analog 2, lpf 1200: one filter" to "d360f396014198a9",
+    "brownnoise | untouched" to "19cfa69bb3bb2646",
+    "brownnoise | analog 2, lpf 1200: one filter" to "e5d4ddf0cd274d05",
+    "brown | untouched" to "19cfa69bb3bb2646",
+    "brown | analog 2, lpf 1200: one filter" to "e5d4ddf0cd274d05",
     "pinknoise | untouched" to "079d43c80e248eb5",
     "pinknoise | analog 2, lpf 1200: one filter" to "6d42451d273b145e",
     "pink | untouched" to "079d43c80e248eb5",
     "pink | analog 2, lpf 1200: one filter" to "6d42451d273b145e",
-    "perlinnoise | untouched" to "e8afeef1f99c725a",
-    "perlinnoise | analog 2, lpf 1200: one filter" to "6cb9aa3272cd7449",  // diverged from the strip at HEAD: the section 8 draw order
-    "perlin | untouched" to "e8afeef1f99c725a",
-    "perlin | analog 2, lpf 1200: one filter" to "6cb9aa3272cd7449",  // diverged from the strip at HEAD: the section 8 draw order
+    "perlinnoise | untouched" to "f529a493ca6902e6",
+    "perlinnoise | analog 2, lpf 1200: one filter" to "e2b8bc764f985955",  // diverged from the strip at HEAD: the section 8 draw order
+    "perlin | untouched" to "f529a493ca6902e6",
+    "perlin | analog 2, lpf 1200: one filter" to "e2b8bc764f985955",  // diverged from the strip at HEAD: the section 8 draw order
     "berlinnoise | untouched" to "9cba8e57e1824000",
     "berlinnoise | analog 2, lpf 1200: one filter" to "2b5412945ef5ebed",  // diverged from the strip at HEAD: the section 8 draw order
     "berlin | untouched" to "9cba8e57e1824000",
@@ -226,20 +233,20 @@ private val BASELINE: Map<String, String> = mapOf(
     "dust | analog 2, lpf 1200: one filter" to "923b6705a573bf48",
     "crackle | untouched" to "83695e0e1a22326d",
     "crackle | analog 2, lpf 1200: one filter" to "824e4c8c6af51213",  // diverged from the strip at HEAD: the section 8 draw order
-    "pluck | untouched" to "03b167dd240ed08a",
-    "pluck | analog 2, lpf 1200: one filter" to "8530f1fdc962de82",
-    "ks | untouched" to "03b167dd240ed08a",
-    "ks | analog 2, lpf 1200: one filter" to "8530f1fdc962de82",
-    "string | untouched" to "03b167dd240ed08a",
-    "string | analog 2, lpf 1200: one filter" to "8530f1fdc962de82",
-    "superpluck | untouched" to "2b81a580160d7b19",
-    "superpluck | analog 2, lpf 1200: one filter" to "8284b98b886c2db8",
+    "pluck | untouched" to "08ad12f0505692f1",
+    "pluck | analog 2, lpf 1200: one filter" to "1a59ee5309a1f20e",
+    "ks | untouched" to "08ad12f0505692f1",
+    "ks | analog 2, lpf 1200: one filter" to "1a59ee5309a1f20e",
+    "string | untouched" to "08ad12f0505692f1",
+    "string | analog 2, lpf 1200: one filter" to "1a59ee5309a1f20e",
+    "superpluck | untouched" to "5589da9e86ce0f8d",
+    "superpluck | analog 2, lpf 1200: one filter" to "61adb818f60de8a3",
     "sgpad | untouched" to "aa9b1c4ae8c74283",
     "sgpad | analog 2, lpf 1200: one filter" to "723617ba5fa39851",
     "sgbell | untouched" to "63e5233c49c2d209",
     "sgbell | analog 2, lpf 1200: one filter" to "e10ba8aae71aaf61",
-    "sgbuzz | untouched" to "9d139d3d127159ce",
-    "sgbuzz | analog 2, lpf 1200: one filter" to "cc393dfe1f207d2b",
+    "sgbuzz | untouched" to "691cb22b0e56c7e4",
+    "sgbuzz | analog 2, lpf 1200: one filter" to "90a686fb6c19ba2e",
     "eqdemo | untouched" to "e70faaae5189e96d",
     "eqdemo | analog 2, lpf 1200: one filter" to "daa5a7b87e4f9b77",
 )
@@ -249,9 +256,10 @@ private val BASELINE: Map<String, String> = mapOf(
  * still lived in the two nodes, and regenerated with the Karplus rows of [BASELINE] when the pluck was tuned and its burst
  * lost its DC (KLANG-00426, a sound change the maintainer asked for), and with the saw, square and Karplus rows when
  * the saw and square began to read their shape through a one-sample box and the string's read became cubic (KLANG-00430,
- * audit findings L3-02 and L3-07); regenerate them only for a sound decision.
+ * audit findings L3-02 and L3-07), and with the Karplus rows when the pluck got its real pick position (KLANG-00426,
+ * L3-08, 2026-11-11); regenerate them only for a sound decision.
  */
 private val STIFF_BASELINE: Map<String, String> = mapOf(
-    "pluck" to "1bf215a35522cf1a",
-    "superpluck" to "b04c6ef06644a3f5",
+    "pluck" to "b639c568c82fa317",
+    "superpluck" to "0c789ed6c1f713ed",
 )

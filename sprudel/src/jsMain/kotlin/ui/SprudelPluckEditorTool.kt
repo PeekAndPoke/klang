@@ -113,7 +113,7 @@ private class SprudelPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelPluckEd
         get() = parseNum(call?.args?.getOrNull(1), 0.5)
 
     private val parsedPickPosition
-        get() = parseNum(call?.args?.getOrNull(2), 0.5)
+        get() = parseNum(call?.args?.getOrNull(2), 0.28)
 
     private val parsedStiffness
         get() = parseNum(call?.args?.getOrNull(3), 0.0)

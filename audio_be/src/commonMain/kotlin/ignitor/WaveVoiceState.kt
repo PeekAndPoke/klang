@@ -119,8 +119,10 @@ internal inline fun waveTrapezoid(
  * The edge's kernel is the flank's box times this one: the saw's one-sample flyback becomes a triangle two samples
  * wide, which is exactly the two-point PolyBLEP (Välimäki and Huovilainen): measured on the bare saw, 22 to 29 dB less
  * aliasing below 5 kHz from 110 Hz to 7 kHz, at 1.3 dB of droop at 10 kHz where the box alone had 0.6. The square's
- * two-sample flank becomes a trapezoid kernel three samples wide (21 to 28 dB less below 5 kHz, 3.3 dB at 10 kHz where
- * it had 2.6). The flank is sized from the block's unmodulated increment; the box follows the per-sample one, so an
+ * flank is one sample too (`PULSE_MIN_FLANK_SAMPLES`, the saw's edge width since 2026-11-11; it was two samples, a
+ * trapezoid kernel three samples wide, 3.3 dB at 10 kHz), so its kernel is the saw's: -1.4 dB at 11 kHz where the saw
+ * has -1.2. Brighter, its total non-harmonic energy rose 3 to 12 dB (the aliasing meter, 110 Hz to 7 kHz), all of it
+ * above 5 kHz: below 5 kHz it is where it was within 0.7 dB. The flank is sized from the block's unmodulated increment; the box follows the per-sample one, so an
  * upward pitch stage widens the box with the step (the saw at +12 semitones of pitch stage, 1244.5 Hz: -50.6 dB below 5
  * kHz where it was -26.4).
  *

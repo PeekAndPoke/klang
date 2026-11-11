@@ -375,6 +375,81 @@ expected reason (the message matched), every file restored byte for byte, the fi
   `SampleIgnitor`'s KDoc says "Perlin noise drift": KLANG-00433 (L3-15) owns those texts. The one stale path in
   `audio/ref/voice-synthesis.md` ("live in `ignitor/OscillatorTuning.kt`") was in a row this change rewrote, and is fixed.
 
+
+## Decisions pass (2026-11-11)
+
+### What was built
+
+| Id | What | Guard (mutation-checked) | Sound |
+|---|---|---|---|
+| L3-02 flank | `PULSE_MIN_FLANK_SAMPLES` 2 to 1: the square's edge is the saw's, its kernel the two-point PolyBLEP's. Every reader follows the one constant: the rounded pulse and square, the supersquare family, the Katalyst square knob LFO (its oracle `handSquare` and two written-out values moved), the triangles (their open flanks are wider than the floor at every pitch below 12 kHz, so they do not move there; the supertri rows moved by L3-12) | `BandLimitedSourcesSpec` (the square's droop at 11 kHz within 0.3 dB of the saw's: -1.4 and -1.2 dB); `OscillatorPhaseSpec` (the square's first sample -0.875 to -0.75) and `KatalystKnobModulatorSpec` (the rise at half and a quarter: 0 and -0.5) moved to the new edge | yes |
+| L3-09 | `PerlinNoise` (`common`) hashes the lattice index with `BerlinNoise`'s Int finalizer: no period. One `nextInt` for the seed (it drew 255 for its table). The Katalyst perlin knob's clock wrapped at the old period of 256 cells; it wraps at `NOISE_CLOCK_SPAN` (2^23, the berlin's) now, or it would bring the period back with a step. `PerlinNoise` is also sprudel's `perlin` pattern signal (`lang_continuous_waves.kt`), so that curve changes too | `PerlinNoiseSpec` (no repeat at 256, 512, 1024, 65536; one draw; an oracle in 64-bit arithmetic on both hosts; the RMS and mean of the 16 equal gradients through the fade); `KatalystKnobModulatorSpec`'s three period rows moved to the new span | yes, every perlin curve |
+| L3-10 | White's tilt and brown's leak are given at 48 kHz and scaled to the block's rate (`NOISE_COEFF_REFERENCE_RATE`): the pole to the power `48000 / fs`, `1 - 0.85^(48000/fs)` for the tilt, `(1 + k)^(48000/fs) - 1` for the leak. One `pow` per block. At 48 kHz NOT bit-identical: `1 - (1 - 0.15)` and `1.02 - 1` round off by an ulp, so a song with brown or a tilted white moves by rounding. Pink and crackle documented in their KDocs and the ref page | `NoiseRateScaleSpec` (the node's output against the recurrence with the scaled pole at 44.1, 48 and 96 kHz; the time constant in seconds the same at every rate) | rounding at 48 kHz; the corner at other rates |
+| L3-12 | At an even count both middle voices (`(v - 1) / 2`, `v / 2`) take the centre's jitter scale. The "center-dominant" wording made true where it was not: "center-weighted", and the side attenuation's 1 is "falling to 0 at the outermost voices", not "only the centre voice" (the constants, the node and builder KDocs, both doors, `superSawVoiceGains`, the ref page) | `UnisonCenterJitterSpec` (a supersine at spread 0 with a scripted stream against the gain law written out, 2 to 9 voices; its first draws left the upper middle voice at a draw of 0.5, where scale does not matter, and a mutant survived: the draws were fixed and it is KILLED) | yes, every even stack |
+
+Pinned renders regenerated, row by change: `BuiltInVoiceMatrixSpec` `square`, `sqr`, `pulse`, `sgbuzz` (the flank),
+`supersaw`, `superramp`, `supersine`, `supertri` (L3-12), `supersquare`, `supersqr`, `superpulse` (both), `brownnoise`,
+`brown` (L3-10 rounding), `perlinnoise`, `perlin` (L3-09), and the Karplus rows (KLANG-00426, L3-08), both rows each;
+`PhasePoolBypassGoldenSpec` the 8-voice entries of every stack (L3-12) and every `superSquare` entry (the flank), the
+11-voice saw, ramp, triangle and sine entries kept (within the tolerance).
+
+### Probes, before against after (the tree as found against this pass, JVM)
+
+Aliasing meter, the bare square (the square node, `pulze` at duty 0.5 and the supersquare at one voice read alike):
+
+| Pitch | harmonics re fund. | non-harmonic total | below 5 kHz |
+|---|---|---|---|
+| 110 | -6.5 to -6.4 | -54.0 to -42.5 | -82.0 to -81.6 |
+| 1244.5 | -8.2 to -7.5 | -43.4 to -33.1 | -70.6 to -70.3 |
+| 2637 | -10.7 to -8.9 | -40.0 to -32.0 | -70.2 to -70.1 |
+| 4186 | -14.3 to -10.7 | -37.1 to -28.8 | -75.2 to -75.5 |
+| 7044.4 | -28.5 to -14.9 | -35.4 to -32.7 | -72.5 to -73.2 |
+
+The square is brighter (its top harmonics up to 13.6 dB), and its total off-harmonic energy rises with the top band it
+lets through, all of it above 5 kHz, where the box puts the saw's too; below 5 kHz, where an alias is heard, it is where
+it was. No other source row moved (perlin's rows are by design).
+
+Click probe: no new click. The square voice's rows keep jump and kink at or under 1.0 of the steady signal's at the gate
+end and the cut; the note-start kink ratio reads 650 to 1155 (the onset row of every oscillator reads in the hundreds,
+the supersaw 663 on both trees); the stacks' rows move within their seeds; the perlin rows move with the curve.
+
+Cost (`net_ns`, the median of 41 rounds; the whole after run ran 10 to 20 percent faster on rows this pass does not
+touch, the saw voice included, so the ratio to the sine is the number to read): perlin 2.83 to 3.20 ns (x sine 1.18 to
+1.44, about +22 percent: the hash's multiplies against two table reads); brown 3.76 to 3.65 (x sine 1.57 to 1.64, the
+`pow` per block, within the probe's noise); white bare unchanged (its tilt is bypassed at color 0); the square 2.14 to
+1.70 and the stacks 10 to 20 percent lower, no voice row higher. No voice row rose by more than 10 percent.
+
+### The corpus
+
+The corpus, my own before (the tree as found, `5e39f1c12`, before the first edit) against after (`runSongBenchmark
+--args=corpus`, 48 kHz, a temporary RMS print in a throwaway worktree's `CorpusCheck`); no song text changed between the
+runs. Each move is attributed by five more runs, each with ONE change of the pass taken out (the pick, the flank, the
+perlin hash, the noise rate scaling, the jitter rule): a change is named where taking it out moves the song's hash. Songs not listed did not move (A Synth Worth Lying For, Final Synthasy VII Prelude).
+"perlin" is the engine's perlin source and Katalyst knob and sprudel's `perlin` signal together (one class); "noise" is
+the 48 kHz rounding of brown's leak and white's tilt.
+
+| Song | Moved by | Peak before, after | RMS before, after (dB) |
+|---|---|---|---|
+| Der Schmetterling | perlin (alone) | 0.7525, 0.7534 | -15.568, -15.568 (+0.000) |
+| Die Kirschblüte | pick, perlin, noise | 0.7467, 0.7651 | -20.423, -20.182 (+0.241) |
+| Drunken Synthlor | pick (alone) | 0.8459, 0.8806 | -19.752, -18.926 (+0.826) |
+| Gestrandet | perlin, noise | 0.0694, 0.0750 | -44.211, -43.574 (+0.637) |
+| Greensleeves Chant | pick, perlin, noise | 0.4530, 0.4758 | -24.040, -23.917 (+0.123) |
+| Kokon | perlin (alone) | 0.7438, 0.7447 | -18.265, -18.211 (+0.054) |
+| Remix: Echo um Echo | flank, noise, jitter | 0.4950, 0.4933 | -25.156, -25.153 (+0.003) |
+| Seltsamere Dinge | flank, perlin, noise | 0.7455, 0.7455 | -17.135, -17.134 (+0.001) |
+| Smalltown Synth | jitter (alone) | 0.9110, 0.9109 | -15.261, -15.261 (+0.000) |
+| Stein um Stein | perlin, jitter | 0.7605, 0.7608 | -16.129, -16.129 (+0.000) |
+| Synthsturm | flank (alone) | 0.8272, 0.8282 | -18.563, -18.563 (+0.000) |
+| The Synthsale Piper's Farewell | pick, perlin, noise | 0.3498, 0.3545 | -27.840, -27.582 (+0.258) |
+| The Synthsale Piper's Last Rave | flank, noise, jitter | 0.8958, 0.8953 | -15.609, -15.608 (+0.001) |
+| frozen derSchmetterling_2026_11_03 | perlin (alone) | 0.7446, 0.7451 | -16.914, -16.911 (+0.003) |
+| frozen piece derSchmetterling_2026_09_16 | perlin (alone) | 0.8994, 0.8993 | -18.393, -18.393 (+0.000) |
+| frozen strangerThings_2026_11_03 | flank, perlin, noise | 0.7455, 0.7455 | -17.135, -17.134 (+0.001) |
+
+The largest: Drunken Synthlor +0.83 dB RMS (its `sndPluck` at the default pick: the whole string carries noise now) and
+Gestrandet +0.64 dB. The shimmer ring and the drive read move no song (none has a shimmer or a non-finite drive).
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

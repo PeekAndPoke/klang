@@ -138,7 +138,10 @@ substitutes at its own read, once:
   pitch envelope's `semitones`, FM `ratio` and `depth`, each with its node's default; the two pitch sustains already
   had it; the vibrato `rate` and `semitones` too until pitch pipeline 7b composed the vibrato, whose non-finite reads
   live in its row of `audio/ref/off-values.md`). Raw, a NaN amount froze the oscillator into a DC hold. Guard: the NaN
-  rows of `PitchModSafetyTest` (2026-10-07).
+  rows of `PitchModSafetyTest` (2026-10-07). The `drive` node's amount since KLANG-00429 (audit L5-11): an amount
+  that is a signal (not a leaf, so not gated) and reads non-finite in a block is unset there, and unset is off, so
+  `DriveIgnitor` copies its input through for that block (`x.drive(Ignitor.param("d", NaN).add(0))` rendered all NaN).
+  Guard: `DriveAmountNonFiniteSpec`.
 - **Katalyst slots**: a non-finite knob is the stage's declared OFF state (`audio/ref/katalyst.md`).
 - **A stage that caches its config never rebuilds on a NaN** (NaN != NaN): it compares the substituted value, or
   compares the arriving value with `sameKnob`, which takes two NaN as equal (`audio/ref/katalyst.md`).

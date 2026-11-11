@@ -64,7 +64,7 @@ internal object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val brightness: IgnitorDsl = IgnitorDsl.Slots.brightness
 
-    /** Open `pickPosition` slot (default 0.5). Used by pluck. */
+    /** Open `pickPosition` slot (default 0.28): where the string is picked, 0 the bridge, 1 the middle. Used by pluck. */
     @KlangScript.Property
     val pickPosition: IgnitorDsl = IgnitorDsl.Slots.pickPosition
 
@@ -88,7 +88,7 @@ internal object KlangScriptIgnitorSlots {
     @KlangScript.Property
     val color: IgnitorDsl = IgnitorDsl.Slots.color
 
-    /** Open `leak` slot (default 0.02): the per-sample white leak, lower is deeper. Used by brownnoise; sprudel's `sndBrown(leak)` writes it. */
+    /** Open `leak` slot (default 0.02): the white leak per sample at 48 kHz (the same corner at every rate), lower is deeper. Used by brownnoise; sprudel's `sndBrown(leak)` writes it. */
     @KlangScript.Property
     val leak: IgnitorDsl = IgnitorDsl.Slots.leak
 

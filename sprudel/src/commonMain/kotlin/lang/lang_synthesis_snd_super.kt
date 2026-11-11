@@ -27,7 +27,7 @@ private fun applySndPluck(source: SprudelPattern): SprudelPattern =
  * Each field is optional; trailing fields can be omitted.
  * - **feedback**: how long the string rings, 0.9 (a short thud) to 0.999 (rings for seconds)
  * - **brightness**: the string loop's lowpass, how fast the highs die, 0.0 (dark) to 1.0 (bright)
- * - **pickPosition**: the pluck's noise burst, 0.0 (a short burst at the start, the bridge) to 1.0 (the whole string)
+ * - **pickPosition**: where the string is picked, 0.0 (the bridge, thin) to 1.0 (the middle, hollow); default 0.28
  * - **stiffness**: harmonic stiffness, 0.0 (nylon) to 1.0 (piano wire)
  *
  * ```KlangScript(Playable)
@@ -38,7 +38,7 @@ private fun applySndPluck(source: SprudelPattern): SprudelPattern =
  * ```
  *
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  * @tool SprudelPluckEditor
  * @tool feedback: SprudelPluckEditor, SprudelPluckSequenceEditor
@@ -68,7 +68,7 @@ fun SprudelPattern.sndPluck(
  *
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  * @return A new pattern with sound set to "pluck" and parameters applied.
  * @category tonal
@@ -93,7 +93,7 @@ fun String.sndPluck(
  *
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  * @return A [PatternMapperFn] that sets sound to "pluck".
  * @category tonal
@@ -114,7 +114,7 @@ fun sndPluck(
  *
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  */
 @KlangScript.Function
@@ -148,7 +148,7 @@ private fun applySndSuperPluck(source: SprudelPattern): SprudelPattern =
  * @param voices Number of unison voices.
  * @param spread Detune spread between voices.
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  * @tool SprudelSuperPluckEditor
  * @tool voices: SprudelSuperPluckEditor, SprudelSuperPluckSequenceEditor
@@ -184,7 +184,7 @@ fun SprudelPattern.sndSuperPluck(
  * @param spread Detune spread between voices.
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  * @return A new pattern with sound set to "superpluck".
  * @category tonal
@@ -209,7 +209,7 @@ fun String.sndSuperPluck(
  * @param spread Detune spread between voices.
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  * @return A [PatternMapperFn] that sets sound to "superpluck".
  * @category tonal
@@ -234,7 +234,7 @@ fun sndSuperPluck(
  * @param spread Detune spread between voices.
  * @param feedback How long the string rings: the share of its level kept on each pass round the loop, 0.9 (a short thud) to 0.999 (rings for seconds); a coefficient, not a time.
  * @param brightness The string loop's lowpass, how fast the highs die (default 0.5, 0 = dark, 1 = bright; floored at 0.01).
- * @param pickPosition The pluck's noise burst (default 0.5): 0 short, at the bridge; 1 over the whole string.
+ * @param pickPosition Where the string is picked (default 0.28, about a seventh of the string): 0 at the bridge, thin; 1 at the middle, hollow.
  * @param stiffness String stiffness (0 = nylon, 1 = piano wire).
  */
 @KlangScript.Function

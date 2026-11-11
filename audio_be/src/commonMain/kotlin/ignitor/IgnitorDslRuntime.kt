@@ -826,7 +826,8 @@ private fun IgnitorDsl.gatedOffInner(ignitorParams: KlangMap<Double>?): IgnitorD
     // GATE ROW `shimmer` (audit L4-09): wet at or below 0.0, or unset. A fold: the node is a bit-exact bypass at a wet
     // of 0 or less (its C4 contract, and the Kotlin door `Ignitor.shimmer(wet: Double)` returns its input there), and
     // a non-finite wet mixes at the dry coefficient 1 and the wet 0 (`WetDryMix`), the dry alone. Gated, the node does
-    // not allocate its grain ring (96,000 samples, times the region's factor), which it did at every note.
+    // not allocate its grain ring (sized to its pitches since L5-03, up to 96,000 samples times the region's factor),
+    // which it did at every note.
     is IgnitorDsl.Shimmer -> inner.takeIf { wet.gatedOff(ignitorParams) { it <= 0.0 } }
     else -> null
 }
@@ -2170,10 +2171,11 @@ private fun IgnitorDsl.buildRaw(
         }
 
         // GATE ROW `shimmer`: wet at or below 0.0, or unset (audit L4-09, `gatedOffInner`). Built ON, it allocates its
-        // grain ring at every note, a modulated wet included: pooling that ring is an open decision (KLANG-00429).
+        // grain ring at every note, a modulated wet included, sized to what its grains read (`shimmerRingFrames`,
+        // KLANG-00429, L5-03 option (b)); renting it from the warehouse is KLANG-00437's.
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(
             wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod(),
-            ringFrames = SHIMMER_RING_FRAMES shl cache.regionStages,
+            ringFrames = shimmerRingFrames(pitches = pitches, sampleRate = cache.sampleRate, maxFrames = SHIMMER_RING_FRAMES shl cache.regionStages),
         )
     }
 

@@ -204,7 +204,8 @@ class OscillatorPhaseSpec : StringSpec({
         // The band-limited shapes read the corner at phase 0 through their one-sample box (KLANG-00430, audit finding
         // L3-02): the saw's first sample is -1 plus the box's share of the corner where the flyback meets the rise,
         // `(riseSlope + fallSlope) * half / 4` with half = dt / 2: 1/4 + dt / (4 (1 - dt)) at dt = 1/64; the square's is
-        // `riseSlope * half / 4` = 1/8 (its two-sample flank). The raw shapes start on -1 and +1 exactly.
+        // `riseSlope * half / 4` = 1/4 (its one-sample flank, the saw's edge width since 2026-11-11; 1/8 at the two-sample
+        // flank before). The raw shapes start on -1 and +1 exactly.
         val dt = 1.0 / 64.0
         val sawCorner = 0.25 + dt / (4.0 * (1.0 - dt))
 
@@ -243,7 +244,7 @@ class OscillatorPhaseSpec : StringSpec({
             withClue("$name: -1, the foot of the rising edge, read through the box, then high") {
                 val x = first(node)
 
-                x[0] shouldBe (-0.875 plusOrMinus 1e-12)
+                x[0] shouldBe (-0.75 plusOrMinus 1e-12)
                 (x[1] > x[0]) shouldBe true
                 x[8] shouldBe 1.0
                 x[40] shouldBe -1.0

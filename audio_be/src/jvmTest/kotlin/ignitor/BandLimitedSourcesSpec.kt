@@ -19,7 +19,13 @@ import io.peekandpoke.klang.audio_be.probes.sampleVoiceProbeStage
 import io.peekandpoke.klang.audio_be.probes.wholeProbeBlocks
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.log10
 import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -28,7 +34,8 @@ import kotlin.random.Random
  * kHz ([io.peekandpoke.klang.audio_be.probes.AliasingReading.nonHarmonicBelow5kDb]), where an alias is heard.
  *
  * - The saw, the square and their unison stacks read their shape through a box one sample's increment wide
- *   ([waveTrapezoidBoxed]). Before, at 1244.5 Hz: the saw -46.6 dB, the square -49.3; after about -68.5 and -70.6.
+ *   ([waveTrapezoidBoxed]). Before, at 1244.5 Hz: the saw -46.6 dB, the square -49.3; after about -68.5 and -70.3 (-70.6
+ *   at the square's two-sample flank, before its flank became the saw's one sample on 2026-11-11).
  *   Every trapezoid loop has a row: the mono oscillator's block-constant loop, its PWM loop (a duty that is a signal),
  *   its phased loop (a phase that is a signal), the same loop under a pitch modulation of an octave (the box follows the
  *   per-sample increment: -26.4 before, about -50.6 after), and the unison stack's plain and phased loops.
@@ -120,6 +127,43 @@ class BandLimitedSourcesSpec : StringSpec({
         println("BAND-LIMITED saw an octave up by phaseMod 2: ${f(db)} dB below 5 kHz")
 
         db shouldBeLessThan -45.0
+    }
+
+    "the square's edge has the saw's width: its top droops as the saw's, not more (L3-02, the flank floor)" {
+        // `PULSE_MIN_FLANK_SAMPLES` 1 (the maintainer, 2026-11-11): the square's one-sample flank through the box is the
+        // saw's kernel, the two-point PolyBLEP's. At 1 kHz (48 samples a cycle) the 11th harmonic, 11 kHz, against its
+        // ideal level (4 / (pi n) for the square, 2 / (pi n) for the saw): the two droop alike, measured -1.4 and -1.2 dB.
+        // At the two-sample flank before, the kernel `sinc(f / fs) sinc(2 f / fs)` drooped -4.0 dB there against the one
+        // sample's -1.5 (the model of the two kernels): about 2.5 dB more than the saw.
+        val hz = 1000.0
+        val harmonic = 11
+        val periods = 400
+        val n = 48 * periods
+
+        fun level(x: DoubleArray): Double {
+            var re = 0.0
+            var im = 0.0
+
+            for (j in 0 until n) {
+                val a = 2.0 * PI * harmonic * j / 48.0
+
+                re += x[j] * cos(a)
+                im += x[j] * sin(a)
+            }
+
+            return 2.0 * sqrt(re * re + im * im) / n
+        }
+
+        val square = level(render(Ignitors.square(analog = analog0), hz))
+        val saw = level(render(Ignitors.saw(analog = analog0), hz))
+        val squareDroop = 20.0 * log10(square / (4.0 / (PI * harmonic)))
+        val sawDroop = 20.0 * log10(saw / (2.0 / (PI * harmonic)))
+
+        println("BAND-LIMITED droop at 11 kHz: square ${f(squareDroop)} dB, saw ${f(sawDroop)} dB")
+
+        withClue("the square's droop at 11 kHz, ${f(squareDroop)} dB, against the saw's, ${f(sawDroop)} dB") {
+            abs(squareDroop - sawDroop) shouldBeLessThan 0.3
+        }
     }
 
     "the sample playhead's cubic read: a sine sample a semitone up at 4186 Hz (L3-05)" {

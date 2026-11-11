@@ -23,6 +23,7 @@ import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.common.math.semitones
+import kotlin.math.ceil
 import kotlin.math.exp
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -109,7 +110,11 @@ private class DriveIgnitor(
             val amt = Ignitors.readParam(amount, freqHz, ctx)
             val end = ctx.windowEnd
 
-            if (amt <= 0.0) {
+            // NaN-guard on a value the author can write: a non-finite amount reads as UNSET, and unset is off for the
+            // drive (its gate row, `audio/ref/off-values.md`): `!(amt > 0.0)` is true at or below 0 and for a NaN,
+            // `amt - amt != 0.0` for an infinity (KLANG-00429, audit finding L5-11; the numerical-safety contract, read
+            // here, at the one place the amount is read). A NaN made every sample NaN, `+Infinity` an infinite gain.
+            if (!(amt > 0.0) || amt - amt != 0.0) {
                 for (i in ctx.offset until end) {
                     buffer[i] = work[i]
                 }
@@ -582,10 +587,50 @@ fun Ignitor.shimmer(
 ): Ignitor = ShimmerIgnitor(upstream = this, wet = wet, feedback = feedback, tone = tone, pitches = pitches, floor = floor, ringFrames = ringFrames)
 
 /**
- * The shimmer's grain ring at the base rate, 96,000 frames (2 s at 48 kHz). Inside an oversampling region the build
- * passes this times the region's factor, so the ring holds the same time.
+ * The shimmer's largest grain ring at the base rate, 96,000 frames (2 s at 48 kHz): the ring of a shimmer whose grains
+ * reach back that far or further, and the bound of [shimmerRingFrames]. Inside an oversampling region the build passes
+ * this times the region's factor, so the ring holds the same time.
  */
 internal const val SHIMMER_RING_FRAMES: Int = 96_000
+
+/** The length of one shimmer grain in seconds (150 ms). */
+internal const val SHIMMER_GRAIN_SECONDS: Double = 0.150
+
+/** Frames the sized ring holds beyond its grains' reach: the read's second tap and the rounding of the reach. */
+internal const val SHIMMER_RING_HEADROOM_FRAMES: Int = 2
+
+/**
+ * The grain ring a shimmer with [pitches] needs at [sampleRate] (the build's rate, the region's inside one; KLANG-00429,
+ * audit finding L5-03, option (b)): what its grains can read, at most [maxFrames]. A grain at the rate `r` starts
+ * `r * G` frames behind the write head (`G` the grain's frames) and reads `G` frames at `r` per frame, so the oldest
+ * frame it reads lies `max(r, 1) * G` behind the newest written: `r * G` for a grain at or above the note, `G` for one
+ * below it (the head moves on faster than the read). The ring holds the largest of these over the pitch list plus
+ * [SHIMMER_RING_HEADROOM_FRAMES], 14,402 frames at the default `[0, 7, 12]` at 48 kHz where it held 96,000.
+ *
+ * The pitch list is fixed per node and the grains read nothing that moves at run time, so the build knows the worst
+ * case; nothing is clamped. A list whose reach is [maxFrames] or more keeps [maxFrames], the ring of before (a grain
+ * rate past the ring is reduced modulo the ring there, `ShimmerIgnitor`), so the sizing never grows a ring. A
+ * non-finite rate reads as 1.0, the node's own rule. The grain's frames are the run time's own expression at the same
+ * rate; the engine renders a voice at the rate it built it.
+ */
+internal fun shimmerRingFrames(pitches: List<Double>, sampleRate: Int, maxFrames: Int): Int {
+    val grainFrames = (sampleRate * SHIMMER_GRAIN_SECONDS).toInt().coerceAtLeast(1)
+    var reach = 1.0
+
+    for (i in pitches.indices) {
+        val rate = pitches[i].semitones()
+
+        // NaN-guard: a non-finite rate fails `rate > reach`; the node reads it as 1.0, already the floor here.
+        if (rate.isFinite() && rate > reach) {
+            reach = rate
+        }
+    }
+
+    // Compared as a Double: a huge finite rate's reach is past any Int.
+    val need = ceil(reach * grainFrames) + SHIMMER_RING_HEADROOM_FRAMES
+
+    return if (need >= maxFrames) maxFrames else need.toInt()
+}
 
 // NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
 // per-block logic readable; revisit perf rules (audio/ref/performance.md) once
@@ -622,7 +667,7 @@ private class ShimmerIgnitor(
     private var nextIntervalIdx: Int = 0
 
     private val grainsPerSecond = 12.0
-    private val grainSizeSec = 0.150
+    private val grainSizeSec = SHIMMER_GRAIN_SECONDS
     private var samplesUntilNextGrain: Int = 0
 
     private var feedbackTap: Double = 0.0
