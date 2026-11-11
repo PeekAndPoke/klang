@@ -87,8 +87,10 @@ This ticket holds the work that follows from the map. The map itself, with every
     `spine.settings.editor`, the user's, following. The old object with its four keys and hand parsing is gone.
   - **The build:** kotlinx.serialization's compiler plug-in on the app module and the workshop; the workshop has a
     JVM target for its shared code; the app's shared code uses the workshop.
-  - **For Ultra** (to send through Mission Control): `persist(storage)` as a public operator; and a note that a
-    listener which publishes from inside its own notification makes later listeners see the older value last.
+  - **For Ultra:** nothing sent of this yet. The maintainer (2026-11-11): the workshop's pieces (`persist(storage)`,
+    the documents and their merging) stay here, "so we can battle test them before moving them into ultra". The
+    note that a listener which publishes from inside its own notification makes later listeners see the older value
+    last goes with `persist` when it moves.
 
 - **Step 3, five more sections (2026-11-10):** the workbench's layout, the output volume, what was opened last,
   the lessons done, the metal's seed. Each is a part of the Spine that builds its own section from the stores it is
@@ -122,7 +124,8 @@ This ticket holds the work that follows from the map. The map itself, with every
     keeps for itself (`Spine.resetAllStored()`), which is in no list of the browser's keys.
   - **A part read without a listener:** Ultra's `distinct()` gives the last value it passed on, which with no
     listener is the one it was made with, so `spine.recents.entries()` read stale. `Stored.part` now gives the
-    part as it is when asked. One more note for Ultra, with the two above.
+    part as it is when asked. Sent to Ultra-Main-Dev as a bug request on 2026-11-11 (the maintainer's word); the
+    ULTRA ticket number goes here when it comes back.
   - **Left for their own slices:** the keymap, the looks and the tools' switch, the songs, the MIDI play code and
     setup (with the laptop keys' layout), and the walkthroughs, which move with `KlangGuiDance` in step 4.
 
