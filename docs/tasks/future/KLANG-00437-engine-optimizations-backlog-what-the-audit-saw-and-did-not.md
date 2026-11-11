@@ -27,6 +27,9 @@ options. An item leaves this list when it is built or dropped. The Ignitor optim
 | The warm-up runs the master chain and the stages outside the born-with chain | KLANG-00431, D7 | a phone measurement first |
 | `KlangSnapshotMap.getOrPut` copies the map at every new key | seen in KLANG-00429 | open |
 | `SizedBuffers.giveBack` allocates an `Idle` wrapper | seen in KLANG-00428 | open |
+| The build-time gate looks through `Variants` and `OptimizerHint` (the build's own pick), so a stage gated off behind one is not built | KLANG-00429, L5-11 part (i) | not built in the decisions pass (2026-11-11): the gate's six queries and their call sites take the sound index, and the optimizer's `mayBeUnset` must look through both too, or an unset cutoff behind a `Variants` fuses where the plain build gates it (two modules, the optimizer's parity); no corpus tree has such a knob |
+| The compressor in the linear domain (saves two `exp`/`ln` per sample) | `Compressor.kt`'s header, KLANG-00433 Decide 9 | open |
+| RMS smoothing in the compressor's peak detector (a second cure for the crackle at fast release) | `Compressor.kt`'s header, KLANG-00433 Decide 9 | open |
 
 ## History
 

@@ -75,6 +75,22 @@ Nothing here changes the sound; each item is a code change or a removal the rule
    items (a linear-domain rewrite, RMS smoothing of the peak detector). The pointer is gone and the items are in the
    KDoc; whether they belong in KLANG-00437 (optimizations backlog) is the maintainer's call.
 
+### Decided (maintainer, 2026-11-11)
+
+1. Refuse `kotlin.Long` in the wire-codec processor: "yes". Owed.
+2. `VoiceScheduler.scheduleVoice`: "remove it". Owed.
+3. The Ignitor phaser's fixed feedback: "leave it like this, write a followup task for adding the door": KLANG-00439.
+4. `endsInClassic`: "ok keep it for now, but update KLANG-00216 that this ticket needs to check if endsInClassic() is
+   still needed". Done (KLANG-00216, open questions).
+5. `withGain`, `octaveUp`, `octaveDown`: "no keep them and check if KlangScript/Kotlin doors are available". Checked:
+   `octaveUp` and `octaveDown` have both doors (`IgnitorDsl.octaveUp()` in `audio_bridge`, the KlangScript extension
+   in `KlangScriptIgnitorExtensions.kt`); `withGain` is the runtime form of the doors' `mul`, and has no door of its
+   own name.
+6. `GraphCensus` models the gate: "as recommended". Owed.
+7. The worklet's `KlangTime`: "drop it". Owed.
+8. `KatalystDistortEffect` uses `houseDcBlockCoeff`: "as recommended". Owed.
+9. The compressor's two deferred items: moved to KLANG-00437.
+
 ## Notes
 
 What landed, per item (2026-11-11, the fix worker). Every item was read against the code as it is after KLANG-00425

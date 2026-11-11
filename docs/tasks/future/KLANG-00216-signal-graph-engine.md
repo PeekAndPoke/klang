@@ -126,6 +126,9 @@ Seed list of fixed-layout assumptions (known so far; the inventory completes it)
   named properties. "OK-ish for now"; a configurable graph revises them, e.g. into one generic list of
   inline graph-node references per event, announced the same way.
 
+- **`endsInClassic` (maintainer, 2026-11-11, from KLANG-00433):** `IgnitorDsl.endsInClassic()` has no caller today and
+  was kept for this plan's auto-attach. When this plan starts, check whether it is still needed; if not, remove it.
+
 ## 5. Bus references: ducking as composition (maintainer, 2026-09-27)
 
 Recorded only; nothing is built for it before this plan starts.
