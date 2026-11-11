@@ -1242,10 +1242,12 @@ class ExcitersTest : StringSpec({
         buf.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
-    "shape through a voice bounds output to within ±1 (the in-engine invariant)" {
+    "shape through a voice is not capped: the DC blocker's overshoot on a railed shape passes 1 (KLANG-00432, L4-05)" {
         // The voice applies no wrap or clip of its own: it hands the tree's output on as produced
-        // (`Voice.ignite`). The bound comes from the per-stage soft cap inside `shape()` and `distort()`
-        // (IgnitorEffects.kt); this row pins it through the path the engine runs, a real voice's block.
+        // (`Voice.ignite`). Neither do `shape()` and `distort()` since the doors took the fused law (their soft cap,
+        // identity to 0.95 and flat from 1.10, went with KLANG-00432, L4-05): the soft shape rails a sine driven at
+        // 10^1.2 and the DC blocker overshoots the rail. This row pins that through the path the engine runs, a real
+        // voice's block: measured 1.205 (JVM, 2026-11-11); the old cap held it under 1.05.
         val voice = createVoice(
             signal = Ignitors.sine().drive(1.0).shape("soft"),
             freqHz = 440.0,
@@ -1258,8 +1260,8 @@ class ExcitersTest : StringSpec({
 
         voice.render(ctx)
 
-        ctx.voiceBuffer.peakAmplitude() shouldBeLessThan 1.05
-        ctx.voiceBuffer.peakAmplitude() shouldBeGreaterThan 0.5  // still loud: the voice isn't silencing it
+        ctx.voiceBuffer.peakAmplitude() shouldBeGreaterThan 1.1
+        ctx.voiceBuffer.peakAmplitude() shouldBeLessThan 2.0  // the shaper's rail and the blocker's overshoot, no more
         ctx.voiceBuffer.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 

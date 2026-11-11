@@ -516,8 +516,8 @@ class Voice(
     /**
      * The tree's block: it renders into [buffer] on the voice's window. It hands the tree no pitch modulation (the root
      * `IgniteContext.phaseMod` stays null, every pitch modulation is a node of the tree, pitch pipeline step 5), and no
-     * clip: output bounding is the per-stage soft cap inside `Ignitor.distort()` and `Ignitor.shape()`, so the stages
-     * after the tree get its output as produced. Was `IgniteRenderer` until 2026-11-06 (KLANG-00290 item 21).
+     * clip: no stage of the tree bounds its output (the distort nodes' soft cap went with KLANG-00432, L4-05), so the
+     * stages after the tree get its output as produced; the house limiter is the one safety net. Was `IgniteRenderer` until 2026-11-06 (KLANG-00290 item 21).
      */
     private fun ignite(buffer: AudioBuffer, offset: Int, length: Int, blockStart: Double) {
         // The voice's limits, read per block (absolute frames, Double, see RenderClock.cursorFrame).

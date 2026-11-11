@@ -54,6 +54,7 @@ button.row:disabled { cursor: default; opacity: .55; }
 .verdict { margin-top: 12px; padding: 8px 12px; border: 1px solid var(--c); border-left-width: 3px; background: rgba(0, 0, 0, .2); line-height: 1.45; }
 .verdict b { text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono); font-size: 12px; color: var(--c); }
 .scroll { overflow-x: auto; margin-top: 14px; }
+.detail .caption { margin-top: 18px; }
 table { border-collapse: collapse; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 th { text-align: left; color: var(--faint); font-weight: 400; letter-spacing: .08em; text-transform: uppercase; font-size: 10.5px; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 td { padding: 4px 12px 4px 0; border-bottom: 1px solid var(--grid); white-space: nowrap; }
@@ -184,17 +185,21 @@ function renderDetail() {
   }
   if (i.reasons.length) { const ul = el('ul'); for (const r of i.reasons) ul.append(el('li', { text: r })); box.append(ul); }
   else if (i.light === 'green') box.append(el('ul', {}, el('li', { text: 'Nothing notable by the rules.' })));
-  const table = el('table'), head = el('tr');
-  for (const c of i.columns) head.append(el('th', { text: c }));
-  table.append(el('thead', {}, head));
-  const body = el('tbody');
-  for (const r of i.rows) {
-    const tr = el('tr');
-    for (const c of r) { const s = String(c); tr.append(el('td', { text: s, class: (s === 'never' || s === 'NaN' || s === 'inf') ? 'bad' : '' })); }
-    body.append(tr);
-  }
-  table.append(body);
-  box.append(el('div', { class: 'scroll' }, table));
+  const tableOf = (columns, rows) => {
+    const table = el('table'), head = el('tr');
+    for (const c of columns) head.append(el('th', { text: c }));
+    table.append(el('thead', {}, head));
+    const body = el('tbody');
+    for (const r of rows) {
+      const tr = el('tr');
+      for (const c of r) { const s = String(c); tr.append(el('td', { text: s, class: (s === 'never' || s === 'NaN' || s === 'inf' || s === 'over') ? 'bad' : '' })); }
+      body.append(tr);
+    }
+    table.append(body);
+    return el('div', { class: 'scroll' }, table);
+  };
+  box.append(tableOf(i.columns, i.rows));
+  for (const t of (i.tables || [])) { box.append(el('div', { class: 'sub caption', text: t.caption })); box.append(tableOf(t.columns, t.rows)); }
   host.append(box);
 }
 

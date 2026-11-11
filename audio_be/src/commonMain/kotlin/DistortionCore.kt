@@ -14,12 +14,13 @@ import kotlin.math.pow
  * The one shaper core of the engine: drive, shape and DC blocker, at the rate of the buffer it is handed (inside an
  * oversampling region, the region's; its own oversampler retired with KLANG-00214 (oversampling regions) step 4). Two nodes
  * host it and adapt only their block contract (engine tidy-up step 11, audit B2.2, 2026-10-08):
- *  - the fused `Distort` node (`FusedDistortIgnitor`, the distort stage `classic()` builds) drives with the amount's
+ *  - the fused `Distort` node (`FusedDistortIgnitor`, the distort stage `classic()` and the doors build) drives with the amount's
  *    gain, and its output is the core's output: the voice strip's law (phase 3 step 4, decision D2 option A,
  *    2026-09-25), with no soft cap;
- *  - the `Shape` node (`ShapeIgnitor`, the Ignitor `shape` and `distort` doors) drives at 1.0, since its gain comes
- *    from an upstream `Drive` node, and bounds the core's output with its own soft cap (`ShapingFuncs.softCap`).
- *    `x * 1.0` is exact for every value, so the shared core is that node's law bit for bit.
+ *  - the `Shape` node (`ShapeIgnitor`, the Ignitor `shape` door) drives at 1.0, since its gain comes from an upstream
+ *    `Drive` node, and its output is the core's output too (the soft cap it ended in went with KLANG-00432, L4-05; the
+ *    `distort` doors build the fused node since then). `x * 1.0` is exact for every value, so the shared core is that
+ *    node's law bit for bit.
  *
  * `StripLawCoresSpec` pins the law against an oracle written in the test; `OversamplerDecimatorParitySpec` pins both
  * nodes bit for bit.
@@ -28,9 +29,8 @@ import kotlin.math.pow
  *  1. every sample is DRIVEN and SHAPED in one expression, `shape(x * drive)`, and NaN-guarded;
  *  2. the DC blocker, on every shape, not only the asymmetric ones: at extreme drive any input
  *     asymmetry rail-locks a symmetric shaper toward +-1 and leaves a DC bias;
- *  3. NO soft cap here. The soft cap belongs to the `Shape` node. The two nodes are different laws on
- *     purpose (D2 kept both): the doors build `Shape(Drive(...))`, drive at the base rate and cap their
- *     output; `classic()` rebuilds the strip, which had its own downstream bounding stages.
+ *  3. NO soft cap. The `Shape` node ended in one, the doors' law kept by D2, until KLANG-00432, L4-05
+ *     (maintainer, 2026-11-11: "Let us use the new implementation and drop the old one"): one law now.
  *
  * The bypass belongs to the host, not here: the fused node is not built for a leaf amount at or below 0 and runs at
  * unity drive for a modulated one; the `Shape` node never bypasses.

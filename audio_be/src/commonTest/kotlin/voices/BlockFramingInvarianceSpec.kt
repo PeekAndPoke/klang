@@ -51,10 +51,10 @@ private val testRandom = Random(0x5EED)
  * Class 1 nodes are asserted BIT-IDENTICAL. Recurrence-anchored nodes would need the E7 relative
  * tolerance instead; none of the P0 picks does.
  *
- * The `KNOWN DEFECT` case at the bottom PINS ledger defect E3 in its current wrong shape, so this
- * suite stays green while the defect is open, and goes RED the moment someone fixes it, forcing the
- * flip to the correct assertion written above the pin. (E1, the FM depth envelope, was pinned the
- * same way and was fixed 2026-08-28: "fm with envelope" now sits in the green node list.)
+ * The case at the bottom pinned ledger defect E3 in its wrong shape until it was fixed (KLANG-00432, L4-02, decisions
+ * pass C, 2026-11-11: the filter envelope's knots belong to the note) and was flipped to the correct assertion. (E1, the
+ * FM depth envelope, was pinned the same way and was fixed 2026-08-28: "fm with envelope" now sits in the green node
+ * list.)
  */
 class BlockFramingInvarianceSpec : StringSpec({
 
@@ -423,17 +423,15 @@ class BlockFramingInvarianceSpec : StringSpec({
         }
     }
 
-    // ── Pinned defects (findings ledger). These go RED when the defect is fixed. ──
+    // ── Fixed defects (findings ledger), each flipped from its pin. ──
 
-    "E3 KNOWN DEFECT: the SVF cutoff-envelope chord erases a sub-block attack (ledger E3)" {
-        // CORRECT assertion, flip to this when fixing (or formally accepting) E3:
-        //   rmsEarly(coarse) >= 0.8 * rmsEarly(fine)
-        // A 22-frame envelope attack should open the filter within ~half a millisecond. With
-        // 128-frame chords the knee is straightened, so the sweep arrives ~a block late and the
-        // early window stays dark. lengths=[1] makes every chord one sample long: the analytic
-        // reference.
+    "E3 FIXED: the SVF cutoff envelope opens a sub-block attack on the note's frames, whatever the block lengths (ledger E3)" {
+        // A 22-frame envelope attack should open the filter within about half a millisecond. With the envelope read at
+        // each block's two ends (the law until KLANG-00432, L4-02) the knee was straightened, the sweep arrived about a
+        // block late and the early window stayed dark (the pin read under half the reference). The knots belong to the
+        // note now, so the block lengths do not matter at all: lengths=[1] (every block one sample) is the reference.
         val env = FilterEnvDef(depth = 60.0, attack = 0.0005, decay = 0.05, sustain = 0.0, release = 0.05)
-        fun chain(): Ignitor = IgnitorDsl.Sine().toExciter(random = testRandom).lowpass(cutoffHz = 150.0, q = 0.707, env = env)
+        fun chain(): Ignitor = IgnitorDsl.Sine().toExciter(random = Random(7)).lowpass(cutoffHz = 150.0, q = 0.707, env = env)
 
         fun rmsEarly(x: DoubleArray): Double {
             var acc = 0.0
@@ -442,10 +440,13 @@ class BlockFramingInvarianceSpec : StringSpec({
         }
 
         val fine = renderRagged(listOf(1), freqHz = 2000.0) { chain() }
-        val coarse = renderRagged(listOf(128), freqHz = 2000.0) { chain() }
-        check(rmsEarly(fine) > 1e-4) { "E3 reference is silent — probe mis-tuned" }
-        withClue("E3 pin: expected the DEFECT's erasure; red here means E3 changed — flip this case to the >= 0.8 form above") {
-            (rmsEarly(coarse) < 0.5 * rmsEarly(fine)) shouldBe true
+        check(rmsEarly(fine) > 1e-4) { "E3 reference is silent: probe mis-tuned" }
+
+        for (lengths in listOf(listOf(128), listOf(64), listOf(37, 128, 64, 91, 13, 111))) {
+            val coarse = renderRagged(lengths, freqHz = 2000.0) { chain() }
+
+            withClue("E3, blocks $lengths: the early window opens as with one-sample blocks") { (rmsEarly(coarse) >= 0.8 * rmsEarly(fine)) shouldBe true }
+            withClue("E3, blocks $lengths: bit-identical to one-sample blocks") { maxDiff(a = coarse, b = fine) shouldBe 0.0 }
         }
     }
 })

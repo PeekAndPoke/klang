@@ -522,8 +522,9 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
   boxed only the sweep's three arguments (47 to 88 B on HEAD) and the highpass with `analog` nothing measurable.
   Remedy: move the branch's per-block setup into a method of its own that takes no doubles (the node's own fields
   hold the block's reads) and returns none (the results land in a holder), so it spends its own budget
-  (`SvfIgnitor.prepareEnvelopeSweep`, larger than the 460-byte limit, so never inlined back); a callee past that
-  limit takes its doubles from a holder (`SvfCoeffSweep`'s cutoffs and q); a per-block step returns nothing and the
+  (`SvfIgnitor.prepareEnvelopeSweep` then, `SvfIgnitor.aimFrom` since the filter envelope's knots, KLANG-00432 L4-02;
+  larger than the 460-byte limit, so never inlined back); a callee past that limit takes its doubles from a holder
+  (`SvfCoeffSweep`'s cutoffs and q then, the node's own fields now); a per-block step returns nothing and the
   caller reads a field (`FilterHumanization.stepDrift`, then `driftMul`). A small setup method can still be inlined
   back where the voice is simpler, and then ITS callees compete for the caller's budget again: the static path's
   `computeStaticCoeffs` is a call in a two-filter voice but inlined in a one-filter one, where Kotlin's `coerceIn`
@@ -656,6 +657,11 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **Measure a fold's ceiling by deleting the nodes before building it** (the Eq and shaper gain folds were won't
   implement: deleting every level `mul` and `Drive` bought under 4 percent, while oversampling was 63 percent of
   the guitar rig and the polyphase decimator then paid).
+- **`Double.toInt()` is a call on Kotlin/JS** (`numberToInt`), so in a method whose inlining budget is spent its
+  double crosses as a heap number (KLANG-00432, L4-02, 2026-11-11: the filter envelope's knot search took one per
+  shortening step, about 1.2 KB per note of a 10 ms attack, `KLANG_PROBE_JS_ALLOC` on the cost table). Whole-number
+  arithmetic instead (a length doubled or halved) took it to 0. A cost row whose moving part fits in its first block
+  hides such a cost: the short render subtracts it.
 
 ### Measuring the engine
 

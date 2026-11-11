@@ -286,8 +286,10 @@ Two classes of envelope, with different roles in deciding when a voice ends:
       a literal `detune` above it included; under a modulated detune it has no static answer (audit L5-06).
 
 - **Modulator envelopes** do **not** extend voice lifetime:
-    - Filter modulator envelope (the `attack, decay, sustain, release` slots of `lpf` / `hpf` / `bpf` / `notch`)
-      — modulates filter cutoff at control rate.
+    - Filter modulator envelope (the `attack, decay, sustain, release` slots of `lpf` / `hpf` / `bpf` / `notch`):
+      modulates filter cutoff, exact at knots that belong to the note (at most 128 frames apart, one at every
+      stage boundary, close enough that the cutoff moves at most half a semitone between two) and linear between
+      them (KLANG-00432, L4-02, 2026-11-11; it was read at each block's two ends).
     - FM envelope — modulates FM depth.
     - Pitch envelope — modulates pitch.
     - These run their attack/decay/sustain during the gate phase and start

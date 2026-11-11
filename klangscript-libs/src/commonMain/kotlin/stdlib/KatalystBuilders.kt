@@ -421,7 +421,7 @@ internal fun KatalystBuilder.scriptLimiter(
 
 /**
  * Appends a distortion of the bus mix: the classic voice's fused `distort` (sprudel's `distort`) at the bus
- * position, same knobs, same scales, same shapes; the Ignitor door `x.distort(...)` adds a soft cap (decision D2).
+ * position, same knobs, same scales, same shapes; the Ignitor door `x.distort(...)` builds the same fused node.
  * A clipper before the master limiter is this stage with `soft` (or `hard`) and
  * a small [amount]; saturation is a gentle shape (`tube`, `softsat`) at a moderate one. Flat, as the
  * voice's door is.

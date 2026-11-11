@@ -347,7 +347,7 @@ class SampleSlots internal constructor() {
  *  - the distort is the fused [IgnitorDsl.Distort] node, the one that switches drive AND shape off as a
  *    unit (`Shape(Drive(...))` would put the shaper on every voice). Decision D2 (option A, landed in
  *    step 4): the node renders the strip's loop (no soft cap), so it
- *    was bit-identical, while the `distort`/`shape` doors keep their capped law;
+ *    was bit-identical; the `distort` doors build the same node since KLANG-00432, L4-05;
  *  - the four filters humanize from the voice's `analog` slot, as the strip did, but draw per filter
  *    where the strip drew every tolerance first (the section 8 migration cost); their cutoff
  *    envelopes are the strip's since D3 (one law, the block interpolation, and the default curve

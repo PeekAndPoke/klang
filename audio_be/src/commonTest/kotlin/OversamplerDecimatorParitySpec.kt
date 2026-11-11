@@ -150,8 +150,9 @@ class OversamplerDecimatorParitySpec : StringSpec({
     }
 
     /**
-     * The stage-0 law written out: the shape of `x * drive`, NaN-guarded, the DC blocker, then the soft cap for the
-     * `Shape` node ([drive] null, no multiply at all) and no cap for the fused `Distort` node.
+     * The stage-0 law written out: the shape of `x * drive`, NaN-guarded, the DC blocker, and nothing after it, for the
+     * `Shape` node ([drive] null, no multiply at all) and the fused `Distort` node alike (the `Shape` node's soft cap
+     * went with KLANG-00432, L4-05).
      */
     fun plainOracle(shape: DistortionShape, drive: Double?): DoubleArray {
         val dc = LowPassHighPassFilters.DcBlocker()
@@ -173,7 +174,7 @@ class OversamplerDecimatorParitySpec : StringSpec({
             dc.process(buffer = work, offset = offset, length = length)
 
             for (i in 0 until length) {
-                out[at + i] = if (drive == null) ShapingFuncs.softCap(work[offset + i]) else work[offset + i]
+                out[at + i] = work[offset + i]
             }
 
             at += length

@@ -295,19 +295,18 @@ class StdLibIgnitorTest : StringSpec({
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    "distort chaining produces Shape(Drive(...))" {
+    "distort chaining produces the fused Distort node (KLANG-00432, L4-05)" {
         val dsl = evalIgnitorDsl("Ignitor.saw().distort(0.5)")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        val drive = dsl.inner
-        drive.shouldBeInstanceOf<IgnitorDsl.Drive>()
-        drive.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
+        dsl.shouldBeInstanceOf<IgnitorDsl.Distort>()
+        dsl.amount shouldBe IgnitorDsl.Constant(0.5)
+        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Saw>()
     }
 
     "distort with a shape" {
         val dsl = evalIgnitorDsl("""Ignitor.saw().distort(0.8, "exp")""")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
+        dsl.shouldBeInstanceOf<IgnitorDsl.Distort>()
         dsl.shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("exp"))
-        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
+        dsl.amount shouldBe IgnitorDsl.Constant(0.8)
     }
 
     "detune chaining" {

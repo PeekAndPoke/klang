@@ -188,9 +188,11 @@ class SvfNodeLawSpec : StringSpec({
         // (`a1 += a1Step`, ..., `g += gStep`), and before this row only the baseline's whole-voice rows pinned the
         // bandpass, notch, highpass and saturated loops while the cutoff moves (`EnvelopeLawSpec` has the linear
         // lowpass). The oracle: the cutoff envelope written out (linear attack to 1 over 300 frames, linear decay to
-        // 0.25 over 400, +24 semitones over 500 Hz), read at each block's first frame and one past its last; the
-        // textbook coefficients `g = tan(pi fc / fs)`, `k = 1 / q`, `a1 = 1 / (1 + g (g + k))`, `a2 = g a1`,
-        // `a3 = g a2` at both ends; every coefficient stepped by `(end - start) / n` after each sample. The saturated
+        // 0.25 over 400, +24 semitones over 500 Hz), read at EVERY frame; the textbook coefficients
+        // `g = tan(pi fc / fs)`, `k = 1 / q`, `a1 = 1 / (1 + g (g + k))`, `a2 = g a1`, `a3 = g a2` at every frame. The node
+        // is exact at its knots and steps every coefficient linearly between them (KLANG-00432, L4-02, decisions pass C;
+        // the knots are pinned in `FilterEnvKnotsSpec`), so the bound is the knots' own distance from the exact cutoff,
+        // and a loop that misses one of its steps holds that coefficient for a whole segment, far over it. The saturated
         // loops' damping `kEff = k + 2 (0.25 analog) (diode(0.0876 ic1) - 1)` takes the documented state scale 0.0876 and
         // drive 0.25 per analog as literals and the diode curve from production, which the row below pins.
         val block = 128
@@ -225,17 +227,13 @@ class SvfNodeLawSpec : StringSpec({
             val out = DoubleArray(total)
             var ic1 = 0.0
             var ic2 = 0.0
-            var start = 0
-
-            while (start < total) {
-                val n = minOf(block, total - start)
-                val c0 = coeffs(start)
-                val c1 = coeffs(start + n)
-                val c = c0.copyOf()
+            for (at in 0 until total step block) {
+                val n = minOf(block, total - at)
 
                 for (i in 0 until n) {
+                    val start = at
                     val v0 = input[start + i]
-                    val (a1, a2, a3, k, g) = c
+                    val (a1, a2, a3, k, g) = coeffs(start + i)
 
                     if (saturated) {
                         val kEff = k + 2.0 * (analog * 0.25) * (diodePairResistanceApprox(ic1 * 0.0876) - 1.0)
@@ -255,13 +253,7 @@ class SvfNodeLawSpec : StringSpec({
                         ic2 = (2.0 * v2 - ic2).flushState()
                         out[start + i] = tap(v0, v1, v2, v0 - k * v1 - v2, k)
                     }
-
-                    for (j in c.indices) {
-                        c[j] += (c1[j] - c0[j]) / n
-                    }
                 }
-
-                start += n
             }
 
             return out
@@ -311,10 +303,8 @@ class SvfNodeLawSpec : StringSpec({
                 worst = maxOf(worst, abs(out[i] - ref[i]))
             }
 
-            // 1e-13: measured at most 4.4e-16 (JVM, 2026-09-28). The envelope's frame arithmetic
-            // (`pos * (1 / attackFrames)`), `computeSvfCoeffs`' operand order and the step's `* (1 / n)` round
-            // differently from the textbook forms here, in the last bits.
-            withClue("$name: the worst sample's distance from the swept oracle is $worst") { worst shouldBeLessThan 1e-13 }
+            // 2e-3: the knots' distance from the exact cutoff measured at most 9.5e-4 on these six loops (JVM, 2026-11-11).
+            withClue("$name: the worst sample's distance from the exact per-sample oracle is $worst") { worst shouldBeLessThan 2e-3 }
         }
     }
 

@@ -2071,11 +2071,11 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Effects: pass mod through to inner ──
 
-        // GATE ROW `distort`: at or below 0.0, or unset. Neither authoring door builds this node
-        // (both spell `distort` as `Shape(Drive(...))`, the Kotlin one at `IgnitorDsl.kt` and the
-        // script one at `KlangScriptIgnitorExtensions`); `classic()` does (its distort stage, phase 3
-        // step 5, the one node that switches drive AND shape off as a unit), and `WarmupVocabulary`
-        // at 0.3. Gating it aligns that node with the `Drive` row below and with the strip, which
+        // GATE ROW `distort`: at or below 0.0, or unset. Both authoring doors build this node since
+        // KLANG-00432, L4-05 (the Kotlin one at `IgnitorDsl.kt` and the script one at
+        // `KlangScriptIgnitorExtensions`; they spelled `distort` as `Shape(Drive(...))` before), and so do
+        // `classic()` (its distort stage, phase 3 step 5, the one node that switches drive AND shape off as a
+        // unit) and `WarmupVocabulary` at 0.3. A door's leaf amount at or below 0 is now a true bypass too. Gating it aligns that node with the `Drive` row below and with the strip, which
         // added no distort stage for an amount at or below 0.
         //
         // Since phase 3 step 4 (decision D2, option A) the node renders the VOICE STRIP's law through
@@ -2104,8 +2104,9 @@ private fun IgnitorDsl.buildRaw(
             )
         }
 
-        // GATE ROW `drive`: at or below 0.0, or unset. THE row the authoring doors reach, because
-        // both build `Shape(Drive(...))`. Two different things at once:
+        // GATE ROW `drive`: at or below 0.0, or unset. The `drive` door's row (the `distort` doors built
+        // `Shape(Drive(...))` until KLANG-00432, L4-05, and build the fused `Distort` above now). Two different
+        // things at once:
         //
         //  - at or below 0 it is a true FOLD: `DriveIgnitor` already copies its input through
         //    unchanged there, bit for bit, so the only thing removed is a buffer pass;
@@ -2116,8 +2117,8 @@ private fun IgnitorDsl.buildRaw(
         //    wired to this node, would have made every voice of that instrument all-NaN.
         //
         // `Shape` is NOT gated and cannot be: it has no amount knob, only a transfer function, so
-        // there is nothing to read an off value from. That is why `classic()`'s distort stage is the
-        // fused `Distort` node above, not this pair; D2 also gave that node the strip's law.
+        // there is nothing to read an off value from. That is why `classic()`'s distort stage and the
+        // `distort` doors are the fused `Distort` node above, not this pair; D2 gave that node the strip's law.
         is IgnitorDsl.Drive -> {
             inner.withMod().drive(amount.noMod())
         }

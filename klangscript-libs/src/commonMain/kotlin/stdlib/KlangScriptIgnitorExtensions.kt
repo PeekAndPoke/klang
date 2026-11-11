@@ -461,9 +461,9 @@ internal object KlangScriptIgnitorExtensions {
      * (`vibrato(Ignitor.slot.vibrato.rate, Ignitor.slot.vibrato.semitones, v => v.range(Ignitor.slot.vibrato.rangeFrom,
      * Ignitor.slot.vibrato.rangeTo).phase(Ignitor.slot.vibrato.phase))`), the FM's `fm.*`
      * (`fm(Ignitor.sine(x => x.analog(0)), Ignitor.slot.fm.ratio, Ignitor.slot.fm.depth, ...)`) and the envelope's stages and curves. The pattern's `onepole` is a slot too (`Ignitor.slot.onepole`): the engine no longer hangs one
-     * around the instrument. Two groups only `classic()` can place: `adsr.on` (no door has the switch) and `distort.*` (the `distort` door
-     * builds a drive into a shaper that always runs and caps its output; `classic()` uses the one distort node that
-     * switches off as a whole, so a slot on the door's distort would shape every note, written or not).
+     * around the instrument. One group only `classic()` can place: `adsr.on` (no door has the switch). The `distort` door
+     * builds the node `classic()`'s distort is, the one that switches off as a whole, so its `distort.*` slots work
+     * there too: `distort(Ignitor.slot.distort.amount, Ignitor.slot.distort.shape)`.
      *
      * ```KlangScript
      * let guitar = Ignitor.saw().distort(0.4).classic()
@@ -504,7 +504,8 @@ internal object KlangScriptIgnitorExtensions {
         self.shape(shape = shapeIndex(shape))
 
     /**
-     * Waveshaping distortion. Convenience for drive(amount) + shape(shape).
+     * Waveshaping distortion: drive by [amount] and the shaper as one unit, the law `classic()`'s distort runs (the
+     * shaper, a DC blocker, nothing after it). An [amount] at or below 0 leaves the signal untouched.
      *
      * Shapes:
      *  - **Symmetric soft:** "soft" (tanh), "gentle", "softsat", "cubic", "exp", "sineshaper".

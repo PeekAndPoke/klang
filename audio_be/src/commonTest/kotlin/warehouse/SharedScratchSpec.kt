@@ -19,9 +19,10 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.coarse
 import io.peekandpoke.klang.audio_bridge.crush
-import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
@@ -50,7 +51,7 @@ class SharedScratchSpec : StringSpec({
     fun deepChain(): IgnitorDsl {
         var dsl: IgnitorDsl = IgnitorDsl.Sine()
         repeat(6) {
-            dsl = dsl.crush(3.0.ign).coarse(4.0.ign).distort(amount = 2.0.ign).tremolo(rate = 5.0.ign, depth = 0.5.ign)
+            dsl = dsl.crush(3.0.ign).coarse(4.0.ign).drive(amount = 2.0.ign).shape().tremolo(rate = 5.0.ign, depth = 0.5.ign)
         }
         return dsl
     }

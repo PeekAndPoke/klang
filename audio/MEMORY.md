@@ -105,9 +105,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   finite block does not linger as DC. "Poison seen": the limiter's
   ring stores a non-finite sample as 0 and counts it (`HouseStage.nonFiniteSamples`, monotone, a Double), and every
   diagnostics report carries the count (`Diagnostics.nonFiniteSamples`); nothing is clamped for it. "Crushed": a block
-  the limiter ends more than 200 dB down (a huge finite value on the mix, past about +210 dBFS) is counted, one compare
-  per block (`HouseStage.crushedBlocks`, `Diagnostics.crushedBlocks`, KLANG-00432 L8-02 (c)); a huge value that moves
-  counts, a huge constant does not (the DC blockers take it out within a sample).
+  the limiter ends more than 200 dB down, or at whose end the mix stands above 1e12 ahead of the DC blockers (their
+  input state, so a huge constant counts every block it stands), is counted once, three compares per block
+  (`HouseStage.crushedBlocks`, `Diagnostics.crushedBlocks`, KLANG-00432 L8-02 (c)).
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
   `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
@@ -149,6 +149,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `ENV_DECLICK_SETTLE_TIME_CONSTANTS`), so a voice that ends in its envelope ends on an exact 0. Voices are admitted
   and placed in frames on the backend's own timeline (`PlaybackCtx.epochOnTimeline`), never in Unix seconds. Knobs
   and `Adsr.on`: `audio/ref/voice-synthesis.md`.
+- **The filter envelope's knots** (`SvfIgnitor`, KLANG-00432 L4-02): the cutoff is exact at knots of the NOTE, at most
+  128 frames apart, one at each stage boundary (`EnvelopeCore.nextStageFrame`), close enough that it moves at most
+  half a semitone between two (`FILTER_ENV_KNOT_SEMITONES`), linear between; within 2.2 cents of the per-sample
+  cutoff, bit-identical at every onset in a block (knob reads per block enter at the next knot; a late gate re-aims).
+  Guard: `FilterEnvKnotsSpec`.
 - **The gate**: a stage whose gating knob is a leaf at its off value (or unset, except where the table says
   otherwise) is not built; since 2026-10-07 the pitch arms too, five now (vibrato, accelerate, pitch envelope, fm, and
   `pitchModSemitones` at a literal mod since 7a), the shimmer at a wet of 0 or less since KLANG-00429. The query reads
@@ -284,9 +289,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
 - **Distortion**: `classic()`'s distort is the fused `IgnitorDsl.Distort` running `DistortionCore` (drive, shaper,
   DC blocker, no cap; a modulated amount at or below 0 runs at unity drive). Every shaper runs at the rate it is in:
-  the stages' own oversampling factors retired (2026-11-03, KLANG-00214 step 4), a region is the one way up. The `distort` and
-  `shape` doors build `Shape(Drive(...))`, bounded to +-1 by `ShapingFuncs.softCap`. `CrushCore` floors. Guard for
-  both laws: `StripLawCoresSpec`. The Katalyst `distort` stage (`KatalystDistortEffect`, 2026-10-09) runs the fused law
+  the stages' own oversampling factors retired (2026-11-03, KLANG-00214 step 4), a region is the one way up. The `distort`
+  doors build the same fused node and `shape` is its law at unity drive (KLANG-00432 L4-05: the doors' soft cap is
+  gone, one law; nothing bounds a shaper's output). `CrushCore` floors. Guards: `StripLawCoresSpec`,
+  `DoorDistortionLawSpec`. The Katalyst `distort` stage (`KatalystDistortEffect`, 2026-10-09) runs the fused law
   on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz), and
   delays nothing (its 2x default, latency and phase twins went with the factor; the songs that relied on the 2x wrap
   it in `oversampleAtLeast(2)`).
@@ -506,6 +512,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 Decisions pass C: the filter envelope's cutoff exact at knots of the note (half a semitone, 128 frames), the distort doors on the fused law (the soft cap gone), the aliasing meter's healthy limit on the health page: KLANG-00432, KLANG-00420
 - 2026-11-11 Decisions pass B2: the browser decodes at the engine's rate, the UI's clock hears an authored master, a sample crosses as one transferred buffer, the dropped and soundless counts monotone, the codec format in the schema hash, refused sends counted, crushed blocks counted, the offline render's head trimmed, `Long` refused on the wire, the worklet clock's frame counting dropped, the census models every gate, `scheduleVoice` removed: KLANG-00430, KLANG-00431, KLANG-00432, KLANG-00433
 - 2026-11-11 Decisions pass B1: a stop gives open gates their note-off and bounds a voice past the 20 s hold, a switch-on fades only over a sounding bus, delay rings bounded at 60 s, 1 s and 2 s rings warmed, a relaxing compressor move snaps, the SVF clamp at 0.49 fs, the house DC state bounded, the 16-bit edge rounds, the distort DC pole per rate: KLANG-00427, KLANG-00428, KLANG-00432, KLANG-00433
 - 2026-11-11 Decisions pass A: the pluck's real pick position (default 0.28), the square's one-sample edge, perlin without a period, white and brown rate-scaled, both middle voices' jitter, the shimmer ring sized, a non-finite drive amount unset: KLANG-00426, KLANG-00429, KLANG-00430

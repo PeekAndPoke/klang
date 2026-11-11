@@ -29,10 +29,10 @@ import kotlin.math.sqrt
  *   `ShapingFuncs` documents, written out here. The Padé `tanh` the soft shapes share is written out too
  *   (`x (27 + x²) / (27 + 9 x²)`, clamped to ±1 outside ±3), because it IS the documented curve (`fastTanh`), not an
  *   approximation of one.
- * - The doors' chain (`Ignitor.drive` + `Ignitor.shape`, which `Ignitor.distort` is, decision D2 option A; the
- *   guitars of DerSchmetterling, Sandsturm and ATruthWorthLyingFor): drive `10^(1.2 amount)`, the shaper, the DC
- *   blocker `y = x - x[n-1] + 0.995 y[n-1]`, then `softCap` (identity to 0.95, `0.95 + 0.05 tanh((|x| - 0.95) / 0.05)`
- *   above); drive, shaper, blocker and cap are this spec's.
+ * - The doors' law (`Ignitor.distort`, the fused node since KLANG-00432, L4-05, and the `Ignitor.drive` +
+ *   `Ignitor.shape` chain, which renders the same law in two nodes): drive `10^(1.2 amount)`, the shaper, the DC
+ *   blocker `y = x - x[n-1] + 0.995 y[n-1]`, and NOTHING after it (the soft cap the doors ended in until then is
+ *   gone); drive, shaper and blocker are this spec's.
  */
 class DoorDistortionLawSpec : StringSpec({
 
@@ -109,18 +109,6 @@ class DoorDistortionLawSpec : StringSpec({
 
     // ── the doors' chain ────────────────────────────────────────────────────────────────────────────
 
-    fun softCap(x: Double): Double {
-        val a = abs(x)
-
-        if (a <= 0.95) {
-            return x
-        }
-
-        val s = 0.95 + 0.05 * pade((a - 0.95) / 0.05)
-
-        return if (x < 0.0) -s else s
-    }
-
     /** The DC blocker's one-pole law, its state carried across blocks, the stored output flushed below 1e-15. */
     class Blocker {
         var xPrev = 0.0
@@ -139,7 +127,7 @@ class DoorDistortionLawSpec : StringSpec({
     /** A 220 Hz sine at [amplitude] with a small offset, so the shaper sees an asymmetric signal and the blocker works. */
     fun source(n: Int, amplitude: Double): DoubleArray = DoubleArray(n) { i -> 0.05 + amplitude * sin(2.0 * PI * 220.0 * i / sampleRate) }
 
-    /** The chain's output, and the largest magnitude that reached the cap (to show the cap acts in a fixture). */
+    /** The chain's output, and its largest magnitude (past 1 where the soft cap of the old door law would have acted). */
     fun oracleChain(input: DoubleArray, amount: Double, shape: DistortionShape): Pair<DoubleArray, Double> {
         val gain = 10.0.pow(amount * 1.2)
         val blocker = Blocker()
@@ -163,7 +151,7 @@ class DoorDistortionLawSpec : StringSpec({
                 val blocked = blocker.step(work[i])
 
                 capInPeak = maxOf(capInPeak, abs(blocked))
-                out[at + i] = softCap(blocked)
+                out[at + i] = blocked
             }
 
             at += n
@@ -174,10 +162,11 @@ class DoorDistortionLawSpec : StringSpec({
 
     fun maxAbsDiff(a: DoubleArray, b: DoubleArray): Double = a.indices.maxOf { abs(a[it] - b[it]) }
 
-    "the doors' chain: drive, shaper, DC blocker, soft cap, in that order" {
+    "the doors' law: drive, shaper, DC blocker, in that order, and no cap after them (KLANG-00432, L4-05)" {
         val total = 2048
         // The soft and tube guitars, a one-sided and an asymmetric shape, at a drive that rails the shaper (so the
-        // blocker overshoots and the cap acts) and at lighter ones; the DSL name and the curve it selects.
+        // blocker overshoots past 1, where the old door law's cap bent it) and at lighter ones; the DSL name and the
+        // curve it selects.
         val cases = listOf(
             DistortCase(1.0, "soft", DistortionShape.SOFT, capActs = true),
             DistortCase(0.35, "tube", DistortionShape.TUBE, capActs = false),
@@ -186,8 +175,8 @@ class DoorDistortionLawSpec : StringSpec({
         )
         val windows = List(total / blockFrames) { blockFrames }
 
-        // `Ignitor.distort(amount, shape)` IS `drive(amount).shape(shape)` (one line in IgnitorEffects.kt); both
-        // spellings are rendered so a future divergence of the two doors shows here.
+        // `Ignitor.distort(amount, shape)` is the fused node, `drive(amount).shape(shape)` the same law in two nodes
+        // (the product `x * drive` is the same double in both); both are rendered so a divergence shows here.
         for (c in cases) {
             val label = "${c.name} at ${c.amount}"
             val input = source(total, 0.8)
@@ -196,8 +185,10 @@ class DoorDistortionLawSpec : StringSpec({
             val viaChain = renderNodeWindows(ArrayIgnitor(input).drive(ParamIgnitor("amount", c.amount)).shape(c.name), windows, sampleRate)
 
             if (c.capActs) {
-                withClue("$label: the blocker overshoots past the knee, so the cap acts in this fixture") {
+                withClue("$label: the blocker overshoots past 1 in this fixture, and the output keeps it (no cap)") {
                     capInPeak shouldBeGreaterThan 1.0
+                    viaDistort.maxOf { abs(it) } shouldBeGreaterThan 1.0
+                    viaChain.maxOf { abs(it) } shouldBeGreaterThan 1.0
                 }
             }
 

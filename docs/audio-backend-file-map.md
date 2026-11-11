@@ -90,7 +90,7 @@ Cmd → PlaybackEngineDispatcher.handle
 
 - `filters/`: `AudioFilter`, `LowPassHighPassFilters` (the SVF coefficient helpers, DcBlocker, `createVowel`/`createBody`,
   `bodyGain`/`vowelGain`), `ResonatorBank` with `ResonatorTable` and `ResonatorConfig`, `EqCore`, `WetDryMix`,
-  `SvfCoeffSweep` (the per-block coefficient glide of `Ignitor.svf`).
+  `FilterEnvCutoff` (the filter envelope's cutoff law; its knots are `SvfIgnitor`'s, in `ignitor/IgnitorFilters.kt`).
 
 ## Ignitors (oscillators / exciters)
 

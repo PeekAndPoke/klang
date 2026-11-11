@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.constants.ADSR_EXP_K
+import kotlin.math.ceil
 import kotlin.math.floor
 
 /**
@@ -18,7 +19,7 @@ import kotlin.math.floor
  * step 1; sprudel's `fm` fills the FM node's since step 4). The voice strip's VCA and filter envelope were hosts too
  * until the strip retired (phase 3 step 9), its pitch envelope until pitch pipeline step 1, and the voice's own
  * control-rate FM envelope (one value per block, release always 0) until step 4. A host adapts only its block contract (per sample, or
- * at a block's two ends) and maps the level onto its destination; the level itself is computed here.
+ * at the filter's knots, `nextStageFrame`) and maps the level onto its destination; the level itself is computed here.
  *
  * **The shape.** Its entry points are [prepare], once per block, and [at], per sample: the "per-block
  * precompute plus a thin `at(absPos)` body, one law with two entry points" that block-framing ledger E1
@@ -164,6 +165,39 @@ internal class EnvelopeCore {
 
     /** The frame where the attack and decay end and the sustain begins. Set by [prepare]. */
     val sustainFrom: Double get() = attDecFrames
+
+    /**
+     * The first frame after [pos] where the law changes its stage: the first decay frame, the first sustain frame, the
+     * gate, the frame from which a finished release holds its end level; [Int.MAX_VALUE] when none follows. Between two
+     * of these frames the level is one stage's curve, monotone, so the level at the two ends bounds the level between
+     * them. A stage boundary that the gate has made unreachable is still returned (one frame too many, never one too
+     * few). Prepared by [prepare]; frame counts past [Int.MAX_VALUE] saturate (`toInt`). The filter envelope's knots
+     * (`SvfIgnitor`) read it once per knot.
+     */
+    fun nextStageFrame(pos: Int): Int {
+        var next = Int.MAX_VALUE
+        val attackEnd = ceil(attackFrames).toInt()
+        val decayEnd = ceil(attDecFrames).toInt()
+        val releaseEnd = (gateEndPos.toDouble() + ceil(relDenom - relOffset)).toInt()
+
+        if (attackEnd > pos) {
+            next = attackEnd
+        }
+
+        if (decayEnd > pos && decayEnd < next) {
+            next = decayEnd
+        }
+
+        if (gateEndPos > pos && gateEndPos < next) {
+            next = gateEndPos
+        }
+
+        if (releaseEnd > pos && releaseEnd < next) {
+            next = releaseEnd
+        }
+
+        return next
+    }
 
     /** The level a finished release holds: [levelAtGate] times the release curve at its end. */
     fun releaseEndLevel(): Double = levelAtGate * adsrCurveShape(curve = releaseCurve, x = 0.0, k = k, norm = norm)

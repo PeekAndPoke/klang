@@ -139,7 +139,7 @@ class KlangScriptEffectDoorParitySpec : StringSpec({
         Row("drive", { saw.drive(0.4.ign) }, "drive(0.4)", IgnitorDsl.Drive(inner = saw, amount = c(0.4))),
         Row(
             "distort", { saw.distort(amount = 0.4.ign) }, "distort(0.4)",
-            IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = saw, amount = c(0.4)), shape = c(0.0)),
+            IgnitorDsl.Distort(inner = saw, amount = c(0.4), shape = c(0.0)),
         ),
         Row("shape", { saw.shape() }, "shape()", IgnitorDsl.Shape(inner = saw, shape = c(0.0))),
         Row("crush", { saw.crush(6.ign) }, "crush(6)", IgnitorDsl.Crush(inner = saw, bits = c(6.0))),
@@ -162,8 +162,8 @@ class KlangScriptEffectDoorParitySpec : StringSpec({
     // ── Door inputs: every argument off its default, a number and a signal, from both doors ──────────────────────
 
     val p = IgnitorDsl.Param("p", 0.5)
-    val driven = IgnitorDsl.Drive(inner = saw, amount = c(0.4))
     fun shapeOf(inner: IgnitorDsl, shape: IgnitorDsl) = IgnitorDsl.Shape(inner = inner, shape = shape)
+    fun distortOf(shape: IgnitorDsl) = IgnitorDsl.Distort(inner = saw, amount = c(0.4), shape = shape)
     val inputs = listOf(
         Row(
             "phaser center and sweep",
@@ -186,10 +186,10 @@ class KlangScriptEffectDoorParitySpec : StringSpec({
         Row("shape, an unknown name is soft", { saw.shape(shape = "wobble") }, "shape(\"wobble\")", shapeOf(saw, c(0.0))),
         Row(
             "distort, the index form, a slot shape", { saw.distort(amount = 0.4.ign, shape = IgnitorDsl.Param("sh", 3.0)) },
-            "distort(0.4, Ignitor.param(\"sh\", 3))", shapeOf(driven, IgnitorDsl.Param("sh", 3.0)),
+            "distort(0.4, Ignitor.param(\"sh\", 3))", distortOf(IgnitorDsl.Param("sh", 3.0)),
         ),
-        Row("distort, the index form", { saw.distort(amount = 0.4.ign, shape = 5.ign) }, "distort(0.4, 5)", shapeOf(driven, c(5.0))),
-        Row("distort, the name form", { saw.distort(amount = 0.4.ign, shape = "hard") }, "distort(0.4, \"hard\")", shapeOf(driven, c(1.0))),
+        Row("distort, the index form", { saw.distort(amount = 0.4.ign, shape = 5.ign) }, "distort(0.4, 5)", distortOf(c(5.0))),
+        Row("distort, the name form", { saw.distort(amount = 0.4.ign, shape = "hard") }, "distort(0.4, \"hard\")", distortOf(c(1.0))),
         Row("adsr, a signal stage", { saw.adsr(attack = p, decay = 0.2.ign, sustain = 0.5.ign, release = 0.3.ign) }, "adsr(Ignitor.param(\"p\", 0.5), 0.2, 0.5, 0.3)", adsrBase.copy(attack = p)),
         Row("fm, a signal depth", { saw.fm(modulator = sine, ratio = 2.ign, depth = p) }, "fm(Ignitor.sine(), 2, Ignitor.param(\"p\", 0.5))", fmBase.copy(depth = p)),
         Row("pitchEnvelope, a signal depth", { saw.pitchEnvelope(p) }, "pitchEnvelope(Ignitor.param(\"p\", 0.5))", penvBase.copy(semitones = p)),

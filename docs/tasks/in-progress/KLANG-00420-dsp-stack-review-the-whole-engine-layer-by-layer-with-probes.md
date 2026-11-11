@@ -351,8 +351,41 @@ Two rule questions of the audit:
 - **An allocation once per note in render code:** "if we are able to avoid it or reduce it through the warehouse we
   should do it." Not forbidden; reduced where the warehouse can hold the buffer (see KLANG-00429, L5-03).
 - **The aliasing verdict on the health page:** "Judge below 5 kHz. Maybe we can also flip it and measure / display up
-  until which frequency the aliasing is healthy (-60 dB) and if this is below 5kHz it is healthy." Owed: the meter
-  reports the frequency up to which the aliasing stays under -60 dB, and the page judges by it.
+  until which frequency the aliasing is healthy (-60 dB) and if this is below 5kHz it is healthy." Built in decisions
+  pass C (below): the meter reports the frequency up to which the aliasing stays under -60 dB, and the page judges by it.
+
+## Decisions pass C (2026-11-11): the aliasing verdict
+
+What the decision of 2026-11-11 ("Judge below 5 kHz. Maybe we can also flip it and measure / display up until which
+frequency the aliasing is healthy (-60 dB)") became.
+
+- **BUILT: the healthy limit.** The aliasing runner sweeps every source and shaper the table can judge (the measured
+  rows and the controls) up 41 fundamentals, 109 Hz to 14.2 kHz, `fs / (N + 0.382)` for whole N (about a sixth of an
+  octave apart; the fraction keeps the folds off the harmonic bands, the 7040 Hz trap of the table). At each note the
+  level is the non-harmonic power BELOW 5 kHz re the power of all the harmonic bands (the fundamental's included, so a
+  rectifier reads right). The limit is the highest swept note up to which that level stays under -60 dB at that note
+  and every lower one; a case leaves the sweep at its first unhealthy note. `measureAliasingLimits(...)` in
+  `audio_be/src/jvmTest/kotlin/probes/_aliasing_limit.kt`, its KDoc the definition; the reading's new field
+  `nonHarmonicBelow5kReHarmonicsDb`. Written beside the table as `aliasing-limit.txt` and `.json`.
+- **The page judges by it:** an aliasing item is green when its limit is at or above 5 kHz, yellow below; its value is
+  the limit ("clean to 6.50 kHz", ">= 14.19 kHz" when nothing failed up to the top), and a second table shows the
+  sweep. An older run without the limit keeps the old rule. `console/dev-status/engine_health.py` now reads, per
+  probe, the newest run folder that holds its JSON, so a rerun of one probe is a folder of its own:
+  `docs/audio-audit/2026-11-11/` holds the aliasing table and the limit only, the other probes still come from
+  2026-11-10 (the page names the run per probe). Page rebuilt.
+- **The run** (49.9 s for the sweep): 181 rows swept, 48 healthy (3 of them the controls), 133 below 5 kHz (most are
+  shapers at 1x, which fold a driven sine's harmonics); the by-design and not-measurable rows are not swept. Sources: `sine`, `supersine` voices 1, the partial bank and
+  the sample playhead at rate 1 clean to the top; `saw`, `square`, `ramp`, the square node and their one-voice stacks
+  6.50 kHz (at 7.52 kHz -57.9 dB); the playhead a semitone up (cubic) 5.12 kHz; `tri` and `supertri` 0.99 kHz (no
+  PolyBLEP, accepted); `pulze`, `zawtooth`, `zamp`, `impulse` fail at the lowest note (-25 to -35 dB, naive by
+  design). Shapers: the smooth shapes at amount 0.5 inside `oversampleBy(4)` are clean to the top, `soft` at 1x and
+  amount 0.5 is clean to 4.62 kHz, at amount 2 to 0.12 kHz.
+- Guard: `AliasingMeterSpec`, two rows (the sweep's pitches; a test-made tone whose alias below 5 kHz crosses -60 dB at
+  3162 Hz and a part at 20 kHz that must not count: the limit is the last swept note under the crossing, a pure sine is
+  clean to the top). Mutants: the threshold 30 dB lower, the band test counting every bin, the fraction 0.5 (see
+  KLANG-00432's pass C for the campaign table).
+- **Not built:** tests for `engine_health.py` (it has none; the rule is plain and the page was checked by a rebuild and
+  a parse of its script).
 
 ## History
 
@@ -360,3 +393,4 @@ Two rule questions of the audit:
 - 2026-11-10: IN PROGRESS. Started: the three small probes first (hot-path lint, dead-knob finder, stage probe).
 - 2026-11-10: all seven probes built (the cost table on the JVM only), the first run in `docs/audio-audit/2026-11-10/`, the engine health page. Next: the Kotlin/JS half of the cost table and the profiles, then the nine-layer audit on Fable 5.2 (held for the start of a budget week) and the adversarial pass.
 - 2026-11-10: the audit ran (ten layers, 120 findings) and the disproof pass (69 challenged, 0 disproved); the index is `docs/audio-audit/2026-11-10/audit/SUMMARY.md`. Waiting for the maintainer to pick the tickets.
+- 2026-11-11: decisions pass C: the aliasing meter's healthy limit, judged on the health page.

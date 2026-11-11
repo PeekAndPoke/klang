@@ -194,4 +194,53 @@ class AliasingMeterSpec : StringSpec({
         withClue("found fundamental harmonic band") { r.harmonicDb shouldBe (-20.0 plusOrMinus 0.001) }
         withClue("found fundamental floor") { r.nonHarmonicDb shouldBeLessThan -150.0 }
     }
+
+    "the sweep's pitches: about 100 Hz to 14.2 kHz, ascending, each a whole number plus 0.382 into the rate" {
+        val pitches = aliasingSweepPitches()
+
+        withClue("ascending") { pitches shouldBe pitches.sorted() }
+        for (f in pitches) {
+            val n = sr / f
+
+            withClue("$f Hz: fs / f = $n") { (n - floor(n)) shouldBe (0.382 plusOrMinus 1e-9) }
+        }
+
+        withClue("bottom") { pitches.first() shouldBe (100.0 plusOrMinus 10.0) }
+        withClue("top") { pitches.last() shouldBe (sr / 3.382 plusOrMinus 1e-9) }
+    }
+
+    "the healthy limit: the last pitch before the aliasing below 5 kHz reaches -60 dB re the harmonics; above 5 kHz does not count" {
+        // At each pitch f: a sine at f (0.5), an inharmonic part at f / 2 whose level re the sine is -80 dB + 40 log10(f / 1 kHz)
+        // (it crosses -60 dB at 3162 Hz), and a part at 20 kHz at -20 dB that the 5 kHz band must not count. And a pure sine.
+        fun case(name: String, f: Double, render: () -> DoubleArray) =
+            AliasingCase(family = "test", stage = name, knobs = "", pitchHz = f, kind = AliasingKind.MEASURED, note = "", findPitch = false, render = render)
+
+        val pitches = aliasingSweepPitches()
+        val rows = measureAliasingLimits(pitches = pitches, config = config) { f ->
+            val alias = 0.5 * Math.pow(10.0, (-80.0 + 40.0 * log10(f / 1000.0)) / 20.0)
+
+            listOf(
+                case("rising alias", f) { tone(f to 0.5, f / 2.0 to alias, 20000.0 to 0.05) },
+                case("pure sine", f) { tone(f to 0.5) },
+            )
+        }
+        val rising = rows.single { it.stage == "rising alias" }
+        val pure = rows.single { it.stage == "pure sine" }
+        val crossing = 1000.0 * Math.pow(10.0, 20.0 / 40.0)
+
+        withClue("rising alias: the limit is the last swept pitch under the crossing") {
+            rising.healthyToHz shouldBe pitches.last { it < crossing }
+            rising.firstUnhealthyHz shouldBe pitches.first { it >= crossing }
+            rising.clean shouldBe false
+        }
+        withClue("rising alias: the level at the limit is its formula (the 20 kHz part not counted)") {
+            val at = rising.levels.single { it.first == rising.healthyToHz }
+
+            at.second shouldBe ((-80.0 + 40.0 * log10(at.first / 1000.0)) plusOrMinus 0.1)
+        }
+        withClue("pure sine: clean to the top") {
+            pure.clean shouldBe true
+            pure.healthyToHz shouldBe pitches.last()
+        }
+    }
 })

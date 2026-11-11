@@ -449,7 +449,7 @@ sealed interface KatalystStageDsl {
     /**
      * Distortion of the bus mix: the classic voice's fused `distort` (the one sprudel's `distort` writes) at the
      * bus position, one DSP and one word on both hosts (KLANG-00292 (katalyst distort stage)). The Ignitor door
-     * `x.distort(...)` adds a soft cap to the same drive and shapes, a recorded difference (decision D2). A clipper
+     * `x.distort(...)` builds the same fused node (KLANG-00432, L4-05; its soft cap is gone). A clipper
      * is this stage with a clipping shape (`soft`, `hard`) and a small [amount]; saturation is a gentle shape at a
      * moderate one.
      *

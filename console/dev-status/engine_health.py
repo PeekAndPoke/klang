@@ -3,10 +3,12 @@
 
     python3 console/dev-status/engine_health.py [--run docs/audio-audit/<date>] [--out FILE]
 
-Reads the newest run folder under docs/audio-audit (the JSON the probes of KLANG-00420 wrote: stage-probe.json,
-stage-cost.json, hot-path-lint.json, dead-knobs.json, and the later ones as they are built) and the judgement in
-docs/audio-audit/verdicts.json, and renders engine-health.template.html with the shared hud.css. The page is flat
-HTML with its data inline, no library. The register of the probes is audio/ref/verification.md, "The probes".
+Reads, for each probe's JSON, the newest run folder under docs/audio-audit that holds it (the JSON the probes of
+KLANG-00420 wrote: stage-probe.json, stage-cost.json, hot-path-lint.json, dead-knobs.json, aliasing.json and
+aliasing-limit.json, clicks.json, framing.json; a later run that reran one probe adds a folder with that probe's
+files only) and the judgement in docs/audio-audit/verdicts.json, and renders engine-health.template.html with the
+shared hud.css. The page is flat HTML with its data inline, no library. The register of the probes is
+audio/ref/verification.md, "The probes". With --run, every file comes from that one folder.
 
 A light is a RULE over a measurement, never the measurement itself:
 
@@ -82,6 +84,14 @@ def load(run, name):
         return None
     with open(path, encoding='utf-8') as fh:
         return json.load(fh)
+
+
+def newest(runs, name):
+    """The newest run folder of [runs] (sorted oldest first) that holds [name], or None."""
+    for run in reversed(runs):
+        if os.path.exists(os.path.join(run, name)):
+            return run
+    return None
 
 
 # ── The rules ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -190,9 +200,28 @@ def knob_items(doc):
     return items
 
 
-def aliasing_items(rows):
-    """One item per source or shaper and knob set, over its pitches. A quality question, so never red by rule: yellow
-    when the energy off the harmonics is within 60 dB of the harmonics at any pitch."""
+def khz(hz):
+    return f'{num(hz) / 1000:.2f} kHz'
+
+
+def limit_words(lim):
+    """A limit row as the page says it: '>= 14.19 kHz' (nothing failed up to the top), '< 0.10 kHz' (the lowest
+    pitch failed), else the limit."""
+    if lim['clean']:
+        return '>= ' + khz(lim['healthyToHz'])
+    if num(lim['healthyToHz']) <= 0:
+        return '< ' + khz(lim['levels'][0][0])
+    return khz(lim['healthyToHz'])
+
+
+def aliasing_items(rows, limits=None):
+    """One item per source or shaper and knob set, over its pitches. A quality question, so never red by rule.
+
+    With the healthy limit (aliasing-limit.json, the maintainer's decision of 2026-11-11, KLANG-00420): green when the
+    aliasing below 5 kHz stays under -60 dB re the harmonics up to a note of 5 kHz or higher, yellow when the limit is
+    lower. Without it (an older run): yellow when the energy off the harmonics is within 60 dB of the harmonics at any
+    pitch."""
+    by_id = {f'{l["family"]}/{l["stage"]}/{l["knobs"]}': l for l in (limits or [])}
     groups = {}
     for r in rows:
         groups.setdefault((r['family'], r['stage'], r['knobs']), []).append(r)
@@ -201,7 +230,30 @@ def aliasing_items(rows):
         notes = sorted({r['note'] for r in rs if r['note']})
         judged = [r for r in rs if r['measurable'] and r['kind'] == 'measured' and not any('by design' in n for n in notes)]
         reasons, light = list(notes), 'blue'
-        if judged:
+        item_id = f'{family}/{stage}/{knobs}'
+        lim = by_id.get(item_id)
+        extra = []
+        value = f'{fmt(max(num(r["nonHarmonicReHarmonicsDb"]) for r in rs), 3)} dB' if all(r['measurable'] for r in rs) else 'n/m'
+        if lim is not None and judged:
+            limit, healthy = num(lim['healthyToHz']), num(lim['healthyToHz']) >= 5000
+            light = 'green' if healthy else 'yellow'
+            value = 'clean to ' + limit_words(lim)
+            if lim['clean']:
+                reasons.insert(0, f'the aliasing below 5 kHz stays under {fmt(lim["thresholdDb"])} dB re the harmonics at every '
+                                  f'swept note up to {khz(lim["sweepTopHz"])}')
+            elif num(lim['healthyToHz']) <= 0:
+                bad = lim['levels'][-1]
+                reasons.insert(0, f'the aliasing below 5 kHz reads {fmt(bad[1], 1)} dB re the harmonics already at the lowest '
+                                  f'swept note, {khz(bad[0])} (healthy: under {fmt(lim["thresholdDb"])} dB up to 5 kHz)')
+            else:
+                bad = lim['levels'][-1]
+                reasons.insert(0, f'the aliasing below 5 kHz stays under {fmt(lim["thresholdDb"])} dB re the harmonics up to '
+                                  f'{limit_words(lim)}; at {khz(bad[0])} it reads {fmt(bad[1], 1)} dB'
+                               + ('' if healthy else ' (healthy from 5 kHz up)'))
+            extra.append({'caption': 'The sweep: the aliasing below 5 kHz, dB re the harmonics, per note',
+                          'columns': ['note Hz', 'aliasing below 5 kHz dB', 'verdict'],
+                          'rows': [[fmt(hz, 5), fmt(db), 'ok' if num(db) < num(lim['thresholdDb']) else 'over'] for hz, db in lim['levels']]})
+        elif judged:
             worst = max(judged, key=lambda r: num(r['nonHarmonicReHarmonicsDb']))
             level = num(worst['nonHarmonicReHarmonicsDb'])
             light = 'yellow' if level > -60 else 'green'
@@ -209,15 +261,16 @@ def aliasing_items(rows):
                 reasons.insert(0, f'at {fmt(worst["pitchHz"], 5)} Hz the energy off the harmonics is {fmt(level)} dB re the '
                                   f'harmonics (strongest at {fmt(worst["strongestHz"], 5)} Hz)')
         items.append({
-            'id': f'{family}/{stage}/{knobs}', 'group': f'{family} {stage.split(":")[0]}', 'title': f'{stage}  {knobs}',
-            'light': light, 'reasons': reasons,
-            'value': f'{fmt(max(num(r["nonHarmonicReHarmonicsDb"]) for r in rs), 3)} dB' if all(r['measurable'] for r in rs) else 'n/m',
+            'id': item_id, 'group': f'{family} {stage.split(":")[0]}', 'title': f'{stage}  {knobs}',
+            'light': light, 'reasons': reasons, 'value': value,
             'columns': ['pitch Hz', 'fundamental dBFS', 'harmonics dB', 'off harmonics dB re fund.', 're harmonics',
-                        'dBFS', 'strongest Hz', 'at dB', 'cents'],
+                        'below 5 kHz re fund.', 'dBFS', 'strongest Hz', 'at dB', 'cents'],
             'rows': [[fmt(r['pitchHz'], 5), blank(r['fundamentalDbfs']), blank(r['harmonicDb']), blank(r['nonHarmonicDb']),
-                      blank(r['nonHarmonicReHarmonicsDb']), blank(r['nonHarmonicDbfs']), blank(r['strongestHz']),
+                      blank(r['nonHarmonicReHarmonicsDb']), blank(r.get('nonHarmonicBelow5kDb', float('nan'))),
+                      blank(r['nonHarmonicDbfs']), blank(r['strongestHz']),
                       blank(r['strongestDb']), blank(r['offsetCents'])] if r['measurable'] else
-                     [fmt(r['pitchHz'], 5), 'not measurable this way', '', '', '', '', '', '', ''] for r in rs],
+                     [fmt(r['pitchHz'], 5), 'not measurable this way', '', '', '', '', '', '', '', ''] for r in rs],
+            'tables': extra,
         })
     return items
 
@@ -315,48 +368,68 @@ def apply_verdicts(probes, verdicts):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    p.add_argument('--run', default=None, help='the run folder (default: the newest docs/audio-audit/<date>)')
+    p.add_argument('--run', default=None,
+                   help="one run folder for every probe (default: per probe, the newest docs/audio-audit/<date> holding its JSON)")
     p.add_argument('--out', default=OUT)
     a = p.parse_args()
     runs = sorted(d for d in glob.glob(os.path.join(AUDIT, '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]')) if os.path.isdir(d))
-    run = a.run or (runs[-1] if runs else None)
-    if not run:
+    if a.run:
+        runs = [a.run]
+    if not runs:
         sys.exit('engine-health: no run folder under docs/audio-audit')
+    used = {}
+
+    def fetch(name):
+        """The newest JSON of that name, and the run it came from noted for the page."""
+        run = newest(runs, name)
+        if run is None:
+            return None
+        used[name] = os.path.basename(run)
+        return load(run, name)
+
+    def from_run(name, text):
+        return f'{text} Run {used[name]}.' if name in used else text
 
     raw = []
-    doc = load(run, 'stage-probe.json')
+    doc = fetch('stage-probe.json')
     if doc is not None:
         raw.append(('stage-probe', 'Stage probe',
                     'One stage alone under eight signals, three of them poison: does it stay finite, recover, fall silent?',
-                    stage_probe_items(doc), 'Each stage alone, fixed knobs, no host; the per-note stages in mono.'))
-    doc = load(run, 'hot-path-lint.json')
+                    stage_probe_items(doc), from_run('stage-probe.json', 'Each stage alone, fixed knobs, no host; the per-note stages in mono.')))
+    doc = fetch('hot-path-lint.json')
     if doc is not None:
         raw.append(('hot-path-lint', 'Hot-path lint',
                     'Does render code hold what the engine rules forbid: boxed types, allocation, capturing lambdas?',
-                    lint_items(doc), f'{doc["hot_functions"]} functions count as render code, in {doc["files"]} files.'))
-    doc = load(run, 'dead-knobs.json')
+                    lint_items(doc), from_run('hot-path-lint.json', f'{doc["hot_functions"]} functions count as render code, in {doc["files"]} files.')))
+    doc = fetch('dead-knobs.json')
     if doc is not None:
         raw.append(('dead-knobs', 'Dead-knob finder',
                     'Does every slot key a door writes have an engine reader, and the reverse?',
-                    knob_items(doc), 'Source text only; keys inside song and tutorial text are not read.'))
-    doc = load(run, 'stage-cost.json')
+                    knob_items(doc), from_run('dead-knobs.json', 'Source text only; keys inside song and tutorial text are not read.')))
+    doc = fetch('stage-cost.json')
     if doc is not None:
         raw.append(('stage-cost', 'Stage cost table',
                     'What does each source, stage and voice cost alone, in nanoseconds per sample?',
-                    cost_items(doc), 'JVM only; the browser ranks differently. Under 10 percent between two runs is noise.'))
+                    cost_items(doc), from_run('stage-cost.json', 'JVM only; the browser ranks differently. Under 10 percent between two runs is noise.')))
 
-    doc = load(run, 'aliasing.json')
+    doc = fetch('aliasing.json')
     if doc is not None:
-        raw.append(('aliasing', 'Aliasing meter', PLANNED[0][2], aliasing_items(doc),
-                    'Steady tones, analog 0, sources bare; the floor is about -165 dB. Yellow is a question for ears.'))
-    doc = load(run, 'clicks.json')
+        limits = fetch('aliasing-limit.json')
+        note = ('Healthy (green) when the aliasing below 5 kHz stays under -60 dB re the harmonics up to a note of 5 kHz or '
+                'higher; the value is that limit. Steady tones, analog 0, sources bare, shapers on a sine at 0.5; the floor '
+                'is about -165 dB.' if limits is not None else
+                'Steady tones, analog 0, sources bare; the floor is about -165 dB. Yellow is a question for ears.')
+        if limits is not None and used.get('aliasing-limit.json') != used.get('aliasing.json'):
+            note += f' The limit is from run {used["aliasing-limit.json"]}.'
+        raw.append(('aliasing', 'Aliasing meter', PLANNED[0][2], aliasing_items(doc, limits), from_run('aliasing.json', note)))
+    doc = fetch('clicks.json')
     if doc is not None:
         raw.append(('clicks', 'Click detector', PLANNED[1][2], click_items(doc),
-                    'A 110 Hz tone, one change at a time; a 50 ms glide reads kink 2.5 and -86 dB, a hard step 3618 and -18 dB.'))
-    doc = load(run, 'framing.json')
+                    from_run('clicks.json', 'A 110 Hz tone, one change at a time; a 50 ms glide reads kink 2.5 and -86 dB, a hard step 3618 and -18 dB.')))
+    doc = fetch('framing.json')
     if doc is not None:
         raw.append(('framing', 'Block-framing checker', PLANNED[2][2], framing_items(doc),
-                    'The production voice path, the onset, the gate close and a cut at each of the 128 offsets in a block.'))
+                    from_run('framing.json', 'The production voice path, the onset, the gate close and a cut at each of the 128 offsets in a block.')))
     probes = [probe(*r) for r in raw]
     verdicts_path = os.path.join(AUDIT, 'verdicts.json')
     verdicts = {}
@@ -371,8 +444,8 @@ def main():
             probes.append({'id': pid, 'title': title, 'question': question, 'note': 'Not built yet (KLANG-00420).',
                            'built': False, 'light': 'none', 'counts': {}, 'items': []})
 
-    data = {'run': os.path.basename(run), 'built': dt.date.today().isoformat(), 'verdicts': len(verdicts),
-            'probes': probes}
+    data = {'run': ', '.join(sorted(set(used.values()))) or os.path.basename(runs[-1]), 'built': dt.date.today().isoformat(),
+            'verdicts': len(verdicts), 'probes': probes}
     template = open(os.path.join(HERE, 'engine-health.template.html'), encoding='utf-8').read()
     css = open(os.path.join(HERE, 'hud.css'), encoding='utf-8').read()
     html = template.replace('/*__HUD_CSS__*/', css).replace('__DATA__', json.dumps(data).replace('</', '<\\/'))
@@ -382,7 +455,7 @@ def main():
         c = q['counts']
         tally = ', '.join(f'{c[k]} {k}' for k in ('red', 'yellow', 'green', 'grey', 'blue') if c.get(k))
         print(f'{q["light"]:<7}{q["title"]}: {tally or "not built"}')
-    print(f'wrote {os.path.relpath(a.out, ROOT)} ({os.path.getsize(a.out) // 1024} KB) from {os.path.relpath(run, ROOT)}')
+    print(f'wrote {os.path.relpath(a.out, ROOT)} ({os.path.getsize(a.out) // 1024} KB) from run(s) {data["run"]}')
 
 
 if __name__ == '__main__':

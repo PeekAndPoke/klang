@@ -91,7 +91,36 @@ fun stageCostCases(): List<StageCostCase> = buildList {
         )
     }
 
+    addAll(filterEnvelopeCostCases())
     addAll(voiceCostCases())
+}
+
+/**
+ * The filter envelope's rows (KLANG-00432, L4-02): the stage probe's catalogue has the lowpass without one. Over the
+ * sample leaf in `classic()` with its envelope off, as the catalogue's rows; the render is one held note of a second, so
+ * "held" spends it in the sustain after 110 ms and "moving" sweeps through all of it (a decay of one second).
+ */
+fun filterEnvelopeCostCases(): List<StageCostCase> = buildList {
+    val tree = IgnitorDsl.Sample.classic()
+    val adsrOff = mapOf("adsr.on" to 0.0)
+
+    fun row(knobs: String, params: Map<String, Double>) {
+        add(
+            StageCostCase(
+                family = "ignitor",
+                stage = "lowpass env",
+                knobs = knobs,
+                baseline = COST_CONTROL_SAMPLE_LEAF,
+                probe = ignitorProbeStage(tree = tree, params = adsrOff + params),
+            ),
+        )
+    }
+
+    val moving = mapOf("lpf.freq" to 1000.0, "lpf.env" to 48.0, "lpf.attack" to 0.001, "lpf.decay" to 1.0, "lpf.sustain" to 0.0)
+
+    row(knobs = "freq=1000 env=24, default times (held)", params = mapOf("lpf.freq" to 1000.0, "lpf.env" to 24.0))
+    row(knobs = "freq=1000 env=48 a=0.001 d=1 s=0 (moving)", params = moving)
+    row(knobs = "freq=1000 env=48 a=0.001 d=1 s=0 analog=1 (moving)", params = moving + mapOf("analog" to 1.0))
 }
 
 /** Every source node, bare: the built-in sounds' own trees ([builtInSources]) and the nodes no built-in uses. */

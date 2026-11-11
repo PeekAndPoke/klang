@@ -21,10 +21,13 @@ class IgnitorDslSpec : StringSpec({
         IgnitorDsl.Sine().mul(IgnitorDsl.Param("factor", 0.5)).shouldBeInstanceOf<IgnitorDsl.Times>()
     }
 
-    "distort builder produces Shape(Drive(...))" {
+    "distort builder produces the fused Distort node (KLANG-00432, L4-05)" {
         val dsl = IgnitorDsl.Sine().distort(0.5.ign)
-        val clip = dsl.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        clip.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
+        val fused = dsl.shouldBeInstanceOf<IgnitorDsl.Distort>()
+        fused.inner.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        fused.amount shouldBe IgnitorDsl.Constant(0.5)
+        fused.shape shouldBe IgnitorDsl.Constant(DistortionShapes.SOFT_INDEX.toDouble())
+        IgnitorDsl.Sine().distort(0.5.ign, "tube").shape shouldBe IgnitorDsl.Constant(DistortionShapes.indexOf("tube"))
     }
 
     "eq extension wraps and is idempotent" {

@@ -60,6 +60,11 @@ data class AliasingReading(
      * the wrong way round (audit finding L3-02, KLANG-00430).
      */
     val nonHarmonicBelow5kDb: Double,
+    /**
+     * The same power below 5 kHz re every harmonic band's (the fundamental's included): the number the healthy limit
+     * judges ([measureAliasingLimit]), meaningful also where the fundamental is weak or absent.
+     */
+    val nonHarmonicBelow5kReHarmonicsDb: Double,
     /** The strongest bin outside the bands, refined between the bins (NaN when there is none). */
     val strongestHz: Double,
     /** The power within [AliasingConfig.bandBins] of [strongestHz] (outside the bands), re the fundamental. */

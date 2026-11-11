@@ -10,7 +10,6 @@ import io.peekandpoke.klang.audio_be.CrushCore
 import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
-import io.peekandpoke.klang.audio_be.ShapingFuncs
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
@@ -41,15 +40,11 @@ import kotlin.math.exp
  * for symmetric shapes at extreme drive where any input asymmetry causes the
  * output to rail-lock toward `±1` and produce a DC bias that can damage speakers.
  *
- * **Output is bounded to ±1 by a C¹-piecewise soft cap** ([ShapingFuncs.softCap]), at the rate the stage runs: inside
- * an oversampling region the cap comes BEFORE the region's down conversion, whose half-band can overshoot it on a
- * near-square (measured up to about 1.5 on a hard-driven saw, KLANG-00214 step 4's review).
- * Below the linear-region threshold the cap is identity (clean signals
- * untouched); above, the rail-edge transients from the DC blocker's 2× HF gain
- * are smoothly compressed toward ±1 with continuous value + slope at the
- * threshold (no cliff click). The cap is per-stage so chained ignitor
- * combinators (downstream filters, mix points) see a well-behaved bounded
- * input — without it, a heavy-distort branch can dominate a mix.
+ * **The output is not capped** (KLANG-00432, L4-05, 2026-11-11): the law is the fused [fusedDistort] node's, the one
+ * `classic()`'s distort runs, the drive, the shaper and the DC blocker as one unit. The doors ended in a soft cap
+ * (`ShapingFuncs.softCap`, identity to 0.95, flat from 1.10) until then, and its knee was where their aliasing came
+ * from (45 to 100 dB more than this law on smooth shapes, KLANG-00420). A hot shape (`gentle` doubles) and the DC
+ * blocker's overshoot on a near-square can leave `[-1, 1]`; the Motor stays raw.
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm saturation, 1.0 = heavy distortion,
  *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Required here; the wire node `IgnitorDsl.Drive`
@@ -60,17 +55,11 @@ import kotlin.math.exp
  *   - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly), "stompbox" (diode pedal), "rectify" (full-wave).
  */
 fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor =
-    drive(amount).shape(shape)
-// NOTE for this Ignitor-amount door: only the DRIVE half bypasses at amount <= 0 — the shaper
-// keeps shaping at unity gain (tanh(1.0) = 0.76, a -2.4 dB peak squash with odd harmonics for
-// full-scale input; identity only well below |x| ~ 0.3). A CONSTANT 0 through the Double
-// overload below still short-circuits to a true bypass; the DSL door has always behaved like
-// this chain. (Ledger W5.)
-// ^ The DOORS' law, kept by decision D2 (option A, 2026-09-25): `Shape(Drive(...))`, the drive at the
-// base rate, the shaper, the DC blocker and `softCap`. The fused `IgnitorDsl.Distort` node is a
-// DIFFERENT law since phase 3 step 4, the voice strip's (see `fusedDistort` below): `classic()` needs
-// it to rebuild the strip bit for bit. The chain here renders DerSchmetterling's guitars, Sandsturm
-// and ATruthWorthLyingFor and does not change.
+    fusedDistort(amount = amount, shape = parseDistortionShape(shape))
+// NOTE for this Ignitor-amount door: an amount at or below 0 read per block is not a bypass, the node keeps shaping
+// at unity drive (tanh(1.0) = 0.76, a -2.4 dB peak squash with odd harmonics for full-scale input; identity only well
+// below |x| ~ 0.3), so its DC blocker never goes stale across a crossing (ledger W5). A CONSTANT 0 through the Double
+// overload below short-circuits to a true bypass, as the DSL's build gate does for a leaf amount.
 
 /**
  * Distortion / waveshaping combinator (convenience overload with fixed amount).
@@ -149,8 +138,7 @@ fun Ignitor.drive(amount: Double): Ignitor {
  *
  * **DC blocker is always applied** to guard against rail-lock when the input is
  * already heavily saturated (e.g. after `drive`). See [distort] for the rationale.
- * Output is bounded to ±1 by a C¹-piecewise soft cap ([ShapingFuncs.softCap]), identity in the linear region,
- * smooth saturation above, at the rate the stage runs (inside a region, before its down conversion). See [distort].
+ * Nothing follows it: [distort]'s law at unity drive, the output not capped (KLANG-00432, L4-05). See [distort].
  *
  * @param shape Waveshaper function. Default: "soft" (tanh). See [distort] for the full
  *   list of options ("soft", "hard", "gentle", "softsat", "cubic", "exp", "sineshaper",
@@ -175,9 +163,9 @@ internal fun Ignitor.shape(
 
 /**
  * The `Shape` node: the shaper and the DC blocker are [DistortionCore] at drive 1.0 (the gain comes from an upstream
- * `Drive` node), and the soft cap after them is this node's own (engine tidy-up step 11, audit B2.2). `x * 1.0` is
- * exact for every value (-0.0, the infinities and the denormals included; a NaN stays a NaN, which the core's guard
- * writes as 0), so the shared core renders this node's law bit for bit.
+ * `Drive` node), nothing after them: the fused node's law at unity drive (KLANG-00432, L4-05; the soft cap this node
+ * ended in went with it). `x * 1.0` is exact for every value (-0.0, the infinities and the denormals included; a NaN
+ * stays a NaN, which the core's guard writes as 0), so the shared core renders this node's law bit for bit.
  */
 private class ShapeIgnitor(
     private val upstream: Ignitor,
@@ -193,17 +181,17 @@ private class ShapeIgnitor(
             val end = ctx.windowEnd
 
             for (i in ctx.offset until end) {
-                buffer[i] = ShapingFuncs.softCap(work[i])
+                buffer[i] = work[i]
             }
         }
     }
 }
 
 /**
- * The runtime of the fused `IgnitorDsl.Distort` node, the distort stage `classic()` builds: drive and
- * shape as ONE unit rendering the VOICE STRIP's law through [DistortionCore], the loop the strip's
- * distort ran (phase 3 step 4, decision D2 option A, 2026-09-25): the drive, the shaper, the DC
- * blocker, NO soft cap. The doors keep their own law (`distort` above).
+ * The runtime of the fused `IgnitorDsl.Distort` node, the distort stage `classic()` builds and the one the
+ * `distort` doors build (KLANG-00432, L4-05): drive and shape as ONE unit rendering the VOICE STRIP's law
+ * through [DistortionCore], the loop the strip's distort ran (phase 3 step 4, decision D2 option A,
+ * 2026-09-25): the drive, the shaper, the DC blocker, NO soft cap.
  *
  * **D2 supersedes ledger W5's "delete it"** (maintainer, 2026-08-30), which removed an earlier fused
  * node. W5's REASON is designed out rather than reintroduced: that node bypassed per block, so a

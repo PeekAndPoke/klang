@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.probes
 
 import io.kotest.core.spec.style.StringSpec
+import java.io.File
 import java.time.Instant
 import java.util.Locale
 
@@ -21,6 +22,11 @@ import java.util.Locale
  *
  * The table goes to `$KLANG_PROBE_OUT` when set (a file path), else to `aliasing.txt` in `<build dir>/probes/`
  * ([probeOutputFile]); the same rows go beside it as JSON (`aliasing.json`, [formatAliasingJson]).
+ *
+ * Then the healthy limit ([measureAliasingLimits]): every source and shaper that can be judged, swept up from about
+ * 100 Hz, to the highest note up to which its aliasing below 5 kHz stays under -60 dB re its harmonics. Beside the
+ * table as `aliasing-limit.txt` and `aliasing-limit.json` (the engine health page judges by it: healthy at or above
+ * 5 kHz).
  */
 class AliasingRunner : StringSpec({
 
@@ -79,5 +85,44 @@ class AliasingRunner : StringSpec({
 
         writeProbeFile(target = target, text = report, what = "aliasing table")
         writeProbeFile(target = jsonTwin(target), text = formatAliasingJson(rows), what = "aliasing JSON")
+
+        // The healthy limit: the sweep of fundamentals.
+        fun h(x: Double): String = String.format(Locale.ROOT, "%.0f", x)
+
+        val limitStarted = System.nanoTime()
+        val pitches = aliasingSweepPitches(config.sampleRate)
+        val limits = measureAliasingLimits(pitches = pitches, config = config)
+        val limitSeconds = (System.nanoTime() - limitStarted) / 1e9
+        val limitReport = buildString {
+            appendLine("Aliasing meter, the healthy limit (KLANG-00420, decision of 2026-11-11), ${Instant.now()}")
+            appendLine(
+                "per source and shaper: the highest swept fundamental up to which the aliasing below ${h(ALIASING_AUDIBLE_BAND_HZ)} Hz " +
+                    "stays under ${h(ALIASING_HEALTHY_DB)} dB re the harmonics, at that pitch and every lower one",
+            )
+            appendLine(
+                "level per pitch: the power of every bin outside the harmonic and DC bands and below ${h(ALIASING_AUDIBLE_BAND_HZ)} Hz, " +
+                    "re the power of all harmonic bands (the fundamental's included); the meter's method otherwise (the table's header)",
+            )
+            appendLine(
+                "sweep: ${pitches.size} fundamentals from ${h(pitches.first())} to ${h(pitches.last())} Hz, fs / (N + $ALIASING_SWEEP_FRACTION) " +
+                    "for whole N, about a sixth of an octave apart, ascending; a case leaves the sweep at its first unhealthy pitch",
+            )
+            appendLine(
+                "healthy_to_Hz: the limit (the pitch below the first unhealthy one; '>=' when none failed up to the top; 0 when the lowest failed); " +
+                    "verdict: healthy at or above ${h(ALIASING_HEALTHY_FROM_HZ)} Hz; at_dB: the level at the first unhealthy pitch",
+            )
+            appendLine("judged: the measured rows and the controls; the by-design and not-measurable rows of the table are not swept")
+            appendLine()
+            append(formatAliasingLimitTable(limits))
+            appendLine()
+            appendLine("${limits.size} rows, ${String.format(Locale.ROOT, "%.1f", limitSeconds)} s")
+        }
+
+        println(limitReport)
+
+        val limitTarget = File(target.parentFile, target.nameWithoutExtension + "-limit.txt")
+
+        writeProbeFile(target = limitTarget, text = limitReport, what = "aliasing limit table")
+        writeProbeFile(target = jsonTwin(limitTarget), text = formatAliasingLimitJson(limits), what = "aliasing limit JSON")
     }
 })

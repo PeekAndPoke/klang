@@ -10,10 +10,12 @@ Two flat HTML pages about where Klang stands, built from the docs and served nex
 A third page is built by its own script from the DSP probes' results (KLANG-00420):
 
 - `src/jsMain/resources/klang-engine-health.html`: every probe with a light, its items with a light each, and the
-  measured rows behind an item. `python3 console/dev-status/engine_health.py` reads the newest run folder in
-  `docs/audio-audit/<date>/` (the probes' JSON) and the judgement in `docs/audio-audit/verdicts.json`. A light is a
+  measured rows behind an item. `python3 console/dev-status/engine_health.py` reads, per probe, the newest run folder
+  in `docs/audio-audit/<date>/` that holds its JSON (a rerun of one probe adds a folder with that probe's files only) and the judgement in `docs/audio-audit/verdicts.json`. A light is a
   rule over a measurement (the rules are the `*_items` functions in the script): green nothing notable, yellow a lead
   nobody has judged, red bad on its face or confirmed, grey accepted by decision, blue a measurement without a rule.
+  The aliasing meter's items judge by the healthy limit (`aliasing-limit.json`): green when the aliasing below 5 kHz
+  stays under -60 dB re the harmonics up to a note of 5 kHz or higher.
   Rebuild it after a probe run or a verdict.
 
 All share `hud.css` (the UI palette of `KlangLookAndFeel`, the Chakra Petch and Share Tech Mono

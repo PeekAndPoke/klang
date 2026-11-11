@@ -125,13 +125,13 @@ every WAV render's lowest bit and `Pcm16EdgeSpec`. Recommendation: (b), (c) as a
 
 - **L4-02:** "No need to pay respect to the songs, they need retuning anyway. I am interested in the correct yet
   performant solution." Not accepted as it is: a design with measurements first (accuracy against the exact curve,
-  cost on JVM and JS), then the build. Owed.
+  cost on JVM and JS), then the build. Built in decisions pass C.
 - **L4-08:** "as recommended": a stage that stores a sample stores a non-finite one as 0, everything else stays raw,
   the house stage counts. It is the rule; the table goes into `audio/ref/numerical-safety.md`. Owed (the text).
 - **L4-01:** "accepted". The maintainer asked whether warehousing the state's memory would win anything: no, the
   state is two numbers inside the filter node, there is no buffer to hold.
 - **L4-05:** "no need to pay attention to the builtin songs. Let us use the new implementation and drop the old one":
-  the doors take the fused law, the old door law goes. Owed.
+  the doors take the fused law, the old door law goes. Built in decisions pass C.
 - **L4-10:** "as recommended": the cutoff clamp at 0.49 of the sample rate. Owed.
 - **L8-01, L8-02:** "as recommended" and "ok": the house DC blockers flush their state above 1e3, and the blocks where
   the limiter's gain reduction sits past -200 dB are counted beside "poison seen". Owed.
@@ -260,7 +260,189 @@ reach above 0.49 fs (23.52 kHz) at some point; the levels move by under 0.003 dB
   Guards: `HouseStageSpec`, "crushed: ..." (the measured counts, the constant pinned at 0 as the reach), and
   `PlaybackEngineDispatcherDiagnosticsTest` (a sample voice at 1e15 through the dispatcher reports crushed blocks, a
   voice at 1e3 none, monotone). The L8-02 reproduction in `AuditSafetyRepro` stays: the constant's case is open.
+  **Decided and built 2026-11-11** (maintainer: "count in the DC blocker"): the house stage also counts a block at
+  whose end the mix stands above 1e12 (`HouseStage.HOUSE_CRUSHED_INPUT`) ahead of the DC blockers, read from the
+  blockers' own input state (`DcBlocker.lastInputAbove`), so nothing is added per sample. A standing constant of 1e15
+  now counts every block (300 of 300 measured), one block of 1e15 counts 2, 1e11 counts 0, either channel counts.
+  Five mutants killed (the mix's side off, the level at 1e10, each channel off).
   Mutants: the count taken out, the threshold at 1e-20, the dispatcher not carrying it: each KILLED (`HouseStageSpec`: `expected:<1.0> but was:<0.0>`; the dispatcher row: `0.0 should be > 0.0`).
+
+## Decisions pass C (2026-11-11)
+
+What the fix worker of pass C built of the decisions of 2026-11-11 (L4-02 and L4-05; the aliasing verdict is in
+KLANG-00420's pass C).
+
+### L4-02, the filter envelope: BUILT, a sound change
+
+**Measured first** (a gated scratch measurement, not kept: the engine's lowpass emulated from its own primitives, as the
+disproof's L4-02 (c) did, against the EXACT per-sample cutoff; a 48 kHz saw, nine shapes: attacks 0, 1, 2, 5 and 10 ms,
+depths -36 to 60 semitones, q 0.7 to 8, the IrishLamentTechno bass and Tetris sub shapes among them). Columns: the
+largest difference re the exact render's peak, and the largest cutoff error in cents (from the stepped `g`):
+
+| Law | 1 ms, 48 st | 5 ms, 48 st | defaults, 24 st | pluck (a 0), 60 st | Irish bass | Tetris sub | hpf, 2 ms, -36 st |
+|---|---|---|---|---|---|---|---|
+| today (block ends, worst of 32 onsets) | -4.7 dB, 2872 c | -25.0, 1809 | -15.9, 381 | -23.4, 231 | -37.0, 446 | -25.4, 1070 | -17.1, 2352 |
+| grid 32 + the stage breakpoints | -17.2, 1095 | -51.0, 204 | -42.8, 27 | -42.8, 19 | -63.4, 37 | -51.2, 121 | -40.9, 129 |
+| grid 16 + the stage breakpoints | -25.1, 1095 | -64.0, 90 | -51.5, 7 | -52.7, 5 | -76.5, 14 | -64.5, 34 | -54.7, 68 |
+| knots by travel, 1 st, cap 128 | -57.6, 2.5 | -57.6, 2.6 | -61.5, 5.2 | -53.0, 2.9 | -63.4, 5.1 | -65.0, 3.1 | -46.3, 12.5 |
+| **built: knots by travel, 0.5 st, cap 128** | -68.8, 1.0 | -68.9, 1.0 | -69.6, 1.2 | -68.0, 0.6 | -65.1, 2.2 | -77.2, 0.7 | -67.9, 1.5 |
+
+A uniform grid of 16 or 32 is not correct for a fast deep sweep: a 1 ms attack over 48 semitones moves most of its
+travel in its last few frames, and a straight line through 16 frames of it misses by 11 semitones. So the knots follow
+the envelope instead. The criterion: the cutoff never more than 5 cents from the exact one (the pitch JND of a pure tone
+in the mid range is about 5 cents, and a cutoff is heard far less precisely than a pitch); 0.5 semitone per segment
+meets it with a margin (2.2 cents worst), 1 semitone does not (12.5). The output difference is reported, not judged: at
+q 8 a fraction of a cent reads -55 to -60 dB at the largest sample.
+
+**The design** (`SvfIgnitor.renderEnvelope` and `aimFrom`, `IgnitorFilters.kt`): the cutoff is exact at knots that belong
+to the NOTE, the coefficients step linearly between two knots (the same adds per sample as before; the six loops moved
+into one method, `runSegment`, called per segment). From a knot the next is at most 128 frames on
+(`FILTER_ENV_KNOT_MAX_FRAMES`), never past the envelope's next stage frame (`EnvelopeCore.nextStageFrame`, new: the
+attack's end, the decay's end, the gate, the release's end; within a stage the level is monotone), and close enough that
+the cutoff moves at most 0.5 semitone (`FILTER_ENV_KNOT_SEMITONES`): the first guess is the last segment's length, twice
+it after a move of at most half the step, halved while too far (whole numbers only; a `Double.toInt()` there boxed on V8,
+below). The running coefficients carry across block borders, so a note renders the same samples, bit for bit, at every
+onset inside a block (analog 0, knobs constant). The knobs read per block (the cutoff and q, an `analog` drift) enter at
+the next knot's aim (at most two knots late, gliding); a gate learned while the note sounds re-aims at once. A knot whose
+cutoff and q are unchanged (a sustain, a finished release) computes no coefficients. `SvfCoeffSweep` (its only host was
+this node) and `SvfCoeffSweepSpec` are deleted; its cutoff law moved to `filters/FilterEnvCutoff.kt`
+(`filterEnvCutoff`, `filterEnvCutoffAtLevel`). No new clamp; the level clamp to [0, 1] is the one that was there.
+
+**Coefficient sets per note** (a `tan` and a divide each): 118 to 336 over the nine shapes, against 114 to 211 for the
+block law (more only on the deep fast sweeps: Tetris 336 against 207, the pluck 172 against 114); plus about one envelope
+level read per knot.
+
+**Cost** (the cost probe, `KLANG_PROBE=cost`, three new rows `lowpass env`: default times held, a 1 s decay of 48
+semitones moving through the whole render, the same with `analog` 1). Two sets of interleaved runs, HEAD (a throwaway worktree with the new rows copied in) against the tree, after the
+last code change: JVM two pairs (HEAD, tree, HEAD, tree), JS five node processes each, interleaved, the production test
+bundle, ratios to the plain sine. Tree over HEAD, the median of the runs:
+
+| Row | JVM | JS |
+|---|---|---|
+| `lowpass env` default times (held) | 0.987 | 1.036 |
+| `lowpass env` 1 s decay of 48 semitones (moving) | 0.955 | 0.986 |
+| the same with `analog` 1 (moving) | 0.974 | 1.003 |
+| the static lowpass and highpass rows (`freq=1000`, `q=200`, `passes=16`) | 1.03 to 1.05 | 1.02 to 1.04 |
+| the median of every row over 2 ns (JVM) or over half a sine (JS) | 0.987 | 1.012 |
+
+The envelope rows cost what they cost before, within the run-to-run noise (the register: under 10 percent between two
+runs is noise); the static SVF rows read 2 to 5 percent dearer in both runs and on both platforms, consistent in sign
+though inside the noise band (the static path now writes its latched coefficients into the node's fields and calls
+`runSegment`). The first measurement, before the last two changes of the search, read the same picture (envelope rows
+0.96 to 0.98 JVM, 0.96 to 1.02 JS).
+
+**V8 allocation** (`KLANG_PROBE_JS_ALLOC=1`, three processes): 0 bytes per block on every filter row, HEAD and tree.
+On the way: the first version's knot search shortened a segment by `(length * ratio).toInt()`, which on Kotlin/JS is a
+call (`numberToInt`) V8 left out of the method's budget, so its double crossed as a heap number: 3.1 bytes per block on
+the held row (about 1.2 KB per note of a 10 ms attack); whole-number doubling and halving took it to 0
+(`audio/ref/performance.md`, the new bullet).
+
+**Guards:** `FilterEnvKnotsSpec` (new): the node against an ORACLE written in the test (the TPT lowpass or highpass with
+the cutoff recomputed at every sample from the textbook coefficients and the envelope law written out), four shapes
+with bounds from the measurement (-64.5 / -54.3 / -68.0 / -68.2 dB re the peak as built, bounds -60 / -50 / -60 / -60,
+and RMS bounds); note-anchoring (offsets 1 to 127 against 0, bit for bit); a gate learned three blocks early and in its
+own block renders, from the gate on, what the known gate renders (bit for bit as measured, bound 1e-3 re the peak);
+`nextStageFrame` against a scan of the law; the cutoff law (moved from the deleted spec). Specs that pinned the old law,
+changed: `EnvelopeLawSpec`'s filter host row and `SvfNodeLawSpec`'s six-loop row now compare with the exact per-sample
+cutoff (tolerances 5e-3 and 2e-3 on a unit sine, measured 3.0e-3 and 9.5e-4); `BlockFramingInvarianceSpec`'s
+"E3 KNOWN DEFECT" pin is flipped to "E3 FIXED" (block lengths 128, 64 and a ragged sequence bit-identical to one-sample
+blocks); the E3 ledger line of KLANG-00156 says FIXED.
+
+### L4-05, the doors take the fused law: BUILT, a sound change
+
+The `distort` doors (Kotlin `IgnitorDsl.distort`, both overloads, and the script door through it) build
+`IgnitorDsl.Distort`, the fused node `classic()` runs, instead of `Shape(Drive(...))`. The `Shape` node lost its soft cap
+(`ShapeIgnitor` copies the core's output; `shape()` is the fused law at unity drive, and `drive().shape()` renders the
+fused node bit for bit). The backend `Ignitor.distort(amount: Ignitor, shape)` is `fusedDistort`. Removed: the cap on
+`Shape` and the doors' law; `ShapingFuncs.softCap` stays (the delay's feedback path uses it). Two behaviours follow from
+the fused node: a door's leaf amount at or below 0 is now a true bypass (the old chain kept the shaper at unity drive),
+and a NaN amount read per block drives with NaN (the core writes 0 for that block) where `Drive` read it as unset.
+
+Level and spectrum, old law (the chain plus `softCap`) against the new, a 110 Hz saw at 0.8, peak and RMS after 0.1 s:
+
+| Shape | amount 0.1 | 0.3 | 0.5 | 1.0 | 2.0 |
+|---|---|---|---|---|---|
+| soft | peak 0 to +0.81 dBFS, RMS +0.06 dB | +2.77, +0.51 | +3.33, +0.64 | +3.50, +0.88 | +3.52, +1.07 |
+| tube | -2.33 to -2.33, +0.00 | +0.25, +0.01 | +0.71, +0.05 | +0.37, +0.01 | +0.21, +0.01 |
+| hard | +2.63, +0.50 | +3.25, +0.68 | +3.43, +0.67 | +3.51, +0.94 | +3.52, +1.08 |
+| gentle | +3.07, +0.56 | +5.21, +1.22 | +6.75, +1.99 | +8.71, +4.20 | +9.48, +5.48 |
+| fold | +1.46, +0.17 | +3.11, +0.65 | +2.23, +0.00 | +0.08, +0.02 | +0.09, +0.02 |
+
+(the old peak sat at 0 dBFS, the cap's ceiling; the saw's flyback makes the DC blocker overshoot the shaper's rail, to
+about +3.5 dBFS on a railed shape; `gentle` doubles and was the cap's biggest bend). On a sine at 0.5 (the aliasing
+table, 1244.5 Hz): the fundamental moves +0.02 dB (soft, amount 0.5), +0.11 (hard), +1.78 (gentle); the harmonics stay
+within 0.1 dB except `gentle` (-11.1 to -15.4 dB re the fundamental); the energy off the harmonics falls from -92.3 to
+-138.3 dB (soft 0.5), -67.7 to -167.1 (fold 0.5), -50.6 to -53.2 (gentle 0.5), and does not move where the shape's own
+corner dominates (hard, and every shape at amount 2). The doors' cost: one node instead of two (the drive pass and the
+cap pass gone; the census counts 2 passes for the door, 3 for `drive().shape()`).
+
+**Guards:** `DoorDistortionLawSpec` rewritten for the cap-less law (both spellings against the oracle, the output past 1
+where the cap acted); `IgnitorsTest` ("shape through a voice is not capped", measured 1.205); `GraphCensusSpec` (the door
+is one stage); `WaveshaperKnobsSpec` (the chain is the fused node bit for bit); the tree pins in `IgnitorDslSpec`,
+`IgnitorDslOptimizerSpec`, `StdLibIgnitorTest`, `KlangScriptEffectDoorParitySpec`, `KlangScriptWaveshaperDoorParitySpec`
+follow the node; `OversamplerDecimatorParitySpec`'s oracle lost the cap; `SharedScratchSpec`'s deep chain spells
+`drive().shape()` to stay 24 nodes deep.
+
+### Mutants
+
+`console/tools/mutate`, one campaign under the lock, every file restored byte-identical and the final run green; 15
+mutants, 15 KILLED for the expected reason (one, the sweep fraction, first read KILLED-OTHER because the sweep's top
+fired before its per-pitch check; the check was moved first and the mutant rerun: KILLED):
+
+| Mutant | Spec | Message |
+|---|---|---|
+| the knot step 0.5 to 4 semitones | `FilterEnvKnotsSpec` | largest difference re the oracle's peak |
+| no re-aim on a gate learned late | `FilterEnvKnotsSpec` | gate learned at frame 14336: after the gate |
+| an exact knot at every block start | `FilterEnvKnotsSpec` | onset at offset 1 differs from offset 0 |
+| the same | `BlockFramingInvarianceSpec` | E3, blocks ... |
+| the linear lowpass loop drops `a2`'s step | `SvfNodeLawSpec` | lowpass: the worst sample |
+| the saturated highpass loop drops `g`'s step | `SvfNodeLawSpec` | saturated highpass: the worst sample |
+| the level clamp at 2 instead of 1 | `EnvelopeLawSpec` | sustain 1.5, Linear |
+| `nextStageFrame` without the gate | `FilterEnvKnotsSpec` | pos 145 |
+| the soft cap back on the `Shape` node | `DoorDistortionLawSpec` | no cap / drive(...).shape(...) |
+| the same | `IgnitorsTest` | should be > 1.1 |
+| the door wraps a `Drive` inside the node | `GraphCensusSpec` | expected:<2> but was:<3> |
+| the door drops its shape | `IgnitorDslSpec` | 10.0 |
+| the healthy threshold 30 dB lower | `AliasingMeterSpec` | rising alias: the limit |
+| the 5 kHz band counting every bin | `AliasingMeterSpec` | rising alias |
+| the sweep fraction 0.5 | `AliasingMeterSpec` | fs / f = |
+
+### The corpus
+
+Three renders of the 18 rows (`runSongBenchmark --args=corpus`, through the lock, an RMS line per song added for these
+runs only, `CorpusCheck.kt` restored byte for byte and identical to HEAD): HEAD (a throwaway worktree), HEAD with the
+L4-05 files only, and the tree. No song text changed between them. The corpus check's own verdict is red on all three
+(its reference predates other sessions' song edits), as in pass B1. 13 renders moved; Final Synthasy VII Prelude, Die
+Kirschblüte, Greensleeves Chant, The Synthsale Piper's Farewell and Smalltown Synth did not.
+
+| Render | Moved by | Peak dBFS, HEAD to tree | RMS dB, HEAD to tree |
+|---|---|---|---|
+| Kokon | L4-05 | -2.5604, -2.5478 | -18.2113, -18.1081 (+0.103) |
+| Der Schmetterling | L4-05 | -2.4598, -2.4602 | -15.5682, -15.4801 (+0.088) |
+| Synthsturm | L4-05 | -1.6377, -1.6425 | -18.5634, -18.4803 (+0.083) |
+| frozen derSchmetterling_2026_11_03 | L4-05 | -2.5562, -2.5559 | -16.9107, -16.8590 (+0.052) |
+| frozen piece derSchmetterling_2026_09_16 | L4-05 | -0.9221, -0.9217 | -18.3931, -18.3660 (+0.027) |
+| A Synth Worth Lying For | L4-05 and L4-02 | -2.4357, -2.4349 | -13.9785, -13.9770 (+0.002) |
+| Drunken Synthlor | L4-02 | -1.1043, -1.1042 | -18.9264, -18.9261 (+0.0003) |
+| Gestrandet | L4-02 | -22.4984, -22.4987 | -43.5738, -43.5738 (0.0000) |
+| Stein um Stein | L4-02 | -2.3749, -2.3750 | -16.1293, -16.1292 (+0.0001) |
+| Seltsamere Dinge and the frozen `strangerThings_2026_11_03` (one render) | L4-02 | -2.5499, -2.5499 | -17.1369, -17.1369 (0.0000) |
+| Remix: Echo um Echo | L4-02 | -6.1358, -6.1357 | -25.1528, -25.1528 (0.0000) |
+| The Synthsale Piper's Last Rave | L4-02 | -0.9602, -0.9602 | -15.6083, -15.6084 (-0.0001) |
+
+Attributed by the middle render: a row that moved between HEAD and HEAD plus L4-05 is L4-05's, a row that moved between
+that and the tree is L4-02's. L4-05 moves the songs that play the `distort` door (the guitars of Der Schmetterling,
+Synthsturm, Kokon), up to +0.10 dB RMS; L4-02 moves every song with a filter envelope, by under 0.001 dB RMS on the
+whole render (its change is in the attacks).
+
+### Not built, not verified
+
+- Not listened to: neither change was judged by ear.
+- The knots were measured on the linear lowpass and highpass emulation and through the node; the bandpass, notch and
+  the saturated loops share the same knots and steps (`SvfNodeLawSpec`'s six-loop row) but were not measured against
+  the exact cutoff in dB.
+- A filter envelope inside an oversampling region counts its 128-frame cap in the region's frames (a shorter time); not
+  measured.
 
 ## Acceptance
 
@@ -274,3 +456,4 @@ reach above 0.49 fs (23.52 kHz) at some point; the levels move by under 0.003 dB
 - 2026-11-10: created.
 - 2026-11-11: IN PROGRESS. Fix worker started.
 - 2026-11-11: PAUSED. Landed; eight decisions pending with the maintainer.
+- 2026-11-11: decisions pass C: L4-02 (the filter envelope's knots) and L4-05 (the doors on the fused law) built; see the section.

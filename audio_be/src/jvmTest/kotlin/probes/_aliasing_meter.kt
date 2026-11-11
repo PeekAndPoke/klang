@@ -319,6 +319,7 @@ fun measureAliasing(
         nonHarmonicReHarmonicsDb = db(other / (fundamental + harmonic)),
         nonHarmonicDbfs = db(2.0 * other),
         nonHarmonicBelow5kDb = db(otherBelow5k / fundamental),
+        nonHarmonicBelow5kReHarmonicsDb = db(otherBelow5k / (fundamental + harmonic)),
         strongestHz = if (strongest >= 0) refinedBin(power, strongest) * binHz else Double.NaN,
         strongestDb = db(strongestPower / fundamental),
         dcDbfs = db(dc),

@@ -2170,7 +2170,9 @@ sealed interface IgnitorDsl {
 
     /**
      * Pure waveshaping without drive. Applies a nonlinear transfer function per sample, then a DC
-     * blocker (on every shape, not only the asymmetric ones: see `Ignitor.distort` in the backend).
+     * blocker (on every shape, not only the asymmetric ones: see `Ignitor.distort` in the backend), and
+     * nothing after it: [Distort]'s law at unity drive (KLANG-00432, L4-05; the soft cap the node ended in
+     * is gone), so a hot shape (`gentle` doubles) can leave `[-1, 1]`.
      *
      * Shapes (the catalogue is [DistortionShapes]; the knob carries a name's INDEX in it):
      *  - **Symmetric soft:** "soft" (tanh), "gentle" (soft clip, 2× gain), "softsat"
@@ -2205,17 +2207,17 @@ sealed interface IgnitorDsl {
 
     /**
      * Drive and shape as ONE unit, gated as a whole on [amount] (the `distort` row of the off-value
-     * table, `audio/ref/off-values.md`). Neither authoring door builds it: both
-     * spell `distort` as `Shape(Drive(...))`, whose `Shape` half has no amount and cannot be gated. It is
-     * `classic()`'s distort stage (phase 3 step 5), the one node that switches a distort off completely,
+     * table, `audio/ref/off-values.md`). Both authoring doors build it (`distort`, since KLANG-00432, L4-05;
+     * they spelled it `Shape(Drive(...))` before, whose `Shape` half has no amount and cannot be gated). It is
+     * also `classic()`'s distort stage (phase 3 step 5), the one node that switches a distort off completely,
      * which a slotted tail needs.
      *
-     * **Its law is the VOICE STRIP's, not the doors'** (phase 3 step 4, decision D2 option A,
-     * 2026-09-25): the backend renders it through the loop the strip's distort ran
-     * (`DistortionCore`): `shape(x * 10^(amount * 1.2))`, then a DC blocker, and NO soft cap, so a hot shape (`gentle` is doubled) can leave `[-1, 1]`.
-     * It was proven bit-identical to the strip before the strip retired (phase 3 step 9). The `distort`/`shape` doors keep
-     * their capped `Shape(Drive(...))` law (drive at the base rate, `softCap` last), unchanged, because
-     * songs depend on it.
+     * **Its law is the voice strip's** (phase 3 step 4, decision D2 option A, 2026-09-25): the backend renders it
+     * through the loop the strip's distort ran (`DistortionCore`): `shape(x * 10^(amount * 1.2))`, then a DC blocker,
+     * and NO soft cap, so a hot shape (`gentle` is doubled) can leave `[-1, 1]`. It was proven bit-identical to the strip
+     * before the strip retired (phase 3 step 9). The doors' own law (the drive, the shaper, the DC blocker, then a soft
+     * cap) went with KLANG-00432, L4-05 (maintainer, 2026-11-11: "Let us use the new implementation and drop the old
+     * one"): the cap's knee was where the doors' aliasing came from.
      *
      * [amount] is read once per block. A leaf amount at or below 0, or unset, is not built (the gate);
      * a MODULATED amount at or below 0 is not a bypass: the node keeps shaping at unity drive, so its
@@ -3198,17 +3200,18 @@ fun IgnitorDsl.fm(
 // Effects
 
 /**
- * Applies waveshaping distortion: [drive] by [amount], then [shape] with the waveshaper [shape] (an index, `soft` by
- * default, a number or a slot, read once per note); the name form takes the waveshaper's name. To distort at a higher
+ * Applies waveshaping distortion, the [IgnitorDsl.Distort] node: drive by [amount] and the waveshaper [shape] (an index,
+ * `soft` by default, a number or a slot, read once per note) as one unit, the law `classic()`'s distort runs (the
+ * shaper, the DC blocker, no cap; KLANG-00432, L4-05). The name form takes the waveshaper's name. To distort at a higher
  * rate, write it inside a region (`oversampleAtLeast(4.ign) { it.distort(0.5.ign, "tube") }`).
  * See [IgnitorDsl.Shape] for the shapes, and the script door (`KlangScriptIgnitorExtensions.distort`) for the full text.
  */
-fun IgnitorDsl.distort(amount: IgnitorDsl, shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign): IgnitorDsl.Shape =
-    drive(amount = amount).shape(shape = shape)
+fun IgnitorDsl.distort(amount: IgnitorDsl, shape: IgnitorDsl = DistortionShapes.SOFT_INDEX.ign): IgnitorDsl.Distort =
+    IgnitorDsl.Distort(inner = this, amount = amount, shape = shape)
 
 /** [distort] with the waveshaper by NAME (`distort(amount = 0.4.ign, shape = "tube")`), through [DistortionShapes.indexOf]. */
-fun IgnitorDsl.distort(amount: IgnitorDsl, shape: String): IgnitorDsl.Shape =
-    drive(amount = amount).shape(shape = shape)
+fun IgnitorDsl.distort(amount: IgnitorDsl, shape: String): IgnitorDsl.Distort =
+    distort(amount = amount, shape = DistortionShapes.indexOf(shape).ign)
 
 /**
  * Applies bit-crush quantization at the bit depth [bits] (`2^bits` levels; below 1 it passes through), a number

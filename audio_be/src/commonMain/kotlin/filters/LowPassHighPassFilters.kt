@@ -69,9 +69,8 @@ import kotlin.math.tan
 //
 // **2× edge transient**: rail-to-rail input produces a ~2× peak transient through
 // the raw-pole topology (railed input − railed previous + nearly-railed feedback).
-// The `Shape` node (`Ignitor.distort()` and `Ignitor.shape()`) follows `DistortionCore`
-// with `ShapingFuncs.softCap()` to bound output to ±1; the fused `Distort` node does not. The output DcBlocker in `HouseStage`
-// runs on post-limiter samples (already ±1-bounded), so no softCap needed there.
+// Neither distort node bounds it since KLANG-00432, L4-05 (the `Shape` node ended in `ShapingFuncs.softCap()` until
+// then): the Motor stays raw. The output DcBlocker in `HouseStage` runs on post-limiter samples (already ±1-bounded).
 //
 // **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would give the
 // filter a NaN COEFFICIENT — guarded explicitly in both `bilinearK` and the `DcBlocker`
@@ -273,7 +272,7 @@ internal const val VOWEL_TAME: Double = 0.05
  * Bundled TPT-SVF coefficient set (`a1, a2, a3, k`, plus the exposed angle [g] and the bell
  * mix [m1]). Mutable holder, allocated once per filter instance (not per call) so the
  * compute helpers can write the whole bundle without returning a tuple. Consumers:
- * [SvfCoeffSweep] (for `Ignitor.svf`), `Ignitor.svf`, `ResonatorBank` and `EqCore`.
+ `Ignitor.svf` (its static path and its envelope's knots), `ResonatorBank` and `EqCore`.
  */
 internal class SvfCoeffs {
     var a1: Double = 0.0
@@ -303,8 +302,8 @@ internal class SvfCoeffs {
  * Computes the TPT-SVF coefficient bundle from `cutoffHz` and `q`. NaN/Inf-safe via
  * [bilinearK]; `q` is clamped to `[0.1, 200.0]` and falls back to `1/√2` (Butterworth)
  * if non-finite. Single source of truth for the SVF coefficient math — used by
- * `Ignitor.svf` (per-block recompute), [SvfCoeffSweep] (the swept path of `Ignitor.svf`, computed
- * at block start and end), `ResonatorBank` (at install) and `EqCore`.
+ `Ignitor.svf` (per-block recompute, and at the knots of its cutoff envelope), `ResonatorBank` (at install)
+ * and `EqCore`.
  *
  * **Q clamp note (2026-04-29)**: widened from `[0.1, 50.0]` to `[0.1, 200.0]` for
  * formant synthesis. Vowel tables in `SprudelVoiceData` use Q=60-130 per band and
@@ -466,8 +465,8 @@ object LowPassHighPassFilters {
     /**
      * Lightweight DC blocker — degenerate first-order HPF with raw pole and
      * no input scaling: `y[ n ] = x[ n ] − x[n-1] + a·y[n-1]`. One mul/sample cheaper than
-     * the one-pole HPF (`OnePoleHighpassIgnitor`). Produces a ~2× edge transient on rail-to-rail input; call sites
-     * post-distort/post-clip pair this with `ShapingFuncs.softCap()` to bound output to ±1.
+     * the one-pole HPF (`OnePoleHighpassIgnitor`). Produces a ~2× edge transient on rail-to-rail input, which the
+     * distort nodes leave raw (KLANG-00432, L4-05).
      *
      * Coefficient is the raw IIR pole: `a ≈ 1 − 2π·fc/fs`. At `a = 0.995, fs = 44.1k`
      * the −3 dB knee is ~35 Hz; at `a = 0.999`, ~7 Hz. A finite coefficient is clamped to
@@ -532,6 +531,15 @@ object LowPassHighPassFilters {
             xPrev = 0.0
             y = 0.0
         }
+
+        /**
+         * True when the last sample this blocker read was above [level] in magnitude: its own input state, so the
+         * question costs one compare where it is asked and nothing per sample. The house stage asks it once per block
+         * for its crushed count (`HouseStage.crushedBlocks`): a huge constant leaves the blocker's OUTPUT silent, and
+         * only its input state still shows it. NaN-guard: a NaN input fails the compare and answers false ("poison
+         * seen" counts that one).
+         */
+        fun lastInputAbove(level: Double): Boolean = abs(xPrev) > level
 
         /**
          * True while the blocker's state can still put a sample above [floor] into a silent input: its last output

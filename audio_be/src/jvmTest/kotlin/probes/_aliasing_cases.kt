@@ -15,8 +15,9 @@ import io.peekandpoke.klang.audio_bridge.oversampleBy
 import kotlin.math.pow
 
 // The rows of the aliasing table (KLANG-00420, probe 2): the controls, every source of the cost table bare, and every
-// shaper on a pure sine: the distortion shapes on both hosts (the fused `Distort` node `classic()` builds, the doors'
-// `Shape(Drive(...))` and the Katalyst `distort`), crush, coarse, and oversampling regions around a shape.
+// shaper on a pure sine: the distortion shapes on both hosts (the fused `Distort` node `classic()` and the `distort` doors
+// build, the `drive().shape()` chain, the doors' law until KLANG-00432 L4-05 and since then the same law in two nodes,
+// and the Katalyst `distort`), crush, coarse, and oversampling regions around a shape.
 
 /**
  * The pitches, in Hz: a low control pitch and four high ones whose harmonics and aliases stay apart at 48 kHz. 7044.4
@@ -206,7 +207,7 @@ fun aliasingShaperCases(pitch: Double): List<AliasingCase> = buildList {
             shaper(
                 family = "ignitor",
                 stage = "shape(drive):$shape",
-                knobs = "the doors' Shape(Drive), amount=$amount, 1x",
+                knobs = "the drive().shape() chain, amount=$amount, 1x",
                 probe = ignitorProbeStage(
                     tree = IgnitorDsl.Shape(inner = IgnitorDsl.Drive(inner = IgnitorDsl.Sample, amount = c(amount)), shape = c(index)),
                     freqHz = pitch,

@@ -30,12 +30,11 @@ private fun IgnitorDsl.knobs(): Map<String, Any?> = when (this) {
     else -> error("not a tremolo or shape node: ${this::class.simpleName}")
 }
 
-/** A distort as both doors spell it, `Shape(Drive(...))`: the shape's knobs plus the drive's amount. */
+/** A distort as both doors spell it, the fused `Distort` node (KLANG-00432, L4-05): its shape and its amount. */
 private fun IgnitorDsl.distortKnobs(): Map<String, Any?> {
-    val shape = this as IgnitorDsl.Shape
-    val drive = shape.inner as IgnitorDsl.Drive
+    val distort = this as IgnitorDsl.Distort
 
-    return shape.knobs() + ("amount" to drive.amount)
+    return linkedMapOf("shape" to distort.shape, "amount" to distort.amount)
 }
 
 /**
@@ -127,7 +126,7 @@ class KlangScriptWaveshaperDoorParitySpec : StringSpec({
 
     // ── distort ──────────────────────────────────────────────────────────────────────────────────
 
-    "distort: every waveshaper name, alias and unknown name is the same Shape(Drive) on both doors" {
+    "distort: every waveshaper name, alias and unknown name is the same Distort node on both doors" {
         val spellings = DistortionShapes.names + DistortionShapes.aliases.keys + listOf("Tube", "nonexistent")
 
         for (name in spellings) {

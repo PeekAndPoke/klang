@@ -342,7 +342,7 @@ class HouseStageSpec : StringSpec({
             (recoveredSeconds < 0.4) shouldBe true
         }
     }
-    "crushed: the stage counts the blocks its limiter ends more than 200 dB down, and nothing a loud mix reaches (KLANG-00432 L8-02 (c))" {
+    "crushed: the stage counts the blocks its limiter ends more than 200 dB down or the mix ends huge, and nothing a loud mix reaches (KLANG-00432 L8-02 (c))" {
         // A huge FINITE value on the mix (1e15) has already rounded the music away in the sum; "poison seen" does not
         // count it (it is finite). The limiter's gain is read once per block: a block ending under -200 dB counts. A mix
         // a thousand times too loud (+60 dBFS) is limited by about 58 dB, nowhere near.
@@ -369,23 +369,42 @@ class HouseStageSpec : StringSpec({
         run { 1e3 }.crushedBlocks shouldBe 0.0
         run { block -> if (block == 40) Double.NaN else 0.0 }.crushedBlocks shouldBe 0.0
 
-        // One block of 1e15: its two edges reach the limiter (the DC blockers pass each step once) and hold its gain
-        // down across one block's end. Measured: 1
-        run { block -> if (block == 40) 1e15 else 0.0 }.crushedBlocks shouldBe 1.0
+        // One block of 1e15: the block itself (the mix stands huge at its end, the DC blockers' input state), and one
+        // more whose end the limiter's gain is held down across (the blockers pass each of its two edges once)
+        run { block -> if (block == 40) 1e15 else 0.0 }.crushedBlocks shouldBe 2.0
 
         // A huge value that keeps moving (1e15 flipping its sign every block, from block 100 of 400): every block from
-        // the limiter's lookahead after its arrival to the end. Measured: 297
+        // its arrival to the end (the mix's side; the limiter's side alone begins three blocks later)
         val moving = run { block -> if (block >= 100) (if (block % 2 == 0) 1e15 else -1e15) else 0.0 }
 
-        moving.crushedBlocks shouldBe 297.0
+        moving.crushedBlocks shouldBe 300.0
 
-        // The reach, pinned: a huge CONSTANT is not counted. Since L8-01's bound the DC blockers take it out within a
-        // sample, so the limiter sees one sample of it and its gain never ends a block that low, while the sum has
-        // rounded the music under it away all the same (KLANG-00432, decisions pass B2, reported)
-        run { block -> if (block >= 100) 1e15 else 0.0 }.crushedBlocks shouldBe 0.0
+        // A huge CONSTANT: since L8-01's bound the DC blockers take it out within a sample, so the limiter sees one
+        // sample of it and its gain never ends a block that low, while the sum has rounded the music under it away.
+        // The blockers' input state still shows it: every block it stands (maintainer 2026-11-11). Under the level
+        // (1e11, where the sum keeps 16 bits of the music) nothing counts
+        run { block -> if (block >= 100) 1e15 else 0.0 }.crushedBlocks shouldBe 300.0
+        run { block -> if (block >= 100) 1e11 else 0.0 }.crushedBlocks shouldBe 0.0
+
+        // Either channel counts: the constant on one side only
+        for (side in 0..1) {
+            val house = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
+            val mix = StereoBuffer(blockFrames)
+            val out = StereoBuffer(blockFrames)
+
+            repeat(10) {
+                mix.left.fill(if (side == 0) 1e15 else 0.0)
+                mix.right.fill(if (side == 1) 1e15 else 0.0)
+                house.process(mix = mix, out = out)
+            }
+
+            withClue("side $side") {
+                house.crushedBlocks shouldBe 10.0
+            }
+        }
 
         // Not audio state: reset() leaves it
         moving.reset()
-        moving.crushedBlocks shouldBe 297.0
+        moving.crushedBlocks shouldBe 300.0
     }
 })

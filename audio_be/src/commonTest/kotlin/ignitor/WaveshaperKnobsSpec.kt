@@ -180,8 +180,9 @@ class WaveshaperKnobsSpec : StringSpec({
         render(distort).bits() shouldBe renderRuntime("soft", amount = 0.4).bits()
         render(distort, mapOf("d.shape" to Double.NaN)).bits() shouldBe renderRuntime("soft", amount = 0.4).bits()
 
-        // Not the doors' law any more: the loud saw drives the shaper past the doors' soft cap.
-        render(distort).bits() shouldNotBe renderHand("soft", drive = 0.4).bits()
+        // One law since KLANG-00432, L4-05: the `drive().shape()` chain renders the fused node bit for bit (it ended in
+        // a soft cap until then, which the loud saw drove the shaper past).
+        render(distort).bits() shouldBe renderHand("soft", drive = 0.4).bits()
     }
 
     // ── The rng stream ───────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,192 @@
+Aliasing meter, the healthy limit (KLANG-00420, decision of 2026-11-11), 2026-11-11T15:16:50.426225975Z
+per source and shaper: the highest swept fundamental up to which the aliasing below 5000 Hz stays under -60 dB re the harmonics, at that pitch and every lower one
+level per pitch: the power of every bin outside the harmonic and DC bands and below 5000 Hz, re the power of all harmonic bands (the fundamental's included); the meter's method otherwise (the table's header)
+sweep: 41 fundamentals from 109 to 14193 Hz, fs / (N + 0.382) for whole N, about a sixth of an octave apart, ascending; a case leaves the sweep at its first unhealthy pitch
+healthy_to_Hz: the limit (the pitch below the first unhealthy one; '>=' when none failed up to the top; 0 when the lowest failed); verdict: healthy at or above 5000 Hz; at_dB: the level at the first unhealthy pitch
+judged: the measured rows and the controls; the by-design and not-measurable rows of the table are not swept
+
+family    stage                    knobs                                            healthy_to_Hz  verdict   first_bad_Hz  at_dB  pitches
+--------  -----------------------  -----------------------------------------------  -------------  --------  ------------  -----  -------
+control   pure sine (test code)    peak 0.5                                         >= 14193       healthy   -             -      41
+control   ignitor sample leaf      the sine through the bare leaf                   >= 14193       healthy   -             -      41
+control   katalyst empty chain     the sine through no stage                        >= 14193       healthy   -             -      41
+source    sine                     bare, analog=0                                   >= 14193       healthy   -             -      41
+source    sine                     partial bank, harmonics=4, analog=0              >= 14193       healthy   -             -      41
+source    saw                      bare, analog=0                                   6502           healthy   7521          -57.9  38
+source    square node              bare (not the built-in square), analog=0         6502           healthy   7521          -58.7  38
+source    square                   bare (pulze, duty .5), analog=0                  6502           healthy   7521          -58.7  38
+source    pulze                    bare (raw pulse), analog=0                       0              below 5k  109           -35.0  1
+source    tri                      bare, analog=0                                   992            below 5k  1106          -57.9  21
+source    ramp                     bare, analog=0                                   6502           healthy   7521          -57.9  38
+source    zawtooth                 bare, analog=0                                   0              below 5k  109           -33.2  1
+source    zamp                     bare, analog=0                                   0              below 5k  109           -33.2  1
+source    impulse                  bare, analog=0                                   0              below 5k  109           -25.0  1
+source    supersaw                 voices=1, analog=0                               6502           healthy   7521          -57.9  38
+source    supersine                voices=1, analog=0                               >= 14193       healthy   -             -      41
+source    supersquare              voices=1, analog=0                               6502           healthy   7521          -58.7  38
+source    supertri                 voices=1, analog=0                               992            below 5k  1106          -57.9  21
+source    superramp                voices=1, analog=0                               6502           healthy   7521          -57.9  38
+source    sample playhead          sine sample, rate=1                              >= 14193       healthy   -             -      41
+source    sample playhead          sine sample, rate=2^(1/12), cubic interpolation  5116           healthy   5727          -56.4  36
+ignitor   distort:soft             classic() fused node, amount=0.5, 1x             4623           below 5k  5116          -56.6  35
+ignitor   shape(drive):soft        the drive().shape() chain, amount=0.5, 1x        4623           below 5k  5116          -56.6  35
+katalyst  distort:soft             amount=0.5, 1x                                   4623           below 5k  5116          -56.6  35
+ignitor   distort:soft             classic() fused node, amount=2.0, 1x             123            below 5k  138           -55.8  3
+ignitor   shape(drive):soft        the drive().shape() chain, amount=2.0, 1x        123            below 5k  138           -55.8  3
+katalyst  distort:soft             amount=2.0, 1x                                   123            below 5k  138           -56.0  3
+ignitor   distort:hard             classic() fused node, amount=0.5, 1x             782            below 5k  883           -59.1  19
+ignitor   shape(drive):hard        the drive().shape() chain, amount=0.5, 1x        782            below 5k  883           -59.1  19
+katalyst  distort:hard             amount=0.5, 1x                                   782            below 5k  883           -59.1  19
+ignitor   distort:hard             classic() fused node, amount=2.0, 1x             0              below 5k  109           -55.5  1
+ignitor   shape(drive):hard        the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -55.5  1
+katalyst  distort:hard             amount=2.0, 1x                                   0              below 5k  109           -55.8  1
+ignitor   distort:gentle           classic() fused node, amount=0.5, 1x             1580           below 5k  1753          -58.8  25
+ignitor   shape(drive):gentle      the drive().shape() chain, amount=0.5, 1x        1580           below 5k  1753          -58.8  25
+katalyst  distort:gentle           amount=0.5, 1x                                   1580           below 5k  1753          -58.8  25
+ignitor   distort:gentle           classic() fused node, amount=2.0, 1x             0              below 5k  109           -56.0  1
+ignitor   shape(drive):gentle      the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -56.0  1
+katalyst  distort:gentle           amount=2.0, 1x                                   0              below 5k  109           -56.4  1
+ignitor   distort:cubic            classic() fused node, amount=0.5, 1x             2245           below 5k  2477          -59.1  28
+ignitor   shape(drive):cubic       the drive().shape() chain, amount=0.5, 1x        2245           below 5k  2477          -59.1  28
+katalyst  distort:cubic            amount=0.5, 1x                                   2245           below 5k  2477          -59.1  28
+ignitor   distort:cubic            classic() fused node, amount=2.0, 1x             0              below 5k  109           -49.6  1
+ignitor   shape(drive):cubic       the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -49.6  1
+katalyst  distort:cubic            amount=2.0, 1x                                   0              below 5k  109           -50.0  1
+ignitor   distort:diode            classic() fused node, amount=0.5, 1x             1969           below 5k  2245          -59.9  27
+ignitor   shape(drive):diode       the drive().shape() chain, amount=0.5, 1x        1969           below 5k  2245          -59.9  27
+katalyst  distort:diode            amount=0.5, 1x                                   1969           below 5k  2245          -59.9  27
+ignitor   distort:diode            classic() fused node, amount=2.0, 1x             109            below 5k  123           -59.3  2
+ignitor   shape(drive):diode       the drive().shape() chain, amount=2.0, 1x        109            below 5k  123           -59.3  2
+katalyst  distort:diode            amount=2.0, 1x                                   109            below 5k  123           -59.6  2
+ignitor   distort:fold             classic() fused node, amount=0.5, 1x             7521           healthy   8919          -38.5  39
+ignitor   shape(drive):fold        the drive().shape() chain, amount=0.5, 1x        7521           healthy   8919          -38.5  39
+katalyst  distort:fold             amount=0.5, 1x                                   7521           healthy   8919          -38.5  39
+ignitor   distort:fold             classic() fused node, amount=2.0, 1x             275            below 5k  309           -59.5  10
+ignitor   shape(drive):fold        the drive().shape() chain, amount=2.0, 1x        275            below 5k  309           -59.5  10
+katalyst  distort:fold             amount=2.0, 1x                                   275            below 5k  309           -59.5  10
+ignitor   distort:chebyshev        classic() fused node, amount=0.5, 1x             195            below 5k  219           -58.9  7
+ignitor   shape(drive):chebyshev   the drive().shape() chain, amount=0.5, 1x        195            below 5k  219           -58.9  7
+katalyst  distort:chebyshev        amount=0.5, 1x                                   195            below 5k  219           -58.9  7
+ignitor   distort:chebyshev        classic() fused node, amount=2.0, 1x             0              below 5k  109           -28.4  1
+ignitor   shape(drive):chebyshev   the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -28.4  1
+katalyst  distort:chebyshev        amount=2.0, 1x                                   0              below 5k  109           -28.8  1
+ignitor   distort:rectify          classic() fused node, amount=0.5, 1x             246            below 5k  275           -59.2  9
+ignitor   shape(drive):rectify     the drive().shape() chain, amount=0.5, 1x        246            below 5k  275           -59.2  9
+katalyst  distort:rectify          amount=0.5, 1x                                   246            below 5k  275           -59.2  9
+ignitor   distort:rectify          classic() fused node, amount=2.0, 1x             0              below 5k  109           -12.9  1
+ignitor   shape(drive):rectify     the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -12.9  1
+katalyst  distort:rectify          amount=2.0, 1x                                   0              below 5k  109           -12.8  1
+ignitor   distort:exp              classic() fused node, amount=0.5, 1x             2477           below 5k  2761          -57.7  29
+ignitor   shape(drive):exp         the drive().shape() chain, amount=0.5, 1x        2477           below 5k  2761          -57.7  29
+katalyst  distort:exp              amount=0.5, 1x                                   2477           below 5k  2761          -57.7  29
+ignitor   distort:exp              classic() fused node, amount=2.0, 1x             0              below 5k  109           -58.7  1
+ignitor   shape(drive):exp         the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -58.7  1
+katalyst  distort:exp              amount=2.0, 1x                                   0              below 5k  109           -59.1  1
+ignitor   distort:softsat          classic() fused node, amount=0.5, 1x             3877           below 5k  4217          -55.9  33
+ignitor   shape(drive):softsat     the drive().shape() chain, amount=0.5, 1x        3877           below 5k  4217          -55.9  33
+katalyst  distort:softsat          amount=0.5, 1x                                   3877           below 5k  4217          -55.9  33
+ignitor   distort:softsat          classic() fused node, amount=2.0, 1x             0              below 5k  109           -58.2  1
+ignitor   shape(drive):softsat     the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -58.2  1
+katalyst  distort:softsat          amount=2.0, 1x                                   0              below 5k  109           -58.6  1
+ignitor   distort:tube             classic() fused node, amount=0.5, 1x             5116           healthy   5727          -50.3  36
+ignitor   shape(drive):tube        the drive().shape() chain, amount=0.5, 1x        5116           healthy   5727          -50.3  36
+katalyst  distort:tube             amount=0.5, 1x                                   5116           healthy   5727          -50.3  36
+ignitor   distort:tube             classic() fused node, amount=2.0, 1x             123            below 5k  138           -55.9  3
+ignitor   shape(drive):tube        the drive().shape() chain, amount=2.0, 1x        123            below 5k  138           -55.9  3
+katalyst  distort:tube             amount=2.0, 1x                                   123            below 5k  138           -56.1  3
+ignitor   distort:linearfold       classic() fused node, amount=0.5, 1x             347            below 5k  389           -59.0  12
+ignitor   shape(drive):linearfold  the drive().shape() chain, amount=0.5, 1x        347            below 5k  389           -59.0  12
+katalyst  distort:linearfold       amount=0.5, 1x                                   347            below 5k  389           -59.0  12
+ignitor   distort:linearfold       classic() fused node, amount=2.0, 1x             0              below 5k  109           -26.3  1
+ignitor   shape(drive):linearfold  the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -26.3  1
+katalyst  distort:linearfold       amount=2.0, 1x                                   0              below 5k  109           -26.2  1
+ignitor   distort:zerosquare       classic() fused node, amount=0.5, 1x             692            below 5k  782           -59.7  18
+ignitor   shape(drive):zerosquare  the drive().shape() chain, amount=0.5, 1x        692            below 5k  782           -59.7  18
+katalyst  distort:zerosquare       amount=0.5, 1x                                   692            below 5k  782           -59.7  18
+ignitor   distort:zerosquare       classic() fused node, amount=2.0, 1x             0              below 5k  109           -36.4  1
+ignitor   shape(drive):zerosquare  the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -36.4  1
+katalyst  distort:zerosquare       amount=2.0, 1x                                   0              below 5k  109           -36.7  1
+ignitor   distort:sineshaper       classic() fused node, amount=0.5, 1x             5727           healthy   6502          -42.5  37
+ignitor   shape(drive):sineshaper  the drive().shape() chain, amount=0.5, 1x        5727           healthy   6502          -42.5  37
+katalyst  distort:sineshaper       amount=0.5, 1x                                   5727           healthy   6502          -42.5  37
+ignitor   distort:sineshaper       classic() fused node, amount=2.0, 1x             195            below 5k  219           -9.3   7
+ignitor   shape(drive):sineshaper  the drive().shape() chain, amount=2.0, 1x        195            below 5k  219           -9.3   7
+katalyst  distort:sineshaper       amount=2.0, 1x                                   195            below 5k  219           -9.3   7
+ignitor   distort:asym             classic() fused node, amount=0.5, 1x             219            below 5k  246           -60.0  8
+ignitor   shape(drive):asym        the drive().shape() chain, amount=0.5, 1x        219            below 5k  246           -60.0  8
+katalyst  distort:asym             amount=0.5, 1x                                   246            below 5k  275           -59.0  9
+ignitor   distort:asym             classic() fused node, amount=2.0, 1x             0              below 5k  109           -47.3  1
+ignitor   shape(drive):asym        the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -47.3  1
+katalyst  distort:asym             amount=2.0, 1x                                   0              below 5k  109           -47.7  1
+ignitor   distort:stompbox         classic() fused node, amount=0.5, 1x             692            below 5k  782           -59.1  18
+ignitor   shape(drive):stompbox    the drive().shape() chain, amount=0.5, 1x        692            below 5k  782           -59.1  18
+katalyst  distort:stompbox         amount=0.5, 1x                                   692            below 5k  782           -59.1  18
+ignitor   distort:stompbox         classic() fused node, amount=2.0, 1x             0              below 5k  109           -46.8  1
+ignitor   shape(drive):stompbox    the drive().shape() chain, amount=2.0, 1x        0              below 5k  109           -46.8  1
+katalyst  distort:stompbox         amount=2.0, 1x                                   0              below 5k  109           -47.2  1
+ignitor   distort:soft             fused node in oversampleBy(2), amount=0.5        8919           healthy   10954         -56.5  40
+katalyst  distort:soft             in oversampleBy(2), amount=0.5                   8919           healthy   10954         -56.5  40
+ignitor   distort:soft             fused node in oversampleBy(4), amount=0.5        >= 14193       healthy   -             -      41
+katalyst  distort:soft             in oversampleBy(4), amount=0.5                   >= 14193       healthy   -             -      41
+ignitor   distort:soft             fused node in oversampleBy(8), amount=0.5        >= 14193       healthy   -             -      41
+katalyst  distort:soft             in oversampleBy(8), amount=0.5                   >= 14193       healthy   -             -      41
+ignitor   distort:soft             fused node in oversampleBy(16), amount=0.5       >= 14193       healthy   -             -      41
+katalyst  distort:soft             in oversampleBy(16), amount=0.5                  >= 14193       healthy   -             -      41
+ignitor   distort:soft             fused node in oversampleBy(2), amount=2.0        246            below 5k  275           -59.6  9
+katalyst  distort:soft             in oversampleBy(2), amount=2.0                   246            below 5k  275           -59.6  9
+ignitor   distort:soft             fused node in oversampleBy(4), amount=2.0        549            below 5k  620           -58.5  16
+katalyst  distort:soft             in oversampleBy(4), amount=2.0                   549            below 5k  620           -58.5  16
+ignitor   distort:soft             fused node in oversampleBy(8), amount=2.0        1251           below 5k  1396          -58.7  23
+katalyst  distort:soft             in oversampleBy(8), amount=2.0                   1251           below 5k  1396          -58.4  23
+ignitor   distort:soft             fused node in oversampleBy(16), amount=2.0       2761           below 5k  3121          -56.5  30
+katalyst  distort:soft             in oversampleBy(16), amount=2.0                  2761           below 5k  3121          -56.5  30
+ignitor   distort:hard             fused node in oversampleBy(2), amount=0.5        2245           below 5k  2477          -57.1  28
+katalyst  distort:hard             in oversampleBy(2), amount=0.5                   2245           below 5k  2477          -57.1  28
+ignitor   distort:hard             fused node in oversampleBy(4), amount=0.5        5116           healthy   5727          -55.8  36
+katalyst  distort:hard             in oversampleBy(4), amount=0.5                   5116           healthy   5727          -55.8  36
+ignitor   distort:hard             fused node in oversampleBy(8), amount=0.5        10954          healthy   14193         -52.1  41
+katalyst  distort:hard             in oversampleBy(8), amount=0.5                   10954          healthy   14193         -52.1  41
+ignitor   distort:hard             fused node in oversampleBy(16), amount=0.5       >= 14193       healthy   -             -      41
+katalyst  distort:hard             in oversampleBy(16), amount=0.5                  >= 14193       healthy   -             -      41
+ignitor   distort:hard             fused node in oversampleBy(2), amount=2.0        123            below 5k  138           -59.4  3
+katalyst  distort:hard             in oversampleBy(2), amount=2.0                   123            below 5k  138           -59.6  3
+ignitor   distort:hard             fused node in oversampleBy(4), amount=2.0        275            below 5k  309           -58.7  10
+katalyst  distort:hard             in oversampleBy(4), amount=2.0                   275            below 5k  309           -58.8  10
+ignitor   distort:hard             fused node in oversampleBy(8), amount=2.0        1106           below 5k  1251          -55.8  22
+katalyst  distort:hard             in oversampleBy(8), amount=2.0                   1106           below 5k  1251          -55.6  22
+ignitor   distort:hard             fused node in oversampleBy(16), amount=2.0       2245           below 5k  2477          -58.8  28
+katalyst  distort:hard             in oversampleBy(16), amount=2.0                  2245           below 5k  2477          -58.8  28
+ignitor   distort:fold             fused node in oversampleBy(2), amount=0.5        >= 14193       healthy   -             -      41
+katalyst  distort:fold             in oversampleBy(2), amount=0.5                   >= 14193       healthy   -             -      41
+ignitor   distort:fold             fused node in oversampleBy(4), amount=0.5        >= 14193       healthy   -             -      41
+katalyst  distort:fold             in oversampleBy(4), amount=0.5                   >= 14193       healthy   -             -      41
+ignitor   distort:fold             fused node in oversampleBy(8), amount=0.5        >= 14193       healthy   -             -      41
+katalyst  distort:fold             in oversampleBy(8), amount=0.5                   >= 14193       healthy   -             -      41
+ignitor   distort:fold             fused node in oversampleBy(16), amount=0.5       >= 14193       healthy   -             -      41
+katalyst  distort:fold             in oversampleBy(16), amount=0.5                  >= 14193       healthy   -             -      41
+ignitor   distort:fold             fused node in oversampleBy(2), amount=2.0        620            below 5k  692           -23.7  17
+katalyst  distort:fold             in oversampleBy(2), amount=2.0                   620            below 5k  692           -23.7  17
+ignitor   distort:fold             fused node in oversampleBy(4), amount=2.0        1251           below 5k  1396          -26.2  23
+katalyst  distort:fold             in oversampleBy(4), amount=2.0                   1251           below 5k  1396          -26.2  23
+ignitor   distort:fold             fused node in oversampleBy(8), amount=2.0        1396           below 5k  1580          -59.5  24
+katalyst  distort:fold             in oversampleBy(8), amount=2.0                   1396           below 5k  1580          -59.5  24
+ignitor   distort:fold             fused node in oversampleBy(16), amount=2.0       2477           below 5k  2761          -59.7  29
+katalyst  distort:fold             in oversampleBy(16), amount=2.0                  2477           below 5k  2761          -59.6  29
+ignitor   distort:rectify          fused node in oversampleBy(2), amount=0.5        549            below 5k  620           -59.7  16
+katalyst  distort:rectify          in oversampleBy(2), amount=0.5                   549            below 5k  620           -59.7  16
+ignitor   distort:rectify          fused node in oversampleBy(4), amount=0.5        1753           below 5k  1969          -58.3  26
+katalyst  distort:rectify          in oversampleBy(4), amount=0.5                   1753           below 5k  1969          -58.3  26
+ignitor   distort:rectify          fused node in oversampleBy(8), amount=0.5        3587           below 5k  3877          -58.5  32
+katalyst  distort:rectify          in oversampleBy(8), amount=0.5                   3587           below 5k  3877          -58.5  32
+ignitor   distort:rectify          fused node in oversampleBy(16), amount=0.5       6502           healthy   7521          -56.5  38
+katalyst  distort:rectify          in oversampleBy(16), amount=0.5                  6502           healthy   7521          -56.5  38
+ignitor   distort:rectify          fused node in oversampleBy(2), amount=2.0        0              below 5k  109           -38.7  1
+katalyst  distort:rectify          in oversampleBy(2), amount=2.0                   0              below 5k  109           -38.6  1
+ignitor   distort:rectify          fused node in oversampleBy(4), amount=2.0        0              below 5k  109           -43.4  1
+katalyst  distort:rectify          in oversampleBy(4), amount=2.0                   0              below 5k  109           -43.3  1
+ignitor   distort:rectify          fused node in oversampleBy(8), amount=2.0        0              below 5k  109           -51.1  1
+katalyst  distort:rectify          in oversampleBy(8), amount=2.0                   0              below 5k  109           -51.0  1
+ignitor   distort:rectify          fused node in oversampleBy(16), amount=2.0       138            below 5k  155           -58.6  4
+katalyst  distort:rectify          in oversampleBy(16), amount=2.0                  138            below 5k  155           -58.5  4
+
+181 rows, 49.9 s

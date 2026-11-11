@@ -261,11 +261,10 @@ class KlangCommLink(capacity: Int = 8192) {
             val nonFiniteSamples: Double = 0.0,
             /**
              * "Crushed" (KLANG-00432, audit L8-02, option (c)): the blocks at whose end the house limiter held the mix
-             * more than 200 dB down, since the backend started. No music reaches that: it takes a mix past about
-             * +210 dBFS, a huge finite value on the mix, which has already rounded every playback's music away in the
-             * sum (1e15 leaves steps of 0.125). Counted once per block from the limiter's gain, nothing clamped
-             * (`HouseStage.crushedBlocks`, which says its reach: a huge CONSTANT is not counted, the DC blockers take it
-             * out first). Monotone; a Double (no Long on the wire).
+             * more than 200 dB down or the mix stood above 1e12 ahead of the DC blockers, since the backend started. No
+             * music reaches that: it takes a huge finite value on the mix, which has already rounded every playback's
+             * music away in the sum (1e15 leaves steps of 0.125). Counted once per block, nothing clamped
+             * (`HouseStage.crushedBlocks`, which says its reach). Monotone; a Double (no Long on the wire).
              */
             val crushedBlocks: Double = 0.0,
             /**

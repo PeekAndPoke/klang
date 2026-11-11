@@ -124,9 +124,8 @@ class IgnitorDslOptimizerSpec : StringSpec({
         outer.sections.size shouldBe 1
         outer.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.Lowpass>()
 
-        val clip = outer.inner.shouldBeInstanceOf<IgnitorDsl.Shape>()
-        val drive = clip.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
-        val inner = drive.inner.shouldBeInstanceOf<IgnitorDsl.Eq>()
+        val distort = outer.inner.shouldBeInstanceOf<IgnitorDsl.Distort>()
+        val inner = distort.inner.shouldBeInstanceOf<IgnitorDsl.Eq>()
         inner.sections.single().shouldBeInstanceOf<IgnitorDsl.EqSection.Bandpass>()
     }
 

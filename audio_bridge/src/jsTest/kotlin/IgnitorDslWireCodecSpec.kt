@@ -297,7 +297,7 @@ class IgnitorDslWireCodecSpec : StringSpec({
     "Shape (the index knob)" {
         check(IgnitorDsl.Shape(inner = IgnitorDsl.Sine(), shape = IgnitorDsl.Param("sh", 10.0)))
     }
-    "Distort (Drive+Shape chain)" { check(IgnitorDsl.Sine().distort(0.5.ign)) }
+    "Distort (the fused node the door builds)" { check(IgnitorDsl.Sine().distort(0.5.ign)) }
     "Distort (the gated unit node, every field non-default)" {
         check(
             IgnitorDsl.Distort(

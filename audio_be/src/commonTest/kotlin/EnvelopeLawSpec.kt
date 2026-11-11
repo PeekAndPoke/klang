@@ -9,6 +9,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
@@ -325,11 +326,12 @@ class EnvelopeLawSpec : StringSpec({
         lastFrameGate[255] shouldBe 1.0
     }
 
-    "host: the Ignitor filter envelope (read at each block's two ends, clamped to [0, 1], coefficients interpolated)" {
-        // Oracle: the envelope written out here, read at each block's first frame and one past its last,
-        // clamped to [0, 1], turned into SVF coefficients by the shared `computeSvfCoeffs` and stepped
-        // linearly across the block through the plain TPT lowpass recursion. Only the coefficient helper
-        // is shared with the node. Two envelopes: three different curves (Square up, Exponential down,
+    "host: the Ignitor filter envelope (clamped to [0, 1], each stage its own curve, near the exact per-sample cutoff)" {
+        // Oracle: the envelope written out here, read at EVERY frame, clamped to [0, 1], turned into SVF
+        // coefficients by the shared `computeSvfCoeffs` and run through the plain TPT lowpass recursion. Only the
+        // coefficient helper is shared with the node. The node is exact at its knots and linear between them
+        // (KLANG-00432, L4-02, decisions pass C; `FilterEnvKnotsSpec` pins the knots), so the comparison has a
+        // tolerance, far under what a swapped curve or a missing clamp moves. Two envelopes: three different curves (Square up, Exponential down,
         // Cube on release, so a swap of any two is heard), and linear curves with a raw sustain of 1.5,
         // which only the host's [0, 1] clamp keeps from sweeping past the full depth. A third names no
         // curve and is checked against the Exponential oracle: the modulation default (decision D3).
@@ -350,6 +352,10 @@ class EnvelopeLawSpec : StringSpec({
             else -> error("not used here")
         }
 
+        // 5e-3 on a unit sine at 1500 Hz: the knots' distance from the exact cutoff measured at most 3.0e-3 here (JVM,
+        // 2026-11-11); a curve swapped between two stages moves the cutoff by semitones, the output by tenths.
+        val tolerance = 5e-3
+
         fun check(sus: Double, ac: AdsrCurve, dc: AdsrCurve, rc: AdsrCurve, nameCurves: Boolean = true) {
             fun ads(p: Int): Double = when {
                 p < a -> curve(ac, p / a)
@@ -363,35 +369,19 @@ class EnvelopeLawSpec : StringSpec({
             val input = DoubleArray(total) { i -> sin(2.0 * PI * 1500.0 * i / sampleRate) }
             val expected = DoubleArray(total)
             val c0 = SvfCoeffs()
-            val c1 = SvfCoeffs()
             var ic1 = 0.0
             var ic2 = 0.0
-            var start = 0
 
-            while (start < total) {
-                val n = minOf(blockFrames, total - start)
+            for (i in 0 until total) {
+                computeSvfCoeffs(cutoffHz = base * 2.0.pow(depth / 12.0 * oracleLevel(i).coerceIn(0.0, 1.0)), q = q, sampleRate = sampleRate.toDouble(), out = c0)
 
-                computeSvfCoeffs(cutoffHz = base * 2.0.pow(depth / 12.0 * oracleLevel(start).coerceIn(0.0, 1.0)), q = q, sampleRate = sampleRate.toDouble(), out = c0)
-                computeSvfCoeffs(cutoffHz = base * 2.0.pow(depth / 12.0 * oracleLevel(start + n).coerceIn(0.0, 1.0)), q = q, sampleRate = sampleRate.toDouble(), out = c1)
+                val v3 = input[i] - ic2
+                val v1 = c0.a1 * ic1 + c0.a2 * v3
+                val v2 = ic2 + c0.a2 * ic1 + c0.a3 * v3
 
-                var a1 = c0.a1
-                var a2 = c0.a2
-                var a3 = c0.a3
-
-                for (i in 0 until n) {
-                    val v3 = input[start + i] - ic2
-                    val v1 = a1 * ic1 + a2 * v3
-                    val v2 = ic2 + a2 * ic1 + a3 * v3
-
-                    ic1 = (2.0 * v1 - ic1).flushState()
-                    ic2 = (2.0 * v2 - ic2).flushState()
-                    expected[start + i] = v2
-                    a1 += (c1.a1 - c0.a1) / n
-                    a2 += (c1.a2 - c0.a2) / n
-                    a3 += (c1.a3 - c0.a3) / n
-                }
-
-                start += n
+                ic1 = (2.0 * v1 - ic1).flushState()
+                ic2 = (2.0 * v2 - ic2).flushState()
+                expected[i] = v2
             }
 
             val source = object : Ignitor {
@@ -409,11 +399,13 @@ class EnvelopeLawSpec : StringSpec({
             val node = source.lowpass(cutoffHz = ParamIgnitor("f", base), q = ParamIgnitor("q", q), env = env)
             val out = renderNode(node, total, gate = gate)
 
+            var worst = 0.0
+
             for (i in 0 until total) {
-                // 1e-9: the core bends Exponential through `fastExp` (relative error under 1e-10), the
-                // oracle through the library `exp`.
-                withClue("sustain $sus, $ac / $dc / $rc (named: $nameCurves), frame $i") { out[i] shouldBe (expected[i] plusOrMinus 1e-9) }
+                worst = maxOf(worst, abs(out[i] - expected[i]))
             }
+
+            withClue("sustain $sus, $ac / $dc / $rc (named: $nameCurves): the worst frame's distance from the exact cutoff") { worst shouldBeLessThan tolerance }
         }
 
         check(sus = 0.3, ac = AdsrCurve.Square, dc = AdsrCurve.Exponential, rc = AdsrCurve.Cube)

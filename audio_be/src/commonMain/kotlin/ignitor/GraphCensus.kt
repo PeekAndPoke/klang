@@ -370,8 +370,8 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return GraphCensus(passes = n, traffic = 2 * n - 1, bytes = SOURCE_BYTES + n * UNISON_VOICE_BYTES)
         }
 
-        // the shaper: its loop, the DC blocker, and the output pass in place (the soft cap on `Shape`, the copy out
-        // on the fused `Distort`, whose drive rides in the loop)
+        // the shaper: its loop, the DC blocker, and the output pass in place (the copy out on both nodes; the fused
+        // `Distort`'s drive rides in the loop)
         private fun shaped(): GraphCensus = GraphCensus(passes = 1, traffic = 2 + 2 + 2, bytes = 24)
 
         /** An oversampling region's trip up and down at [factor] (none at 1 or less), the converters only. */

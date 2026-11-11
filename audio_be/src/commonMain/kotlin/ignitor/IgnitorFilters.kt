@@ -8,12 +8,12 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.EnvelopeCore
 import io.peekandpoke.klang.audio_be.filters.SAT_STATE_SCALE
-import io.peekandpoke.klang.audio_be.filters.SvfCoeffSweep
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
-import io.peekandpoke.klang.audio_be.filters.filterEnvCutoff
+import io.peekandpoke.klang.audio_be.filters.clampSvfRange
+import io.peekandpoke.klang.audio_be.filters.filterEnvCutoffAtLevel
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.utils.flushState
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
@@ -37,7 +37,8 @@ enum class SvfMode {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Optional ADSR-style envelope that modulates filter cutoff at control rate (at each block's two ends).
+ * Optional ADSR-style envelope that modulates filter cutoff, exact at knots that belong to the note and linear
+ * between them (`SvfIgnitor.renderEnvelope`, [FILTER_ENV_KNOT_SEMITONES]).
  *
  * When applied, the effective cutoff becomes: `baseCutoff * 2^(depth/12 * envValue)` —
  * depth is SEMITONES (C3 of the filter unification; +12 doubles the cutoff at full
@@ -73,6 +74,22 @@ data class FilterEnvDef(
     }
 }
 
+/**
+ * The most the filter envelope's cutoff moves between two knots of `SvfIgnitor`, in semitones: half a semitone. Between
+ * two knots the coefficients step linearly, so the cutoff there departs from the envelope's; at this step it stayed
+ * within 2.2 cents of the exact per-sample cutoff over nine measured shapes (attacks 0 to 10 ms, depths -36 to 60
+ * semitones, q 0.7 to 8), under the pitch JND of a pure tone (about 5 cents), which a cutoff is heard less precisely
+ * than. One semitone measured up to 12.5 cents (KLANG-00432, "Decisions pass C").
+ */
+internal const val FILTER_ENV_KNOT_SEMITONES: Double = 0.5
+
+/**
+ * The longest stretch between two knots of the filter envelope, in frames of the rate the node runs at: one block at
+ * the base rate. It bounds how late a knob read per block (the cutoff, q, an `analog` drift) enters an envelope path
+ * that is not moving (two knots), and a held sustain computes no coefficients at these knots (the cutoff is unchanged).
+ */
+internal const val FILTER_ENV_KNOT_MAX_FRAMES: Int = 128
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SVF Filter — unified implementation for all modes
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -83,12 +100,13 @@ data class FilterEnvDef(
  * The TPT/Zavalishin canonical Cytomic form computes lowpass, highpass, bandpass, and
  * notch simultaneously; [mode] selects which output is used. Each instance creates
  * per-voice filter state in its closure. Optional [env] modulates cutoff over the
- * voice's lifetime: when active, the envelope ([EnvelopeCore], the engine's one envelope law) is
- * read at block start AND at block end (`filterEnvCutoff`), and the coefficients are linearly
- * interpolated per sample between the two (`SvfCoeffSweep`), which avoids the 375 Hz block-rate
- * stair-stepping (128 frames at 48 kHz) that a per-block-only recompute would produce. The level is
- * clamped to [0, 1] before it scales the depth. The retired voice strip's filter envelope ran the
- * same two helpers (decision D3, the sampling).
+ * voice's lifetime: when active, the envelope ([EnvelopeCore], the engine's one envelope law) gives the
+ * cutoff EXACTLY at knots that belong to the note (`filterEnvCutoff`), and the coefficients step linearly
+ * per sample between two knots. The knots follow the envelope: never more than [FILTER_ENV_KNOT_MAX_FRAMES]
+ * apart, one at every stage boundary, and close enough that the cutoff moves at most
+ * [FILTER_ENV_KNOT_SEMITONES] between two (KLANG-00432, L4-02, decisions pass C; until then the envelope was
+ * read at each block's two ends, which straightened a short attack and depended on where the block borders fell).
+ * The level is clamped to [0, 1] before it scales the depth.
  *
  * **The default curve** was the voice strip's too (decision D3 of KLANG-00237 (builtin instruments)):
  * an unshaped stage takes `MOD_ENV_CURVE`, exponential; `curves` can shape each stage, and sprudel's
@@ -139,9 +157,8 @@ private class SvfIgnitor(
     private var ic1eq: Double = 0.0
     private var ic2eq: Double = 0.0
 
-    // The static path's coefficients, and the envelope path's sweep (start coefficients plus steps).
+    // The static path's coefficients.
     private val coefs = SvfCoeffs()
-    private val sweep = SvfCoeffSweep()
     private var initialized: Boolean = false
     private val hasEnv: Boolean = env.depth != 0.0
 
@@ -155,11 +172,42 @@ private class SvfIgnitor(
     // block's drift and then both ends by the fixed tolerance.
     private val offsetMul: Double = humanize?.cutoffOffsetMul ?: 1.0
 
-    // The block's cutoff, q and drift, read in [generate] and held here for the two coefficient setups
-    // ([prepareEnvelopeSweep], [computeStaticCoeffs]): a holder, not arguments (see [prepareEnvelopeSweep]).
+    // The block's cutoff, q, drift and analog drive, read in [generate] and held here for the coefficient setups and
+    // the sample loops: a holder, not arguments (see [aimFrom]).
     private var blockCutoff: Double = 0.0
     private var blockQ: Double = 0.0
     private var blockDriftMul: Double = 1.0
+    private var blockSaturate: Boolean = false
+    private var blockDriveScale: Double = 0.0
+
+    // The coefficients the sample loops run with, and what each of them adds after every sample: the static path's
+    // latched set with no steps, or the envelope path's segment between two knots ([runSegment] reads and writes them).
+    private var runA1: Double = 0.0
+    private var runA2: Double = 0.0
+    private var runA3: Double = 0.0
+    private var runK: Double = 0.0
+    private var runG: Double = 0.0
+    private var stepA1: Double = 0.0
+    private var stepA2: Double = 0.0
+    private var stepA3: Double = 0.0
+    private var stepK: Double = 0.0
+    private var stepG: Double = 0.0
+
+    // The envelope path's knots (KLANG-00432, L4-02; see [renderEnvelope]): the next knot's frame, its exact
+    // coefficients, cutoff, q and envelope level; the cutoff and q the running coefficients last arrived at; the
+    // gate the knot was aimed with; the length and the cutoff travel of the last segment (the next one's first guess);
+    // and the voice frame the next block must start at, anything else starts over at an exact knot.
+    private val target = SvfCoeffs()
+    private var knotFrame: Int = 0
+    private var knotCutoffHz: Double = 0.0
+    private var knotQ: Double = 0.0
+    private var knotLevel: Double = 0.0
+    private var runCutoffHz: Double = 0.0
+    private var runQ: Double = 0.0
+    private var aimedGate: Int = 0
+    private var lastLength: Int = FILTER_ENV_KNOT_MAX_FRAMES
+    private var lastTravel: Double = 0.0
+    private var expectedFrame: Int = -1
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
@@ -181,200 +229,344 @@ private class SvfIgnitor(
                 blockDriftMul = hum.driftMul
             }
 
-            val saturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)
-            val driveScale = analogVal * FILTER_DRIVE_PER_ANALOG
-            val length = ctx.length
-
-            // Per-sample coefficient deltas (Bresenham accumulator). When env is off they're
-            // zero and the inner loop just adds zero each sample — no measurable cost.
-            // `g` is only needed by the saturated path (analog-style state-dependent damping); the
-            // linear branches just `g += 0.0` per sample.
-            var a1: Double
-            var a2: Double
-            var a3: Double
-            var k: Double
-            var g: Double
-            var a1Step = 0.0
-            var a2Step = 0.0
-            var a3Step = 0.0
-            var kStep = 0.0
-            var gStep = 0.0
+            blockSaturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)
+            blockDriveScale = analogVal * FILTER_DRIVE_PER_ANALOG
 
             if (hasEnv) {
-                prepareEnvelopeSweep(ctx)
+                renderEnvelope(input = input, buffer = buffer, ctx = ctx)
 
-                val c = sweep.start
+                return@use
+            }
 
-                a1 = c.a1; a2 = c.a2; a3 = c.a3; k = c.k; g = c.g
-                a1Step = sweep.a1Step; a2Step = sweep.a2Step; a3Step = sweep.a3Step; kStep = sweep.kStep; gStep = sweep.gStep
-                initialized = true
-            } else if (!initialized || hasDrift || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
+            if (!initialized || hasDrift || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
                 // `hasDrift` is false without a lane, so the cheap latch below is untouched for
                 // every node that does not humanize; with one, the cutoff moves every block and
                 // there is nothing to latch.
                 computeStaticCoeffs(ctx)
-                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
                 initialized = true
-            } else {
-                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
             }
 
-            val end = ctx.offset + length
-            // Mode is fixed for the lifetime of this Ignitor — branch once per block,
-            // not per sample. LOWPASS/HIGHPASS additionally branch on `saturate` (analog>0)
-            // to switch between the linear closed-form math and the analog-style state-dependent
-            // damping path (per-sample diode-pair polynomial + explicit-feedback solve).
-            //
-            // The saturated branch, in its own words (moved here from the retired strip `SvfLPF`,
-            // phase 3 step 9):
-            //  - Convention conversion, why the factor of 2: the OB-X-style filter parameterises
-            //    resonance with `R`, where `2R` corresponds to our `k` (damping vs. inverse quality
-            //    factor). A feedback term `2 * (R + tCfb)` therefore maps onto our `k + 2 * tCfb`,
-            //    hence `kEff = k + 2 * driveScale * tCfb`.
-            //  - Why it works where tanh failed: the signal stays linear and only the DAMPING grows
-            //    with the state, so the resonance compresses and the filter stays bounded. A tanh
-            //    capping the feedback signal does the opposite (less damping, runaway). The failed
-            //    attempts are recorded in `audio/ref/memory-history.md`, "Filter Saturation Dead-End".
-            when (mode) {
-                SvfMode.LOWPASS -> {
-                    if (saturate) {
-                        for (i in ctx.offset until end) {
-                            val v0 = input[i]
-                            val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
-                            val kRaw = k + 2.0 * driveScale * tCfb
-                            // Never NEGATIVE damping (audit N1): the polynomial dips under 1 for a state between about
-                            // -3.1 and 0, which at q times analog over about 590 made the loop oscillate for good near
-                            // fs/3. Floored at 0, bit-identical wherever the damping is positive (all ordinary settings).
-                            // NaN-guard: a NaN reads as 0 here, the state's flush catches it below.
-                            val kEff = if (kRaw > 0.0) kRaw else 0.0
-                            val kPlusG = kEff + g
-                            val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
-                            val vBp = g * vHp + ic1eq
-                            val vLp = g * vBp + ic2eq
-                            ic1eq = (2.0 * vBp - ic1eq).flushState()
-                            ic2eq = (2.0 * vLp - ic2eq).flushState()
-                            buffer[i] = vLp
-                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        }
-                    } else {
-                        for (i in ctx.offset until end) {
-                            val v0 = input[i]
-                            val v3 = v0 - ic2eq
-                            val v1 = a1 * ic1eq + a2 * v3
-                            val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                            ic1eq = (2.0 * v1 - ic1eq).flushState()
-                            ic2eq = (2.0 * v2 - ic2eq).flushState()
-                            buffer[i] = v2
-                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        }
-                    }
-                }
+            runA1 = coefs.a1; runA2 = coefs.a2; runA3 = coefs.a3; runK = coefs.k; runG = coefs.g
+            stepA1 = 0.0; stepA2 = 0.0; stepA3 = 0.0; stepK = 0.0; stepG = 0.0
 
-                SvfMode.HIGHPASS -> {
-                    if (saturate) {
-                        for (i in ctx.offset until end) {
-                            val v0 = input[i]
-                            val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
-                            val kRaw = k + 2.0 * driveScale * tCfb
-                            // Never NEGATIVE damping (audit N1): the polynomial dips under 1 for a state between about
-                            // -3.1 and 0, which at q times analog over about 590 made the loop oscillate for good near
-                            // fs/3. Floored at 0, bit-identical wherever the damping is positive (all ordinary settings).
-                            // NaN-guard: a NaN reads as 0 here, the state's flush catches it below.
-                            val kEff = if (kRaw > 0.0) kRaw else 0.0
-                            val kPlusG = kEff + g
-                            val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
-                            val vBp = g * vHp + ic1eq
-                            val vLp = g * vBp + ic2eq
-                            ic1eq = (2.0 * vBp - ic1eq).flushState()
-                            ic2eq = (2.0 * vLp - ic2eq).flushState()
-                            buffer[i] = vHp
-                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        }
-                    } else {
-                        for (i in ctx.offset until end) {
-                            val v0 = input[i]
-                            val v3 = v0 - ic2eq
-                            val v1 = a1 * ic1eq + a2 * v3
-                            val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                            ic1eq = (2.0 * v1 - ic1eq).flushState()
-                            ic2eq = (2.0 * v2 - ic2eq).flushState()
-                            buffer[i] = v0 - k * v1 - v2
-                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                        }
-                    }
-                }
-
-                SvfMode.BANDPASS -> {
-                    // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ) —
-                    // q is a pure width control, matching the `ResonatorBank` bands and the fused EqCore
-                    // BANDPASS arm bit-for-bit. Both env-path coefficient sets share one
-                    // per-block q, so kStep is structurally 0: no mid-sweep mismatch.
-                    for (i in ctx.offset until end) {
-                        val v0 = input[i]
-                        val v3 = v0 - ic2eq
-                        val v1 = a1 * ic1eq + a2 * v3
-                        val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushState()
-                        ic2eq = (2.0 * v2 - ic2eq).flushState()
-                        buffer[i] = k * v1
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                    }
-                }
-
-                SvfMode.NOTCH -> {
-                    for (i in ctx.offset until end) {
-                        val v0 = input[i]
-                        val v3 = v0 - ic2eq
-                        val v1 = a1 * ic1eq + a2 * v3
-                        val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushState()
-                        ic2eq = (2.0 * v2 - ic2eq).flushState()
-                        buffer[i] = v0 - k * v1
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
-                    }
-                }
-            }
+            runSegment(input = input, buffer = buffer, from = ctx.offset, to = ctx.offset + ctx.length)
         }
     }
 
     /**
-     * The envelope path's block setup: the cutoff envelope prepared, the cutoff at the block's two ends (the drift
-     * held across the block; `filterEnvCutoff`: depth in SEMITONES, C3), and the [sweep] that carries the
-     * coefficients linearly between them.
+     * The envelope path (KLANG-00432, L4-02, decisions pass C, 2026-11-11): the cutoff is EXACT at knots that belong to
+     * the NOTE, and the coefficients step linearly between two knots, an add per coefficient per sample as before.
      *
-     * **A method of its own, reading [blockCutoff], [blockQ] and [blockDriftMul] from the node, ON PURPOSE**
-     * (engine follow-up 29, 2026-10-11; `audio/ref/performance.md`, "one node class is one compiled body with one
-     * inlining budget"). Inside [generate], whose one compiled body and one inlining budget every SVF node shares,
-     * this setup left V8 without the budget for its small callees: with a filter envelope, a drift and a second
-     * filter in the voice (`classic()` with `lpf.env`, `hpf` and `analog`), `prepareModEnvelope` (the stage times)
-     * and the level's `coerceIn` stayed calls, and so did the static path's clamps in the other filter, so their
-     * doubles crossed as heap numbers: with the sweep's arguments, about 8 per block on the lowpass and 4 on the
-     * highpass. Here the setup spends a budget of its own (its envelope code makes it larger than V8's limit for
-     * inlining, 460 bytes, so V8 never inlines it back into [generate]), and nothing double crosses into it
-     * ([generate] hands it the context only) or out of it (the results land in [sweep]). No test can pin it (the
-     * sound is the same either way): this KDoc is the guard. Do not fold it back into [generate], and do not hand
-     * it the cutoff, q or drift as arguments.
+     * **Where the knots fall.** From a knot at frame `p` the next is at most [FILTER_ENV_KNOT_MAX_FRAMES] frames on, never
+     * past the envelope's next stage frame (`EnvelopeCore.nextStageFrame`: the attack's end, the decay's end, the gate, the
+     * release's end), and close enough that the cutoff moves at most [FILTER_ENV_KNOT_SEMITONES] between the two: the
+     * level's change across the segment times the depth. Within one stage the level is monotone, so its two ends bound
+     * it. So a fast deep sweep gets a knot every frame or two (a 1 ms attack over 48 semitones), a held sustain one per
+     * [FILTER_ENV_KNOT_MAX_FRAMES] whose coefficients are not recomputed (the cutoff is unchanged). Measured against the
+     * exact per-sample cutoff over nine shapes (attacks 0 to 10 ms, depths -36 to 60 semitones, q 0.7 to 8): the cutoff
+     * stays within 2.2 cents of it, with 118 to 336 coefficient sets per note; the block law this replaces was 230 to
+     * 2870 cents off in the same cases with 114 to 211 sets (KLANG-00432, "Decisions pass C").
+     *
+     * **Note-anchored.** Every knot is a function of the note's frames and the envelope, not of the block grid: the
+     * running coefficients carry across a block border, so the same note sounds the same, bit for bit, wherever its
+     * onset falls in a block, as long as nothing it reads per block moves (the cutoff and q knobs, an `analog` drift,
+     * a gate learned late). Those enter at the next knot's aim, at most two knots (256 frames) late, gliding there; a
+     * gate learned late re-aims at once from where the coefficients stand (it moves the envelope's stages).
+     *
+     * A block that does not start where the last one ended (the first block, a skipped one) starts over at an exact knot.
      */
-    private fun prepareEnvelopeSweep(ctx: IgniteContext) {
+    private fun renderEnvelope(input: AudioBuffer, buffer: AudioBuffer, ctx: IgniteContext) {
         envCore.prepareModEnvelope(
             ctx = ctx, attack = env.attack, decay = env.decay, sustain = env.sustain, release = env.release,
             attackCurve = env.attackCurve, decayCurve = env.decayCurve, releaseCurve = env.releaseCurve,
         )
 
-        val pos = ctx.voiceElapsedFrames
-        val length = ctx.length
-        val baseCutoff = blockCutoff
-        val driftMul = blockDriftMul
+        val start = ctx.voiceElapsedFrames
+        val from = ctx.offset
+        val end = ctx.offset + ctx.length
 
-        sweep.cutoffStartHz = envCore.filterEnvCutoff(pos = pos, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
-        sweep.cutoffEndHz = envCore.filterEnvCutoff(pos = pos + length, baseCutoff = baseCutoff, depthSemitones = env.depth) * driftMul * offsetMul
-        sweep.q = blockQ
-        sweep.prepare(sampleRate = ctx.sampleRate.toDouble(), frames = length)
+        if (start != expectedFrame) {
+            snapTo(ctx = ctx, frame = start)
+        } else if (ctx.gateEndFrame != aimedGate) {
+            // Between two knots the running coefficients are at no knot's cutoff: a NaN keeps [aimFrom] from reading
+            // the new knot as flat (NaN equals nothing) and freezing them where they stand.
+            runCutoffHz = Double.NaN
+            knotLevel = levelAt(start)
+            aimFrom(ctx = ctx, frame = start)
+        }
+
+        expectedFrame = start + ctx.length
+
+        var i = from
+
+        while (i < end) {
+            val frame = start + (i - from)
+
+            if (frame == knotFrame) {
+                arrive(ctx = ctx, frame = frame)
+            }
+
+            val toKnot = knotFrame - frame
+            val segmentEnd = if (toKnot < end - i) i + toKnot else end
+
+            runSegment(input = input, buffer = buffer, from = i, to = segmentEnd)
+
+            i = segmentEnd
+        }
+    }
+
+    /** The envelope's level at [frame], clamped to [0, 1] as the cutoff law reads it (`filterEnvCutoff`). */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun levelAt(frame: Int): Double = clampSvfRange(x = envCore.at(frame), lo = 0.0, hi = 1.0)
+
+    /** The cutoff at the envelope [level] with the block's base, drift and tolerance ([filterEnvCutoff]'s law). */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun cutoffAtLevel(level: Double): Double =
+        filterEnvCutoffAtLevel(level = level, baseCutoff = blockCutoff, depthSemitones = env.depth) * blockDriftMul * offsetMul
+
+    /** A knot at [frame] itself, exact: the loop in [renderEnvelope] arrives at it before its first sample. */
+    private fun snapTo(ctx: IgniteContext, frame: Int) {
+        val level = levelAt(frame)
+        val cutoff = cutoffAtLevel(level)
+
+        computeSvfCoeffs(cutoffHz = cutoff, q = blockQ, sampleRate = ctx.sampleRate.toDouble(), out = target)
+
+        knotFrame = frame
+        knotLevel = level
+        knotCutoffHz = cutoff
+        knotQ = blockQ
+        lastLength = FILTER_ENV_KNOT_MAX_FRAMES
+        lastTravel = 0.0
+    }
+
+    /** At a knot: the running coefficients take its exact set, and the next segment is aimed from there. */
+    private fun arrive(ctx: IgniteContext, frame: Int) {
+        runA1 = target.a1; runA2 = target.a2; runA3 = target.a3; runK = target.k; runG = target.g
+        runCutoffHz = knotCutoffHz
+        runQ = knotQ
+
+        aimFrom(ctx = ctx, frame = frame)
+    }
+
+    /**
+     * Aims the running coefficients from [frame] (where the envelope's level is [knotLevel]) at the next knot: finds it
+     * (see [renderEnvelope]), computes its exact coefficients into [target] and the steps that reach them. A knot whose
+     * cutoff and q equal the running ones steps nothing and computes no coefficients (a sustain, a finished release).
+     *
+     * Its doubles travel through the node's fields, not as arguments (`audio/ref/performance.md`, "a non-integral double
+     * handed to a function that is not inlined is a heap number per call"): the frame is an Int, the rest is read here.
+     */
+    private fun aimFrom(ctx: IgniteContext, frame: Int) {
+        val fromLevel = knotLevel
+        val depth = if (env.depth < 0.0) -env.depth else env.depth
+        var length = FILTER_ENV_KNOT_MAX_FRAMES
+
+        // The first guess, after a segment that moved: its length, twice it when it moved at most half the allowed
+        // step. Whole numbers only: a `Double.toInt()` here is a call on Kotlin/JS that V8 left out of this method's
+        // budget, so its double crossed as a heap number (measured: about 1.2 KB per note of a 10 ms attack).
+        if (lastTravel > 0.0) {
+            length = if (lastTravel <= FILTER_ENV_KNOT_SEMITONES * 0.5) lastLength * 2 else lastLength
+
+            if (length > FILTER_ENV_KNOT_MAX_FRAMES) {
+                length = FILTER_ENV_KNOT_MAX_FRAMES
+            }
+        }
+
+        val toStage = envCore.nextStageFrame(frame) - frame
+
+        if (toStage < length) {
+            length = toStage
+        }
+
+        var level: Double
+        var travel: Double
+
+        // Halved while the cutoff moves too far (a NaN travel ends it). One loop with one level read, so the envelope's
+        // law is inlined here once.
+        while (true) {
+            level = levelAt(frame + length)
+            travel = depth * (if (level > fromLevel) level - fromLevel else fromLevel - level)
+
+            if (!(travel > FILTER_ENV_KNOT_SEMITONES) || length <= 1) {
+                break
+            }
+
+            length /= 2
+        }
+
+        lastLength = length
+        lastTravel = travel
+        aimedGate = ctx.gateEndFrame
+        knotFrame = frame + length
+        knotLevel = level
+
+        val cutoff = cutoffAtLevel(level)
+
+        knotCutoffHz = cutoff
+        knotQ = blockQ
+
+        // Flat: the running coefficients ARE [target]'s (an arrival just copied them, and a re-aim sets [runCutoffHz]
+        // to NaN, which equals nothing), so the segment only steps nothing.
+        if (cutoff == runCutoffHz && blockQ == runQ) {
+            stepA1 = 0.0; stepA2 = 0.0; stepA3 = 0.0; stepK = 0.0; stepG = 0.0
+
+            return
+        }
+
+        computeSvfCoeffs(cutoffHz = cutoff, q = blockQ, sampleRate = ctx.sampleRate.toDouble(), out = target)
+
+        val inv = 1.0 / length
+
+        stepA1 = (target.a1 - runA1) * inv
+        stepA2 = (target.a2 - runA2) * inv
+        stepA3 = (target.a3 - runA3) * inv
+        stepK = (target.k - runK) * inv
+        stepG = (target.g - runG) * inv
+    }
+
+    /**
+     * The sample loops over `[from, to)`: the running coefficients from the node's fields, each stepped after every
+     * sample, written back at the end. Mode is fixed for the lifetime of this Ignitor, so it branches once per call, not
+     * per sample; LOWPASS/HIGHPASS additionally branch on the block's analog drive, to switch between the linear
+     * closed-form math and the analog-style state-dependent damping path (per-sample diode-pair polynomial plus an
+     * explicit-feedback solve).
+     *
+     * A method of its own, with no double argument (see [aimFrom]): the envelope path calls it once per segment, the
+     * static path once per block.
+     *
+     * The saturated branch, in its own words (moved here from the retired strip `SvfLPF`, phase 3 step 9):
+     *  - Convention conversion, why the factor of 2: the OB-X-style filter parameterises
+     *    resonance with `R`, where `2R` corresponds to our `k` (damping vs. inverse quality
+     *    factor). A feedback term `2 * (R + tCfb)` therefore maps onto our `k + 2 * tCfb`,
+     *    hence `kEff = k + 2 * driveScale * tCfb`.
+     *  - Why it works where tanh failed: the signal stays linear and only the DAMPING grows
+     *    with the state, so the resonance compresses and the filter stays bounded. A tanh
+     *    capping the feedback signal does the opposite (less damping, runaway). The failed
+     *    attempts are recorded in `audio/ref/memory-history.md`, "Filter Saturation Dead-End".
+     */
+    private fun runSegment(input: AudioBuffer, buffer: AudioBuffer, from: Int, to: Int) {
+        var a1 = runA1
+        var a2 = runA2
+        var a3 = runA3
+        var k = runK
+        var g = runG
+        val a1Step = stepA1
+        val a2Step = stepA2
+        val a3Step = stepA3
+        val kStep = stepK
+        val gStep = stepG
+        val saturate = blockSaturate
+        val driveScale = blockDriveScale
+
+        when (mode) {
+            SvfMode.LOWPASS -> {
+                if (saturate) {
+                    for (i in from until to) {
+                        val v0 = input[i]
+                        val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
+                        val kRaw = k + 2.0 * driveScale * tCfb
+                        // Never NEGATIVE damping (audit N1): the polynomial dips under 1 for a state between about
+                        // -3.1 and 0, which at q times analog over about 590 made the loop oscillate for good near
+                        // fs/3. Floored at 0, bit-identical wherever the damping is positive (all ordinary settings).
+                        // NaN-guard: a NaN reads as 0 here, the state's flush catches it below.
+                        val kEff = if (kRaw > 0.0) kRaw else 0.0
+                        val kPlusG = kEff + g
+                        val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
+                        val vBp = g * vHp + ic1eq
+                        val vLp = g * vBp + ic2eq
+                        ic1eq = (2.0 * vBp - ic1eq).flushState()
+                        ic2eq = (2.0 * vLp - ic2eq).flushState()
+                        buffer[i] = vLp
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                    }
+                } else {
+                    for (i in from until to) {
+                        val v0 = input[i]
+                        val v3 = v0 - ic2eq
+                        val v1 = a1 * ic1eq + a2 * v3
+                        val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                        ic1eq = (2.0 * v1 - ic1eq).flushState()
+                        ic2eq = (2.0 * v2 - ic2eq).flushState()
+                        buffer[i] = v2
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                    }
+                }
+            }
+
+            SvfMode.HIGHPASS -> {
+                if (saturate) {
+                    for (i in from until to) {
+                        val v0 = input[i]
+                        val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
+                        val kRaw = k + 2.0 * driveScale * tCfb
+                        // Never NEGATIVE damping (audit N1): the polynomial dips under 1 for a state between about
+                        // -3.1 and 0, which at q times analog over about 590 made the loop oscillate for good near
+                        // fs/3. Floored at 0, bit-identical wherever the damping is positive (all ordinary settings).
+                        // NaN-guard: a NaN reads as 0 here, the state's flush catches it below.
+                        val kEff = if (kRaw > 0.0) kRaw else 0.0
+                        val kPlusG = kEff + g
+                        val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
+                        val vBp = g * vHp + ic1eq
+                        val vLp = g * vBp + ic2eq
+                        ic1eq = (2.0 * vBp - ic1eq).flushState()
+                        ic2eq = (2.0 * vLp - ic2eq).flushState()
+                        buffer[i] = vHp
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                    }
+                } else {
+                    for (i in from until to) {
+                        val v0 = input[i]
+                        val v3 = v0 - ic2eq
+                        val v1 = a1 * ic1eq + a2 * v3
+                        val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                        ic1eq = (2.0 * v1 - ic1eq).flushState()
+                        ic2eq = (2.0 * v2 - ic2eq).flushState()
+                        buffer[i] = v0 - k * v1 - v2
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                    }
+                }
+            }
+
+            SvfMode.BANDPASS -> {
+                // C2 (filter unification): k * v1 = unity peak at fc (k = 1/clampedQ):
+                // q is a pure width control, matching the `ResonatorBank` bands and the fused EqCore
+                // BANDPASS arm bit-for-bit. Between two knots of one q, kStep is exactly 0.
+                for (i in from until to) {
+                    val v0 = input[i]
+                    val v3 = v0 - ic2eq
+                    val v1 = a1 * ic1eq + a2 * v3
+                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                    ic1eq = (2.0 * v1 - ic1eq).flushState()
+                    ic2eq = (2.0 * v2 - ic2eq).flushState()
+                    buffer[i] = k * v1
+                    a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                }
+            }
+
+            SvfMode.NOTCH -> {
+                for (i in from until to) {
+                    val v0 = input[i]
+                    val v3 = v0 - ic2eq
+                    val v1 = a1 * ic1eq + a2 * v3
+                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                    ic1eq = (2.0 * v1 - ic1eq).flushState()
+                    ic2eq = (2.0 * v2 - ic2eq).flushState()
+                    buffer[i] = v0 - k * v1
+                    a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                }
+            }
+        }
+
+        runA1 = a1
+        runA2 = a2
+        runA3 = a3
+        runK = k
+        runG = g
     }
 
     /**
      * The static path's coefficients, at [blockCutoff] times the drift and the tolerance, into [coefs]. A method of
-     * its own, reading the holder, for the reason [prepareEnvelopeSweep] gives (engine follow-up 29): in a voice
+     * its own, reading the holder, for the reason [aimFrom] gives (engine follow-up 29): in a voice
      * with a second SVF, V8 keeps it a call, and it spends its own budget. In a voice with one SVF, V8 inlines it
      * into [generate] (238 bytes of bytecode on the production bundle), and its callees then compete for
      * [generate]'s budget. That is why the `coerceIn` half of the clamps is written out as comparisons
@@ -663,7 +855,7 @@ fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIg
 
 /**
  * Prepares this [EnvelopeCore] for one block of a MODULATION envelope on the Ignitor side: the filter
- * cutoff envelope (`SvfIgnitor`, which reads [EnvelopeCore.at] at the block's two ends) and the FM index
+ * cutoff envelope (`SvfIgnitor`, which reads [EnvelopeCore.at] at its knots) and the FM index
  * envelope (`FmModIgnitor`, which reads it per sample). The level is the core's; each host clamps it to
  * [0, 1], the depth range of both destinations.
  *

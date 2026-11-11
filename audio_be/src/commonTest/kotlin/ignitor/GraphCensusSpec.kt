@@ -14,12 +14,14 @@ import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.childNodes
 import io.peekandpoke.klang.audio_bridge.classic
 import io.peekandpoke.klang.audio_bridge.distort
+import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.highpass
 import io.peekandpoke.klang.audio_bridge.ign
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.mul
 import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
+import io.peekandpoke.klang.audio_bridge.shape
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.withChildNodes
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
@@ -136,7 +138,7 @@ class GraphCensusSpec : StringSpec({
         }
     }
 
-    "an oversampler's round trip and a shaper: upsample, decimation stages, copy back; the shaper loop, blocker and cap" {
+    "an oversampler's round trip and a shaper: upsample, decimation stages, copy back; the shaper loop, blocker and copy out" {
         // The IIR half-band round trip at 4x, what a region counts (2026-10-10): the first stage up reads one and
         // writes two, the second moves its two inputs (read and write), reads them and writes four; down, each output
         // reads two and writes one (2 at the second stage, 1 at the first); the copy back two.
@@ -147,12 +149,18 @@ class GraphCensusSpec : StringSpec({
         GraphCensus.oversampleBytes(4) shouldBe 2 * 2 * (8 + 6) * 8
         GraphCensus.oversampleBytes(1) shouldBe 0
 
-        // distort(0.5, soft) lowers to Drive then Shape: the drive is one pass in place, the shaper loop, the DC
-        // blocker and the soft cap in place.
-        val census = GraphCensus.of(saw.distort(amount = 0.5.ign, shape = "soft"))
+        // drive(0.5).shape(soft) lowers to Drive then Shape: the drive is one pass in place, the shaper loop, the DC
+        // blocker and the copy out in place.
+        val census = GraphCensus.of(saw.drive(amount = 0.5.ign).shape(shape = "soft"))
 
         census.passes shouldBe 3
         census.traffic shouldBe 1 + 2 + (2 + 2 + 2)
+
+        // The distort door is the fused node since KLANG-00432, L4-05: one stage, the drive in the shaper loop.
+        val door = GraphCensus.of(saw.distort(amount = 0.5.ign, shape = "soft"))
+
+        door.passes shouldBe 2
+        door.traffic shouldBe 1 + (2 + 2 + 2)
     }
 
     "the fused Distort node is ONE stage: the drive rides in the shaper loop, a copy out replaces the cap" {
