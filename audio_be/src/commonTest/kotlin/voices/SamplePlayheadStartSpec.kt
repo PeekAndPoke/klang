@@ -175,11 +175,19 @@ class SamplePlayheadStartSpec : StringSpec({
         val out = render(meta, freqHz = 275.0)
 
         // The SF2 definition of a loop is a CONTINUOUS phase that wraps modulo the loop length.
-        // On a ramp PCM, linear interpolation of position x is exactly x / (pcmSize - 1).
+        // On a ramp PCM, the cubic read of position x is exactly x / (pcmSize - 1) where its four frames lie on the
+        // ramp. Frame 1870 sits on the first wrap, at 2205.5, where the read reaches back across the seam to the loop's
+        // last frame (KLANG-00430, L3-14): the four frames there are 2336, 2205, 2206 and 2207, weighed -1, 9, 9, -1
+        // sixteenths. A dropped overshoot reads 2205.0 there, and every later frame off by half a frame.
         var ph = 0.0
         for (k in 0 until 30 * blockFrames) {
             if (ph >= tinyLoopEnd) ph = loopStartFrame + (ph - loopStartFrame) % 132.0
-            if (k in listOf(1870, 1871, 2000, 2500, 3500)) {
+            if (k == 1870) {
+                val seam = (-(tinyLoopEnd - 1.0) + 9.0 * loopStartFrame + 9.0 * (loopStartFrame + 1.0) - (loopStartFrame + 2.0)) / 16.0
+
+                withClue("frame $k, playhead $ph, across the seam") { out[k] shouldBe (seam / (pcmSize - 1)).plusOrMinus(1e-9) }
+            }
+            if (k in listOf(1871, 2000, 2500, 3500)) {
                 withClue("frame $k, playhead $ph") { out[k] shouldBe (ph / (pcmSize - 1)).plusOrMinus(1e-9) }
             }
             ph += 1.25

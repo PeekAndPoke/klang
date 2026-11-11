@@ -146,7 +146,7 @@ fun aliasingSourceCases(pitch: Double): List<AliasingCase> = buildList {
     }
 
     // The sample playhead plays a sine sample whose own pitch is pitch / rate, so the voice sounds at the pitch.
-    for ((knobs, rate) in listOf("rate=1" to 1.0, "rate=2^(1/12), linear interpolation" to 2.0.pow(1.0 / 12.0))) {
+    for ((knobs, rate) in listOf("rate=1" to 1.0, "rate=2^(1/12), cubic interpolation" to 2.0.pow(1.0 / 12.0))) {
         val pcm = probeSine(hz = pitch / rate, amplitude = ALIASING_SINE_LEVEL, frames = caseConfig.framesNeeded * 2)
 
         add(

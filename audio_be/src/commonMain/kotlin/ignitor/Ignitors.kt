@@ -881,9 +881,12 @@ object Ignitors {
     /**
      * The single mono oscillator behind saw / ramp / square / pulse / triangle (and the raw
      * zaw / zamp / pulze). A `±1` piecewise-linear [waveTrapezoid] in a [WaveVoiceState], finite-slope
-     * edges (no PolyBLEP). [kind] picks the shape config (SAW = rise + finite flyback; PULSE = min-flank
+     * edges. [kind] picks the shape config (SAW = rise + finite flyback; PULSE = min-flank
      * rise/fall around a high plateau of width [duty]). [polarity] negates for ramp/zamp. [flankSamples]
      * is the edge length in samples (`0` = raw / instant / aliased). [duty] may be audio-rate (PWM).
+     * [bandLimit] reads the shape through a box one sample's increment wide ([waveTrapezoidBoxed], audit finding
+     * L3-02): on for the saw, the ramp and the rounded pulse; off for the triangle (its aliasing is accepted by name,
+     * `audio-constraints.md`), the raw variants and the tremolo's LFO, which then render the plain shape bit for bit.
      */
     private class WaveIgnitor(
         private val freq: Ignitor,
@@ -899,8 +902,12 @@ object Ignitors {
         // separate SAW (Saw/Ramp expose shapeMax) from PULSE (Pulze/Tri don't).
         private val shapeMax: Double = SAW_SHAPE_MAX,
         private val phaseIn: PhaseOffset? = null,
+        bandLimit: Boolean,
     ) : Ignitor {
         private val voice = WaveVoiceState()
+
+        /** The half box per unit of increment: 0.5 when band-limited, 0 for the plain shape (see [waveTrapezoidBoxed]). */
+        private val boxScale: Double = if (bandLimit) 0.5 else 0.0
 
         /**
          * The drift lane, built with the node when `analog` may be above 0 ([mayDrift]); seeded and handed to [voice] at
@@ -1019,6 +1026,8 @@ object Ignitors {
                         dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                     }
 
+                    val boxed = boxScale != 0.0
+
                     for (i in off until end) {
                         val d = dutyBuf[i]
 
@@ -1026,14 +1035,24 @@ object Ignitors {
                             lastDuty = d; voice.setPulseShape(duty = d, riseFlank = riseFlank, fallFlank = fallFlank, floor = floor)
                         }
 
-                        buffer[i] = pol * waveTrapezoid(
-                            p = phase, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
-                        )
-
                         var inc = dt * m
 
                         if (pm != null) {
                             inc *= pm[i]
+                        }
+
+                        buffer[i] = pol * if (boxed) {
+                            var half = boxScale * abs(inc)
+
+                            if (half > TRAPEZOID_BOX_HALF_MAX) {
+                                half = TRAPEZOID_BOX_HALF_MAX
+                            }
+
+                            waveTrapezoidBoxed(
+                                p = phase, half = half, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
+                            )
+                        } else {
+                            waveTrapezoid(p = phase, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope)
                         }
 
                         m += dm
@@ -1071,13 +1090,27 @@ object Ignitors {
             val riseSlope = voice.riseSlope
             val fallSlope = voice.fallSlope
 
-            for (i in off until end) {
-                buffer[i] = pol * waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
+            val scale = boxScale
+            val boxed = scale != 0.0
 
+            for (i in off until end) {
                 var inc = dt * m
 
                 if (pm != null) {
                     inc *= pm[i]
+                }
+
+                buffer[i] = pol * if (boxed) {
+                    // The box is the sample's own step (see waveTrapezoidBoxed); a NaN step gives a NaN half, read as the plain shape.
+                    var half = scale * abs(inc)
+
+                    if (half > TRAPEZOID_BOX_HALF_MAX) {
+                        half = TRAPEZOID_BOX_HALF_MAX
+                    }
+
+                    waveTrapezoidBoxed(p = phase, half = half, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
+                } else {
+                    waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
                 }
 
                 m += dm
@@ -1118,6 +1151,8 @@ object Ignitors {
                     dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
                 }
 
+                val boxed = boxScale != 0.0
+
                 for (i in off until end) {
                     if (dutyBuf != null) {
                         val d = dutyBuf[i]
@@ -1133,14 +1168,25 @@ object Ignitors {
                         p -= 1.0
                     }
 
-                    buffer[i] = pol * waveTrapezoid(
-                        p = p, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
-                    )
-
                     var inc = dt * m
 
                     if (pm != null) {
                         inc *= pm[i]
+                    }
+
+                    buffer[i] = pol * if (boxed) {
+                        // The box is the accumulator's step; a moving offset's own motion is not counted in it.
+                        var half = boxScale * abs(inc)
+
+                        if (half > TRAPEZOID_BOX_HALF_MAX) {
+                            half = TRAPEZOID_BOX_HALF_MAX
+                        }
+
+                        waveTrapezoidBoxed(
+                            p = p, half = half, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope,
+                        )
+                    } else {
+                        waveTrapezoid(p = p, riseEnd = voice.riseEnd, highEnd = voice.highEnd, fallEnd = voice.fallEnd, riseSlope = voice.riseSlope, fallSlope = voice.fallSlope)
                     }
 
                     m += dm
@@ -1154,9 +1200,11 @@ object Ignitors {
     }
 
     /**
-     * Sawtooth: rise then a finite flyback ([SAW_RESET_SAMPLES] samples; no PolyBLEP, softens with
-     * pitch). Single-voice form of the shape shared with [superSaw]. Per-voice analog drift via [analog].
+     * Sawtooth: rise then a finite flyback ([SAW_RESET_SAMPLES] samples, softens with pitch), read through a box one
+     * sample's increment wide ([waveTrapezoidBoxed]; the default flyback through it is the two-point PolyBLEP's
+     * kernel). Single-voice form of the shape shared with [superSaw]. Per-voice analog drift via [analog].
      * Phase 0 is -1, the bottom of the rise (the flyback ends the cycle); [phase] (null: none) see [PhaseOffset].
+     * [bandLimit] false renders the plain shape (the tremolo's LFO, whose long edge needs no box).
      */
     fun saw(
         freq: Ignitor = FreqIgnitor,
@@ -1164,21 +1212,26 @@ object Ignitors {
         resetSamples: Double = SAW_RESET_SAMPLES,
         shapeMax: Double = SAW_SHAPE_MAX,
         phase: Ignitor? = null,
+        bandLimit: Boolean = true,
     ): Ignitor = WaveIgnitor(
         freq = freq, analog = analog, kind = WaveKind.SAW, polarity = 1.0, flankSamples = resetSamples, shapeMax = shapeMax,
-        phaseIn = phase?.let { PhaseOffset(it) },
+        phaseIn = phase?.let { PhaseOffset(it) }, bandLimit = bandLimit,
     )
 
-    /** Reverse sawtooth: the negated [saw] (own `RAMP_RESET_SAMPLES` flyback knob). Phase 0 is +1, the top of the fall. */
+    /**
+     * Reverse sawtooth: the negated [saw] (own `RAMP_RESET_SAMPLES` flyback knob, the same box). Phase 0 is +1, the top
+     * of the fall. [bandLimit] as on [saw].
+     */
     fun ramp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
         resetSamples: Double = RAMP_RESET_SAMPLES,
         shapeMax: Double = RAMP_SHAPE_MAX,
         phase: Ignitor? = null,
+        bandLimit: Boolean = true,
     ): Ignitor = WaveIgnitor(
         freq = freq, analog = analog, kind = WaveKind.SAW, polarity = -1.0, flankSamples = resetSamples, shapeMax = shapeMax,
-        phaseIn = phase?.let { PhaseOffset(it) },
+        phaseIn = phase?.let { PhaseOffset(it) }, bandLimit = bandLimit,
     )
 
     /** Square wave — a 50%-duty [pulze] (Kotlin convenience; the DSL drives `duty` via an Ignitor slot). */
@@ -1195,7 +1248,7 @@ object Ignitors {
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
         freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
-        duty = ConstantIgnitor(0.5), riseFlank = 1.0, fallFlank = 1.0, phaseIn = phase?.let { PhaseOffset(it) },
+        duty = ConstantIgnitor(0.5), riseFlank = 1.0, fallFlank = 1.0, phaseIn = phase?.let { PhaseOffset(it) }, bandLimit = false,
     )
 
     /** White noise generator. Flat spectrum with equal energy at all frequencies. */
@@ -1245,7 +1298,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = 1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = 1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) }, bandLimit = false,
     )
 
     /** Raw ramp ("zamp"): the negated [zawtooth] (naive reverse saw, no anti-aliasing). Phase 0 is +1. */
@@ -1254,7 +1307,7 @@ object Ignitors {
         analog: Ignitor = analogDefault,
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
-        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = -1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) },
+        freq = freq, analog = analog, kind = WaveKind.SAW, polarity = -1.0, flankSamples = 0.0, phaseIn = phase?.let { PhaseOffset(it) }, bandLimit = false,
     )
 
     /**
@@ -1269,7 +1322,7 @@ object Ignitors {
         phase: Ignitor? = null,
     ): Ignitor = WaveIgnitor(
         freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = 0.0,
-        duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, phaseIn = phase?.let { PhaseOffset(it) },
+        duty = duty, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, phaseIn = phase?.let { PhaseOffset(it) }, bandLimit = false,
     )
 
     /**
@@ -1277,6 +1330,16 @@ object Ignitors {
      * 1. With [phase] (null: none, see [PhaseOffset]) the spike sits where the shifted phase passes 0 going forward,
      * so a start phase of 0.25 spikes first after three quarters of a cycle, and a moving phase moves the spikes
      * (one per forward crossing, a step back of less than half a cycle spikes nothing).
+     *
+     * One rule in every loop: a sample spikes when the phase dropped by more than half a cycle since the last one, a
+     * forward pass through 0. A phase running backwards (a negative frequency, or an FM depth above the note's frequency)
+     * crosses 0 the other way and spikes nothing; the plain loops used to spike on any drop, so a backward phase wrote 1.0
+     * on nearly every sample (audit finding L3-04, KLANG-00430).
+     *
+     * A naive spike train on purpose: one whole sample of 1.0 on the first sample after the wrap, an exact unit impulse
+     * for an exciter (a filter or a comb rings its own impulse response). Not band-limited: about 23 percent of its
+     * power folds back from above Nyquist, -5.3 dB re its harmonics at every pitch (audit finding L3-03, accepted;
+     * the aliasing meter's `impulse` rows), and its level follows the pitch and the sample rate.
      */
     fun impulse(
         freq: Ignitor = FreqIgnitor,
@@ -1335,7 +1398,7 @@ object Ignitors {
 
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
+                        buffer[i] = if (lastPhase - phase > PI) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * m
                         m += dm
@@ -1343,7 +1406,7 @@ object Ignitors {
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
+                        buffer[i] = if (lastPhase - phase > PI) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * phaseMod[i] * m
                         m += dm
@@ -1353,14 +1416,14 @@ object Ignitors {
             } else {
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
+                        buffer[i] = if (lastPhase - phase > PI) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc
                         phase = phase.wrapPhase(TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
+                        buffer[i] = if (lastPhase - phase > PI) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * phaseMod[i]
                         phase = phase.wrapPhase(TWO_PI)
@@ -1396,10 +1459,8 @@ object Ignitors {
         /**
          * The phased loop (a moving `phase` signal): the shifted phase `phase + offset` spikes where it passes 0
          * going forward, read as a drop of more than half a cycle between two samples (a step back of less than
-         * half a cycle spikes nothing). The very first sample spikes only at exactly 0, the unshifted start. Where
-         * the plain loop's rule (any drop spikes) differs: an increment above half a cycle per sample (above
-         * Nyquist) or a backward pitch modulation spike there and not here, so an offset of 0 renders the plain
-         * loop's bits only for a forward increment below Nyquist.
+         * half a cycle spikes nothing), the plain loops' rule. The very first sample spikes only at exactly 0, the
+         * unshifted start; an offset of 0 renders the plain loop's bits.
          */
         private fun renderPhased(
             buffer: AudioBuffer, actualFreq: Double, ctx: IgniteContext, d: AnalogDrift, phaseInc: Double, phaseIn: PhaseOffset,
@@ -1449,9 +1510,10 @@ object Ignitors {
     }
 
     /**
-     * Rounded pulse with variable [duty] cycle (square / pulse), band-limited [WaveIgnitor], PWM-capable. Phase 0
-     * is -1, the foot of the rising edge (rise, the high plateau up to `duty`, fall, the low plateau); [phase]
-     * (null: none) see [PhaseOffset].
+     * Rounded pulse with variable [duty] cycle (square / pulse), PWM-capable: finite flanks of at least
+     * [flankSamples], read through a box one sample's increment wide ([waveTrapezoidBoxed]) when [bandLimit] (false:
+     * the plain shape, the tremolo's LFO). Phase 0 is -1, the foot of the rising edge (rise, the high plateau up to
+     * `duty`, fall, the low plateau); [phase] (null: none) see [PhaseOffset].
      */
     fun pulze(
         freq: Ignitor = FreqIgnitor,
@@ -1461,15 +1523,18 @@ object Ignitors {
         riseFlank: Double = PULSE_RISE_FLANK,
         fallFlank: Double = PULSE_FALL_FLANK,
         phase: Ignitor? = null,
+        bandLimit: Boolean = true,
     ): Ignitor = WaveIgnitor(
         freq = freq, analog = analog, kind = WaveKind.PULSE, polarity = 1.0, flankSamples = flankSamples,
-        duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, phaseIn = phase?.let { PhaseOffset(it) },
+        duty = duty, riseFlank = riseFlank, fallFlank = fallFlank, phaseIn = phase?.let { PhaseOffset(it) }, bandLimit = bandLimit,
     )
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
     /**
      * Brown (random-walk) noise. [leak] is the per-sample white-leak `k` in `out = (out + k·white)/(1+k)`
-     * (read control-rate). `leak = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte.
+     * (read control-rate). `leak = BROWN_LEAK_DEFAULT` reproduces the original `/1.02` walk byte-for-byte. A per-sample
+     * coefficient: the corner follows the device's rate (154 Hz at 48 kHz, 309 at 96; audit finding L3-10, open in
+     * KLANG-00430).
      */
     fun brownNoise(rng: Random, leak: Ignitor = brownLeakDefault): Ignitor = BrownNoiseIgnitor(rng = rng, leak = leak)
 
@@ -1490,7 +1555,10 @@ object Ignitors {
         }
     }
 
-    /** Pink noise (1/f spectrum via Paul Kellet's IIR cascades). */
+    /**
+     * Pink noise (1/f spectrum via Paul Kellet's IIR cascades). Kellet's coefficients are per sample, fitted at 44.1 kHz,
+     * so the 1/f band follows the device's rate (audit finding L3-10, open in KLANG-00430).
+     */
     fun pinkNoise(rng: Random): Ignitor = PinkNoiseIgnitor(rng)
 
     private class PinkNoiseIgnitor(private val rng: Random) : Ignitor {
@@ -1523,7 +1591,11 @@ object Ignitors {
         }
     }
 
-    /** Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. */
+    /**
+     * Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. Periodic: the gradient table has 256
+     * entries, so the walk repeats every 256 lattice units, `256 / (PERLIN_UNITS_PER_SECOND * rate)` seconds (1.78 s at
+     * `rate` 1; audit finding L3-09, open in KLANG-00430). [berlinNoise] has no period.
+     */
     fun perlinNoise(
         rng: Random,
         rate: Ignitor = rateDefault,
@@ -1718,7 +1790,7 @@ object Ignitors {
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
-        resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX,
+        resetSamples = SAW_RESET_SAMPLES, shapeMax = SAW_SHAPE_MAX, bandLimit = true,
     )
 
     /** Super Saw (mono). Alias of [superSawRaw]; the historic pitch-tracking HPF wrapper was removed. */
@@ -1774,7 +1846,9 @@ object Ignitors {
      * development bundle and none after; on the production bundle in 2 of 3 in one sample and 0 of 3 in another; V8
      * allocation pass).
      * The shape knobs are read only by their kind: [resetSamples] and [shapeMax] by SAW, [duty], [riseFlank],
-     * [fallFlank] and [flankSamples] by PULSE; SINE reads none. Voice count is read lazily from the [voices] param;
+     * [fallFlank] and [flankSamples] by PULSE; SINE reads none. `bandLimit` reads each voice's shape through a box of
+     * its own per-sample increment ([waveTrapezoidBoxed], audit finding L3-02): on for supersaw, superramp and
+     * supersquare, off for supertri (the plain triangle). Voice count is read lazily from the [voices] param;
      * detune + shape are cached, recomputed only when freq / voice count / spread change.
      */
     private class UnisonStackIgnitor(
@@ -1808,7 +1882,11 @@ object Ignitors {
         private val riseFlank: Double = 0.0,
         private val fallFlank: Double = 0.0,
         private val flankSamples: Double = 0.0,
+        bandLimit: Boolean = false,
     ) : Ignitor {
+        /** The half box per unit of increment for SAW and PULSE: 0.5 when band-limited ([waveTrapezoidBoxed]), 0 for the plain shape. */
+        private val boxScale: Double = if (bandLimit) 0.5 else 0.0
+
         /** `selection` parsed at build (`"name[:width[:outliers]]"`, see [parsePhasePoolSelection]) when the pool is
          *  on; voices with the pool OFF (the default) never pay the parse, and the render never touches the string. */
         private val parsedSelection: PhasePoolSelectionParsed? = if (phasePool > 0.5) parsePhasePoolSelection(selection) else null
@@ -2034,7 +2112,8 @@ object Ignitors {
         }
 
         /**
-         * Renders voice [n]'s [waveTrapezoid] block: writes the buffer when [first], else accumulates onto it. The drift
+         * Renders voice [n]'s [waveTrapezoid] block (through [waveTrapezoidBoxed] when the stack is band-limited, a
+         * loop-invariant choice): writes the buffer when [first], else accumulates onto it. The drift
          * prologue advances lane [n] right before voice [n] renders, voice by voice in index order. The order inside
          * (the voice's fields and `safeWrap`, then the prologue, then the samples) is the one the loops had before step
          * 11; the other order measured 9 to 11 percent slower on V8 for the sine (review round 1).
@@ -2071,16 +2150,30 @@ object Ignitors {
                 dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
+            val scale = boxScale
+            val boxed = scale != 0.0
+
             for (i in off until end) {
-                val s = waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
                 var inc = dt * m
 
                 if (pm != null) {
                     inc *= pm[i]
                 }
+
+                val s = gain * if (boxed) {
+                    // The box is the voice's own step (see waveTrapezoidBoxed); a NaN step gives a NaN half, read as the plain shape.
+                    var half = scale * abs(inc)
+
+                    if (half > TRAPEZOID_BOX_HALF_MAX) {
+                        half = TRAPEZOID_BOX_HALF_MAX
+                    }
+
+                    waveTrapezoidBoxed(p = phase, half = half, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
+                } else {
+                    waveTrapezoid(p = phase, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
+                }
+
+                buffer[i] = if (first) s else buffer[i] + s
 
                 m += dm
                 phase += inc
@@ -2122,6 +2215,9 @@ object Ignitors {
                 dm = rampStep(from = m, to = drift.blockEnd, frames = end - off)
             }
 
+            val scale = boxScale
+            val boxed = scale != 0.0
+
             for (i in off until end) {
                 var p = phase + offsets[i].wrapToUnitCycle()
 
@@ -2129,15 +2225,25 @@ object Ignitors {
                     p -= 1.0
                 }
 
-                val s = waveTrapezoid(p = p, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope) * gain
-
-                buffer[i] = if (first) s else buffer[i] + s
-
                 var inc = dt * m
 
                 if (pm != null) {
                     inc *= pm[i]
                 }
+
+                val s = gain * if (boxed) {
+                    var half = scale * abs(inc)
+
+                    if (half > TRAPEZOID_BOX_HALF_MAX) {
+                        half = TRAPEZOID_BOX_HALF_MAX
+                    }
+
+                    waveTrapezoidBoxed(p = p, half = half, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
+                } else {
+                    waveTrapezoid(p = p, riseEnd = riseEnd, highEnd = highEnd, fallEnd = fallEnd, riseSlope = riseSlope, fallSlope = fallSlope)
+                }
+
+                buffer[i] = if (first) s else buffer[i] + s
 
                 m += dm
                 phase += inc
@@ -2420,8 +2526,8 @@ object Ignitors {
      * Supersquare: a detuned stack of the finite-slope pulse shape (duty 0.5, mono) on the shared
      * [UnisonStackIgnitor] / super-saw unison engine (center-dominant gains, per-voice drift,
      * centroid-anchored detune; its own `SUPERSQUARE_*` knobs, seeded to the super-saw values). Edges
-     * are finite-slope flanks (no PolyBLEP), like the mono square. Voice count is read lazily from the
-     * [voices] Ignitor param on the first block.
+     * are finite-slope flanks read through a box of each voice's increment, like the mono square. Voice count is read
+     * lazily from the [voices] Ignitor param on the first block.
      */
     fun superSquare(
         freq: Ignitor = FreqIgnitor,
@@ -2455,14 +2561,15 @@ object Ignitors {
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
-        duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+        duty = 0.5, riseFlank = PULSE_RISE_FLANK, fallFlank = PULSE_FALL_FLANK, flankSamples = PULSE_MIN_FLANK_SAMPLES, bandLimit = true,
     )
 
     /**
      * Supertri: a detuned stack of triangles (mono) on the shared [UnisonStackIgnitor] / super-saw
      * unison engine — the pulse shape with fully-open flanks (1.0/1.0, duty 0.5); its own `SUPERTRI_*`
-     * knobs, seeded to the super-saw values. Piecewise linear, inherently band-limited. Voice count is
-     * read lazily from the [voices] Ignitor param on the first block.
+     * knobs, seeded to the super-saw values. Piecewise linear, the plain shape (no box: the triangle's aliasing is
+     * accepted by name, `audio-constraints.md`). Voice count is read lazily from the [voices] Ignitor param on the first
+     * block.
      */
     fun superTri(
         freq: Ignitor = FreqIgnitor,
@@ -2496,7 +2603,7 @@ object Ignitors {
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
-        duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES,
+        duty = 0.5, riseFlank = 1.0, fallFlank = 1.0, flankSamples = PULSE_MIN_FLANK_SAMPLES, bandLimit = false,
     )
 
     /**
@@ -2537,7 +2644,7 @@ object Ignitors {
         phasePool = phasePool, drawTries = drawTries, kMin = kMin, kMax = kMax,
         poolSize = poolSize, refreshEvery = refreshEvery, selection = selection, warmup = warmup,
         phasePools = phasePools, cylinder = cylinder, phaseIn = phase?.let { PhaseOffset(it) }, countsAtBuild = countsAtBuild,
-        resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX,
+        resetSamples = RAMP_RESET_SAMPLES, shapeMax = RAMP_SHAPE_MAX, bandLimit = true,
     )
 
     /**

@@ -71,13 +71,30 @@ interface AudioDecoder {
 - Detects format from magic bytes (WAV: `RIFF`, MP3: `ID3`/`0xFF 0xFB`)
 - WAV: parsed via `javax.sound.sampled.AudioSystem`
 - MP3: decoded via JLayer (`javazoom.jl.decoder`)
-- Converts to mono float PCM, resamples if needed
+- Converts to mono PCM (every channel averaged) and keeps the file's own sample rate: no resampling at decode
 
 ### BrowserAudioDecoder (jsMain)
 
-- Delegates to `AudioContext.decodeAudioData(buffer)` (Web Audio API)
-- Returns first channel as mono PCM
+- Delegates to `decodeAudioData(buffer)` (Web Audio API) on an `OfflineAudioContext(1, 1, 48000)`, so the browser's
+  own resampler converts every file to 48 kHz before the engine sees it (the fallback `AudioContext()` decodes at the
+  device's rate)
+- Averages every channel to mono, as the JVM decoders do (since KLANG-00430; it used to keep the left channel only)
 - Supports all browser-native formats (MP3, WAV, OGG, AAC)
+
+### The two hosts differ in the rate conversion (KLANG-00430, audit finding L9-07)
+
+The channel rule is the same on both hosts (the mean of all channels). The rate conversion is not:
+
+- **Browser**: the file reaches the engine at 48 kHz, converted by the browser's resampler (its quality is the
+  browser's own, not specified by Web Audio). On a 48 kHz engine an untransposed sample then steps by exactly 1.
+- **JVM** (the offline render, the corpus, `RenderWavCommand`): the file keeps its rate, and the playhead converts it
+  with the engine's four-point cubic Lagrange read (`SampleIgnitor`). A 44.1 kHz file's images of a 10 kHz tone read
+  -26 to -31 dB under the tone there (the linear read before KLANG-00430: -20.4); a band-limiting converter would
+  remove them, the four-point read only lowers them.
+
+So an offline render of a sample song is not the browser's sound in the top octaves of a file that is not at the
+engine's rate. Whether to convert at decode on the JVM, or to decode in the browser at the engine's own rate (a browser
+engine not at 48 kHz converts twice today), is open in KLANG-00430, "Decide".
 
 ## UrlCache
 
@@ -134,6 +151,6 @@ data class MonoSamplePcm(
 )
 ```
 
-Stereo samples are downmixed to mono during decoding (L+R averaged).
+Stereo samples are downmixed to mono during decoding (every channel averaged, on both hosts).
 Rate conversion to the engine sample rate is part of the playhead rate `VoiceFactory` computes at voice
 build (the PCM's rate over the engine's, times pitch and speed); `SampleIgnitor` steps the playhead by it.

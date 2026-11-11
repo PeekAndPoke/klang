@@ -274,6 +274,7 @@ fun measureAliasing(
     var fundamental = 0.0
     var harmonic = 0.0
     var other = 0.0
+    var otherBelow5k = 0.0
     var dc = 0.0
     var strongest = -1
 
@@ -284,6 +285,10 @@ fun measureAliasing(
             BIN_DC -> dc += meanSquare[k]
             else -> {
                 other += meanSquare[k]
+
+                if (k * binHz < ALIASING_AUDIBLE_BAND_HZ) {
+                    otherBelow5k += meanSquare[k]
+                }
 
                 if (strongest < 0 || power[k] > power[strongest]) {
                     strongest = k
@@ -313,11 +318,15 @@ fun measureAliasing(
         nonHarmonicDb = db(other / fundamental),
         nonHarmonicReHarmonicsDb = db(other / (fundamental + harmonic)),
         nonHarmonicDbfs = db(2.0 * other),
+        nonHarmonicBelow5kDb = db(otherBelow5k / fundamental),
         strongestHz = if (strongest >= 0) refinedBin(power, strongest) * binHz else Double.NaN,
         strongestDb = db(strongestPower / fundamental),
         dcDbfs = db(dc),
     )
 }
+
+/** The band [AliasingReading.nonHarmonicBelow5kDb] sums: non-harmonic energy below 5 kHz, where an alias is heard. */
+const val ALIASING_AUDIBLE_BAND_HZ: Double = 5000.0
 
 /** [frames] rounded up to whole [PROBE_BLOCK_FRAMES] blocks. */
 fun wholeProbeBlocks(frames: Int): Int = ((frames + PROBE_BLOCK_FRAMES - 1) / PROBE_BLOCK_FRAMES) * PROBE_BLOCK_FRAMES

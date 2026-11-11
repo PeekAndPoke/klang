@@ -104,6 +104,11 @@ A sample voice runs the sample instrument (`IgnitorRegistry.SAMPLE_INSTRUMENT`, 
 Its playback slots are `begin`, `end`, `speed` and `loop` (`IgnitorDsl.Slots.sample`), read where the
 playhead is built; a loop region is sprudel's `loop().begin(x).end(y)`. A sample's own envelope
 (`SampleMetadata.adsr`) fills the `adsr.*` slots the pattern left unset (`withSampleEnvelopeDefaults`).
+The playhead reads with a four-point cubic Lagrange kernel (`lagrange4`, KLANG-00430, audit L3-05): silence before
+frame 0 and after the last frame, so a one-shot plays its last frame and falls to 0 within one frame; while looping,
+the frames past the loop's end are its start again and, after the first wrap, the frames before its start are its end
+(audit L3-14: a loop over the whole sample used to write a zero at every pass). The rate conversion of a file not at
+the engine's rate is this read on the JVM and the browser's resampler in the browser (`ref/sample-management.md`).
 Cut groups: a new voice in the same `cut` group ends the ones still sounding: each fades over 4 ms from the new
 voice's onset (`Voice.cutOff`, the `Fading` state, `CUT_FADE_SECONDS`). A voice not yet rendered is judged by its
 onset: one that starts before the new voice's onset plays up to it and fades the same way, wherever the block border
@@ -138,13 +143,13 @@ registered in `ignitor/IgnitorDefaults.kt` / `IgnitorRegistry.kt`. (There is no 
 | Family           | Names                                                       | Notes                                                                                                                                                           |
 |------------------|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Sine             | `sine`                                                      | Pure sinusoid (inherently band-limited)                                                                                                                         |
-| Trapezoid shapes | `saw` `ramp` `square` `pulze` `tri`                         | ONE `waveTrapezoid` / `WaveVoiceState` engine (`WaveIgnitor`); finite-slope edges, no PolyBLEP, softens with pitch. `pulze` duty is audio-rate (PWM)            |
+| Trapezoid shapes | `saw` `ramp` `square` `pulze` `tri`                         | ONE `waveTrapezoid` / `WaveVoiceState` engine (`WaveIgnitor`); finite-slope edges, softens with pitch. `pulze` duty is audio-rate (PWM). The saw, ramp and rounded pulse read the shape through a box of the sample's own increment (`waveTrapezoidBoxed`, KLANG-00430, audit L3-02): the saw's one-sample flyback through it is the two-point PolyBLEP's kernel, 22 to 29 dB less aliasing below 5 kHz, and the box follows pitch modulation. The triangle stays the plain shape (its aliasing is accepted), as do the raw shapes and the tremolo's LFO |
 | Raw shapes       | `zaw`/`zawtooth` `zamp`                                     | `flankSamples = 0` → instant / aliased edges                                                                                                                    |
-| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `UnisonStackIgnitor` (a `StackKind` per shape): detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams |
-| Noise            | `noise` `pink` `dust` …                                     | White / pink / impulse noise                                                                                                                                    |
-| Plucked string   | `pluck` `ks` `string` `superpluck`                           | `KarplusString`: a noise burst (its mean taken out) in a delay line, a brightness one-pole and a stiffness allpass in the loop. In tune: the read delay is the period less the filters' phase delay at the note (`loopDelayOf`, KLANG-00426). `pickPosition` sets the burst's length and place |
+| Super (unison)   | `supersaw` `superramp` `supersquare` `supertri` `supersine` | ONE `UnisonStackIgnitor` (a `StackKind` per shape): detuned voice stack, center-dominant gains, per-voice drift, centroid-anchored tuning. `voices` / `freqSpread` / `analog` ignitorParams. Each saw and square voice reads the same box as the mono shape. The gains sum to 1, so more voices are quieter (about 3 dB per doubling), and an even count has no centre voice (audit L3-11, L3-12: open in KLANG-00430) |
+| Noise            | `noise` `pink` `dust` …                                     | White / pink / impulse noise. `perlin` repeats every 256 lattice units (1.78 s at `rate` 1, audit L3-09); white's tilt, brown's leak, pink's filter and crackle's DC pole are per-sample coefficients, so their colour follows the device's rate (audit L3-10); both open in KLANG-00430 |
+| Plucked string   | `pluck` `ks` `string` `superpluck`                           | `KarplusString`: a noise burst (its mean taken out) in a delay line read by a cubic Lagrange interpolation (KLANG-00430, audit L3-07), a brightness one-pole and a stiffness allpass in the loop. In tune: the read delay is the period less the phase delay of the filters and the read at the note (`loopDelayOf`, KLANG-00426). `pickPosition` sets the burst's length and place |
 
-Per-oscillator character constants live in `ignitor/OscillatorTuning.kt`
+Per-oscillator character constants live in `audio_bridge/.../constants/OscillatorTuning.kt`
 (`SAW_*`, `PULSE_*`, `SUPERSAW_*`, `SUPER{RAMP,SQUARE,TRI,SINE}_*`).
 
 ## The pitch nodes and their two laws
@@ -397,6 +402,9 @@ reorders the build changes songs with `analog > 0`.
   drift, a noise layer, any source at `analog > 0` render other dice (the same statistics). Measured on the corpus at
   7b: from -1.0 dB (the frozen Stranger Things, a 9-voice supersaw at `analog(10)` under a 2-bit crush) to -27.7 dB
   diff RMS; a voice without such a consumer is unchanged by it.
+- **Two per-sample drawers in one voice** (white, brown, pink, dust, a pluck's burst) share the stream node after node,
+  block after block, so their samples (not their statistics) depend on where the block borders fall (audit L3-16,
+  accepted in KLANG-00430: the framing probe's "identical at every offset" holds for one such consumer per voice).
 - **Construction-time drawers**: `perlin`, `berlin`, `crackle` and the sample's `AnalogDrift` lane draw in a
   property initialiser; every other source captures the stream and draws when it renders. So build order reaches
   only these, and a gated-off stage (not built, `audio/ref/off-values.md`) also stops its sibling knob subtrees

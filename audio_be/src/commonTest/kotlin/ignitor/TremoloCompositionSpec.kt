@@ -91,7 +91,9 @@ class TremoloCompositionSpec : StringSpec({
     /**
      * The oscillator of [shape] at [rate], built here the way the listening pairs built the composed tremolo:
      * `Ignitor.<shape>(rate, o => ...edges... .analog(0))` (the shape `triangle` is `Ignitor.tri`). Not the engine's own
-     * mapping: a shape that maps to the wrong oscillator there, or a new shape with no oscillator, shows here.
+     * mapping: a shape that maps to the wrong oscillator there, or a new shape with no oscillator, shows here. The edges
+     * are the plain shape, `bandLimit = false`, as the tremolo's LFO is (KLANG-00430): a script's `Ignitor.saw` is read
+     * through a one-sample box, which at an LFO's rate moves only the samples at an edge's corners, by about 1e-3.
      */
     fun oscillator(shape: String, rate: Ignitor, sampleRate: Int): Ignitor {
         val analog = ConstantIgnitor(0.0)
@@ -100,9 +102,9 @@ class TremoloCompositionSpec : StringSpec({
         return when (shape) {
             "sine" -> Ignitors.sine(freq = rate, analog = analog)
             "triangle" -> Ignitors.tri(freq = rate, analog = analog)
-            "square" -> Ignitors.pulze(freq = rate, duty = ConstantIgnitor(0.5), analog = analog, flankSamples = edge)
-            "sawtooth" -> Ignitors.saw(freq = rate, analog = analog, resetSamples = edge)
-            "ramp" -> Ignitors.ramp(freq = rate, analog = analog, resetSamples = edge)
+            "square" -> Ignitors.pulze(freq = rate, duty = ConstantIgnitor(0.5), analog = analog, flankSamples = edge, bandLimit = false)
+            "sawtooth" -> Ignitors.saw(freq = rate, analog = analog, resetSamples = edge, bandLimit = false)
+            "ramp" -> Ignitors.ramp(freq = rate, analog = analog, resetSamples = edge, bandLimit = false)
             else -> error("a new LFO shape needs its oscillator in this spec: $shape")
         }
     }

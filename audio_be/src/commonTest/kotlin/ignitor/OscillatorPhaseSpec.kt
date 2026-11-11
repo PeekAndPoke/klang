@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -200,38 +201,49 @@ class OscillatorPhaseSpec : StringSpec({
             abs(x[16] - 1.0) shouldBeLessThan 1e-10 // the peak a quarter cycle in
         }
 
-        for ((name, node) in listOf(
-            "sawtooth" to IgnitorDsl.Saw(analog = c(0.0)),
-            "zawtooth" to IgnitorDsl.Zawtooth(analog = c(0.0)),
-        )) {
-            withClue("$name: -1, the bottom of the rise") {
-                val x = first(node)
+        // The band-limited shapes read the corner at phase 0 through their one-sample box (KLANG-00430, audit finding
+        // L3-02): the saw's first sample is -1 plus the box's share of the corner where the flyback meets the rise,
+        // `(riseSlope + fallSlope) * half / 4` with half = dt / 2: 1/4 + dt / (4 (1 - dt)) at dt = 1/64; the square's is
+        // `riseSlope * half / 4` = 1/8 (its two-sample flank). The raw shapes start on -1 and +1 exactly.
+        val dt = 1.0 / 64.0
+        val sawCorner = 0.25 + dt / (4.0 * (1.0 - dt))
 
-                x[0] shouldBe -1.0
-                (x[1] > x[0]) shouldBe true
-            }
+        withClue("sawtooth: -1, the bottom of the rise, read through the box") {
+            val x = first(IgnitorDsl.Saw(analog = c(0.0)))
+
+            x[0] shouldBe (-1.0 + sawCorner plusOrMinus 1e-12)
+            (x[2] > x[1]) shouldBe true
         }
 
-        for ((name, node) in listOf(
-            "ramp" to IgnitorDsl.Ramp(analog = c(0.0)),
-            "zamp" to IgnitorDsl.Zamp(analog = c(0.0)),
-        )) {
-            withClue("$name: +1, the top of the fall") {
-                val x = first(node)
+        withClue("zawtooth: -1, the bottom of the rise") {
+            val x = first(IgnitorDsl.Zawtooth(analog = c(0.0)))
 
-                x[0] shouldBe 1.0
-                (x[1] < x[0]) shouldBe true
-            }
+            x[0] shouldBe -1.0
+            (x[1] > x[0]) shouldBe true
+        }
+
+        withClue("ramp: +1, the top of the fall, read through the box") {
+            val x = first(IgnitorDsl.Ramp(analog = c(0.0)))
+
+            x[0] shouldBe (1.0 - sawCorner plusOrMinus 1e-12)
+            (x[2] < x[1]) shouldBe true
+        }
+
+        withClue("zamp: +1, the top of the fall") {
+            val x = first(IgnitorDsl.Zamp(analog = c(0.0)))
+
+            x[0] shouldBe 1.0
+            (x[1] < x[0]) shouldBe true
         }
 
         for ((name, node) in listOf(
             "square (Pulze)" to IgnitorDsl.Pulze(analog = c(0.0)),
             "square (internal)" to IgnitorDsl.Square(analog = c(0.0)),
         )) {
-            withClue("$name: -1, the foot of the rising edge, then high") {
+            withClue("$name: -1, the foot of the rising edge, read through the box, then high") {
                 val x = first(node)
 
-                x[0] shouldBe -1.0
+                x[0] shouldBe (-0.875 plusOrMinus 1e-12)
                 (x[1] > x[0]) shouldBe true
                 x[8] shouldBe 1.0
                 x[40] shouldBe -1.0

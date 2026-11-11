@@ -56,7 +56,7 @@ internal fun builtInSources(): Map<String, IgnitorDsl> = buildMap {
     put("sawtooth", saw)
     put("saw", saw)
 
-    // Rounded pulse (square / sqr / pulse) — one band-limited pulse with a "duty" Ignitor slot (0.5 = square).
+    // Rounded pulse (square / sqr / pulse): one pulse with finite flanks read through a one-sample box, with a "duty" Ignitor slot (0.5 = square).
     val pulse = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
     put("square", pulse)
     put("sqr", pulse)

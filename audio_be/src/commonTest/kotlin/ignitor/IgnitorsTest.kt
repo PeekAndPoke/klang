@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
@@ -502,6 +503,54 @@ class ExcitersTest : StringSpec({
         val totalImpulses = buf1.count { it == 1.0 } + buf2.count { it == 1.0 }
         // 256 samples at 440Hz ≈ 2.5 cycles ≈ 2-3 impulses
         totalImpulses shouldBeInRange 2..4
+    }
+
+    "impulse - a phase running backwards spikes nothing after its start, in every plain loop (L3-04)" {
+        // A negative increment (a phaseMod of -1, or a negative frequency) runs the phase backwards: it passes 0 the
+        // other way once per cycle and must not spike there. The plain loops spiked on any drop of the phase, so a
+        // backward phase wrote 1.0 on nearly every sample (audit finding L3-04: 4778 of 4800 at 220 Hz). Each row takes
+        // one of the four plain loops: drift on or off, a phaseMod or none. Phase 0 spikes on the first sample, as ever.
+        // The scratch is the engine's 128-frame block, so the drift lane steps at its real rate (at a step rate of 10
+        // per second, one 4410-frame block, the lane's coefficients are not finite and the drift loops stand still).
+        val frames = 4410
+
+        fun ctxOf(phaseMod: Double?): IgniteContext = IgniteContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = sampleRate,
+            gateEndFrame = sampleRate,
+            scratchBuffers = ScratchBuffers(128),
+            random = Random(9),
+        ).apply {
+            updateOffsetAndLength(offset = 0, length = frames)
+            voiceElapsedFrames = 0
+
+            if (phaseMod != null) {
+                this.phaseMod = DoubleArray(frames) { phaseMod }
+            }
+        }
+
+        for (analog in listOf(0.0, 2.0)) {
+            for (byPhaseMod in listOf(true, false)) {
+                val back = AudioBuffer(frames)
+
+                Ignitors.impulse(analog = ConstantIgnitor(analog))
+                    .generate(back, if (byPhaseMod) 440.0 else -440.0, ctxOf(if (byPhaseMod) -1.0 else null))
+
+                withClue("analog $analog, ${if (byPhaseMod) "phaseMod -1" else "frequency -440"}") {
+                    back[0] shouldBe 1.0
+                    back.count { it != 0.0 } shouldBe 1
+                }
+
+                // The same loop forward: one spike per cycle crossed (440 Hz over 0.1 s, about 44).
+                val fwd = AudioBuffer(frames)
+
+                Ignitors.impulse(analog = ConstantIgnitor(analog)).generate(fwd, 440.0, ctxOf(if (byPhaseMod) 1.0 else null))
+
+                withClue("analog $analog forward, ${if (byPhaseMod) "phaseMod 1" else "no phaseMod"}") {
+                    fwd.count { it == 1.0 } shouldBeInRange 43..45
+                }
+            }
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

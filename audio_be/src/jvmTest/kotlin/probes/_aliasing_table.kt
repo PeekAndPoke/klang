@@ -20,6 +20,7 @@ val ALIASING_LEGEND: List<String> = listOf(
     "nonh_dB    every bin outside the harmonic and DC bands, total, re the fundamental: the aliasing",
     "nonh_reH   the same re ALL harmonic bands (the fundamental's included); the number to read where the fundamental is weak",
     "nonh_dBFS  the same as an absolute level",
+    "nonh<5k    the non-harmonic energy below 5 kHz only, re the fundamental: the aliases where they are heard (KLANG-00430)",
     "top_Hz     the strongest non-harmonic component, and top_dB its level re the fundamental",
     "dc_dBFS    the DC band (20 log10 of the DC value); not counted as non-harmonic",
     "note       why a row is a control, by design or not measurable",
@@ -42,7 +43,7 @@ private fun f(x: Double, digits: Int): String = when {
 /** The text table, one row per case in the order given, plain columns padded to their widest cell. */
 fun formatAliasingTable(rows: List<AliasingRow>): String {
     val header = listOf(
-        "family", "stage", "knobs", "pitch", "kind", "f_cents", "fund_dBFS", "harm_dB", "nonh_dB", "nonh_reH", "nonh_dBFS", "top_Hz", "top_dB",
+        "family", "stage", "knobs", "pitch", "kind", "f_cents", "fund_dBFS", "harm_dB", "nonh_dB", "nonh_reH", "nonh_dBFS", "nonh<5k", "top_Hz", "top_dB",
         "dc_dBFS", "note",
     )
     val cells = rows.map { row ->
@@ -63,6 +64,7 @@ fun formatAliasingTable(rows: List<AliasingRow>): String {
             num(r.nonHarmonicDb, 1),
             num(r.nonHarmonicReHarmonicsDb, 1),
             num(r.nonHarmonicDbfs, 1),
+            num(r.nonHarmonicBelow5kDb, 1),
             num(r.strongestHz, 1),
             num(r.strongestDb, 1),
             num(r.dcDbfs, 1),
@@ -107,6 +109,7 @@ fun aliasingJsonRow(row: AliasingRow): Map<String, Any?> {
         "nonHarmonicDb" to r.nonHarmonicDb,
         "nonHarmonicReHarmonicsDb" to r.nonHarmonicReHarmonicsDb,
         "nonHarmonicDbfs" to r.nonHarmonicDbfs,
+        "nonHarmonicBelow5kDb" to r.nonHarmonicBelow5kDb,
         "strongestHz" to r.strongestHz,
         "strongestDb" to r.strongestDb,
         "dcDbfs" to r.dcDbfs,

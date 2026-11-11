@@ -54,6 +54,12 @@ data class AliasingReading(
     val nonHarmonicReHarmonicsDb: Double,
     /** [nonHarmonicDb] as an absolute level, dBFS. */
     val nonHarmonicDbfs: Double,
+    /**
+     * The non-harmonic power that lands below [ALIASING_AUDIBLE_BAND_HZ] (5 kHz), re the fundamental: the aliases where
+     * they are heard. The total ([nonHarmonicDb]) is dominated by the band just under Nyquist and can rank two methods
+     * the wrong way round (audit finding L3-02, KLANG-00430).
+     */
+    val nonHarmonicBelow5kDb: Double,
     /** The strongest bin outside the bands, refined between the bins (NaN when there is none). */
     val strongestHz: Double,
     /** The power within [AliasingConfig.bandBins] of [strongestHz] (outside the bands), re the fundamental. */

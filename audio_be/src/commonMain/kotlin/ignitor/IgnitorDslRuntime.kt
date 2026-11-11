@@ -1150,7 +1150,8 @@ private fun IgnitorDsl.lfoShapeIndexKnob(ignitorParams: KlangMap<Double>?): Int 
  * The tremolo's LFO: the oscillator of the shape at [lfoShapeIndex] (an index into [LfoShapes.names]),
  * running at [rate] with no analog drift. The square, sawtooth and ramp get a soft edge of
  * [TREMOLO_EDGE_SECONDS] (`flankSamples` on the square, `resetSamples` on the other two); the sine and
- * the triangle have no edge. Shielded from pitch modulation: a vibrato on the voice must not move it.
+ * the triangle have no edge. The edges are the plain shape (`bandLimit = false`): an edge thousands of samples long needs
+ * no box, and the LFO stays what it was. Shielded from pitch modulation: a vibrato on the voice must not move it.
  */
 private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Ignitor {
     val analog = ConstantIgnitor(0.0)
@@ -1160,9 +1161,9 @@ private fun tremoloLfo(lfoShapeIndex: Int, rate: Ignitor, sampleRate: Int): Igni
     // every index `indexAt` falls back to.
     val lfo = when (LfoShapes.names[lfoShapeIndex]) {
         "triangle" -> Ignitors.tri(freq = rate, analog = analog)
-        "square" -> Ignitors.pulze(freq = rate, duty = ConstantIgnitor(0.5), analog = analog, flankSamples = edgeSamples)
-        "sawtooth" -> Ignitors.saw(freq = rate, analog = analog, resetSamples = edgeSamples)
-        "ramp" -> Ignitors.ramp(freq = rate, analog = analog, resetSamples = edgeSamples)
+        "square" -> Ignitors.pulze(freq = rate, duty = ConstantIgnitor(0.5), analog = analog, flankSamples = edgeSamples, bandLimit = false)
+        "sawtooth" -> Ignitors.saw(freq = rate, analog = analog, resetSamples = edgeSamples, bandLimit = false)
+        "ramp" -> Ignitors.ramp(freq = rate, analog = analog, resetSamples = edgeSamples, bandLimit = false)
         else -> Ignitors.sine(freq = rate, analog = analog)
     }
 

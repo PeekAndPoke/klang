@@ -244,6 +244,8 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   again only when the pitch, brightness or stiffness moves, taken off after the pitch modulation divides the delay;
   within 1 cent from A1 to C7 wherever the tone has a pitch (`PluckPitchSpec`). The burst is written with its mean taken
   out, so no DC circulates (`PluckDcSpec`). `pickPosition` is still the burst's length and place, not a pick position.
+  The line is read by a cubic Lagrange interpolation (`lagrange4`, KLANG-00430), its delay counted in `loopDelayOf`, so
+  the highs damp nearly alike from note to note (`PluckReadSpec`).
 - **`pregain`** is an ordinary slot (`Param("pregain", 1.0)`) on the source, before every nonlinearity. It changes
   timbre only where a nonlinearity follows; a saturating shaper driven hard makes it inert, on a wavefolder it is
   the fold depth. A `mul` slot's default must be a safe literal: unset is NOT off for `mul`.
@@ -320,7 +322,13 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   the fader. No optimizer (won't implement, maintainer 2026-10-11): one cheap stage costs about 50 ns per block (KLANG-00300 (katalyst arithmetic), D5).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
-  `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields.
+  `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields. The playhead reads with a cubic Lagrange kernel,
+  silence around the PCM, a loop's seam read across both ways (KLANG-00430); both hosts decode to the mean of the
+  channels, but the browser converts the rate at decode and the JVM in this read (`audio/ref/sample-management.md`).
+- **The band-limited trapezoid** (KLANG-00430): the saw, ramp, rounded pulse and their stacks read the shape through a
+  box of the sample's own increment (`waveTrapezoidBoxed`; for the saw's one-sample flyback the two-point PolyBLEP's
+  kernel). The triangle, the raw shapes, the tremolo's LFO and the Katalyst knob LFOs stay the plain `waveTrapezoid`
+  (`bandLimit = false`). The aliasing meter's `nonh<5k` column reads it.
 
 ## Guardrails and traps still in force
 
@@ -455,6 +463,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-10 The sources: the saw and square through a one-sample box, the impulse's backward phase silent, the cubic read for samples and the pluck, a sample's last frame and loop seam, stereo files averaged in the browser: KLANG-00430
 - 2026-11-10 The bus, second pass: `reverb.lowpass` a real cutoff, the compressor smooths the reduction, ducks read every source before any duck writes: KLANG-00428
 - 2026-11-10 The Ignitor build: the fused filter keeps its gate, the name holds the sharing, the shimmer gated, off stages cost their query only, a region's memo does not freeze: KLANG-00429
 - 2026-11-10 The bus: a switch-on and a swap fade the delay's and room's feed in, an O(1) ring reset, an offset cut at a swap, the pad's tail, the phaser under 36 kHz, every cylinder cleaned: KLANG-00428

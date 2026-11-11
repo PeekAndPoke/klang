@@ -190,11 +190,52 @@ class KarplusStringSpec : StringSpec({
         }
     }
 
+    "a read between frames is the cubic Lagrange interpolation of the four frames around it (L3-07)" {
+        // Read delay 100.3 on a plucked line: the read position `wp - 100.3` sits 0.7 past a frame. The oracle is the
+        // Lagrange product formula over the frames base - 1 .. base + 2 of the line as the burst left it (the write-back
+        // lands from index 100 on, ahead of every read here). A linear read misses it by up to the burst's own steps.
+        val s = KarplusString().apply { excite(lineDelay = 100.0, pickPos = 1.0, rng = Random(42)) }
+        val line = s.delayLine.copyOf()
+        val buf = AudioBuffer(128)
+
+        s.render(
+            buffer = buf, from = 0, to = 90, baseDelay = 100.3, phaseMod = null,
+            hasDrift = false, driftStart = 1.0, driftStep = 0.0, loopDelay = 0.0,
+            lpAlpha = KarplusString.lpAlphaOf(0.5), hasStiffness = false,
+            apCoeff = 0.0, feedback = 0.99, gain = 1.0, accumulate = false,
+        )
+
+        for (i in 1 until 90) {
+            val pos = 100 + i - 100.3
+            val base = floor(pos).toInt()
+            val t = pos - base
+            var want = 0.0
+
+            for (k in -1..2) {
+                var w = 1.0
+
+                for (j in -1..2) {
+                    if (j != k) {
+                        w *= (t - j) / (k - j)
+                    }
+                }
+
+                want += w * line[(base + k + line.size) % line.size]
+            }
+
+            withClue("sample $i, read position $pos") {
+                buf[i] shouldBe (want plusOrMinus 1e-12)
+            }
+        }
+    }
+
     "loopDelayOf puts the loop's pole at the note: on the angle of the note, at the radius where the loop gain is 1" {
         // The oracle is the loop's defining condition, solved another way than the engine's fixed point: with the read
-        // delay `period - loopDelay` = M + d, the loop `feedback * H(z) * ((1 - d) + d z^-1) * z^-M` has a pole at
-        // z = r e^(jw) when its gain there is 1 (r found by bisection) and its phase a whole number of turns. The phase
-        // left over, as cents of the pole's angle (the loop's group delay is about one period), must be under 0.2.
+        // delay `period - loopDelay` = M + d, the loop `feedback * H(z) * R(z) * z^-M` has a pole at z = r e^(jw) when its
+        // gain there is 1 (r found by bisection) and its phase a whole number of turns. R is the cubic Lagrange read
+        // (KLANG-00430, L3-07): the weights of the delay 1 + d over taps 0 to 3, taken here from the product formula,
+        // on z^1, z^0, z^-1 and z^-2. The phase left over, as cents of the pole's angle (the loop's group delay is about
+        // one period), must be under 0.2.
         fun residualCents(period: Double, brightness: Double, stiffness: Double, feedback: Double): Double {
             val alpha = KarplusString.lpAlphaOf(brightness)
             val hasStiffness = KarplusString.hasStiffnessOf(stiffness)
@@ -218,8 +259,27 @@ class KarplusStringSpec : StringSpec({
                     phase += atan2(zi, a + zr) - atan2(a * zi, 1.0 + a * zr)
                 }
 
-                logGain += 0.5 * ln((1.0 - d + d * zr).pow(2) + (d * zi).pow(2))
-                phase += atan2(d * zi, 1.0 - d + d * zr)
+                var readRe = 0.0
+                var readIm = 0.0
+
+                for (k in 0..3) {
+                    var h = 1.0
+
+                    for (j in 0..3) {
+                        if (j != k) {
+                            h *= (1.0 + d - j) / (k - j)
+                        }
+                    }
+
+                    // z^-(k - 1) at z = r e^(jw)
+                    val n = k - 1
+
+                    readRe += h * r.pow(-n) * cos(n * w)
+                    readIm -= h * r.pow(-n) * sin(n * w)
+                }
+
+                logGain += 0.5 * ln(readRe * readRe + readIm * readIm)
+                phase += atan2(readIm, readRe)
 
                 return logGain to phase
             }

@@ -42,6 +42,11 @@ private val testRandom = Random(0x5EED)
  * `superSine` re-measured bit-identical, which is what confirms the change was saw-shaped and the
  * rng stream was untouched. The baseline is therefore "the engine as of that retune", and the
  * bypass guarantee it defends is unchanged.
+ *
+ * **Re-captured again, 2026-11-10 (KLANG-00430, audit finding L3-02), a deliberate sound change:** the saw and the
+ * square read their shape through a one-sample box. The `superSaw`, `superRamp` and `superSquare` weighted sums moved
+ * (their first samples did not: no corner within the box at phase 0 there); `superTri` and `superSine` re-measured
+ * within the tolerance, which again confirms the rng stream was untouched.
  */
 class PhasePoolBypassGoldenSpec : StringSpec({
 
@@ -52,18 +57,18 @@ class PhasePoolBypassGoldenSpec : StringSpec({
     // "name|voices|freq" -> (first sample, positionally-weighted sum), stored as the exact raw
     // bits captured on the pre-change engine and decoded via Double.fromBits for the comparison.
     val goldens = mapOf(
-        "superSaw|8|82.4069" to (-4631196170831095938L to 4668984362955846089L),
-        "superSaw|8|440.0" to (-4631681161308006552L to 4657100955607444449L),
-        "superSaw|11|82.4069" to (-4630623069204948262L to 4666261975792702351L),
-        "superSaw|11|440.0" to (-4631103912808725848L to 4651771550479462468L),
-        "superRamp|8|82.4069" to (4592175866023679870L to -4554387673898929719L),
-        "superRamp|8|440.0" to (4591690875546769256L to -4566271081247331359L),
-        "superRamp|11|82.4069" to (4592748967649827546L to -4557110061062073457L),
-        "superRamp|11|440.0" to (4592268124046049960L to -4571600486375313340L),
-        "superSquare|8|82.4069" to (4598315725601515205L to -4550082607452518128L),
-        "superSquare|8|440.0" to (4598315725601515205L to -4563260665614983060L),
-        "superSquare|11|82.4069" to (4591372646541300384L to -4555375934017155196L),
-        "superSquare|11|440.0" to (4591372646541300384L to -4567438291225263336L),
+        "superSaw|8|82.4069" to (-4631196170831095938L to 4668984396877036995L),
+        "superSaw|8|440.0" to (-4631681161308006552L to 4657101885245460962L),
+        "superSaw|11|82.4069" to (-4630623069204948262L to 4666262023376277361L),
+        "superSaw|11|440.0" to (-4631103912808725848L to 4651774688535849880L),
+        "superRamp|8|82.4069" to (4592175866023679870L to -4554387639977738813L),
+        "superRamp|8|440.0" to (4591690875546769256L to -4566270151609314846L),
+        "superRamp|11|82.4069" to (4592748967649827546L to -4557110013478498447L),
+        "superRamp|11|440.0" to (4592268124046049960L to -4571597348318925928L),
+        "superSquare|8|82.4069" to (4598315725601515205L to -4550082605847890138L),
+        "superSquare|8|440.0" to (4598315725601515205L to -4563262010772270884L),
+        "superSquare|11|82.4069" to (4591372646541300384L to -4555375922063291098L),
+        "superSquare|11|440.0" to (4591372646541300384L to -4567438584391825687L),
         "superTri|8|82.4069" to (-4627714646193224951L to -4557692805699273317L),
         "superTri|8|440.0" to (-4627714646193224951L to 4658129254101608967L),
         "superTri|11|82.4069" to (-4632849514720810862L to -4560998030980759210L),

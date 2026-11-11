@@ -41,18 +41,37 @@ class BrowserAudioDecoder : AudioDecoder {
             val audioBuffer = ctx.decodeAudioData(arrayBuffer).await()
 
             // 3. Extract Mono Data
-            if (audioBuffer.numberOfChannels == 0) return null
+            val channels = audioBuffer.numberOfChannels
 
-            // getChannelData returns a Float32Array
-            val pcmFloat32: Float32Array = audioBuffer.getChannelData(0)
+            if (channels == 0) return null
 
-            // 4. Return
-            // The engine's canonical sample type is Double — widen Float32Array → DoubleArray here
+            // 4. Return: every channel averaged, as the JVM decoders do (KLANG-00430, audit findings L3-13 and L9-07:
+            // this used to keep channel 0 only, so a stereo sample was the left side in the browser and the mean of
+            // both offline). The engine's canonical sample type is Double: widen Float32Array to DoubleArray here
             // (Kotlin/JS DoubleArray is backed by Float64Array). One-shot per decoded asset.
-            val asFloatArray = pcmFloat32.unsafeCast<FloatArray>()
+            val first = audioBuffer.getChannelData(0).unsafeCast<FloatArray>()
+            val pcm = DoubleArray(first.size) { first[it].toDouble() }
+
+            for (c in 1 until channels) {
+                val data: Float32Array = audioBuffer.getChannelData(c)
+                val samples = data.unsafeCast<FloatArray>()
+
+                for (i in pcm.indices) {
+                    pcm[i] += samples[i].toDouble()
+                }
+            }
+
+            if (channels > 1) {
+                val scale = 1.0 / channels
+
+                for (i in pcm.indices) {
+                    pcm[i] *= scale
+                }
+            }
+
             MonoSamplePcm(
                 sampleRate = audioBuffer.sampleRate,
-                pcm = DoubleArray(asFloatArray.size) { asFloatArray[it].toDouble() }
+                pcm = pcm,
             )
         } catch (e: Throwable) {
             log.error("Failed to decode audio", e)

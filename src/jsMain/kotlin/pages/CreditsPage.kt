@@ -360,6 +360,9 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         delay at the note is taken out of the delay line, so the pluck plays its note at every brightness
                         and stiffness
                         - **PolyBLEP** (Välimäki et al.) — band-limited oscillator anti-aliasing
+                        - **Lagrange fractional delay** after Timo I. Laakso, Vesa Välimäki, Matti Karjalainen and
+                        Unto K. Laine, *"Splitting the Unit Delay"* (IEEE Signal Processing Magazine, 1996): the
+                        four-point cubic read of the sample playhead and of the plucked string's delay line
                         - **Super-saw** after Adam Szabo's *"How to Emulate the Super Saw"* (Roland JP-8000)
                         - **Chebyshev-polynomial waveshaping** — harmonic distortion
                         - **Padé `tanh` approximation** `x(27+x²)/(27+9x²)` — the public-domain "27/9" fast-tanh

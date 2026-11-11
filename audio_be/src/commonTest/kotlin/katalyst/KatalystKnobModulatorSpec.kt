@@ -39,7 +39,8 @@ import kotlin.random.Random
  * at hand-computed phases; and the Ignitor's own oscillators ([Ignitors]), rendered with the same frequency at the
  * same phase (a phase input set to it), whose first sample is the Ignitor's value there. The Ignitor is built from its
  * factories with their defaults, which are the defaults of the nodes the Ignitor's doors build (`saw`, `ramp`, `tri`,
- * and `square`, which builds a `Pulze`). So a wrong law, a wrong edge or a wrong phase turns a row red, and the
+ * and `square`, which builds a `Pulze`), the edges as the plain shape (`bandLimit = false`: the knob modulators are
+ * LFOs and read no one-sample box, KLANG-00430). So a wrong law, a wrong edge or a wrong phase turns a row red, and the
  * evaluator's law functions are never their own oracle. The noises cannot be set to a position from outside, so their
  * oracle is the Ignitor's walk rendered sample by sample from the same seed.
  *
@@ -111,13 +112,13 @@ class KatalystKnobModulatorSpec : StringSpec({
         Shape(
             name = "saw",
             node = { f, p -> KatalystKnobDsl.Saw(freq = f, phase = p) },
-            ignitor = { f, p -> Ignitors.saw(freq = ConstantIgnitor(f), phase = ConstantIgnitor(p)) },
+            ignitor = { f, p -> Ignitors.saw(freq = ConstantIgnitor(f), phase = ConstantIgnitor(p), bandLimit = false) },
             hand = { p -> handSaw(p) },
         ),
         Shape(
             name = "ramp",
             node = { f, p -> KatalystKnobDsl.Ramp(freq = f, phase = p) },
-            ignitor = { f, p -> Ignitors.ramp(freq = ConstantIgnitor(f), phase = ConstantIgnitor(p)) },
+            ignitor = { f, p -> Ignitors.ramp(freq = ConstantIgnitor(f), phase = ConstantIgnitor(p), bandLimit = false) },
             hand = { p -> -handSaw(p) },
         ),
         Shape(
@@ -130,7 +131,7 @@ class KatalystKnobModulatorSpec : StringSpec({
             name = "square, duty 0.4",
             node = { f, p -> KatalystKnobDsl.Square(freq = f, duty = c(0.4), phase = p) },
             ignitor = { f, p ->
-                Ignitors.pulze(freq = ConstantIgnitor(f), duty = ConstantIgnitor(0.4), phase = ConstantIgnitor(p))
+                Ignitors.pulze(freq = ConstantIgnitor(f), duty = ConstantIgnitor(0.4), phase = ConstantIgnitor(p), bandLimit = false)
             },
             hand = { p -> handSquare(p, duty = 0.4) },
         ),

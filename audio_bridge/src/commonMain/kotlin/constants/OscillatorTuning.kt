@@ -34,7 +34,8 @@ package io.peekandpoke.klang.audio_bridge.constants
 // ── Saw shape (single saw + super-saw share one shape) ───────────────────────────────────────────
 
 /** Analog flyback time in samples (constant → a larger fraction of the cycle at higher pitch, so
- *  high notes soften toward a triangle). Lower = brighter / sharper reset. Tune by ear. */
+ *  high notes soften toward a triangle). Lower = brighter / sharper reset. The saw reads its shape through a
+ *  one-sample box, so 1 sample here is the two-point PolyBLEP's kernel (KLANG-00430). Tune by ear. */
 const val SAW_RESET_SAMPLES: Double = 1.0
 
 /** Max flyback fraction of a cycle (`rf = 0.5` → symmetric triangle; keeps very high notes sane). */
@@ -221,12 +222,14 @@ const val SUPERSINE_WARMUP: Double = SUPERSAW_WARMUP
 
 // ── Pulse family (square / pulse / pulze / triangle share one shape) ──────────────────────────────
 // square / pulse / pulze are one pulse oscillator (duty Ignitor slot; 0.5 = square). Each edge is a
-// finite-slope flank (no PolyBLEP — like the saw), as a fraction of its plateau: 0 = sharpest (just
-// the minimum floor below), 1 = full ramp. Both flanks = 1 (at duty 0.5) → a triangle (the `tri`
+// finite-slope flank, as a fraction of its plateau: 0 = sharpest (just the minimum floor below), 1 = full
+// ramp; the rounded square and pulse read the shape through a one-sample box like the saw (KLANG-00430). Both flanks = 1 (at duty 0.5) → a triangle (the `tri`
 // factory hardcodes 1.0/1.0).
 
-/** Minimum flank length in **samples** (a floor on every edge, like the saw → edges are never truly
- *  instant, so no PolyBLEP and high notes soften with pitch). Tune by ear. */
+/** Minimum flank length in **samples** (a floor on every edge, like the saw: edges are never truly
+ *  instant and high notes soften with pitch). The rounded pulse reads it through a one-sample box, so the
+ *  edge's kernel is this flank times one sample (2 samples: a trapezoid kernel 3 samples wide; 1 would be the
+ *  two-point PolyBLEP's). Tune by ear. */
 const val PULSE_MIN_FLANK_SAMPLES: Double = 2.0
 
 /** Pulse rising-edge flank fraction of its plateau (0 = sharpest / min floor, 1 = full ramp). */

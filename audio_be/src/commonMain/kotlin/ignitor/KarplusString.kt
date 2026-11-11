@@ -17,8 +17,16 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * One Karplus-Strong string: a delay line excited by a noise burst, read with linear interpolation, its feedback
- * filtered by a brightness one-pole and an optional stiffness allpass, then scaled by the feedback coefficient.
+ * One Karplus-Strong string: a delay line excited by a noise burst, read with a four-point (cubic Lagrange)
+ * interpolation, its feedback filtered by a brightness one-pole and an optional stiffness allpass, then scaled by the
+ * feedback coefficient.
+ *
+ * **The read** (KLANG-00430, audit finding L3-07): the fractional delay sits inside the loop, so its gain is paid on
+ * every trip. A linear read's gain is 1 at a fraction of 0 and `cos(w / 2)` at 0.5 (0.71 at 12 kHz), so two notes 2 Hz
+ * apart rang very differently at brightness 1: one kept its top for seconds, the other lost it in tens of
+ * milliseconds. The cubic Lagrange read ([lagrange4]) is 0.88 at 12 kHz at its worst fraction and 0.99 at 6 kHz; the
+ * note dependence shrinks but stays (a lossless allpass read is the other option, see the ticket). Its delay at the
+ * note is in [loopDelayOf], so the tuning is untouched.
  *
  * **In tune** (KLANG-00426, audit finding L3-01): the loop's period is the line's read delay PLUS the phase delay of the
  * two loop filters (and of the read's interpolation). The nodes take that delay at the note ([loopDelayOf]) out of the
@@ -165,13 +173,28 @@ internal class KarplusString {
 
             dl = (dl - filterDelay).coerceIn(2.0, (len - 1.0))
 
-            // Read with linear interpolation
+            // The cubic read at `wp - dl`: the frames `i0 - 1` to `i0 + 2` round the line. The newest of them is at least
+            // one sample old (`dl` >= 2), except at a whole `dl` of 2, where the frame at `wp` is read with weight 0.
             val readPosF = wp - dl
             val readPosWrapped = if (readPosF < 0) readPosF + len else readPosF
-            val readIdx = readPosWrapped.toInt() % len
-            val frac = readPosWrapped - readPosWrapped.toInt()
-            val nextIdx = (readIdx + 1) % len
-            val sample = line[readIdx] + (line[nextIdx] - line[readIdx]) * frac
+            val whole = readPosWrapped.toInt()
+            // A position a hair under 0 wraps to `len` itself in floating point: that is frame 0.
+            val i0 = if (whole >= len) whole - len else whole
+            val frac = readPosWrapped - whole
+            val im1 = if (i0 == 0) len - 1 else i0 - 1
+            var i1 = i0 + 1
+
+            if (i1 >= len) {
+                i1 -= len
+            }
+
+            var i2 = i1 + 1
+
+            if (i2 >= len) {
+                i2 -= len
+            }
+
+            val sample = lagrange4(t = frac, xm1 = line[im1], x0 = line[i0], x1 = line[i1], x2 = line[i2])
 
             // One-pole lowpass (brightness)
             lp = (lp + alpha * (sample - lp)).flushState()
@@ -217,9 +240,11 @@ internal class KarplusString {
         /**
          * How much the nodes take off the line's read delay so the string sounds at the frequency whose period is
          * [period] samples (a base delay, [baseDelayOf]): the delay the loop adds besides the line, so that the loop as
-         * a whole has its pole at the note (audit finding L3-01). The loop is the line `z^-M`, its linear read
-         * `(1 - d) + d z^-1` (`M + d` the read delay), the brightness one-pole `alpha / (1 - (1 - alpha) z^-1)`, when
-         * [hasStiffness] the allpass `(a + z^-1) / (1 + a z^-1)` with `a` = [apCoeff], and the gain [feedback].
+         * a whole has its pole at the note (audit finding L3-01). The loop is the line `z^-M`, its cubic Lagrange read
+         * `h0 z + h1 + h2 z^-1 + h3 z^-2`, the Lagrange weights of the delay `1 + d` over taps 0 to 3 (`M + d` the read
+         * delay, [render]'s four frames; KLANG-00430, audit finding L3-07), the brightness one-pole
+         * `alpha / (1 - (1 - alpha) z^-1)`, when [hasStiffness] the allpass `(a + z^-1) / (1 + a z^-1)` with `a` =
+         * [apCoeff], and the gain [feedback].
          *
          * The phase delay at the note on the unit circle (the one-pole's lag `atan2((1 - alpha) sin w, 1 - (1 - alpha)
          * cos w) / w`, the allpass's) is most of it: the one-pole's falls with frequency (at `alpha` 0.01 it is 99
@@ -268,9 +293,21 @@ internal class KarplusString {
                     gainSq *= (numRe * numRe + zi * zi) / (denRe * denRe + denIm * denIm)
                 }
 
-                // The linear read: (1 - frac) + frac z^-1.
-                val inRe = 1.0 - frac + frac * zr
-                val inIm = frac * zi
+                // The cubic Lagrange read: h0 z + h1 + h2 z^-1 + h3 z^-2, the weights of the delay 1 + frac over taps 0 to 3.
+                // z = (1 / rInv) e^(jw), z^-2 = (z^-1)^2.
+                val fm1 = frac - 1.0
+                val fm2 = frac - 2.0
+                val fp1 = frac + 1.0
+                val h0 = -frac * fm1 * fm2 / 6.0
+                val h1 = fp1 * fm1 * fm2 / 2.0
+                val h2 = -fp1 * frac * fm2 / 2.0
+                val h3 = fp1 * frac * fm1 / 6.0
+                val zpr = cosW / rInv
+                val zpi = sinW / rInv
+                val z2r = zr * zr - zi * zi
+                val z2i = 2.0 * zr * zi
+                val inRe = h0 * zpr + h1 + h2 * zr + h3 * z2r
+                val inIm = h0 * zpi + h2 * zi + h3 * z2i
 
                 phase += atan2(inIm, inRe)
                 gainSq *= inRe * inRe + inIm * inIm
