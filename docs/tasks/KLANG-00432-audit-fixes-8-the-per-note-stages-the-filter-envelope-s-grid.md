@@ -1,6 +1,6 @@
 # KLANG-00432: Audit fixes 8: the per-note stages (the filter envelope's grid, fastExp, the doors' soft cap, non-finite samples, the house stage)
 
-> **Status (2026-11-11): IN PROGRESS.** Fix worker started.
+> **Status (2026-11-11): PAUSED.** Landed; eight decisions pending with the maintainer.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -187,3 +187,4 @@ L4-02, L4-08, L4-11, L8-01 and L8-02 stay.
 
 - 2026-11-10: created.
 - 2026-11-11: IN PROGRESS. Fix worker started.
+- 2026-11-11: PAUSED. Landed; eight decisions pending with the maintainer.
