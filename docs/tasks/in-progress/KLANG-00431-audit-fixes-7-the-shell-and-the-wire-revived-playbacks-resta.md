@@ -1,6 +1,6 @@
 # KLANG-00431: Audit fixes 7: the shell and the wire (revived playbacks, restarts, leaks, sample decoding on both platforms, latency, replaceVoices)
 
-> **Status (2026-11-10): DESIGNED.** From the engine audit (KLANG-00420); maintainer, 2026-11-10: fix all findings, sound changes are fine.
+> **Status (2026-11-11): IN PROGRESS.** Fix worker started.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -60,3 +60,4 @@ run with `KLANG_PROBE=audit`), fix it, and turn the reproduction's row into an o
 ## History
 
 - 2026-11-10: created.
+- 2026-11-11: IN PROGRESS. Fix worker started.
