@@ -36,7 +36,8 @@ class JvmAudioBackend(
         dispatcher.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
 
         // Kick off JIT / cache warmup. JVM JIT is warmer than Kotlin/JS but running the same
-        // path keeps behavior consistent across targets (and costs ~21 ms of silence at start).
+        // path keeps behavior consistent across targets (and costs 48 to 219 ms of silence at start: 18 blocks, then up
+        // to 64 more while the shelves are zeroed, audit L9-12).
         // Warmup voices run through the real scheduler/renderer; the limiter + scheduler are
         // reset at the end of the handshake so nothing leaks into real playback.
         val warmup = WarmupRunner(
@@ -72,6 +73,10 @@ class JvmAudioBackend(
 
         line.open(format, bufferBytes)
         line.start()
+
+        // What the line holds is rendered and not heard yet: the UI's clock takes it off the timeline (audit L8-08).
+        // The size the line granted, which may not be the size asked for
+        dispatcher.outputLatencyMs = outputLatencyMs(lineBufferBytes = line.bufferSize, sampleRate = sampleRate)
 
         // Pre-allocate output buffers: the engine's floating-point block, and the line's 16-bit bytes
         val out = StereoBuffer(blockSize)
@@ -145,5 +150,15 @@ class JvmAudioBackend(
             hasLoggedThrow = true
             println("[JvmAudioBackend] $where threw, the backend plays on (logged once): $e")
         }
+    }
+
+    internal companion object {
+        /**
+         * The output latency of the JVM host in ms: the line's buffer, [lineBufferBytes] of 16-bit stereo frames, plus
+         * the house limiter's lookahead, which delays the whole output inside the engine (the browser adds the same
+         * to its own figures, `JsAudioBackend`).
+         */
+        fun outputLatencyMs(lineBufferBytes: Int, sampleRate: Int): Double =
+            lineBufferBytes / 4.0 / sampleRate * 1000.0 + HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * 1000.0
     }
 }

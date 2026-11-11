@@ -9,12 +9,12 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
+import io.peekandpoke.klang.audio_be.renderTimerMs
 import io.peekandpoke.klang.audio_bridge.AudioWorkletProcessor
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.set
-import kotlin.js.Date
 
 @Suppress("NON_EXPORTABLE_TYPE")
 @OptIn(ExperimentalJsExport::class)
@@ -49,8 +49,8 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             commLink = commLink.backend,
-            // Used for performance measurement only
-            performanceTimeMs = { Date.now() },
+            // Used for performance measurement only: the finest clock the scope has (audit L9-16)
+            performanceTimeMs = renderTimerMs(),
         )
 
         fun setBackendStartTime(startTimeSec: Double) = dispatcher.setBackendStartTime(startTimeSec)

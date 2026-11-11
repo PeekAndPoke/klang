@@ -27,6 +27,13 @@ fun IgnitorRegistry.registerDefaults() {
 }
 
 /**
+ * The names of the built-in sounds, lowercase, as [registerDefaults] registers them: the sounds that never need a sample.
+ * The frontend leaves them out of its sample loads, as the engine never asks for a sample of a registered instrument
+ * (audit L9-05).
+ */
+val builtInSoundNames: Set<String> by lazy { builtInSources().keys }
+
+/**
  * The built-in sounds' SOURCES by name (several names share one tree), in registration order: what a
  * built-in is before [IgnitorRegistry.builtInVoice] wraps it in the classic voice. The one list
  * [registerDefaults] registers, and the list a spec renders each built-in against its own raw source from.

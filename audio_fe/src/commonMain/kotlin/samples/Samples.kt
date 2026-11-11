@@ -9,6 +9,12 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
+import io.peekandpoke.klang.common.infra.KlangLock
+import io.peekandpoke.klang.common.infra.withLock
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Registry for resolving and decoding samples.
@@ -158,28 +164,35 @@ class Samples(
         suspend fun getPcm(loader: AssetLoader, decoder: AudioDecoder): MonoSamplePcm?
     }
 
-    private val resolveCache = mutableMapOf<SampleRequest, ResolvedSample?>()
+    /**
+     * Guards the two caches: on the JVM several requests run on several threads at once (the preloader starts one
+     * coroutine per request on the default pool), and on both platforms two requests for one sample meet inside a
+     * suspending load. Each cache holds one [CompletableDeferred] per key, put under the lock by the first caller,
+     * who loads it outside the lock; every later caller awaits that one load (audit L9-13; L9-06: one sample decoded
+     * once, not once per concurrent request).
+     */
+    private val lock = KlangLock()
+
+    private val resolveCache = mutableMapOf<SampleRequest, CompletableDeferred<ResolvedSample?>>()
 
     // Keyed by Sample instance identity — avoids duplicate decoding when multiple requests
     // resolve to the same underlying audio (e.g., pitched samples where C4 and D4 both pick C4.mp3)
-    private val pcmCache = mutableMapOf<Sample, MonoSamplePcm?>()
+    private val pcmCache = mutableMapOf<Sample, CompletableDeferred<MonoSamplePcm?>>()
 
     /**
      * Resolve a sample by the given [request].
      */
     suspend fun resolve(request: SampleRequest): ResolvedSample? {
-        return resolveCache.getOrPut(request) { index.resolve(request) }
+        return once(cache = resolveCache, key = request) { index.resolve(request) }
     }
 
     /**
      * Resolves a sample by the given [request] and loads its PCM audio data.
      */
     suspend fun get(request: SampleRequest): LoadedSample? {
-        val resolved = resolveCache.getOrPut(request) {
-            index.resolve(request)
-        } ?: return null
+        val resolved = resolve(request) ?: return null
 
-        val pcm = pcmCache.getOrPut(resolved.sample) {
+        val pcm = once(cache = pcmCache, key = resolved.sample) {
             resolved.sample.getPcm(loader, decoder)
         }
 
@@ -188,5 +201,54 @@ class Samples(
             sample = resolved.sample,
             pcm = pcm,
         )
+    }
+
+    /**
+     * The value of [key] in [cache], loaded by [load] once: the first caller loads, the others await it. A load that
+     * throws or gives null is not kept: its caller gets the throw (or the null), a waiting caller gets it too, and the
+     * next caller loads again. A waiting caller whose loader was cancelled (its coroutine, not this one) loads again
+     * itself.
+     */
+    private suspend fun <K : Any, V> once(
+        cache: MutableMap<K, CompletableDeferred<V>>,
+        key: K,
+        load: suspend () -> V,
+    ): V {
+        while (true) {
+            var mine = false
+            val entry = lock.withLock {
+                cache[key] ?: CompletableDeferred<V>().also {
+                    cache[key] = it
+                    mine = true
+                }
+            }
+
+            if (mine) {
+                try {
+                    val value = load()
+
+                    // A null (not found, a download that failed) is not kept, as before: the next caller tries again
+                    if (value == null) {
+                        lock.withLock { cache.remove(key) }
+                    }
+
+                    entry.complete(value)
+
+                    return value
+                } catch (t: Throwable) {
+                    lock.withLock { cache.remove(key) }
+                    entry.completeExceptionally(t)
+
+                    throw t
+                }
+            }
+
+            try {
+                return entry.await()
+            } catch (e: CancellationException) {
+                // Either this coroutine was cancelled (rethrown here), or the one loading was: then load again
+                currentCoroutineContext().ensureActive()
+            }
+        }
     }
 }

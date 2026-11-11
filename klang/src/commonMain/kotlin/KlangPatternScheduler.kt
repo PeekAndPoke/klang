@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_be.ignitor.builtInSoundNames
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
@@ -20,7 +21,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -163,10 +166,19 @@ internal class KlangPatternScheduler(
         private set
 
     /**
-     * Orders [setGain]'s look at [running] and its send against the start's and the stop's flip of it: a gain sent
-     * while started is on its way before the stop's cleanup is (on the JVM, where they may run on two threads).
+     * Orders every send of this playback against the start's and the stop's flip of [running]: [setGain], the
+     * announces of its inline DSLs, its voices ([sendWhileStarted]) and the stop's `Cleanup`, which the stop sends
+     * under it. A command sent while started is on its way before the stop's cleanup is, and none follows the cleanup
+     * until the next start (on the JVM, where the fetch loop and the stop run on two threads; audit L9-02).
      */
-    private val gainLock = KlangLock()
+    private val sendLock = KlangLock()
+
+    /**
+     * Counts the starts. A fetch loop belongs to the start that launched it and sends only while that start is the
+     * current one ([sendWhileStarted]): a loop the stop cancelled in the middle of a pattern query cannot send its
+     * cycle into the next start either.
+     */
+    private var generation = 0
 
     // ===== Public API =====
     @Suppress("unused")
@@ -178,7 +190,7 @@ internal class KlangPatternScheduler(
      * cleanup, it would create an engine on the backend that nothing ever stops.
      */
     fun setGain(gain: Double, rampSec: Double) {
-        gainLock.withLock {
+        sendLock.withLock {
             this.gain = gain
 
             if (running.get()) {
@@ -198,8 +210,15 @@ internal class KlangPatternScheduler(
         this.pattern = pattern
         // Re-request current cycle to repopulate backend
         resyncCurrentCycle()
-        // Pre-fetch samples for new pattern
-        lookAheadForSampleSounds(queryCursorCycles, sampleSoundLookAheadCycles)
+        // Pre-fetch the new pattern's samples over the whole look-ahead the old one was fetched for (audit N-R4: through
+        // the look-ahead's pointer, which the tick had already moved past this span, it fetched nothing). Not while
+        // stopped (the start preloads) nor driven (the holder loaded every sample before the first block).
+        if (running.get() && !driven) {
+            prefetchSampleSounds(
+                from = queryCursorCycles,
+                to = maxOf(queryCursorCycles + sampleSoundLookAheadCycles, sampleSoundLookAheadPointer),
+            )
+        }
     }
 
     /**
@@ -237,39 +256,65 @@ internal class KlangPatternScheduler(
     }
 
     fun start(options: KlangCyclicPlayback.Options = KlangCyclicPlayback.Options()) {
-        gainLock.withLock {
+        // This start's number, taken inside the lock that flips [running]: read after it, a stop and another start in
+        // between would hand this start the next one's number
+        val started = sendLock.withLock {
             // Atomically transition from stopped to running
             if (!running.compareAndSet(expect = false, update = true)) {
                 // Already running
                 return
             }
 
+            generation++
+
             // The gain kept goes first, at once: one port keeps the order, so the first block that sounds has it.
-            // Sent at 1 too, as the backend may still hold this id's engine at another gain
+            // Sent at 1 too, as the backend may still hold this id's engine at another gain. [begin] sends it once more
+            // right before the first voices, for an engine the backend disposed in between (audit L9-04)
             sendControl(KlangCommLink.Cmd.SetGain(playbackId = playbackId, gain = gain, rampSec = 0.0))
+
+            generation
         }
+
+        // The backend's registry forks die with the engine, which a start after a stop may find disposed: every inline
+        // DSL is announced again for this start (audit L1-03, L9-04)
+        registrar.forgetAnnounced()
 
         onStarted()
 
-        driven = false
-        reset(cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0, lookaheadCycles = options.lookaheadCycles)
-
-        // Start the fetcher job
+        // Start the fetcher job: only while this start is still the current one. A start that was stopped (and perhaps
+        // started again) before it got here launches no loop and touches no state: the loop of the start that is
+        // current is the one [fetcherJob] holds, so the next stop cancels it. Checked under [jobLock], which the stop
+        // takes after its flip, so a stop that comes after the check finds the job set and cancels it
         val prefetchCycles = options.prefetchCycles?.toDouble() ?: 2.0
         jobLock.withLock {
+            if (!isCurrent(started)) {
+                return
+            }
+
+            driven = false
+            reset(cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0, lookaheadCycles = options.lookaheadCycles)
+
             fetcherJob = scope.launch(fetcherDispatcher.limitedParallelism(1)) {
-                runPlayback(this, prefetchCycles)
+                runPlayback(scope = this, prefetchCycles = prefetchCycles, started = started)
             }
         }
     }
 
+    /** True while the start [started] is the current one: started and not stopped or started again since. */
+    private fun isCurrent(started: Int): Boolean = sendLock.withLock { running.get() && started == generation }
+
     fun stop() {
-        gainLock.withLock {
+        sendLock.withLock {
             // Atomically transition from running to stopped
             if (!running.compareAndSet(expect = true, update = false)) {
                 // Already stopped
                 return
             }
+
+            // The cleanup goes out here, under the lock every send of this playback takes: what was sent while started
+            // is ahead of it, and nothing follows it (audit L9-02; it was launched, and a cycle fetched while the stop
+            // ran could follow it and revive the engine for good)
+            sendControl(KlangCommLink.Cmd.Cleanup(playbackId))
         }
 
         // Cancel the fetcher job
@@ -279,9 +324,6 @@ internal class KlangPatternScheduler(
         }
 
         begun = false
-
-        // Send clean up command to backend
-        cleanUpBackend()
 
         // The pattern's work metric is this playback's: closed with it
         runtime?.close()
@@ -329,12 +371,17 @@ internal class KlangPatternScheduler(
     // ===== Private Implementation =====
 
     /**
-     * Cleans up backend state for this playback.
+     * Sends [cmd] only while the start [started] is the current one, ordered by [sendLock] against the stop's flip and
+     * its `Cleanup`: true when it was sent. Every voice the fetch path sends goes through here (audit L9-02, N-R3).
      */
-    private fun cleanUpBackend() {
-        scope.launch(fetcherDispatcher) {
-            sendControl(KlangCommLink.Cmd.Cleanup(playbackId))
+    private fun sendWhileStarted(started: Int, cmd: KlangCommLink.Cmd): Boolean = sendLock.withLock {
+        val current = running.get() && started == generation
+
+        if (current) {
+            sendControl(cmd)
         }
+
+        current
     }
 
     /**
@@ -350,9 +397,7 @@ internal class KlangPatternScheduler(
         }
 
         // Identify unique sample requests (non-oscillator sounds)
-        val sampleRequests = preloadVoices
-            .map { it.data.asSampleRequest() }
-            .toSet()
+        val sampleRequests = sampleRequestsOf(preloadVoices)
 
         if (sampleRequests.isEmpty()) {
             return
@@ -369,12 +414,16 @@ internal class KlangPatternScheduler(
                 deferred.await()
             }
         } catch (e: Exception) {
+            // A stop cancels this loop while it waits: that ends the start here, rethrown (audit N-R3; swallowed, the
+            // start went on and sent its first cycle after the stop). On Kotlin/JS and the JVM a CancellationException
+            // is an Exception, so it is told apart by this coroutine's own state, not by its type: the timeout is one too
+            currentCoroutineContext().ensureActive()
             e.printStackTrace()
             // Continue anyway - samples may have been sent even if ack wasn't received
         }
     }
 
-    private suspend fun runPlayback(scope: CoroutineScope, prefetchCycles: Double) {
+    private suspend fun runPlayback(scope: CoroutineScope, prefetchCycles: Double, started: Int) {
         // ===== WAIT FOR BACKEND WARMUP =====
         // Ensures the audio thread's hot path is JIT'd before the first real voice hits.
         // Completes immediately if the backend already signalled ready earlier in the session.
@@ -388,11 +437,11 @@ internal class KlangPatternScheduler(
         // ===== PRELOAD PHASE =====
         preloadSamples(prefetchCycles)
 
-        begin()
+        begin(started = started)
 
         // The live driver: asks the scheduler every round with the playback clock's time
         while (scope.isActive) {
-            tick(nowSec = elapsedSec())
+            tick(nowSec = elapsedSec(), started = started)
             // roughly 60 FPS
             pause()
         }
@@ -400,29 +449,45 @@ internal class KlangPatternScheduler(
         println("KlangPatternScheduler stopped")
     }
 
-    /** Sets the playback's start, sends its first cycle and says it started: the same live and driven. */
-    private fun begin() {
-        // ===== RECORD START TIME =====
-        // Must be set BEFORE scheduling first cycle so voices have correct playbackStartTime
-        requestedEpochSec = clock.nowSec()
-        epochSec = requestedEpochSec
-        begun = true
+    /**
+     * Sets the playback's start, sends its first cycle and says it started: the same live and driven. Only while the
+     * start [started] is the current one: a stop that came first leaves nothing behind it, no origin, no open metric,
+     * no voice (audit N-R3).
+     */
+    private fun begin(started: Int) {
+        val current = sendLock.withLock {
+            if (!running.get() || started != generation) {
+                return@withLock false
+            }
 
-        // ===== THE PATTERN'S WORK, MEASURED FROM HERE =====
-        runtime?.close()
-        // One line for every playback, under one id: played, stopped and played again it goes on where it stopped, not a
-        // line per play (the maintainer, 2026-10-29: "maybe a single sprudel entry is better and simpler"); two at once
-        // share it, the newer post showing
-        runtime = diagnostics.metric(
-            id = "sprudel",
-            name = "Sprudel runtime",
-            category = "CPU",
-            unit = "%",
-            min = 0.0,
-            max = 100.0,
-        )
-        runtimeSpentMs = 0.0
-        runtimeWindowStartMs = workClock.internalMsNow()
+            // ===== RECORD START TIME =====
+            // Must be set BEFORE scheduling first cycle so voices have correct playbackStartTime
+            requestedEpochSec = clock.nowSec()
+            epochSec = requestedEpochSec
+            begun = true
+
+            // ===== THE PATTERN'S WORK, MEASURED FROM HERE =====
+            runtime?.close()
+            // One line for every playback, under one id: played, stopped and played again it goes on where it stopped,
+            // not a line per play (the maintainer, 2026-10-29: "maybe a single sprudel entry is better and simpler");
+            // two at once share it, the newer post showing
+            runtime = diagnostics.metric(
+                id = "sprudel",
+                name = "Sprudel runtime",
+                category = "CPU",
+                unit = "%",
+                min = 0.0,
+                max = 100.0,
+            )
+            runtimeSpentMs = 0.0
+            runtimeWindowStartMs = workClock.internalMsNow()
+
+            true
+        }
+
+        if (!current) {
+            return
+        }
 
         // ===== SCHEDULE FIRST CYCLE IMMEDIATELY =====
         // Sent as a single batched command so all voices share one nowSec snapshot at the
@@ -433,7 +498,24 @@ internal class KlangPatternScheduler(
             // A first cycle with nothing in it still opens the playback, so the backend starts it now, where it was
             // asked to, not at the first sound (KLANG-00399, step 3c): a silent control event at second 0
             val opening = firstCycleEvents.ifEmpty { listOf(openingEvent()) }
-            sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = opening))
+            // The gain kept, once more, right before the first voices: the start's own SetGain may have reached an engine
+            // the backend disposed before these voices came (a stopped one that went idle during the preload), and the
+            // fresh engine would play at 1 (audit L9-04)
+            val sent = sendLock.withLock {
+                val stillCurrent = running.get() && started == generation
+
+                if (stillCurrent) {
+                    sendControl(KlangCommLink.Cmd.SetGain(playbackId = playbackId, gain = gain, rampSec = 0.0))
+                    sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = opening))
+                }
+
+                stillCurrent
+            }
+
+            if (!sent) {
+                return
+            }
+
             queryCursorCycles = fetchChunk
         } catch (e: Exception) {
             if (driven) {
@@ -453,8 +535,13 @@ internal class KlangPatternScheduler(
      * The offline renderer drives it so, block by block, in lockstep with its backend.
      */
     internal fun startDriven(cyclesPerSecond: Double) {
-        if (!running.compareAndSet(expect = false, update = true)) {
-            return
+        // The flip and this start's number in one lock, as [start] takes them
+        val started = sendLock.withLock {
+            if (!running.compareAndSet(expect = false, update = true)) {
+                return
+            }
+
+            ++generation
         }
 
         onStarted()
@@ -465,7 +552,7 @@ internal class KlangPatternScheduler(
         // The holder loads every sample before the first block: no look-ahead for samples
         sampleSoundLookAheadPointer = Double.POSITIVE_INFINITY
 
-        begin()
+        begin(started = started)
     }
 
     /** The playback's tempo and look-ahead, and its state as at a start. */
@@ -480,17 +567,23 @@ internal class KlangPatternScheduler(
     /**
      * One round at [nowSec], the playback's time (KLANG-00399, choice B): the scheduler keeps no time of its own, it is
      * asked. The live loop asks every 16 ms with the playback clock's time; an offline driver can ask with the
-     * backend's exact position.
+     * backend's exact position. It runs for the start that is current now, its number read under [sendLock]: a holder
+     * that ticks a stopped playback sends nothing.
      */
     internal fun tick(nowSec: Double) {
+        tick(nowSec = nowSec, started = sendLock.withLock { generation })
+    }
+
+    /** [tick] for the start [started]: what it sends goes out only while that start is the current one. */
+    private fun tick(nowSec: Double, started: Int) {
         // Emit completed cycles (stall-safe)
         emitCompletedCycles()
         // Behind now after a stall: skip what has gone by, keep the state it set
-        catchUp(nowSec)
+        catchUp(nowSec = nowSec, started = started)
         // Look ahead for sample sound
         lookAheadForSampleSounds(from = queryCursorCycles + sampleSoundLookAheadCycles, dur = 1.0)
         // Request the next cycles from the source
-        requestNextCyclesAndAdvanceCursor(nowSec)
+        requestNextCyclesAndAdvanceCursor(nowSec = nowSec, started = started)
         // The share of real time the pattern's queries took, now and then
         postRuntime()
     }
@@ -504,7 +597,7 @@ internal class KlangPatternScheduler(
      * times, which have gone by: the backend applies a control event's state even when it comes late, and in time
      * order, so the current cycle's newer state, sent next, still wins. At most [CATCH_UP_MAX_CYCLES] cycles are read.
      */
-    private fun catchUp(nowSec: Double) {
+    private fun catchUp(nowSec: Double, started: Int) {
         val nowCycle = floor(tempo.cycleAt(nowSec))
 
         if (queryCursorCycles >= nowCycle) {
@@ -541,7 +634,7 @@ internal class KlangPatternScheduler(
             return
         }
 
-        sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = controls))
+        sendWhileStarted(started = started, cmd = KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = controls))
     }
 
     /** This event as a control event carrying [data]: it sets state, it sounds no note. */
@@ -658,8 +751,14 @@ internal class KlangPatternScheduler(
         // Announce every inline DSL these events reference BEFORE they are scheduled, so the
         // synthetic names resolve on the backend by the time voices referencing them arrive.
         // The registrar belongs to the playback (it is shared with the realtime path); the
-        // announce-once gate and the sweep itself live there.
-        registrar.announceAll(events)
+        // announce-once gate and the sweep itself live there. Only while started, under the send lock: a
+        // `RegisterIgnitor` after the stop's cleanup would revive the engine for good (audit L9-02); the next start
+        // announces everything again
+        sendLock.withLock {
+            if (running.get()) {
+                registrar.announceAll(events)
+            }
+        }
 
         // Transform to ScheduledVoice: seconds from the playback's start, through the tempo map; the UI's when heard
         val uiOffsetSec = uiOffsetSec()
@@ -724,6 +823,11 @@ internal class KlangPatternScheduler(
 
         sampleSoundLookAheadPointer = to
 
+        prefetchSampleSounds(from = from, to = to)
+    }
+
+    /** Loads the samples of the cycles [from] to [to], without waiting for the backend. */
+    private fun prefetchSampleSounds(from: Double, to: Double) {
         // Lookup events; a cycle whose query fails has no samples to load, and the playback plays on
         val events = try {
             queryEvents(from = from, to = to, sendSignals = false)
@@ -738,9 +842,7 @@ internal class KlangPatternScheduler(
         }
 
         // Get unique sample requests
-        val sampleRequests = events
-            .map { it.data.asSampleRequest() }
-            .toSet()
+        val sampleRequests = sampleRequestsOf(events)
 
         // Use preloader async (fire-and-forget, doesn't wait for backend ack)
         // No signals emitted here since this is lookahead, not initial preload
@@ -748,11 +850,31 @@ internal class KlangPatternScheduler(
     }
 
     /**
+     * The sample requests of [voices]: only the voices whose sound the backend plays as a sample, by the engine's own
+     * rule (`VoiceScheduler.prefetchSampleSound`): not a registered instrument, so no sound (the default instrument), no
+     * built-in sound and no inline instrument this playback announced. Every other voice became a sample request that
+     * was not found, kept for the session in four process-wide maps, one entry per note and per edit of an inline
+     * instrument (audit L9-05).
+     */
+    private fun sampleRequestsOf(voices: List<ScheduledVoice>): Set<SampleRequest> = voices
+        .filter { voice -> playsAsSample(voice.data.sound) }
+        .map { voice -> voice.data.asSampleRequest() }
+        .toSet()
+
+    private fun playsAsSample(sound: String?): Boolean {
+        if (sound == null) {
+            return false
+        }
+
+        return sound.lowercase() !in builtInSoundNames && !registrar.ignitors.isAnnounced(sound)
+    }
+
+    /**
      * The cycle playing now, on the scheduler's clock, through the tempo map.
      */
     private fun getNowCycle(): Double = tempo.cycleAt(elapsedSec())
 
-    private fun requestNextCyclesAndAdvanceCursor(nowSec: Double) {
+    private fun requestNextCyclesAndAdvanceCursor(nowSec: Double, started: Int) {
         // The look-ahead in seconds: its cycles, but never less than LOOKAHEAD_MIN_SEC
         val map = tempo
         val nowCycles = map.cycleAt(nowSec)
@@ -767,8 +889,11 @@ internal class KlangPatternScheduler(
             try {
                 val events = queryEvents(from = from, to = to, sendSignals = true)
 
-                if (events.isNotEmpty()) {
-                    sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = events))
+                val stopped = events.isNotEmpty() &&
+                    !sendWhileStarted(started = started, cmd = KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = events))
+
+                if (stopped) {
+                    return
                 }
 
                 queryCursorCycles = to

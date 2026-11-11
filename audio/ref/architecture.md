@@ -125,7 +125,7 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | `Feedback.SampleReceived`   | `SampleRequest` | confirm a sample was accepted                                           |
 | `Feedback.PlaybackAnchored` | `epochSec`      | where the backend started a playback; its time counts from there        |
 | `Feedback.PlaybackFailed`   | `reason`        | the playback's engine threw; it is out of the render, the others play on |
-| `Feedback.Diagnostics`      | engine stats    | voice count, headroom, and the timeline the frontend's clock runs on    |
+| `Feedback.Diagnostics`      | engine stats    | voice count, headroom, the timeline the frontend's clock runs on, and the output latency the host knows |
 
 **The net** (audit L8-03, L9-01; the `PlaybackEngineDispatcher` KDoc): a throw from one playback's engine, in a block
 or in a command, is caught by the dispatcher. That engine leaves the render and is disposed, `Feedback.PlaybackFailed`
@@ -133,6 +133,16 @@ goes out once (the player logs it), every other playback plays on, and the faile
 its `Cleanup`. Each host has a last catch of its own (the worklet's `process` and message handler, the JVM loop), and
 `JsAudioBackend` listens for `processorerror`, so the audio node never dies of a throw. The offline renderer fails
 loud on a `PlaybackFailed`.
+
+**A playback's life on the wire** (KLANG-00431, audit L9-02, L9-04, L1-03): the backend cannot tell a straggler from
+a restart, so a `ScheduleVoices`, `RegisterIgnitor`, `RegisterKatalyst` or `StartRealtimeVoice` for a stopped id resumes
+its engine, or creates one when it was disposed. The frontend's `KlangPatternScheduler` is the gate: its stop sends the
+`Cleanup` under the lock every send of the playback takes, and nothing of that start goes out after it (a fetch loop
+belongs to its start, `sendWhileStarted`; the announces of inline DSLs only while started). A start sends its gain
+first and once more right before its first voices (the engine its first `SetGain` reached may be disposed during the
+preload), and announces every inline DSL again (the engine's forks die with it). The frontend asks for samples only
+for the voices the engine plays as samples: not a built-in sound (`builtInSoundNames`), not an announced inline
+instrument, not an unset sound.
 
 ## Platform Backends
 

@@ -16,13 +16,25 @@ import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Feedback
 import io.peekandpoke.klang.audio_bridge.wire.decode_SampleRequest
 import io.peekandpoke.klang.audio_bridge.wire.decode_ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl
-import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd
-import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback
-import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest
-import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.wire.encode_KatalystDsl as encodeInRealm_KatalystDsl
+import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Cmd as encodeInRealm_KlangCommLink_Cmd
+import io.peekandpoke.klang.audio_bridge.wire.encode_KlangCommLink_Feedback as encodeInRealm_KlangCommLink_Feedback
+import io.peekandpoke.klang.audio_bridge.wire.encode_SampleRequest as encodeInRealm_SampleRequest
+import io.peekandpoke.klang.audio_bridge.wire.encode_ScheduledVoice as encodeInRealm_ScheduledVoice
 import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.klang.common.infra.toMap
+
+// Every row of this spec crosses the wire the way the worklet's messages do (audit L1-08): encoded, then through
+// `postMessage`'s structured clone, then decoded. A value the encoder passed through as a Kotlin object (a class
+// instance, a Kotlin `Set`, a `KlangMap`) round-tripped in one realm and arrived broken in the worklet, where the clone
+// strips the prototype; the clone in between makes such a row fail here.
+private fun hop(encoded: dynamic): dynamic = js("structuredClone")(encoded)
+
+private fun encode_KatalystDsl(value: KatalystDsl): dynamic = hop(encodeInRealm_KatalystDsl(value))
+private fun encode_KlangCommLink_Cmd(value: KlangCommLink.Cmd): dynamic = hop(encodeInRealm_KlangCommLink_Cmd(value))
+private fun encode_KlangCommLink_Feedback(value: KlangCommLink.Feedback): dynamic = hop(encodeInRealm_KlangCommLink_Feedback(value))
+private fun encode_SampleRequest(value: SampleRequest): dynamic = hop(encodeInRealm_SampleRequest(value))
+private fun encode_ScheduledVoice(value: ScheduledVoice): dynamic = hop(encodeInRealm_ScheduledVoice(value))
 
 /**
  * Round-trip guard for the KSP-generated worklet wire codec (JS-only — the codec uses `dynamic`).
@@ -396,8 +408,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // from -583834474 (`Cmd.ScheduleVoice` and `Cmd.ClearScheduled` left it), and from 1837919315 (`VoiceData.legato`
         // left it: the frontend folds it into the gate time, D6), and from 580783604 (the duck's knob `cylinder` is
         // `cylinder`, KLANG-00418 step 2), and from -209384306 (the duck's `attack` is `release`, KLANG-00417 B1); KLANG-00425
-        // from 591120935 (`Feedback.PlaybackFailed` joined it: the dispatcher's net reports a failed playback).
-        WIRE_SCHEMA_HASH shouldBe -985611466
+        // from 591120935 (`Feedback.PlaybackFailed` joined it: the dispatcher's net reports a failed playback); KLANG-00431
+        // from -985611466 (an enum's entries joined its signature: it crosses as its ordinal, audit L1-07).
+        WIRE_SCHEMA_HASH shouldBe 212461444
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -415,6 +428,7 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Feedback.PlaybackAnchored("pb", epochSec = 1234.5),
             KlangCommLink.Feedback.PlaybackFailed("pb", reason = "render: IllegalArgumentException: fromIndex (100) > toIndex (76)"),
             KlangCommLink.Feedback.RequestSample("pb", SampleRequest(bank = "b", sound = "s", index = 1, note = "c3")),
+            KlangCommLink.Feedback.SampleReceived("pb", SampleRequest(bank = "b", sound = "s", index = 1, note = "c3")),
             KlangCommLink.Feedback.Diagnostics(
                 playbackId = "pb", sampleRate = 48000, renderHeadroom = 0.8, activeVoiceCount = 3,
                 cylinders = listOf(
@@ -457,6 +471,12 @@ class WireCodecRoundTripSpec : StringSpec({
             KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice)),
             KlangCommLink.Cmd.ScheduleVoices("pb", listOf(voice, voice)),
             KlangCommLink.Cmd.ReplaceVoices("pb", listOf(voice), afterTimeSec = 2.0),
+            KlangCommLink.Cmd.ReplaceVoices("pb", emptyList(), afterTimeSec = null),
+            // A voice with tags (a Set) and an EMPTY slot map, both non-null
+            KlangCommLink.Cmd.ScheduleVoices(
+                "pb",
+                listOf(voice.copy(data = voice.data.copy(tags = setOf("lead", "drums"), ignitorParams = klangMapOf<Double>()))),
+            ),
             // Both gateDurSec variants: fixed length AND the held case (null must survive the trip)
             KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 7, data = voice.data, gateDurSec = 0.4)),
             KlangCommLink.Cmd.StartRealtimeVoice("pb", RealtimeVoice(liveId = 8, data = voice.data, gateDurSec = null)),

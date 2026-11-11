@@ -74,6 +74,8 @@ class ResourceWarehouse(
     // ── Stats: one entry point, maintained by change, read for free ──────────────────────────────
 
     private var statsVersion = -1
+    private var statsDroppedVoices = -1
+    private var statsDeniedRents = -1
     private var stats: KlangCommLink.Feedback.Diagnostics.WarehouseStats? = null
 
     /**
@@ -82,13 +84,16 @@ class ResourceWarehouse(
      * not need to do any calculations again and again"). Every part bumps a `version` when it
      * changes; this rebuilds the snapshot only when the combined version moved, otherwise it hands
      * back the same object. [droppedVoices] and [deniedRents] live in the engines, not here, so the
-     * caller sums them and passes them in; they are folded into the version so a change re-snapshots.
+     * caller sums them and passes them in; each is compared on its own, not folded into the version: they fall when a
+     * playback stops or its engine goes, so in a sum a fall could cancel the parts' rise and serve a stale snapshot
+     * (audit L9-11). The parts' versions only ever rise, so their sum moves with any of them.
      */
     fun stats(droppedVoices: Int, deniedRents: Int): KlangCommLink.Feedback.Diagnostics.WarehouseStats {
-        val version = sized.version + reverbs.version + cylinders.version + scratch.version + samples.version +
-            droppedVoices + deniedRents
+        val version = sized.version + reverbs.version + cylinders.version + scratch.version + samples.version
         val cached = stats
-        if (cached != null && version == statsVersion) {
+        val unchanged = version == statsVersion && droppedVoices == statsDroppedVoices && deniedRents == statsDeniedRents
+
+        if (cached != null && unchanged) {
             return cached
         }
 
@@ -124,6 +129,8 @@ class ResourceWarehouse(
         )
         stats = fresh
         statsVersion = version
+        statsDroppedVoices = droppedVoices
+        statsDeniedRents = deniedRents
 
         return fresh
     }

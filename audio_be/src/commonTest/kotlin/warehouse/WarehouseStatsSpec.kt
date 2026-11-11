@@ -140,6 +140,18 @@ class WarehouseStatsSpec : StringSpec({
         s.sampleBytes shouldBe 32_000.0
     }
 
+    "a fall of the dropped count while a part rises by as much still re-snapshots (audit L9-11)" {
+        val (w, _) = warehouse()
+        val before = w.stats(droppedVoices = 3, deniedRents = 0)
+
+        // A playback with three dropped voices stops (minus 3) while three sample messages arrive (plus 3)
+        repeat(3) { i -> w.samples.addSample(KlangCommLink.Cmd.Sample.NotFound(SampleRequest("b", "s$i", 0, null))) }
+        val after = w.stats(droppedVoices = 0, deniedRents = 0)
+
+        after shouldNotBeSameInstanceAs before
+        after.droppedVoices shouldBe 0
+    }
+
     "the dispatcher sends the snapshot with every Diagnostics, with the engines' dropped and denied summed in" {
         val clock = BackendClock(sampleRate)
         val commLink = KlangCommLink(capacity = 4096)

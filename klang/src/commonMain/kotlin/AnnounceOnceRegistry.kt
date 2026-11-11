@@ -49,6 +49,17 @@ internal class AnnounceOnceRegistry<T : Any>(
     /** Number of unique DSLs announced so far. */
     val size: Int get() = lock.withLock { announced.size }
 
+    /** True when [name] was announced since the last [forget]. */
+    fun isAnnounced(name: String): Boolean = lock.withLock { name in announced }
+
+    /**
+     * Forgets every name announced: each is announced again at its next sighting. A playback forgets at each start,
+     * because the backend's fork that knew the names may have died with its engine since (audit L1-03).
+     */
+    fun forget() {
+        lock.withLock { announced.clear() }
+    }
+
     /** The synthetic name for [dsl]; announces it on first sighting. */
     fun registerOrLookup(dsl: T): String {
         val name = uniqueId(dsl)

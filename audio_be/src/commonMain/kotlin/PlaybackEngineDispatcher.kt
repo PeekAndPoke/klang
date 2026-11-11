@@ -79,6 +79,15 @@ class PlaybackEngineDispatcher(
     private var diagnosticSoundlessVoices = 0
     private var diagnosticDeniedRents = 0
 
+    /**
+     * The milliseconds from the timeline to the speaker that only the host knows, carried in every report
+     * ([KlangCommLink.Feedback.Diagnostics.outputLatencyMs]): the JVM host sets its line's buffer plus the house
+     * limiter's lookahead (audit L8-08: it reported none, and the UI's time ran a quarter second ahead of the sound).
+     * The browser leaves it at 0 in the worklet and fills the field on the main thread, where the context's figures
+     * are (`JsAudioBackend`). Written by the host once, before it renders.
+     */
+    var outputLatencyMs: Double = 0.0
+
     val ignitorRegistry: IgnitorRegistry get() = context.ignitorRegistry
     val sampleStore: SampleStore get() = context.sampleStore
 
@@ -376,6 +385,13 @@ class PlaybackEngineDispatcher(
      * every block regardless of engine count, so a fully-idle backend reports zero voices / zero cylinders (the
      * gauges drop to 0 on stop) and the headroom reflects the WHOLE block (all engines + the house stage), not one scheduler.
      * It carries the timeline at [blockEndFrame], the end of the block just rendered.
+     *
+     * **A periodic allocation on the audio thread, accepted** (it departs from "no allocation in audio hot paths"): one
+     * list, one `CylinderState` per rented cylinder and one message per report, about 47 a second, idle or not, and in
+     * the worklet one encode and one structured clone of them. Measured on the JVM (audit L1-06, L8-05, L9-08,
+     * `AuditRealtimeRepro`): 104 B and under 0.1 us per report idle, 352 B and 0.6 to 1.25 us with 8 cylinders, nothing
+     * in the blocks between. The report is the frontend's clock, so it cannot be sent less often; sending the gauges
+     * apart from the clock would change what the frontend reads (KLANG-00431, Decide).
      */
     private fun emitDiagnostics(startMs: Double, blockEndFrame: Double) {
         val endMs = context.performanceTimeMs()
@@ -413,6 +429,7 @@ class PlaybackEngineDispatcher(
                 activeVoiceCount = diagnosticVoices,
                 cylinders = cylinderStates,
                 backendNowMs = context.clock.secAt(blockEndFrame) * 1000.0,
+                outputLatencyMs = outputLatencyMs,
                 // The warehouse's own snapshot: rebuilt only when one of its parts changed.
                 warehouse = context.warehouse.stats(
                     droppedVoices = diagnosticDroppedVoices,

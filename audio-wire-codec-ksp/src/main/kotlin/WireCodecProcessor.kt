@@ -290,8 +290,26 @@ class WireCodecProcessor(
             LIST -> "List<${typeSig(t.arguments[0].type!!.resolve())}>$n"
             SET -> "Set<${typeSig(t.arguments[0].type!!.resolve())}>$n"
             KLANG_MAP -> "Map<kotlin.String,${typeSig(t.arguments[0].type!!.resolve())}>$n"
-            else -> "$qn$n"
+            else -> "$qn${enumEntriesSig(t)}$n"
         }
+    }
+
+    /**
+     * An enum's entries, in order, for [typeSig]: an enum crosses the wire as its ordinal, so an entry appended,
+     * removed, renamed or moved changes what an ordinal means and must move [WIRE_SCHEMA_HASH] (audit L1-07; before,
+     * the signature was the enum's name alone). Empty for any other type.
+     */
+    private fun enumEntriesSig(t: KSType): String {
+        val decl = t.declaration as? KSClassDeclaration
+
+        if (decl == null || decl.classKind != ClassKind.ENUM_CLASS) {
+            return ""
+        }
+
+        return decl.declarations
+            .filterIsInstance<KSClassDeclaration>()
+            .filter { it.classKind == ClassKind.ENUM_ENTRY }
+            .joinToString(separator = ",", prefix = "{", postfix = "}") { it.simpleName.asString() }
     }
 
     /** True for a `@WireFormat` root: its codec opens the identity scope. */

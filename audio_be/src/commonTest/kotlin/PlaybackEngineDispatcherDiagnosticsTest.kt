@@ -100,6 +100,19 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
         commLink.readAllDiagnostics().single().backendNowMs shouldBe (endSec * 1000.0 plusOrMinus 1e-6)
     }
 
+    "a report carries the output latency its host set, 0 until it sets one (audit L8-08)" {
+        val (d, commLink) = createDispatcher { 0.0 }
+        val out = StereoBuffer(blockFrames)
+
+        d.render(out)
+        commLink.readAllDiagnostics().single().outputLatencyMs shouldBe 0.0
+
+        // What the JVM host sets: its line's buffer plus the house limiter's lookahead
+        d.outputLatencyMs = 255.0
+        d.render(out)
+        commLink.readAllDiagnostics().single().outputLatencyMs shouldBe 255.0
+    }
+
     "diagnostics carry the SYSTEM playbackId" {
         var t = 0.0
         val (d, commLink) = createDispatcher { t }

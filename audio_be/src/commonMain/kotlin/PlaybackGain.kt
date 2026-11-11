@@ -25,7 +25,8 @@ import kotlin.math.round
  * multiplies by the target itself.
  *
  * **A new target mid-ramp starts from where the gain IS** (the position the last block ended on) and takes its full
- * time again. `rampSec <= 0`, or a ramp shorter than half a block, sets the gain at once. A non-finite gain or ramp is
+ * time again; so does the same target asked again with a new time (a fade made faster). `rampSec <= 0`, or a ramp
+ * shorter than half a block, sets the gain at once. A non-finite gain or ramp is
  * ignored and the values that stand stay (the review ledger's cached-config rule); nothing else is clamped (the Motor
  * stays raw).
  */
@@ -68,7 +69,9 @@ internal class PlaybackGain(private val sampleRate: Int, private val blockFrames
             return
         }
 
-        if (gain == state[TARGET]) {
+        // The same target, settled: nothing to do. The same target while a ramp runs to it is a new time for the rest
+        // of the way, from where the gain is (audit L8-09: a fade of 2 s asked again with 0.05 s ran on for its 2 s)
+        if (gain == state[TARGET] && remaining == 0) {
             return
         }
 

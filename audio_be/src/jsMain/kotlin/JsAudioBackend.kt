@@ -199,12 +199,14 @@ class JsAudioBackend(
             fun pumpTimerTick() {
                 // Upload the next sample chunk ... we send them one at a time.
                 //
-                // This drip is why the timer still exists. One chunk is ~512 KB (`toChunks`
-                // counts DoubleArray elements, so 64 * 1024 frames is 512 KB), i.e. ~51 MB/s of
-                // structured clone onto the same MessagePort the audio thread services between
-                // render callbacks. Draining the whole upload buffer here would hand the audio
-                // thread an unbounded burst mid-load. Control commands do not go through this
-                // valve, see [pump].
+                // This drip is why the timer still exists. One chunk is 1 MB ([drainControl] asks
+                // `toChunks` for 128 * 1024 frames, and it counts DoubleArray elements of 8 bytes),
+                // i.e. about 100 MB/s of structured clone onto the same MessagePort the audio thread
+                // services between render callbacks, each chunk cloned and then copied once more by
+                // `SampleStore.addSample`; the first chunk of a sample allocates its whole PCM there
+                // (audit L9-09; the transfer of one buffer instead: KLANG-00431, Decide). Draining
+                // the whole upload buffer here would hand the audio thread an unbounded burst
+                // mid-load. Control commands do not go through this valve, see [pump].
                 //
                 // Read through the FIELD, not the captured local: a timer already scheduled when
                 // teardown runs fires once more afterwards, and the field is null by then. Check

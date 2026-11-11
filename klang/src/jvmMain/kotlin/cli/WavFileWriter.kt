@@ -29,6 +29,12 @@ class WavFileWriter(
     }
 
     private var file: RandomAccessFile? = null
+
+    /**
+     * The data chunk's size. An Int that wraps past 2 GiB (about 3.1 hours of 48 kHz stereo): `putInt` then writes the
+     * same 32 bits as the unsigned size, which is the header field's type, so the header is right up to the format's
+     * own end at 4 GiB (audit L8-11, checked by reading).
+     */
     private var dataBytes = 0
     private var blockBytes = ByteArray(0)
 

@@ -122,7 +122,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   count from there. The frontend's `PlaybackClock` runs on the reports (at most 0.5 s past the last, never backwards),
   the scheduler is asked `tick(now)` with it, looks ahead at least 1.5 s (`LOOKAHEAD_MIN_SEC`), skips what a long
   stall let go by but keeps its `master`, `katalyst` and running solo controls (at their own times), and puts the UI's
-  times on `Date.now()` plus the output latency. `OfflineBackend` renders only when told, for the specs
+  times on `Date.now()` plus the output latency (the browser's context figures plus the house lookahead; the JVM's
+  line buffer plus the house lookahead, `PlaybackEngineDispatcher.outputLatencyMs`; an authored master's lookahead is
+  not in it, KLANG-00431 Decide). A playback sends nothing after its stop's `Cleanup` until it starts again, and a
+  start sends what a fresh engine needs (`audio/ref/architecture.md`, "A playback's life on the wire"). `OfflineBackend` renders only when told, for the specs
   (`KlangPlaybackSyncSpec`) and `KlangOfflineRenderer`, which drives the scheduler on it in lockstep (`startDriven`,
   `tick`); `VoiceWatch` tells each voice's fate there. Voices without their sample are counted
   (`Diagnostics.soundlessVoices`). The scheduled-voice heap is stable (`KlangMinHeap`): voices that start together are
@@ -463,6 +466,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 The shell and the wire: nothing after a stop's `Cleanup`, a restart's gain and inline DSLs, no sample requests for synth voices, an edit's samples at once, the JVM's output latency, enum entries in the schema hash: KLANG-00431
 - 2026-11-10 The sources: the saw and square through a one-sample box, the impulse's backward phase silent, the cubic read for samples and the pluck, a sample's last frame and loop seam, stereo files averaged in the browser: KLANG-00430
 - 2026-11-10 The bus, second pass: `reverb.lowpass` a real cutoff, the compressor smooths the reduction, ducks read every source before any duck writes: KLANG-00428
 - 2026-11-10 The Ignitor build: the fused filter keeps its gate, the name holds the sharing, the shimmer gated, off stages cost their query only, a region's memo does not freeze: KLANG-00429

@@ -281,9 +281,11 @@ class KlangCommLink(capacity: Int = 8192) {
             /** AudioContext.outputLatency in ms (hardware/device latency, e.g. Bluetooth). 0.0 on JVM. */
             val outputDeviceLatencyMs: Double = 0.0,
             /**
-             * Total output latency in ms: `baseLatencyMs + outputDeviceLatencyMs` **plus the master
+             * Total output latency in ms: `baseLatencyMs + outputDeviceLatencyMs` **plus the house
              * limiter's lookahead**, which happens inside the worklet where the browser's own
-             * latency figures cannot see it.
+             * latency figures cannot see it. On the JVM: the line's buffer plus that lookahead
+             * (`PlaybackEngineDispatcher.outputLatencyMs`, audit L8-08). An authored master chain's
+             * lookahead is not in it (KLANG-00431, Decide).
              */
             val outputLatencyMs: Double = 0.0,
             /**
@@ -306,8 +308,10 @@ class KlangCommLink(capacity: Int = 8192) {
             )
 
             /**
-             * One line per part of the warehouse. Counters are monotone since backend start;
-             * `idle*` are current. Bytes are Double (no Long on the wire or in audio paths).
+             * One line per part of the warehouse. Counters are monotone since backend start, except
+             * [droppedVoices] and [deniedRents], which are the engines' and fall when a playback stops
+             * (audit L9-11; KLANG-00431, Decide); `idle*` are current. Bytes are Double (no Long on the
+             * wire or in audio paths).
              */
             data class WarehouseStats(
                 /** Delay rings: idle bytes on the shelf, idle count, dirty (not yet zeroed) count. */
@@ -340,7 +344,10 @@ class KlangCommLink(capacity: Int = 8192) {
                 val sampleBytes: Double,
                 val sampleCount: Int,
                 val sampleAllocationFailures: Int,
-                /** Across all live engines: voices dropped at admission (late), and refused unit rents. */
+                /**
+                 * Across the engines rendering now: voices dropped at admission (late), and refused unit
+                 * rents. A playback's own count leaves the sum when it stops.
+                 */
                 val droppedVoices: Int,
                 val deniedRents: Int,
             ) {

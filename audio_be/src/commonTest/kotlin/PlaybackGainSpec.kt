@@ -85,6 +85,30 @@ class PlaybackGainSpec : StringSpec({
         withClue("on the way down, not back at 1") { before shouldBeLessThan 0.75 }
     }
 
+    "the same target asked again with a shorter time mid-ramp lands in the new time (audit L8-09)" {
+        val gain = PlaybackGain(sampleRate = sampleRate, blockFrames = blockFrames)
+
+        // A fade out over 40 blocks, then, 10 blocks in, the same fade asked to end within 4
+        gain.retarget(gain = 0.0, rampSec = rampOf(40))
+        repeat(10) { gain.block() }
+        gain.retarget(gain = 0.0, rampSec = rampOf(4))
+
+        val blocks = (0 until 4).map { gain.block() }
+
+        withClue("silent at the end of the new time, not 26 blocks later") { blocks[3].last() shouldBe 0.0 }
+        withClue("from where it was, no jump") { (blocks[0].first() > 0.7) shouldBe true }
+    }
+
+    "the same target asked again once settled changes nothing" {
+        val gain = PlaybackGain(sampleRate = sampleRate, blockFrames = blockFrames)
+
+        gain.retarget(gain = 0.5, rampSec = rampOf(2))
+        repeat(2) { gain.block() }
+        gain.retarget(gain = 0.5, rampSec = rampOf(8))
+
+        gain.block().toList() shouldBe List(blockFrames) { 0.5 }
+    }
+
     "a ramp of 0 sets the gain at once; back at 1 the gain is unity" {
         val gain = PlaybackGain(sampleRate = sampleRate, blockFrames = blockFrames)
 

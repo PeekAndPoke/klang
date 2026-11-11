@@ -30,8 +30,9 @@ import io.peekandpoke.klang.audio_bridge.uniqueId
  * in process.
  *
  * The synthetic names come from the process-wide `uniqueId()` maps in `audio_bridge`; this class
- * only owns the per-playback "have I announced it yet" gate. Both sides free it when the playback
- * stops — it mirrors the backend's per-`PlaybackEngine` registry forks.
+ * only owns the per-playback "have I announced it yet" gate, which mirrors the backend's per-`PlaybackEngine` registry
+ * forks. The fork dies with its engine; the gate is forgotten at every start of the playback ([forgetAnnounced]), so a
+ * start after a stop announces every name again, whether its engine was disposed in between or not (audit L1-03).
  */
 internal class InlineDslRegistrar(
     val ignitors: AnnounceOnceRegistry<IgnitorDsl>,
@@ -93,6 +94,12 @@ internal class InlineDslRegistrar(
                 announce = { name, value -> katalysts.register(name, value.katalyst) },
             ),
         )
+    }
+
+    /** Forgets every name announced: the next sighting of each announces it again (see the class KDoc). */
+    fun forgetAnnounced() {
+        ignitors.forget()
+        katalysts.forget()
     }
 
     /**
