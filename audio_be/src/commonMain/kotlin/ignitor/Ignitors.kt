@@ -13,6 +13,8 @@ import io.peekandpoke.klang.audio_be.utils.rampStep
 import io.peekandpoke.klang.audio_be.utils.wrapPhase
 import io.peekandpoke.klang.audio_be.utils.wrapPhaseFastOrSafe
 import io.peekandpoke.klang.audio_be.utils.wrapToUnitCycle
+import io.peekandpoke.klang.audio_be.warehouse.NoteRingLease
+import io.peekandpoke.klang.audio_be.warehouse.ringOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.coerceUnisonVoices
 import io.peekandpoke.klang.audio_bridge.constants.BROWN_LEAK_DEFAULT
@@ -2679,7 +2681,12 @@ object Ignitors {
         stiffness: Ignitor = stiffnessDefault,
         analog: Ignitor = analogDefault,
         rng: Random,
-    ): Ignitor = KarplusStrongIgnitor(freq = freq, feedback = feedback, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, rng = rng)
+        /** The voice's lease on the warehouse's note-ring shelf, which the string's line is rented through; null allocates it. */
+        noteRings: NoteRingLease? = null,
+    ): Ignitor = KarplusStrongIgnitor(
+        freq = freq, feedback = feedback, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, rng = rng,
+        noteRings = noteRings,
+    )
 
     private class KarplusStrongIgnitor(
         private val freq: Ignitor,
@@ -2689,8 +2696,10 @@ object Ignitors {
         private val stiffness: Ignitor,
         private val analog: Ignitor,
         private val rng: Random,
+        noteRings: NoteRingLease?,
     ) : Ignitor {
-        private val string = KarplusString()
+        /** The string, its line rented with the voice (KLANG-00429, L5-03) and given back when the voice ends. */
+        private val string = KarplusString(delayLine = noteRings.ringOf(KarplusString.MAX_DELAY))
 
         /**
          * The loop delay ([KarplusString.loopDelayOf]) and the inputs it was computed from: the base delay, the
@@ -2790,9 +2799,11 @@ object Ignitors {
         analogSpread: Ignitor = analogSpreadDefault,
         rng: Random,
         countsAtBuild: Boolean = false,
+        /** The voice's lease on the warehouse's note-ring shelf, which every string's line is rented through; null allocates them. */
+        noteRings: NoteRingLease? = null,
     ): Ignitor = SuperKarplusStrongIgnitor(
         freq = freq, voices = voices, detune = detune, feedback = feedback, brightness = brightness, pickPosition = pickPosition, stiffness = stiffness, analog = analog, analogSpread = analogSpread, rng = rng,
-        countsAtBuild = countsAtBuild,
+        countsAtBuild = countsAtBuild, noteRings = noteRings,
     )
 
     private class SuperKarplusStrongIgnitor(
@@ -2807,6 +2818,11 @@ object Ignitors {
         private val analogSpread: Ignitor,
         private val rng: Random,
         countsAtBuild: Boolean,
+        /**
+         * The voice's lease the strings' lines are rented through (KLANG-00429, L5-03), kept for a count that grows past
+         * the build's strings at render, whose new lines go back with the voice's others; null allocates them.
+         */
+        private val noteRings: NoteRingLease?,
     ) : Ignitor {
         private var v: Int = 0
         private var voiceGain: Double = 0.0
@@ -2816,7 +2832,9 @@ object Ignitors {
          * ([unisonCapacity]); only a count past them grows the array, at render (a `voices` signal the build could
          * not read). A shrink keeps them all.
          */
-        private var strings: Array<KarplusString> = Array(unisonCapacity(voices = voices, countsAtBuild = countsAtBuild)) { KarplusString() }
+        private var strings: Array<KarplusString> = Array(unisonCapacity(voices = voices, countsAtBuild = countsAtBuild)) {
+            KarplusString(delayLine = noteRings.ringOf(KarplusString.MAX_DELAY))
+        }
 
         /**
          * One lane per string plus the shared walk, built with the node when `analog` may be above 0 (see
@@ -2889,11 +2907,7 @@ object Ignitors {
                 voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
 
                 if (v > strings.size) {
-                    val old = strings
-
-                    strings = Array(v) { i -> if (i < old.size) old[i] else KarplusString() }
-                    baseDelays = DoubleArray(v)
-                    loopDelays = DoubleArray(v)
+                    growStrings()
                 }
 
                 // A regrown string RE-PLUCKS (the DECIDED note above), so it gets a fresh lane
@@ -3004,6 +3018,19 @@ object Ignitors {
                     gain = voiceGain, accumulate = n != 0,
                 )
             }
+        }
+
+        /**
+         * Grows [strings] to [v], the strings it holds kept and the new ones' lines rented through [noteRings], and the
+         * delay caches with it: a count past the build's strings, at render. Out of [generate] so the render's own
+         * code stays the size it was.
+         */
+        private fun growStrings() {
+            val old = strings
+
+            strings = Array(v) { i -> if (i < old.size) old[i] else KarplusString(delayLine = noteRings.ringOf(KarplusString.MAX_DELAY)) }
+            baseDelays = DoubleArray(v)
+            loopDelays = DoubleArray(v)
         }
 
         /**

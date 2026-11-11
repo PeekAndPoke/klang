@@ -89,6 +89,27 @@ class WarehouseStatsSpec : StringSpec({
         s5.cylinderAllocations shouldBe 1
         s5.cylinderIdleCount shouldBe 1
 
+        // Note rings (KLANG-00429, L5-03): rent (allocates), return (dirty), housekeep (clean), rent again (hit), and a
+        // return over the shelf's bound is dropped.
+        val line = w.noteRings.rent(2500)
+        w.stats(droppedVoices = 0, deniedRents = 0).noteRingAllocations shouldBe 1
+        w.noteRings.giveBack(line)
+        val n1 = w.stats(droppedVoices = 0, deniedRents = 0)
+        n1.noteRingIdleCount shouldBe 1
+        n1.noteRingDirtyCount shouldBe 1
+        n1.noteRingIdleBytes shouldBe 4096 * 8.0
+        while (!w.isClean) {
+            w.housekeep()
+        }
+        w.stats(droppedVoices = 0, deniedRents = 0).noteRingDirtyCount shouldBe 0
+        w.noteRings.rent(2500)
+        val n2 = w.stats(droppedVoices = 0, deniedRents = 0)
+        n2.noteRingHits shouldBe 1
+        n2.noteRingIdleCount shouldBe 0
+        n2.noteRingIdleBytes shouldBe 0.0
+        w.noteRings.giveBack(w.noteRings.rent(NoteRings.MAX_CLASS_FRAMES + 1))
+        w.stats(droppedVoices = 0, deniedRents = 0).noteRingDropped shouldBe 1
+
         // Scratch: the pre-sized capacity, and a deeper nesting bumps the high water.
         s5.scratchCapacity shouldBe ResourceWarehouse.SCRATCH_DEPTH
         w.scratch.use { w.scratch.use { } }

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.ignitor.KarplusString
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
@@ -146,6 +147,17 @@ class WarmupRunner(
 
         /** Delay rings of the 2 s class (a delay from 1 to 2 s), as [WARM_RINGS_ONE_SECOND]. */
         const val WARM_RINGS_TWO_SECONDS: Int = 2
+
+        /**
+         * Karplus lines (one per pluck, one per superpluck string; the note-ring shelf's 4096-frame class, 32 KB each)
+         * the warmup puts on the note-ring shelf (KLANG-00429, audit finding L5-03; maintainer 2026-11-11: "allocation per
+         * note: if we are able to avoid it or reduce it through the warehouse we should do it"), so a song's first
+         * plucks rent their lines instead of allocating them in their onset block. Twice the corpus's peak: the most
+         * lines a corpus song holds at once is 8 (The Synthsale Piper's Farewell; Die Kirschblüte and Greensleeves Chant
+         * 6, Drunken Synthlor 4, every other song none; measured 2026-11-11, KLANG-00429). The warmup's own pluck and
+         * superpluck give four back, and the stock tops the class up to this count: 512 KB idle.
+         */
+        const val WARM_NOTE_RINGS: Int = 16
     }
 
     /**
@@ -298,6 +310,8 @@ class WarmupRunner(
                 // never took one of them for a ring of the smallest class. Zeroed by the same housekeeping.
                 dispatcher.stockDelayRings(seconds = 1.0, count = WARM_RINGS_ONE_SECOND)
                 dispatcher.stockDelayRings(seconds = 2.0, count = WARM_RINGS_TWO_SECONDS)
+                // The Karplus lines (KLANG-00429, L5-03): fresh, so clean at once, beside what the warmup's own plucks gave back.
+                dispatcher.stockNoteRings(minFrames = KarplusString.MAX_DELAY, count = WARM_NOTE_RINGS)
                 // Wipe limiter state so the first real kick sees unity gain.
                 dispatcher.resetPostChain()
             }

@@ -20,14 +20,18 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  * spec would share one warehouse, the offline renderer would share it with a live backend in the
  * same JVM, and state would leak between tests.
  *
- * Four shelves, two kinds of rule:
+ * Five shelves, two kinds of rule:
  *
  * - [sized] (delay rings, class-sized, byte-budgeted), [reverbs] (Freeverb networks, one size,
  *   count-bounded) and [cylinders] (whole cylinders, count-bounded), large, returnable state. Rent
  *   may return `null` for rings and networks: those are the out-of-memory catch sites, and the
  *   compiler makes every consumer decide. A cylinder without units is a few KB and is not caught.
- *   Idle memory is therefore `SHELF_BUDGET_BYTES` (rings) + 32 networks (~6.5 MB at 44.1 kHz) +
- *   32 cylinders (KBs); the byte budget covers the part that has a ladder.
+ * - [noteRings] (per-note mono rings: the Karplus lines and the shimmer's grain ring, class-sized, byte-budgeted;
+ *   KLANG-00429, L5-03): rented by a voice's build, given back when the voice ends. Not nullable, like a build's
+ *   own allocation before it: a 32 KB line is not an out-of-memory catch site.
+ *   Idle memory is therefore `SHELF_BUDGET_BYTES` (the delay rings and the note rings, [NoteRings.BUDGET_BYTES] of it
+ *   the note rings') + 32 networks (~6.5 MB at 44.1 kHz) + 32 cylinders (KBs); the byte budget covers the parts that
+ *   have a ladder.
  * - [scratch] — per-node, per-block, KB-scale, held for microseconds. NOT nullable: a 1 KB failure
  *   cannot be handled meaningfully, and `acquire()` runs per node per block, so nullability there
  *   would spread branches whose only content is "render silence" through every composing ignitor.
@@ -44,7 +48,8 @@ class ResourceWarehouse(
      * a store on a private link.
      */
     val samples: SampleStore = SampleStore(KlangCommLink(capacity = 16).backend),
-    budgetBytes: Int = SHELF_BUDGET_BYTES,
+    /** The delay rings' idle bound: the warehouse's budget less the note rings' part ([NoteRings.BUDGET_BYTES]). */
+    budgetBytes: Int = SHELF_BUDGET_BYTES - NoteRings.BUDGET_BYTES,
     allocate: (frames: Int) -> StereoBuffer? = SizedBuffers::allocateOrNull,
     allocateReverb: (sampleRate: Int, factor: Int) -> Reverb? = ReverbUnits::allocateOrNull,
 ) {
@@ -57,19 +62,33 @@ class ResourceWarehouse(
     /** Whole cylinders — built by the warmup, returned by engine disposal, taken by the next engine. */
     val cylinders: CylinderUnits = CylinderUnits(blockFrames = blockFrames, sampleRate = sampleRate, rings = sized, reverbs = reverbs)
 
+    /** Per-note rings (KLANG-00429, L5-03): a voice's Karplus lines and shimmer ring, rented at its build, back at its end. */
+    val noteRings: NoteRings = NoteRings()
+
     /**
-     * One block's worth of deferred clearing: up to one class-0 ring's frames and one reverb network
-     * (review round 3). The backend calls this once per rendered block, after the mix, so a return
-     * costs nothing where it happens and the shelf is zeroed a few dozen blocks later. Cylinders
-     * need no housekeeping: a retired one holds no units and its own state is small.
+     * One block's worth of deferred clearing: up to one class-0 ring's frames, one reverb network and
+     * [NoteRings.HOUSEKEEP_FRAMES] of note rings (review round 3). The backend calls this once per rendered block,
+     * after the mix, so a return costs nothing where it happens and the shelf is zeroed a few dozen blocks later.
+     * Cylinders need no housekeeping: a retired one holds no units and its own state is small.
      */
     fun housekeep() {
         sized.housekeep()
         reverbs.housekeep()
+        noteRings.housekeep()
     }
 
     /** True when every idle ring and network is zeroed — what the warmup waits for before `BackendReady`. */
-    val isClean: Boolean get() = sized.isClean && reverbs.isClean
+    val isClean: Boolean get() = sized.isClean && reverbs.isClean && noteRings.isClean
+
+    /**
+     * Puts note rings of the class of [minFrames] on the note-ring shelf until it holds [count] of that class: the
+     * warmup's stock of Karplus lines (`WarmupRunner`, KLANG-00429, L5-03), so a song's first plucks rent instead of
+     * allocating in their onset block. Fresh rings, clean at once, inside the shelf's byte bound. Not for render code:
+     * it allocates.
+     */
+    fun stockNoteRings(minFrames: Int, count: Int) {
+        noteRings.stock(minFrames = minFrames, count = count)
+    }
 
     /**
      * Puts [count] delay rings that hold [seconds] (the class a delay of that time rents, [RING_MARGIN_FRAMES]
@@ -112,7 +131,7 @@ class ResourceWarehouse(
      * playback's count). The parts' versions only ever rise, so their sum moves with any of them.
      */
     fun stats(droppedVoices: Int, deniedRents: Int): KlangCommLink.Feedback.Diagnostics.WarehouseStats {
-        val version = sized.version + reverbs.version + cylinders.version + scratch.version + samples.version
+        val version = sized.version + reverbs.version + cylinders.version + scratch.version + samples.version + noteRings.version
         val cached = stats
         val unchanged = version == statsVersion && droppedVoices == statsDroppedVoices && deniedRents == statsDeniedRents
 
@@ -140,6 +159,12 @@ class ResourceWarehouse(
             cylinderAllocations = cylinders.allocations,
             cylinderHits = cylinders.hits,
             cylinderDropped = cylinders.dropped,
+            noteRingIdleBytes = noteRings.idleBytes,
+            noteRingIdleCount = noteRings.idleCount,
+            noteRingDirtyCount = noteRings.dirtyCount,
+            noteRingAllocations = noteRings.allocations,
+            noteRingHits = noteRings.hits,
+            noteRingDropped = noteRings.dropped,
             scratchCapacity = scratch.capacity,
             scratchHighWater = scratch.highWater,
             scratchLateAllocations = scratch.lateAllocations,
@@ -199,7 +224,8 @@ class ResourceWarehouse(
         const val RING_MARGIN_FRAMES: Int = 64
 
         /**
-         * Idle-shelf bound: roughly four songs of right-sized rings, one order below the old
+         * Idle-shelf bound of the two ring shelves together, the delay rings' and the note rings' (the note rings take
+         * [NoteRings.BUDGET_BYTES] of it, KLANG-00429): roughly four songs of right-sized rings, one order below the old
          * single-song spike. A named constant, not a mechanism — it bounds idle memory only, so being
          * wrong is never audible. Live browser only; the offline renderer renders once and needs no
          * shelf. `navigator.deviceMemory` is Chromium-only, coarse, and unreadable inside an

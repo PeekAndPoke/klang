@@ -14,6 +14,8 @@ import io.peekandpoke.klang.audio_be.distortionShapeAt
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.butterworthQLadder
 import io.peekandpoke.klang.audio_be.filters.eqSectionSpec
+import io.peekandpoke.klang.audio_be.warehouse.NoteRingLease
+import io.peekandpoke.klang.audio_be.warehouse.NoteRings
 import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrCurves
 import io.peekandpoke.klang.audio_bridge.DistortionShapes
@@ -79,12 +81,20 @@ fun IgnitorDsl.buildExciter(
     /** The voice's sample playhead, the runtime of every [IgnitorDsl.Sample] leaf in this tree; null
      *  (every voice that is not a sample) builds that leaf as silence. See [IgnitorBuildCache.sampleSource]. */
     sampleSource: Ignitor? = null,
+    /** The warehouse's shelf of per-note rings the tree's rings are rented from (KLANG-00429, L5-03); null (a build
+     *  outside a voice: specs, tools) allocates them. What was rented comes back in [BuiltIgnitor.noteRings]. */
+    noteRings: NoteRings? = null,
 ): BuiltIgnitor {
     val cache = IgnitorBuildCache(
         soundIndex = soundIndex, phasePools = phasePools, cylinder = cylinder, random = random, freqHz = freqHz,
-        baseSampleRate = sampleRate, baseBlockFrames = blockFrames, sampleSource = sampleSource,
+        baseSampleRate = sampleRate, baseBlockFrames = blockFrames, sampleSource = sampleSource, noteRings = noteRings,
     )
-    return buildIgnitor(ignitorParams, cache)
+    val built = buildIgnitor(ignitorParams, cache)
+    val lease = cache.noteRingLeaseIfMade
+
+    // The lease the build made on its first rent rides out with the root, for the voice to give back; a tree that
+    // rented nothing made none and hands its root back as built.
+    return if (lease == null) built else built.copy(noteRings = lease)
 }
 
 /**
@@ -156,7 +166,24 @@ internal class IgnitorBuildCache(
      *  build, so its drift lane draws first; carried here like [soundIndex] to reach the leaf. Null builds the
      *  leaf as silence. */
     val sampleSource: Ignitor? = null,
+    /** The warehouse's shelf of per-note rings (KLANG-00429, L5-03); null allocates every ring. See [noteRingLease]. */
+    private val noteRings: NoteRings? = null,
 ) {
+    /** The lease [noteRingLease] made, null until a node asked for one. */
+    var noteRingLeaseIfMade: NoteRingLease? = null
+        private set
+
+    /**
+     * The voice's lease on the note-ring shelf, made on the first call (a voice that rents nothing makes none), or null
+     * without a shelf. A node that builds a per-note ring (the Karplus strings, the shimmer) rents it through this, and
+     * the voice gives every such ring back when it ends (`Voice.giveBackNoteRings`).
+     */
+    fun noteRingLease(): NoteRingLease? {
+        val shelf = noteRings ?: return null
+
+        return noteRingLeaseIfMade ?: NoteRingLease(shelf).also { noteRingLeaseIfMade = it }
+    }
+
     /** The detune scope at the current recursion point — null at the root.
      *  Identity-compared as part of the cache key (pushed/popped by the Detune build arm). */
     var detuneContext: DetuneContext? = null
@@ -1583,6 +1610,7 @@ private fun IgnitorDsl.buildRaw(
                 stiffness = stiffness.noMod(),
                 analog = analog.noMod(),
                 rng = cache.random,
+                noteRings = cache.noteRingLease(),
             ),
         )
 
@@ -1600,6 +1628,7 @@ private fun IgnitorDsl.buildRaw(
                 analogSpread = analogSpread.noMod(),
                 rng = cache.random,
                 countsAtBuild = !cache.usesMusicalFreq(voices),
+                noteRings = cache.noteRingLease(),
             ),
         )
 
@@ -2206,12 +2235,13 @@ private fun IgnitorDsl.buildRaw(
             }
         }
 
-        // GATE ROW `shimmer`: wet at or below 0.0, or unset (audit L4-09, `gatedOffInner`). Built ON, it allocates its
-        // grain ring at every note, a modulated wet included, sized to what its grains read (`shimmerRingFrames`,
-        // KLANG-00429, L5-03 option (b)); renting it from the warehouse is KLANG-00437's.
+        // GATE ROW `shimmer`: wet at or below 0.0, or unset (audit L4-09, `gatedOffInner`). Built ON, it rents its grain
+        // ring at every note, a modulated wet included, sized to what its grains read (`shimmerRingFrames`, KLANG-00429,
+        // L5-03 option (b)), from the warehouse's note-ring shelf through the voice's lease (L5-03 option (a)).
         is IgnitorDsl.Shimmer -> inner.withMod().shimmer(
             wet = wet.noMod(), feedback = feedback.noMod(), tone = tone.noMod(), pitches = pitches, floor = floor.noMod(),
             ringFrames = shimmerRingFrames(pitches = pitches, sampleRate = cache.sampleRate, maxFrames = SHIMMER_RING_FRAMES shl cache.regionStages),
+            noteRings = cache.noteRingLease(),
         )
     }
 

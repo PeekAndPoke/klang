@@ -152,6 +152,8 @@ class VoiceScheduler(
         sampleRate = context.sampleRate,
         blockFrames = context.blockFrames,
         scratchBuffers = scratchBuffers,
+        // The voices' per-note rings come from the warehouse and go back when a voice leaves [active] (KLANG-00429, L5-03)
+        noteRings = context.warehouse.noteRings,
     )
 
     fun addSample(msg: KlangCommLink.Cmd.Sample) = context.sampleStore.addSample(msg)
@@ -288,7 +290,29 @@ class VoiceScheduler(
      * no other voice is `Done`.
      */
     private fun removeDoneVoices() {
-        active.retainInOrder { it.voice.state !is Voice.State.Done }
+        active.retainInOrder { activeVoice ->
+            val keep = activeVoice.voice.state !is Voice.State.Done
+
+            // A voice leaves: its per-note rings go back to the warehouse in the same step (KLANG-00429, L5-03)
+            if (!keep) {
+                activeVoice.voice.giveBackNoteRings()
+            }
+
+            keep
+        }
+    }
+
+    /**
+     * The engine is disposed (`PlaybackEngine.dispose`): every voice still in the list is killed and removed, its per-note
+     * rings given back (KLANG-00429, L5-03). A released engine is disposed with its voices still listed (its release
+     * has run out, they no longer sound); without this their rings would be lost to the shelf. Nothing renders after.
+     */
+    fun disposeVoices() {
+        for (i in 0 until active.size) {
+            active[i].voice.kill()
+        }
+
+        removeDoneVoices()
     }
 
     /** Drops every voice not yet promoted. */
@@ -495,8 +519,13 @@ class VoiceScheduler(
 
             val isAlive = activeVoice.voice.render(ctx)
 
-            if (!isAlive && activeVoice.voice.culled) {
-                culledVoices++
+            if (!isAlive) {
+                if (activeVoice.voice.culled) {
+                    culledVoices++
+                }
+
+                // The voice leaves the list here: its per-note rings go back to the warehouse (KLANG-00429, L5-03)
+                activeVoice.voice.giveBackNoteRings()
             }
 
             isAlive

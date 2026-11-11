@@ -529,6 +529,9 @@ class PlaybackEngineDispatcher(
     /** Puts [count] delay rings of [seconds] on the warehouse's shelf, for the warmup ([ResourceWarehouse.stockDelayRings]). */
     fun stockDelayRings(seconds: Double, count: Int) = context.warehouse.stockDelayRings(seconds = seconds, count = count)
 
+    /** Puts [count] note rings of [minFrames] on the warehouse's note-ring shelf, for the warmup ([ResourceWarehouse.stockNoteRings]). */
+    fun stockNoteRings(minFrames: Int, count: Int) = context.warehouse.stockNoteRings(minFrames = minFrames, count = count)
+
     /**
      * Frames of latency the output adds: the house stage's (the house limiter's lookahead) plus the longest master
      * chain an engine has in service. A render that stops must run this many frames past its musical end, or the last

@@ -87,7 +87,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   2026-09-30); an input with equal sides feeds what it did before, bit for bit. A Freeverb tail only: no pre-delay,
   no early reflections (KLANG-00256 (reverb models)). `reverb.lowpass` is a real cutoff: the -3 dB corner of the
   combs' one-pole at every rate, held to 5 Hz .. Nyquist (`Reverb.cutoffDamping`); unset is Freeverb's pole 0.2, bit
-  for bit; a set cutoff's lag lengthens the drain and ceiling lap (`Reverb.dampingLag`, KLANG-00428). Two tail floors on purpose (maintainer,
+  for bit; a set cutoff's lag lengthens the drain and ceiling lap (`Reverb.dampingLag`, KLANG-00428). A change glides
+  on the comb pole like the size, per block over the glide time, one block when modulated
+  (`KatalystReverbEffect.dampingGlide`, KLANG-00420: under the real cutoff a jump clicked); while it moves the lap counts
+  the larger pole's lag. Two tail floors on purpose (maintainer,
   2026-10-17): ordinary playback holds a room's ceiling to `SILENCE_FLOOR` on the cells (unchanged, the corpus pins
   it); only while its chain drains after a swap (`KatalystReverbEffect.swapDraining`, set by the drain's
   `measureTail`, cleared by reset and retire) does it answer against `Reverb.TAIL_FLOOR`, the comb level whose output
@@ -409,6 +412,17 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   build can read (a count only when it reads no `Freq`, `countsAtBuild`); the first block reads the depth and draws,
   when and in the order it always did. Still allocated at render: a count signal's rise past that size, the shared drift lane's `Random` below
   spread 1 (D7), the phase pool's vocabulary while it grows. Guards: `FirstBlockAllocationSpec`, `SeededVoiceRngSpec`.
+- **Per-note rings are rented** (KLANG-00429, L5-03, 2026-11-11): the Karplus lines (one per pluck, one per
+  superpluck string) and the shimmer's grain ring come from the warehouse's note-ring shelf (`NoteRings`: powers of two
+  from 4096 to 131,072 frames, idle bound 4 MB carved out of `SHELF_BUDGET_BYTES`) through the voice's
+  `NoteRingLease`, which the build makes on its first rent (`IgnitorBuildCache.noteRingLease`, out in
+  `BuiltIgnitor.noteRings`). The voice gives them back on every way out of its engine (the scheduler's two removals,
+  `PlaybackEngine.dispose` through `VoiceScheduler.disposeVoices`), once; they go back dirty and housekeeping zeroes
+  16,384 frames per block. A dirty ring is never rented: a class with no clean ring allocates (counted,
+  `WarehouseStats.noteRing*`). A rented ring is longer than asked: the string runs on `KarplusString.length` (2,500),
+  the shimmer on its `ringSize`, never the array's size. The warm-up stocks 16 Karplus lines (512 KB; the corpus holds at
+  most 8 at once). A build outside a voice (no shelf) allocates its own, as before. Guards: `NoteRingsSpec`,
+  `NoteRingReturnSpec`, `NoteRingIdentitySpec`, `NoteRingBuildBytesSpec`.
 - **The SVF cutoff clamp** (`clampSvfCutoff`, the one home, read by the SVF, the one-poles, the EQ and the resonator
   bank) is `[5 Hz, 0.49 * fs]` since KLANG-00432 (audit L4-10; `fs / 2 - 1` before, a resonator at Nyquist).
 - **A non-finite SAMPLE**: a stage that stores it stores 0, every other stage stays raw, the house stage counts it
@@ -503,15 +517,13 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   maintainer first.
 - **Never measured alone**: the build-time cost of the gate's ON path (the per-block numbers are in the history's gate
   entry; every classic stage on builds in 19.8 us through `VoiceFactory`, `AuditRealtimeRepro`, KLANG-00429).
-- **Per-note rings, not pooled** (KLANG-00429; the rental is KLANG-00437's): a built shimmer allocates its grain ring
-  sized to its pitches (`shimmerRingFrames`: 14,402 samples at the default at 48 kHz, at most 96,000), a pluck string
-  2,500 samples, a superpluck one per string, at every note on the audio thread.
 
 ## History
 
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 The per-note rings pooled (the Karplus lines and the shimmer ring rented per voice from the warehouse, given back on every voice exit, 16 lines warmed, six note-ring counts on the wire), the reverb's `lowpass` glides on its pole (the closing run's click), the stale L4-02 reproductions deleted: KLANG-00429, KLANG-00420
 - 2026-11-11 Decisions pass C: the filter envelope's cutoff exact at knots of the note (half a semitone, 128 frames), the distort doors on the fused law (the soft cap gone), the aliasing meter's healthy limit on the health page: KLANG-00432, KLANG-00420
 - 2026-11-11 Decisions pass B2: the browser decodes at the engine's rate, the UI's clock hears an authored master, a sample crosses as one transferred buffer, the dropped and soundless counts monotone, the codec format in the schema hash, refused sends counted, crushed blocks counted, the offline render's head trimmed, `Long` refused on the wire, the worklet clock's frame counting dropped, the census models every gate, `scheduleVoice` removed: KLANG-00430, KLANG-00431, KLANG-00432, KLANG-00433
 - 2026-11-11 Decisions pass B1: a stop gives open gates their note-off and bounds a voice past the 20 s hold, a switch-on fades only over a sounding bus, delay rings bounded at 60 s, 1 s and 2 s rings warmed, a relaxing compressor move snaps, the SVF clamp at 0.49 fs, the house DC state bounded, the 16-bit edge rounds, the distort DC pole per rate: KLANG-00427, KLANG-00428, KLANG-00432, KLANG-00433

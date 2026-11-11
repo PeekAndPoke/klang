@@ -308,6 +308,18 @@ class KlangCommLink(capacity: Int = 8192) {
                 val cylinderAllocations: Int,
                 val cylinderHits: Int,
                 val cylinderDropped: Int,
+                /**
+                 * Per-note rings (KLANG-00429, audit finding L5-03): the Karplus lines and the shimmer's grain ring a
+                 * voice rents at its build and gives back at its end. Idle bytes, idle count, dirty (not yet zeroed)
+                 * count; rings allocated because no clean one was idle (or stocked by the warmup), rents served from the
+                 * shelf, returns not shelved (over its byte bound).
+                 */
+                val noteRingIdleBytes: Double,
+                val noteRingIdleCount: Int,
+                val noteRingDirtyCount: Int,
+                val noteRingAllocations: Int,
+                val noteRingHits: Int,
+                val noteRingDropped: Int,
                 /** Shared scratch: pre-sized capacity and the deepest nesting ever served. */
                 val scratchCapacity: Int,
                 val scratchHighWater: Int,
@@ -337,6 +349,8 @@ class KlangCommLink(capacity: Int = 8192) {
                         reverbIdleCount = 0, reverbDirtyCount = 0, reverbAllocations = 0, reverbHits = 0,
                         reverbFailures = 0, reverbDropped = 0,
                         cylinderIdleCount = 0, cylinderAllocations = 0, cylinderHits = 0, cylinderDropped = 0,
+                        noteRingIdleBytes = 0.0, noteRingIdleCount = 0, noteRingDirtyCount = 0, noteRingAllocations = 0,
+                        noteRingHits = 0, noteRingDropped = 0,
                         scratchCapacity = 0, scratchHighWater = 0, scratchLateAllocations = 0, scratchUnbalancedReleases = 0,
                         sampleBytes = 0.0, sampleCount = 0, sampleAllocationFailures = 0,
                         droppedVoices = 0, deniedRents = 0,

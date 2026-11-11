@@ -464,6 +464,50 @@ Synthasy VII Prelude, Drunken Synthlor) and the 13 live songs edited since (info
 deliberate sound changes (KLANG-00426, 00427, 00430, 00432, among them L3-01, L2-01, L2-03, L3-02, L3-05, L4-02,
 L4-05); this run does not attribute rows to fixes.
 
+## After the closing run (2026-11-11): the `reverb.lowpass` click, the stale L4-02 reproductions
+
+**The click is fixed at its cause.** `reverb.lowpass` 1000 to unset read kink 1.31 and a burst at -95.0 dB on
+2026-11-10 and 6.84 and -68.6 dB in the closing run. The change that moved it is KLANG-00428's second pass
+(8b4506c0d, "reverb.lowpass is a cutoff in Hz"), found by reading the damping law at both commits: before it a set
+`lowpass` was a linear damping amount, `(1 - fc / Nyquist) * 0.4`, so 1000 Hz at 48 kHz was a comb pole of 0.383
+against the unset 0.2; since it the pole is the one-pole's own for the corner, 0.877 at 1000 Hz. The comb's store
+`y = (1 - p) x + p y'` keeps its value across a pole jump but not its lag at the tone (about 0.10 rad at 110 Hz under
+0.877, 0.004 under 0.2), so the jump bends every comb's recirculating signal, and the bend comes out one comb length
+later, staggered over the combs (the kink 49.75 ms after the change). The standing law said the damping does not
+glide, "measured inaudible under the old law, not measured again" (`audio/ref/katalyst.md`): under the new law it no
+longer held, so this is not a wrong old reading but a law whose condition fell away.
+
+The fix, in the engine's existing terms: the damping glides like the size, a COEFFICIENT knob (`KnobGlide`, per
+block, over the glide time, one block when the knob is modulated, the first configure out of Off snapping), on the
+comb damping's POLE, the coefficient the store is linear in. `KatalystReverbEffect.dampingGlide` holds its value on
+the unit while it moves (`Reverb.holdDamping`); the block it lands in runs on the unit's own law again, the same
+number bit for bit, so a room whose `lowpass` never moves renders as before. While a pole is held the tail accounting
+counts the lag of the larger of the held pole and its target, which bounds every lap until the glide lands (a drain
+that starts mid-glide towards a dark room). No clamp. The click rows now: 1000 to unset kink 1.29, burst -92.6 dB;
+unset to 1000 kink 1.27, burst -94.4 dB (were 1.90 and -86.2): the worst of the probe's four instants and both
+channels, read by `ReverbLowpassClickSpec` with the probe's own cases and function. No corpus song moves: all 18
+renders are bit identical with this and KLANG-00429's pooling applied (the render there), so no song changes a
+cylinder's `lowpass` while its room sounds.
+
+Guards: `ReverbLowpassClickSpec` (jvmTest, the probe rows with a threshold: kink under 2, burst under -86 dB, under the
+probe's own 50 ms glide control), `KatalystReverbDampingGlideSpec` (the pole's linear glide by hand, three moves; the
+gliding room against a bare network held on hand-computed poles; a still `lowpass` never holds a pole, bit for bit the
+bare network; a modulated one lands at once; the drain mid-glide counts the darker room's lag; reset forgets the
+glide), and a row in `KatalystModulatedStagesSpec` (a modulated cutoff holds no pole). Mutants, all KILLED for the
+expected reason (one campaign with KLANG-00429's pooling): the effect not holding the pole (the click rows, kink back
+over 2), `Reverb.process` ignoring a held pole (after the oracle was made independent of `holdDamping`, see KLANG-00429),
+the lag bound taken from the held pole alone, the way into Off keeping a held pole, the chain builder not passing a
+modulated lowpass. Docs: `audio/ref/katalyst.md`, `audio/ref/knob-glide.md`,
+`audio/ref/effects-mixing.md`.
+
+**The L4-02 reproductions are deleted** (`AuditSoundStagesRepro`): (b), the onsets one frame apart, measured a fixed
+finding (identical at every offset since pass C), and (c), the grid emulation, emulated a law the engine no longer
+has. With them went what only they used: the file's `renderTreeAtOffset`, `sweptLowpass` and `diffDb`, and
+`AuditSoundKit.renderVoice` and `AuditSoundKit.peak` (`_audit_sound_kit.kt`); the file's KDoc says what is left in it
+(L7b-02, the vowel). The framing cases' known text for a filter envelope (`KNOWN_E3` in `_framing_cases.kt`, the
+KLANG-00156 E3 quote with its "latent: no production door passes an env here") is gone: those rows are identical at
+every offset, and the quote described the block law pass C retired.
+
 ## History
 
 - 2026-11-10: created.
@@ -472,3 +516,4 @@ L4-05); this run does not attribute rows to fixes.
 - 2026-11-10: the audit ran (ten layers, 120 findings) and the disproof pass (69 challenged, 0 disproved); the index is `docs/audio-audit/2026-11-10/audit/SUMMARY.md`. Waiting for the maintainer to pick the tickets.
 - 2026-11-11: decisions pass C: the aliasing meter's healthy limit, judged on the health page.
 - 2026-11-11: closing measurement run: every probe and reproduction rerun into `docs/audio-audit/2026-11-11/`, verdicts updated, page rebuilt; the corpus is red against the pre-audit reference, not accepted.
+- 2026-11-11: after the closing run: the `reverb.lowpass` click fixed (the damping glides on its pole), the stale L4-02 reproductions deleted.

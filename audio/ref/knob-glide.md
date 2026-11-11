@@ -99,7 +99,11 @@ its JUMP is audible. The pilot measured the cylinder reverb in a Python copy of 
 to 70 dB below the tail, because the comb's one-pole state stays continuous and the change reaches
 the output one comb length later, staggered over 16 combs; a SIZE jump sits 44 to 50 dB below the
 tail, marginal, possibly audible on an exposed tail, and the glide takes 12 to 15 dB off it. So
-size glides and damping does not. Every later knob is measured the same way first, and only the
+size glided and damping did not, until `reverb.lowpass` became a real cutoff (KLANG-00428): its pole
+then spans 0.17 to 0.999 where the old law spanned 0 to 0.4, the click probe read 1000 Hz to unset
+at kink 6.84 and a burst at -68.6 dB, and the damping glides on its pole since 2026-11-11
+(KLANG-00420; under the glide 1.29 and -92.6 dB). A knob whose law changes is measured again.
+Every later knob is measured the same way first, and only the
 ones whose jump is audible get the helper. Coefficients inside recursive filters with continuous
 state are the likeliest to need nothing; LEVEL knobs (a gain that steps) are the likeliest to need
 it.
@@ -109,7 +113,7 @@ it.
 | kind | examples | how it glides | cost |
 |---|---|---|---|
 | LEVEL | reverb and delay `wet`, body, vowel and phaser mix, the fader, the crossfade between two delay taps | linear ramp PER SAMPLE: start value and step computed once per block, one add per sample in the effect's own loop, on locals | one add per sample |
-| COEFFICIENT | reverb size (damping measured and NOT needed, pilot log entry 4), delay feedback, compressor settings, filter frequencies: each measured first | linear glide PER BLOCK: the value used for a block moves one step toward the target | nothing per sample; the coefficient math stays at block rate |
+| COEFFICIENT | reverb size, reverb damping on its pole (not needed under the old law, pilot log entry 4; needed under the real cutoff, 2026-11-11), delay feedback, compressor settings, filter frequencies: each measured first | linear glide PER BLOCK: the value used for a block moves one step toward the target | nothing per sample; the coefficient math stays at block rate |
 | exception: delay TIME | | never glides (a glide bends the echoes' pitch); a change crossfades from the old tap to the new one, which is a LEVEL ramp | as LEVEL |
 
 Why the split: a gain that moves in per-block steps (about 19 steps over 50 ms at 128 frames)
@@ -171,7 +175,10 @@ changes (18 of 18 built-in songs and frozen pieces bit-identical in raw doubles 
    (low tones, energy above 3 kHz as the artifact): a full-span damping jump already sits 66 to 70
    dB below the tail, because the comb's one-pole state stays continuous and the change reaches
    the output one comb length later, staggered over the combs. The glide bought about 15 dB on an
-   artifact nobody hears, and was removed. A size jump sits 44 to 50 dB below the tail and the
+   artifact nobody hears, and was removed (under the old law; the real cutoff of KLANG-00428 made it
+   audible, and since 2026-11-11 the damping glides on its POLE, which needs no round trip: the
+   glide holds the pole on the unit while it moves and the unit's own law takes over on landing,
+   KLANG-00420). A size jump sits 44 to 50 dB below the tail and the
    glide takes 12 to 15 dB off it (10*log10(17)), so only size glides. Size glides on the
    normalized 0..1 axis, which is affine to the comb feedback. Next effects: measure the jump's
    artifact against the signal before adding a glide. A recursive filter's coefficient whose state

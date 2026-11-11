@@ -188,6 +188,53 @@ class Reverb(
         }
 
     /**
+     * The comb pole a gliding [lowpass] holds this block (`KatalystReverbEffect`'s damping glide, KLANG-00420, the
+     * closing run's `reverb.lowpass` click), valid while [dampingHeld]: [process] runs on it instead of the pole of
+     * [lowpass]. A Boolean beside a double, not a NaN for "none", so a release writes no `NaN` (see [lowpass]).
+     */
+    private var heldDamping: Double = 0.0
+
+    /** True while [heldDamping] is in force ([holdDamping] to [releaseDamping]). */
+    var dampingHeld: Boolean = false
+        private set
+
+    /**
+     * Runs the next blocks on the comb pole [pole] instead of the pole of [lowpass], until [releaseDamping]: the
+     * stage's damping glide writes its value here before each block while it moves, the way the size glide writes
+     * [size]. The tail accounting then counts the lag of the larger of [pole] and the pole of [lowpass] (the glide's
+     * target), so every lap until the glide lands is counted long enough ([dampingLag]).
+     */
+    fun holdDamping(pole: Double) {
+        heldDamping = pole
+        dampingHeld = true
+    }
+
+    /** Back to the pole of [lowpass]: the glide has landed there, the same number bit for bit. */
+    fun releaseDamping() {
+        dampingHeld = false
+    }
+
+    /** Test seam: the comb pole the next [process] runs on (the held one, or the pole of [lowpass]). */
+    internal val dampingInForce: Double get() = if (dampingHeld) heldDamping else dampingFor(lowpass)
+
+    /**
+     * The comb pole [process] runs on for the cutoff [cutoffHz] (NaN = unset): its corner in Hz at this rate, held to
+     * the base rate's Nyquist ([cutoffDamping]), or the fixed DEFAULT_DAMP, whose per-sample pole inside a region is
+     * mapped to stay where it is in Hz (one `pow` per block). The one law, read by [process] and by the stage's damping
+     * glide for its target. Kotlin `inline`, so no double crosses a call on V8.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    internal inline fun dampingFor(cutoffHz: Double): Double =
+        // NaN-guard: NaN is the unset cutoff ([lowpass] never holds an infinity).
+        if (cutoffHz == cutoffHz) {
+            cutoffDamping(cutoffHz = cutoffHz, sampleRate = sampleRate.toDouble(), nyquistHz = sampleRate / (2.0 * factor))
+        } else if (factor > 1) {
+            (DEFAULT_DAMP * DAMP_SCALE).pow(1.0 / factor)
+        } else {
+            DEFAULT_DAMP * DAMP_SCALE
+        }
+
+    /**
      * Highest absolute sample across ALL comb buffers, both channels — the drain-countdown
      * analog of `DelayLine.tapWindowPeakAbs`. For a comb the whole buffer IS the tap window:
      * the read position cycles through every cell and re-feeds it, so (unlike the delay ring)
@@ -364,6 +411,7 @@ class Reverb(
     fun restoreDefaults() {
         size = normalizeSize(REVERB_SIZE)
         lowpass = Double.NaN
+        releaseDamping()
     }
 
     /** The comb feedback [process] runs at: `size x FEEDBACK_SCALE + FEEDBACK_OFFSET` — one
@@ -430,20 +478,24 @@ class Reverb(
         // Comb feedback ← size
         val feedback = effectiveFeedback()
 
-        // Damping: the pole of the cutoff [lowpass] when set (its corner in Hz at this rate, held to the base rate's
-        // Nyquist), else the fixed DEFAULT_DAMP, whose per-sample pole inside a region is mapped to stay where it is in
-        // Hz (one `pow` per block). One `sin` and one `sqrt` per block for a set cutoff.
+        // Damping: the pole of the cutoff [lowpass] ([dampingFor]; one `sin` and one `sqrt` per block for a set cutoff),
+        // or, while the stage's damping glide moves, the pole it holds ([holdDamping]).
         val lp = lowpass
-        // NaN-guard: NaN is the unset cutoff ([lowpass] never holds an infinity).
-        val damping = if (lp == lp) {
-            cutoffDamping(cutoffHz = lp, sampleRate = sampleRate.toDouble(), nyquistHz = sampleRate / (2.0 * factor))
-        } else if (factor > 1) {
-            (DEFAULT_DAMP * DAMP_SCALE).pow(1.0 / factor)
+        val target = dampingFor(lp)
+        val held = dampingHeld
+        val damping = if (held) heldDamping else target
+
+        // The lag of a set cutoff's pole (0 unset, the accounting a song that never sets it always had); while the glide
+        // moves, of the larger pole of the one in force and its target, which bounds every lap until it lands.
+        dampingLag = if (held) {
+            val bound = if (damping > target) damping else target
+
+            bound / (1.0 - bound)
+        } else if (lp == lp) { // NaN-guard: the unset test of [dampingFor]
+            damping / (1.0 - damping)
         } else {
-            DEFAULT_DAMP * DAMP_SCALE
+            0.0
         }
-        // NaN-guard: the same unset test as above
-        dampingLag = if (lp == lp) damping / (1.0 - damping) else 0.0
         val invDamping = 1.0 - damping
         val outputGain = FIXED_GAIN
 

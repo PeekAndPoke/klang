@@ -413,8 +413,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // from 212461444 (`Diagnostics.nonFiniteSamples` joined it: the house stage's "poison seen" count); KLANG-00431
         // and KLANG-00432's decisions pass B2 from 358149839, one change (the codec's format joined the signature, D8;
         // `Cmd.Sample.Chunk` left it, a sample crosses whole as one transferred buffer, D5; `Diagnostics.crushedBlocks`
-        // and `Diagnostics.refusedFeedbackSends` joined it, L8-02 (c) and D10).
-        WIRE_SCHEMA_HASH shouldBe -1036617280
+        // and `Diagnostics.refusedFeedbackSends` joined it, L8-02 (c) and D10); KLANG-00429 from -1036617280 (the note
+        // rings' six counts joined `Diagnostics.WarehouseStats`, L5-03).
+        WIRE_SCHEMA_HASH shouldBe 1286855684
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -451,6 +452,9 @@ class WireCodecRoundTripSpec : StringSpec({
                     ringFailures = 0, ringDropped = 0, ringSyncCleans = 1,
                     reverbIdleCount = 16, reverbDirtyCount = 0, reverbAllocations = 16, reverbHits = 4, reverbFailures = 0, reverbDropped = 0,
                     cylinderIdleCount = 8, cylinderAllocations = 16, cylinderHits = 8, cylinderDropped = 0,
+                    // The note rings (KLANG-00429, L5-03): each its own value, so a swap of two would show.
+                    noteRingIdleBytes = 196_608.0, noteRingIdleCount = 6, noteRingDirtyCount = 2, noteRingAllocations = 9,
+                    noteRingHits = 11, noteRingDropped = 1,
                     scratchCapacity = 64, scratchHighWater = 30, scratchLateAllocations = 0, scratchUnbalancedReleases = 0,
                     sampleBytes = 12_345_678.0, sampleCount = 7, sampleAllocationFailures = 0,
                     droppedVoices = 3, deniedRents = 1,

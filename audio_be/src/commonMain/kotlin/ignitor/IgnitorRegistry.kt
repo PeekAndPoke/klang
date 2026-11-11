@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBackendContext
+import io.peekandpoke.klang.audio_be.warehouse.NoteRings
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
@@ -187,6 +188,8 @@ class IgnitorRegistry(
          *  rate (see [DEFAULT_BUILD_SAMPLE_RATE]). */
         sampleRate: Int = DEFAULT_BUILD_SAMPLE_RATE,
         blockFrames: Int = AudioBackendContext.RENDER_QUANTUM_FRAMES,
+        /** The warehouse's shelf of per-note rings (KLANG-00429, L5-03), see [buildExciter]; null allocates them. */
+        noteRings: NoteRings? = null,
     ): BuiltIgnitor? {
         // No `?: get(name)` fallback on purpose: it could never fire (register writes both maps
         // together), so it would only mask a future regression in optimized()'s delegation by
@@ -207,6 +210,7 @@ class IgnitorRegistry(
             freqHz = freqHz,
             sampleRate = sampleRate,
             blockFrames = blockFrames,
+            noteRings = noteRings,
         )
     }
 

@@ -159,7 +159,7 @@ the table in `.claude/skills/klang-music-writing/ref/sprudel-reference.md` ("Rev
 |-------------|------------------------------------------------|
 | `reverb.wet`     | How much of the cylinder mix feeds the room (insert, the owner's one amount) |
 | `reverb.size`    | Tail length, authored ~0..10, normalized by `Reverb.normalizeSize` |
-| `reverb.lowpass` | The -3 dB cutoff in Hz of the one-pole in every comb's feedback (`Reverb.cutoffDamping`, the same corner at every rate), held to 5 Hz .. Nyquist; a dark cutoff lengthens the tail accounting's lap by the one-pole's lag (`Reverb.dampingLag`). Unset: Freeverb's fixed pole 0.2 (16.9 kHz at 48 kHz), bit for bit as before (KLANG-00428) |
+| `reverb.lowpass` | The -3 dB cutoff in Hz of the one-pole in every comb's feedback (`Reverb.cutoffDamping`, the same corner at every rate), held to 5 Hz .. Nyquist; a dark cutoff lengthens the tail accounting's lap by the one-pole's lag (`Reverb.dampingLag`). Unset: Freeverb's fixed pole 0.2 (16.9 kHz at 48 kHz), bit for bit as before (KLANG-00428). A change glides on the pole, per block over the glide time, one block when modulated (KLANG-00420) |
 
 ### Phaser
 

@@ -359,6 +359,8 @@ class KatalystModulatedStagesSpec : StringSpec({
             withClue("block $k: lowpass") {
                 unit.lowpass shouldBe (ranged(k, from = 2000.0, to = 6000.0) plusOrMinus 1e-6)
             }
+            // The damping glide spans one block for a modulated cutoff (KLANG-00420): the room runs on this block's pole
+            withClue("block $k: no pole held") { unit.dampingHeld shouldBe false }
         }
     }
 

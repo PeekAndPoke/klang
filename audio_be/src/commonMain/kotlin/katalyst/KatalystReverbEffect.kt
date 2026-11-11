@@ -81,11 +81,12 @@ import kotlin.math.min
  * block ([advanceGlide]) and the shared DSP is untouched (the master shares it and does not
  * glide). It glides on the normalized 0..1 axis the [Reverb] holds; the comb feedback is affine in
  * it, so this is also a linear glide of the feedback.
- *  - **Damping does not glide.** Measured in review round 1: a full-span damping jump already sits
- *    66 to 70 dB below the tail (the comb's one-pole state stays continuous, and the change reaches
- *    the output one comb length later, staggered over the combs), so a glide would buy ~15 dB on an
- *    artifact nobody hears. A size jump sits 44 to 50 dB below it, and the glide takes 12 to 15 dB
- *    off that.
+ *  - **The damping glides too, on its pole** ([dampingGlide], KLANG-00420, 2026-11-11). Until then it
+ *    did not: measured in review round 1, a full-span damping jump sat 66 to 70 dB below the tail under
+ *    the old law, whose poles spanned 0 to 0.4. Since `lowpass` is a real cutoff (KLANG-00428) the pole
+ *    spans 0.17 to 0.999, and the jump of the store's lag at the tone is a kink in every comb, one comb
+ *    length later: the click probe read kink 6.84 for 1000 Hz to unset. A size jump sits 44 to 50 dB
+ *    below the tail, and the glide takes 12 to 15 dB off that.
  *  - **The old path, literally.** [configure] writes the configured values exactly as before the
  *    glide existed. While a glide moves, [advanceGlide] overwrites the size before the block
  *    processes; the only reader in between is the drain countdown, which reads the glide.
@@ -115,6 +116,11 @@ class KatalystReverbEffect(
      * [Off] glides the wet up from 0 instead of snapping it (see the class KDoc).
      */
     private val sizeModulated: Boolean = false,
+    /**
+     * True when the lowpass's knob holds a modulator: [dampingGlide] spans one block (step 5b, D2), so a modulated
+     * cutoff is not smeared by the 50 ms glide.
+     */
+    lowpassModulated: Boolean = false,
 ) : KatalystEffect {
 
     /**
@@ -231,6 +237,23 @@ class KatalystReverbEffect(
         KnobGlide(sampleRate = units.sampleRate, blockFrames = blockFrames, modulated = sizeModulated)
 
     /**
+     * The comb damping's POLE ([Reverb.dampingFor] of the `lowpass` in force), gliding to the pole of a new `lowpass`
+     * over [KnobGlide]'s ~50 ms, one step per block, like [sizeGlide] (KLANG-00420, the closing run of 2026-11-11). A
+     * coefficient knob: while it moves, [advanceGlide] holds its value on the [Reverb] before the block
+     * ([Reverb.holdDamping]); once it lands the unit runs on the pole of its `lowpass` again, the same number bit for
+     * bit. Linear in the pole, the coefficient the comb's one-pole store is linear in, so every step lies between its
+     * endpoints.
+     *
+     * Why: since `lowpass` became a real cutoff (KLANG-00428) a jump spans most of the pole's range (1000 Hz is a pole
+     * of 0.88 at 48 kHz, unset is 0.2), and the store's lag at the tone jumps with it, a kink in every comb's
+     * recirculating signal, one comb length later: the click probe read kink 6.84 and a burst at -68.6 dB for 1000 Hz
+     * to unset (1.31 and -95.0 under the old law, where 1000 Hz was a pole of 0.38). The first configure out of Off
+     * snaps, as the size does, so a song whose room never changes renders as before; the same lifecycle as [sizeGlide].
+     */
+    private val dampingGlide =
+        KnobGlide(sampleRate = units.sampleRate, blockFrames = blockFrames, modulated = lowpassModulated)
+
+    /**
      * The lifecycle as a state machine (`audio/ref/effect-state-machines.md`, the shape of
      * [KatalystDelayEffect]), one class per state. One instance of each is created with the effect
      * and [state] points at the current one, so a transition is a pointer swap and nothing
@@ -286,6 +309,9 @@ class KatalystReverbEffect(
         fun enter() {
             activeTail.reset()
             sizeGlide.reset()
+            dampingGlide.reset()
+            // A glide forgotten mid-way leaves no pole held on the unit (the next life's first configure snaps)
+            reverb?.releaseDamping()
             wetGlide.reset()
             // The memo describes an Active life; this one has ended (see [applied]).
             appliedValid = false
@@ -595,6 +621,8 @@ class KatalystReverbEffect(
             // A primitive write, so a lowpass that moves per block (a modulator, step 5b) boxes nothing.
             unit.lowpass = lowpass
             sizeGlide.retarget(boundedSize)
+            // The pole of the cutoff the unit now holds (a non-finite one read as unset by its setter): always finite.
+            dampingGlide.retarget(unit.dampingFor(unit.lowpass))
 
             // A switch-on on a bus that sounds (not [fresh], not [busSilent]), and every return of a modulated size,
             // starts the wet from 0 out of Off, so it glides up from there (out of Draining the fade left it at 0
@@ -731,6 +759,19 @@ class KatalystReverbEffect(
             unit.size = sizeGlide.advance()
         } else {
             sizeGlide.advance()
+        }
+
+        // The damping's pole: held on the unit while it moves; the block it lands in runs on the unit's own law again.
+        if (dampingGlide.isGliding) {
+            val pole = dampingGlide.advance()
+
+            if (dampingGlide.isGliding) {
+                unit.holdDamping(pole)
+            } else {
+                unit.releaseDamping()
+            }
+        } else {
+            dampingGlide.advance()
         }
     }
 

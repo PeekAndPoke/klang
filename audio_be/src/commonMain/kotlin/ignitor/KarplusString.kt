@@ -42,9 +42,20 @@ import kotlin.random.Random
  * plucked again, and its filter state ([lpState], [apPrevIn], [apPrevOut]) carries over. [excited] belongs to the
  * node, which sets it before it plucks and clears it to pluck again.
  */
-internal class KarplusString {
-    /** The delay line, [MAX_DELAY] samples. */
-    val delayLine: AudioBuffer = AudioBuffer(MAX_DELAY)
+internal class KarplusString(
+    /**
+     * The delay line: at least [MAX_DELAY] samples, all zero. A line rented from the warehouse's note-ring shelf is
+     * longer (its class, 4096 samples; KLANG-00429, L5-03), so the string reads [length], never the array's size.
+     */
+    val delayLine: AudioBuffer = AudioBuffer(MAX_DELAY),
+) {
+    /**
+     * The line's length the string runs on: [MAX_DELAY] whatever the array holds, so a rented line plays bit for bit
+     * what an own line of [MAX_DELAY] did (the wrap, the read's clamp and the excitation all count in it). A field read
+     * at run time on purpose: [render] wraps by it, and a wrap by the constant was 15 to 20 percent slower on the JVM
+     * (see there).
+     */
+    val length: Int = MAX_DELAY
 
     /** Where the next sample is written. */
     var writePos: Int = 0
@@ -95,7 +106,7 @@ internal class KarplusString {
             pickComb(len = delayLen, distance = d)
         }
 
-        writePos = delayLen % MAX_DELAY
+        writePos = delayLen % length
     }
 
     /**
@@ -160,8 +171,8 @@ internal class KarplusString {
      * - `inline`: each node gets its own copy of the loop, as before the string was shared. As one shared method the
      *   loop ran 3 to 18 percent slower on V8 (9 to 18 on five of the six Karplus rows measured); on the JVM it makes
      *   no difference once the wrap is the one below.
-     * - The wrap is by the line's length read at run time, not by the constant [MAX_DELAY]. With the constant, C2's
-     *   modulo made the JVM 15 to 20 percent slower here (the write position is a loop-carried `% 2500`).
+     * - The wrap is by the line's length read at run time ([length], a field), not by the constant [MAX_DELAY]. With the
+     *   constant, C2's modulo made the JVM 15 to 20 percent slower here (the write position is a loop-carried `% 2500`).
      * - The state lives in locals during the loop and is written back after it (9 to 16 percent faster on V8 than
      *   the fields; the measured exception to the "no snapshot into locals" rule). The write-back of the allpass
      *   state is pinned by `BlockFramingInvarianceSpec` (I2, the stiff rows) and `BuiltInVoiceMatrixSpec`.
@@ -193,7 +204,8 @@ internal class KarplusString {
         val feedbackGain = feedback * 1.0
         val g = gain * 1.0
         val line = delayLine
-        val len = line.size
+        // The string's own length, never `line.size`: a rented line is longer (see [length]).
+        val len = length
         // `* 1.0`: a seed from a field must pass an arithmetic op on V8, or the loop can box it (audio/ref/performance.md).
         var lp = lpState * 1.0
         var prevIn = apPrevIn * 1.0

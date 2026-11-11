@@ -242,6 +242,7 @@ object KatalystChainBuilder {
                         blockFrames = blockFrames,
                         wetModulated = wet.isModulated,
                         sizeModulated = size.isModulated,
+                        lowpassModulated = lowpass.isModulated,
                     )
                     pipeline.add(fx)
 

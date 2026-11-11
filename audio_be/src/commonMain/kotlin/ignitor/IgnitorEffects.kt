@@ -20,6 +20,8 @@ import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import io.peekandpoke.klang.audio_be.utils.fastSin
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.warehouse.NoteRingLease
+import io.peekandpoke.klang.audio_be.warehouse.ringOf
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.ceil
@@ -572,7 +574,12 @@ fun Ignitor.shimmer(
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
     floor: Ignitor = ParamIgnitor("floor", 0.0),
     ringFrames: Int = SHIMMER_RING_FRAMES,
-): Ignitor = ShimmerIgnitor(upstream = this, wet = wet, feedback = feedback, tone = tone, pitches = pitches, floor = floor, ringFrames = ringFrames)
+    /** The voice's lease on the warehouse's note-ring shelf, which the grain ring is rented through; null allocates it. */
+    noteRings: NoteRingLease? = null,
+): Ignitor = ShimmerIgnitor(
+    upstream = this, wet = wet, feedback = feedback, tone = tone, pitches = pitches, floor = floor, ringFrames = ringFrames,
+    noteRings = noteRings,
+)
 
 /**
  * The shimmer's largest grain ring at the base rate, 96,000 frames (2 s at 48 kHz): the ring of a shimmer whose grains
@@ -631,12 +638,19 @@ private class ShimmerIgnitor(
     pitches: List<Double>,
     private val floor: Ignitor,
     ringFrames: Int,
+    noteRings: NoteRingLease?,
 ) : Ignitor {
     /** True once the grain engine has produced state that a bypass must clear. */
     private var stateDirty = false
 
+    /** The ring's length the grains run on; every read and the bypass's clear count in it, never in `ring.size`. */
     private val ringSize = ringFrames
-    private val ring = AudioBuffer(ringSize)
+
+    /**
+     * The grain ring, all zero: rented with the voice (KLANG-00429, L5-03), so at least [ringSize] frames, its class
+     * (16,384 frames for the default 14,402), and given back when the voice ends.
+     */
+    private val ring = noteRings.ringOf(ringSize)
     private var writePos: Int = 0
 
     private val maxGrains = 8
@@ -680,7 +694,8 @@ private class ShimmerIgnitor(
                 // The ctx.length guard is ledger D7: a zero-length window reads a modulated wet
                 // as 0.0 (the deterministic E5 value) and must not get to DECIDE a bypass.
                 if (stateDirty && ctx.length > 0) {
-                    ring.fill(0.0)
+                    // The ring's own length: a rented ring is longer, and nothing past [ringSize] is ever written.
+                    ring.fill(0.0, 0, ringSize)
                     for (g in 0 until maxGrains) grainActive[g] = false
                     // Ledger D6: the grain SCHEDULER resets with the grain state — a resume must
                     // not keep a framing-dependent countdown remainder or round-robin position,

@@ -489,7 +489,9 @@ class ResourceWarehouseSpec : StringSpec({
     "the warehouse's class 0 is half a second PLUS the interpolation margin, and its budget is the named constant" {
         val w = ResourceWarehouse(sampleRate = 48_000, blockFrames = 128)
         w.sized.baseFrames shouldBe 24_000 + 64
-        w.sized.budgetBytes shouldBe ResourceWarehouse.SHELF_BUDGET_BYTES
+        // The two ring shelves share the one budget: the note rings take theirs out of it (KLANG-00429, L5-03)
+        w.sized.budgetBytes + w.noteRings.budgetBytes shouldBe ResourceWarehouse.SHELF_BUDGET_BYTES
+        w.noteRings.budgetBytes shouldBe NoteRings.BUDGET_BYTES
         ResourceWarehouse.SHELF_BUDGET_BYTES shouldBe 32 * 1024 * 1024
     }
 

@@ -29,6 +29,7 @@ import io.peekandpoke.klang.audio_be.probes.writeProbeFile
 import io.peekandpoke.klang.audio_be.voices.PlaybackCtx
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceFactory
+import io.peekandpoke.klang.audio_be.warehouse.NoteRings
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -472,9 +473,20 @@ class AuditRealtimeRepro : StringSpec({
         registry.register(name = RT_REGION_SOUND, dsl = rtRegionInstrument())
 
         val playbackCtx = PlaybackCtx(playbackId = RT_PID, ignitorRegistry = registry.fork(), phasePools = PhasePools(Random(1)))
-        val factory = VoiceFactory(sampleRate = RT_SR, blockFrames = RT_BLOCK, scratchBuffers = ScratchBuffers(RT_BLOCK))
+        // The engine's per-note rings come from the warehouse's note-ring shelf and go back when a voice ends (KLANG-00429,
+        // L5-03). Here each round's builds are given back, and the shelf zeroed, after the timed builds, as the voices'
+        // ends and the per-block housekeeping would; the bound is raised so a round's 40 superpluck builds (320 lines,
+        // 10 MB) all come back: the row reads a WARM shelf, what the build costs once the song has played a while.
+        val noteRings = NoteRings(budgetBytes = 64 * 1024 * 1024)
+        val factory = VoiceFactory(sampleRate = RT_SR, blockFrames = RT_BLOCK, scratchBuffers = ScratchBuffers(RT_BLOCK), noteRings = noteRings)
         val cases = rtBuildCases()
         val scheduled = cases.map { rtVoice(note = "c4", atSec = 1.0, gateSec = 0.5, sound = it.sound, freqHz = 261.63, ignitorParams = it.params) }
+
+        /** The voice's end and the warehouse's housekeeping, outside every timed span. */
+        fun endVoice(voice: Voice?) {
+            voice?.giveBackNoteRings()
+            noteRings.housekeep(maxFrames = Int.MAX_VALUE)
+        }
 
         // Warm the render path of every case first (the first run measured the heavy cases' blocks JIT-cold)
         run {
@@ -487,6 +499,7 @@ class AuditRealtimeRepro : StringSpec({
                     v.render(warmCtx)
                     warmCtx.blockStart = 48000.0 + RT_BLOCK
                     v.render(warmCtx)
+                    endVoice(v)
                 }
             }
         }
@@ -502,6 +515,7 @@ class AuditRealtimeRepro : StringSpec({
         val secondBytes = List(cases.size) { ArrayList<Double>() }
         val renderCtx = rtRenderContext()
         var sinkVoice: Voice? = null
+        val roundVoices = arrayOfNulls<Voice>(perRound)
 
         for (r in 0 until warm + rounds) {
             val order = cases.indices.shuffled(Random(r))
@@ -514,10 +528,16 @@ class AuditRealtimeRepro : StringSpec({
 
                 for (i in 0 until perRound) {
                     sinkVoice = factory.makeVoice(scheduled = sv, backendStartTimeSec = 0.0, playbackCtx = playbackCtx, getSample = { null })
+                    roundVoices[i] = sinkVoice
                 }
 
                 val t1 = nanoNow()
                 val b1 = allocatedBytesNow()
+
+                for (i in 0 until perRound) {
+                    endVoice(roundVoices[i])
+                    roundVoices[i] = null
+                }
 
                 // The first and the second block of one fresh voice
                 val v = factory.makeVoice(scheduled = sv, backendStartTimeSec = 0.0, playbackCtx = playbackCtx, getSample = { null })!!
@@ -534,6 +554,8 @@ class AuditRealtimeRepro : StringSpec({
                 val t5 = nanoNow()
                 val b5 = allocatedBytesNow()
 
+                endVoice(v)
+
                 if (r >= warm) {
                     buildNs[ci].add((t1 - t0) / perRound)
                     buildBytes[ci].add((b1 - b0 - overhead) / perRound)
@@ -547,6 +569,7 @@ class AuditRealtimeRepro : StringSpec({
 
         line("== L2-06, L4-09, L5-03, L5-04, L5-09: one voice build through VoiceFactory.makeVoice (the production build, optimized registered tree), 48 kHz")
         line("   median of $rounds rounds of $perRound builds each (after $warm warm-up rounds, cases interleaved); then one fresh voice's first and second block")
+        line("   the per-note rings from a warm note-ring shelf, given back and zeroed after each round (KLANG-00429): ${noteRings.allocations} allocated, ${noteRings.hits} rented")
         line("   (sink: ${sinkVoice?.id ?: -1})")
 
         for (ci in cases.indices) {

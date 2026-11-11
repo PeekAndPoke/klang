@@ -9,22 +9,16 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
-import io.peekandpoke.klang.audio_be.probes.FRAMING_NONE
-import io.peekandpoke.klang.audio_be.probes.FramedOutput
-import io.peekandpoke.klang.audio_be.probes.FramingNote
 import io.peekandpoke.klang.audio_be.probes.PROBE_BLOCK_FRAMES
 import io.peekandpoke.klang.audio_be.probes.PROBE_SAMPLE_RATE
 import io.peekandpoke.klang.audio_be.probes.blackmanHarris7
 import io.peekandpoke.klang.audio_be.probes.probeOutputFile
-import io.peekandpoke.klang.audio_be.probes.renderFramedVoice
 import io.peekandpoke.klang.audio_be.probes.wholeProbeBlocks
 import io.peekandpoke.klang.audio_be.probes.windowedPowerSpectrum
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.common.infra.toKlangMap
 import java.io.File
 import java.util.Locale
-import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.ln
@@ -74,24 +68,6 @@ internal object AuditSoundKit {
     }
 
     // ── Rendering ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * One voice of the registered sound [sound] at [freqHz] through the production path (the probes'
-     * [renderFramedVoice]: a fresh registry with the built-ins, the real `VoiceFactory` and `Voice.render`), with the
-     * note slots [params], its onset at [onsetFrame], its gate [gateFrames] long, at least [frames] rendered. The
-     * cylinder mix as the voice left it (both channels).
-     */
-    fun renderVoice(
-        sound: String,
-        freqHz: Double,
-        params: Map<String, Double>,
-        frames: Int,
-        gateFrames: Int,
-        onsetFrame: Int = 0,
-    ): FramedOutput = renderFramedVoice(
-        note = FramingNote(onsetFrame = onsetFrame, gateFrames = gateFrames, cutFrame = FRAMING_NONE, renderFrames = frames),
-        data = VoiceData.empty.copy(sound = sound, freqHz = freqHz, ignitorParams = params.toKlangMap()),
-    )
 
     /**
      * A bare Ignitor tree through the production build ([buildExciter]) at [freqHz] with the note slots [params] and a
@@ -302,16 +278,5 @@ internal object AuditSoundKit {
         }
 
         return if (to > from) sum / (to - from) else 0.0
-    }
-
-    /** Largest |x| over `[from, to)`. */
-    fun peak(x: DoubleArray, from: Int = 0, to: Int = x.size): Double {
-        var p = 0.0
-
-        for (i in from until to) {
-            p = max(p, abs(x[i]))
-        }
-
-        return p
     }
 }

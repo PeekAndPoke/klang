@@ -205,6 +205,103 @@ call sites, and the optimizer's `mayBeUnset` (`audio_bridge`) must look through 
 contract for trees no corpus song has: more than the small local change the maintainer allowed. On KLANG-00437's list.
 `IgnitorGateSpec`'s pin row stays.
 
+## The per-note rings pooled (2026-11-11, L5-03 option (a), maintainer: "go ahead")
+
+**Built.** The plan the maintainer approved, item by item:
+
+1. **A mono shelf** in `ResourceWarehouse`: `NoteRings` (`warehouse/NoteRings.kt`), classes of powers of two from 4096
+   frames (32 KB, the class of a Karplus line's 2,500 frames) to 131,072 (1 MB, the class of the shimmer's largest ring
+   at the base rate, 96,000); a request past the top class (a shimmer in a region of 2x or more whose ring passes 1 MB)
+   is allocated at its own size and never shelved. Its idle bound, `NoteRings.BUDGET_BYTES` 4 MB, is carved out of
+   `SHELF_BUDGET_BYTES` (the delay rings' default bound is now 28 MB, the two 32 MB together); a return that would pass
+   it is dropped.
+2. **Rental per voice.** The build makes the voice's `NoteRingLease` on the first rent (`IgnitorBuildCache.noteRingLease`;
+   a voice that rents nothing makes none) and hands it out in `BuiltIgnitor.noteRings` (set on the root only); the
+   factory gives it to the `Voice`. The pluck rents its line, the superpluck one per string, also a string grown at
+   render past the build's count (`growStrings`, through the same lease), and the shimmer its grain ring
+   (`ringOf`; without a shelf, a build outside a voice, each allocates its own as before). The voice gives it all
+   back in the step that takes it out of the scheduler's list: the render loop's end of a voice, `removeDoneVoices`
+   (a cut, a kill, a stop that drops a pending voice, a hard cleanup), and `PlaybackEngine.dispose` through the new
+   `VoiceScheduler.disposeVoices` (a released engine is disposed with its voices still listed). The delay rings'
+   return path is the engine's disposal; this one is the voice's removal, the only point after which nothing renders
+   the tree. Once: the lease forgets what it gave back, and the shelf refuses a ring it holds already
+   (`doubleReturns`).
+3. **Deferred clearing.** A returned ring is dirty; `ResourceWarehouse.housekeep` zeroes `NoteRings.HOUSEKEEP_FRAMES`
+   (16,384, four lines) per block. A rent takes only a clean ring, nothing is cleared on the note-on path, and a dirty
+   ring is never handed out, not even cleaned on the spot (unlike the delay rings' sync clean). The string would only
+   need its own 2,500 frames zero, but clearing them at the rent would still be on the note-on path; the default
+   holds.
+4. **Fallback.** A class with no clean ring allocates a fresh one, as today, counted in `NoteRings.allocations`. Denied
+   rents mean a refused unit (a latched allocation failure) elsewhere, so the shelf has its own counts, six on the wire:
+   `WarehouseStats.noteRingIdleBytes`, `noteRingIdleCount`, `noteRingDirtyCount`, `noteRingAllocations`, `noteRingHits`,
+   `noteRingDropped`. A clean wire change: `WIRE_SCHEMA_HASH` moved once, -1036617280 to 1286855684
+   (`WireCodecRoundTripSpec`). The warehouse panel (`src/jsMain/kotlin/comp/PlayerWarehouseStats.kt`) does not show
+   them yet (an app file, not this pass's).
+5. **Own length.** A rented ring is longer than asked. The Karplus string runs on `KarplusString.length` (2,500, a
+   field: its wrap is read at run time as before) for the wrap, the read's clamp and the excitation's write head,
+   never `delayLine.size`; the shimmer on its `ringSize` (its bypass clears `0 until ringSize`). Every `.size` of the
+   Karplus code was read: the line's (render) is now `length`; the others are the string array's and the delay
+   caches', which count strings. The ring's length does not depend on the pitch in today's code (the line is 2,500
+   for every note, the lowest about 19 Hz at 48 kHz); sizing it by pitch would be option (b), a sound question for a
+   pitch bent past the sized line, and is not done.
+6. **Warm stock.** The corpus, measured per song (the after-render below, a temporary count in the throwaway
+   worktree): the most lines a song holds at once is 8 (The Synthsale Piper's Farewell, 3,586 rents); Die Kirschblüte
+   and Greensleeves Chant 6 (4,568 and 2,010 rents), Drunken Synthlor 4 (2,172); the other 14 renders none. With an
+   empty shelf each of the four allocated only its peak, every later note rented. The warmup stocks 16 lines
+   (`WarmupRunner.WARM_NOTE_RINGS`, twice the peak, fresh so clean at once; its own pluck and superpluck give 4 back and
+   the stock tops the class up): 512 KB idle after the warmup.
+
+**The shimmer** fits the same mechanism without contortion (one ring per node, its own length already a field), so it
+is in: its default ring of 14,402 frames rents the 16,384 class.
+
+**Numbers.**
+
+- Bytes per build with a warm shelf (`NoteRingBuildBytesSpec`, `IgnitorRegistry.createExciter`, the rings given back
+  and zeroed after each build): pluck 2,720 B, superpluck (8 strings) 3,544 B; through `VoiceFactory` in the closing
+  run, 22,760 and 163,584 B. What is left is the tree around the strings (a default saw builds in 2,456 B).
+- `AuditRealtimeRepro`'s L5-03 row (`KLANG_PROBE=audit`, now with a note-ring shelf whose rings are given back and
+  zeroed after each round, outside the timing: 320 allocated in the first round, 33,844 rented): pluck 22,760 to
+  2,864 B per build (5.75 to 5.89 us), superpluck 163,584 to 3,688 B (12.93 to 7.16 us); the default saw reads 2,472 B
+  in the same run, so a pluck's build now costs what any voice's tree costs. Its first and second blocks still 0 B.
+- **Seen, a trade-off of the power-of-two classes:** a line rents 4096 frames for its 2,500, 32 KB instead of 20 KB. On
+  a COLD shelf (`AuditRealtimeRepro`'s burst, a fresh dispatcher without a warmup per repetition) 16 superplucks in one
+  block allocate 4,196 KB where they allocated 2,596 KB, and the onset block took 692.6 us (median, max 997.5) against
+  567.8 (max 1,301.4) in the closing run; 16 plucks 597 against 396 KB. A live backend starts with 16 lines warm, and
+  every line once allocated is rented again. A class of exactly 2,500 frames (the line's own length as a class of its
+  own) would drop the slack; not built, the plan named powers of two.
+- Cost probe, JVM, HEAD and the tree interleaved, four pairs (`StageCostRunner`, ratio to the plain sine, which moved
+  2.27 to 2.45 ns between runs): pluck 2.25 to 2.35 HEAD, 2.28 to 2.34 tree; superpluck 8 strings 17.9 to 18.4 HEAD,
+  18.7 to 19.4 tree; 16 strings 36.3 to 37.4 HEAD, 37.0 to 38.8 tree; 1 string 2.25 to 2.32 HEAD, 2.34 to 2.43 tree.
+  Under the probe's 10 percent noise rule, but the superpluck rows sat about 4 percent higher in every pair; a
+  variant that wraps by the array's size and clamps by the field read the same, and so did moving the string growth
+  out of `generate`, so the cause is not found (both variants measured; the field version kept). Allocation per block
+  0 B on every row, as before. Kotlin/JS (production test bundle, three node processes each, interleaved): pluck 2.01
+  HEAD, 2.06 tree (medians); superpluck 8 17.01 and 17.26, 16 34.27 and 34.34, 1 2.17 and 2.22; V8's new-space growth
+  per block 0 B on the pluck rows (the shimmer's 16 B as before).
+- The corpus (`runSongBenchmark --args=corpus`, 48 kHz, samples from the cache): every one of the 18 renders bit
+  identical, HEAD (a throwaway worktree) against HEAD with this pass applied, by each render's hash. The four pluck
+  songs rented and returned their lines 2,000 to 4,600 times each in that render, so the shelf's rings carried their
+  sound. No song moves. The hash lines compared are the corpus check's own, against the 2026-11-06 reference both
+  sides.
+
+**Guards.** `NoteRingsSpec` (the classes; the fallback allocates and counts; a dirty ring is never rented, before and
+during its zeroing, and comes back all zero; housekeeping's slice; the byte bound; double returns refused while dirty,
+half zeroed and clean; a ring of no class not shelved; the stock; a lease gives each ring back once), `NoteRingReturnSpec`
+(through the real dispatcher: the end in the render, a cut before sounding and after a fade, a stop that drops a pending
+voice, a hard cleanup, an engine disposed with its voices listed; every ring back once, the next note rents them),
+`NoteRingIdentitySpec` (a pluck, a low pluck bent past its line, a superpluck of eight, one grown at render, a shimmer:
+rented against own ring bit for bit, and again after the rings came back and were zeroed), `NoteRingBuildBytesSpec`
+(JVM, under 8,000 and 12,000 B), rows in `WarehouseStatsSpec` and `ResourceWarehouseSpec`.
+
+**Mutation check** (`console/tools/mutate`, one campaign with KLANG-00420's click fix, 16 mutants): KILLED for the
+expected reason: a rent that takes a dirty ring, no byte bound, no double-return guard, housekeeping that does not
+zero, a lease that does not forget, the string wrapping by the array's size (the bent pluck), the shimmer's grain start
+by the array's size, grown strings allocating their own lines, no return at the render's end, none at a removal, none at
+the disposal; and the click fix's five (below in KLANG-00420). One SURVIVED in the first campaign: `Reverb.process`
+ignoring the held pole stayed green, because the hand oracle held its poles on a bare `Reverb` through the same
+`holdDamping`. The oracle now runs the bare network on the CUTOFF whose pole the glide holds (the pole law inverted by
+hand), and the mutant is KILLED (second campaign, with the spec's other two mutants again).
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.
@@ -219,3 +316,4 @@ contract for trees no corpus song has: more than the small local change the main
 - 2026-11-10: PAUSED. Findings landed. Waiting for the maintainer: five decisions (see Decide).
 - 2026-11-11: IN PROGRESS. Decisions pass: building what the maintainer decided on 2026-11-11.
 - 2026-11-11: PAUSED. The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
+- 2026-11-11: the per-note rings pooled (L5-03 option (a), planned with the maintainer and built).

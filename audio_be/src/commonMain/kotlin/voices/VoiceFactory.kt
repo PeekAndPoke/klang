@@ -15,6 +15,8 @@ import io.peekandpoke.klang.audio_be.ignitor.OversampleRegionIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.ignitor.buildExciter
+import io.peekandpoke.klang.audio_be.warehouse.NoteRingLease
+import io.peekandpoke.klang.audio_be.warehouse.NoteRings
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -41,6 +43,12 @@ class VoiceFactory(
     private val sampleRate: Int,
     private val blockFrames: Int,
     private val scratchBuffers: ScratchBuffers,
+    /**
+     * The warehouse's shelf of per-note rings (KLANG-00429, audit finding L5-03): a voice's tree rents its Karplus lines
+     * and its shimmer ring from it, and the voice gives them back when it ends. Null (a factory outside an engine: the
+     * specs, the probes) allocates them, as before.
+     */
+    private val noteRings: NoteRings? = null,
 ) {
     companion object {
         /**
@@ -173,6 +181,7 @@ class VoiceFactory(
                     random = voiceRandom,
                     sampleRate = sampleRate,
                     blockFrames = blockFrames,
+                    noteRings = noteRings,
                 ) ?: return null
 
                 buildVoice(
@@ -182,6 +191,7 @@ class VoiceFactory(
                     signal = built.ignitor, freqHz = freqHz ?: 0.0, voiceRandom = voiceRandom,
                     cull = treeCull(cull, built),
                     teardown = needsTeardown(built),
+                    noteRings = built.noteRings,
                 )
             }
 
@@ -303,6 +313,7 @@ class VoiceFactory(
                     sampleRate = sampleRate,
                     blockFrames = blockFrames,
                     sampleSource = signal,
+                    noteRings = noteRings,
                 )
 
                 buildVoice(
@@ -313,6 +324,7 @@ class VoiceFactory(
                     voiceRandom = voiceRandom,
                     cull = treeCull(cull, built),
                     teardown = needsTeardown(built),
+                    noteRings = built.noteRings,
                 )
             }
 
@@ -373,6 +385,8 @@ class VoiceFactory(
         cull: Double?,
         /** Whether the teardown fade runs after the tree (`needsTeardown`). */
         teardown: Boolean,
+        /** What the tree rented from the note-ring shelf (`BuiltIgnitor.noteRings`), for the voice to give back. */
+        noteRings: NoteRingLease?,
     ): Voice {
         val endFrame = gateEndFrame + releaseSec * sampleRate
 
@@ -413,6 +427,7 @@ class VoiceFactory(
             limits = VoiceLimits(startFrame = startFrame, gateEndFrame = gateEndFrame, endFrame = endFrame),
             sampleRate = sampleRate,
             rateSteps = rateSteps,
+            noteRings = noteRings,
         )
     }
 }

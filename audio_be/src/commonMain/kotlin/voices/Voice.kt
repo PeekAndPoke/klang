@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.REGION_MAX_STAGES
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.utils.fadeToZero
+import io.peekandpoke.klang.audio_be.warehouse.NoteRingLease
 import io.peekandpoke.klang.audio_bridge.constants.CUT_FADE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_FLOOR
 import io.peekandpoke.klang.audio_bridge.constants.VOICE_CULL_SECONDS
@@ -140,6 +141,12 @@ class Voice(
      * frames times `1 shl rateSteps`, and the stages after the tree read their frame positions between the frames.
      */
     private val rateSteps: Int = 0,
+
+    /**
+     * What the tree rented from the warehouse's note-ring shelf (`BuiltIgnitor.noteRings`, KLANG-00429, audit finding
+     * L5-03): the Karplus lines, the shimmer ring. Null when it rented nothing. Given back by [giveBackNoteRings].
+     */
+    private val noteRings: NoteRingLease? = null,
 ) {
     private val sampleRateD: Double = sampleRate.toDouble()
 
@@ -307,6 +314,16 @@ class Voice(
      */
     fun kill() {
         state = State.Done
+    }
+
+    /**
+     * Gives the rings the tree rented back to the warehouse's note-ring shelf, dirty (KLANG-00429, audit finding L5-03).
+     * The scheduler calls it in the same step that takes the voice out of its list, on every way out (the render loop's
+     * end of a voice, the removal of a killed or cut voice, the engine's disposal), so a voice that is given back never
+     * renders again and its tree never touches the rings after. Gives each ring back once: a second call gives nothing.
+     */
+    fun giveBackNoteRings() {
+        noteRings?.giveBackAll()
     }
 
     /**

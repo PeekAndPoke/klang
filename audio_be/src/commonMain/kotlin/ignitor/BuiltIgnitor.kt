@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.warehouse.NoteRingLease
+
 /**
  * What one build of a DSL subtree produced: the runtime graph, plus what the build learned on the
  * way. Returned by [buildIgnitor] for every node and by [IgnitorRegistry.createExciter] for a whole
@@ -127,6 +129,12 @@ data class BuiltIgnitor(
      * `mul` lists its oversampler as if the signal ran through it).
      */
     val oversamplers: List<Int>? = emptyList(),
+    /**
+     * What the WHOLE tree rented from the warehouse's note-ring shelf (KLANG-00429, audit finding L5-03): set only on
+     * the root `buildExciter` returns, and only when a node rented (a Karplus string, a shimmer); null otherwise and on
+     * every inner node. The voice keeps it and gives it back when it leaves its engine (`Voice.giveBackNoteRings`).
+     */
+    val noteRings: NoteRingLease? = null,
 )
 
 /**

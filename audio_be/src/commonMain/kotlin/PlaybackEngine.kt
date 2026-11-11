@@ -292,11 +292,13 @@ class PlaybackEngine(
     }
 
     /**
-     * The engine's end: every rented unit (cylinder delay rings, reverb networks, master chain units)
-     * goes back to the backend's warehouse (2f), and the phase is `Disposed`. Called by the dispatcher exactly
+     * The engine's end: every rented unit (the per-note rings of the voices still listed, cylinder delay rings, reverb
+     * networks, master chain units) goes back to the backend's warehouse (2f), and the phase is `Disposed`. Called by the dispatcher exactly
      * once, after the engine has been removed from the render set; nothing renders through it afterwards.
      */
     fun dispose() {
+        // The voices still listed (a released engine's) give their per-note rings back (KLANG-00429, L5-03)
+        scheduler.disposeVoices()
         cylinders.releaseAll()
         masterBus.releaseAll()
         phase = Phase.Disposed

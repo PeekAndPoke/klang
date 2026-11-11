@@ -191,15 +191,12 @@ private const val KNOWN_DRIFT: String =
 
 private const val ADSR_OFF: String = "adsr.on"
 
-/** Where the KLANG-00156 ledger names the filter envelope's per-block chord (E3), and its stated reach. */
-private const val KNOWN_E3: String =
-    "known: KLANG-00156 E3 'SVF cutoff-env chord straightens knees; segment shorter than a block erased; peak height " +
-        "alignment- and block-size-dependent', listed there as 'latent: no production door passes an env here'; " +
-        "SvfIgnitor KDoc 'modulates filter cutoff at control rate (at each block's two ends)'"
-
-/** The known quote of a stage row with the note slots [params]. */
+/**
+ * The known quote of a stage row with the note slots [params]. A filter envelope (`.env`) has none since KLANG-00432
+ * (L4-02, decisions pass C): its cutoff is exact at knots of the note, so its rows are identical at every offset (the
+ * KLANG-00156 E3 quote, its block law and its "latent" reach, no longer held).
+ */
 private fun knownFor(stage: String, params: Map<String, Double>): String = when {
-    params.keys.any { it.endsWith(".env") } -> KNOWN_E3
     "analog" in params -> KNOWN_DRIFT
     stage == "accelerate" -> KNOWN_ACCELERATE
     else -> ""
