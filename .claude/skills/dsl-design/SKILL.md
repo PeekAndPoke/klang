@@ -424,9 +424,8 @@ the bug.
   leads with the modulator, its structure, and puts the ratio first; the words are the same since pitch pipeline step
   4 (D4), and sprudel kept its order so that no positional call changed, `fm(300, 1.4)` is still depth 300, ratio
   1.4). Recorded at the parity audit (KLANG-00417 A5, 2026-11-06), one clause each, the detail in the KDoc named:
-  - the distort's two laws (decision D2): sprudel's `distort` and the Katalyst `distort` run the fused law
-    (`DistortionCore`, no soft cap), the Ignitor door `x.distort(...)` runs `Shape(Drive(...))` with a soft cap,
-    because songs depend on it (`IgnitorDsl.Distort`, `IgnitorEffects.kt`);
+  - the distort: sprudel's `distort`, the Katalyst `distort` and the Ignitor door `x.distort(...)` all run the fused
+    law (`DistortionCore`, no soft cap; one law since KLANG-00432 L4-05);
   - the amplitude envelope's slot defaults (`VOICE_ADSR_*`, sustain 1, release 0.05) differ from the `Adsr` node's
     (sustain 0.7, release 0.3): no door reaches the node's, the Ignitor doors take all four stages (`EnvelopeDefaults.kt`);
   - the curve calls: sprudel's `adsrCurves` / `lpfCurves` / `penvCurves` keep the current curve for an omitted

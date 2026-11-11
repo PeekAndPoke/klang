@@ -767,12 +767,11 @@ and its curves `Ignitor.slot.penvCurves.attack|decay|release`, and the filter en
 Want another order? Write your own tail from the same slots, as far as a door takes them:
 `Ignitor.saw().highpass(Ignitor.slot.hpf.freq, Ignitor.slot.hpf.q).crush(Ignitor.slot.crush.bits).lowpass(Ignitor.slot.lpf.freq)`.
 The doors take a slot for every filter's `freq`, `q`, `passes` (`x => x.passes(Ignitor.slot.lpf.passes)`), `env` and
-envelope stages, for `crush`, `coarse`, the tremolo's knobs and the envelope's stages and curves. Two groups ONLY
-`.classic()` can place:
-- `adsr.on`: no door has the switch (on a door, not writing `adsr()` already means no envelope);
-- `distort.*`: the `distort` door builds a drive into a shaper whose shaper always runs and caps its
-  output, while `.classic()` uses the one distort node that switches drive AND shape off together and
-  renders the retired voice strip's exact law (no cap, so a hot shape can go past 1.0). A slot on the door's distort would shape every note, written or not.
+envelope stages, for `crush`, `coarse`, the tremolo's knobs and the envelope's stages and curves. One group ONLY
+`.classic()` can place: `adsr.on` (no door has the switch; on a door, not writing `adsr()` already means no
+envelope). The `distort` door builds the same node `.classic()` uses, the one that switches drive AND shape off
+together and renders the voice strip's law (no cap, so a hot shape can go past 1.0);
+`distort(Ignitor.slot.distort.amount, Ignitor.slot.distort.shape)` places its slots.
 
 **Every voice is its tree (phase 3 step 9, 2026-09-27).** The BUILT-IN sounds (`sound("saw")`) and the
 SAMPLES are `.classic()` voices, and so is every authored instrument whose tree ENDS in `.classic()`: the pattern

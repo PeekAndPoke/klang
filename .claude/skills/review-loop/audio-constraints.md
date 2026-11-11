@@ -31,7 +31,8 @@ gone is removed when someone notices, not kept for history.
   network has no steady state. The soft-cap alternative was measured (DC rail, AC-RMS 0.0) and
   reverted 2026-08-03. See `Reverb.normalizeSize`.
 - **Accepted and intentional, each documented:** triangle aliasing (no PolyBLEP), no clip at `Voice.ignite`
-  (the `distort()` and `shape()` doors bound their output with a soft cap at the rate they run, so inside a region before its down conversion; `classic()`'s fused distort does not), the unconditional DC-block on distort, cylinder last-writer-wins,
+  (no stage bounds its output: the `distort` doors build `classic()`'s fused distort and `shape()` is its law at unity
+  drive, no soft cap since KLANG-00432 L4-05), the unconditional DC-block on distort, cylinder last-writer-wins,
   `rectify()`'s hard clip, the body filter's fixed (non-note-tracking) resonances, `crackle`'s sound
   change, body and vowel at cylinder level.
 - **`Ignitor` is deliberately NOT a `fun interface`**: SAM turns captured `var`s into JS `ObjectRef`.
