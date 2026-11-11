@@ -209,24 +209,54 @@ class VoiceScheduler(
     internal fun containsIgnitor(name: String): Boolean = ignitorFork.contains(name)
 
     /**
-     * The playback stops: its held realtime voices are released, its context and its scheduled voices are dropped,
-     * and the voices already playing ring out.
+     * The playback stops (KLANG-00427, audit L2-07, maintainer 2026-11-11, which changed decision (j)): what a DAW's
+     * stop does. Every TIMELINE voice whose gate is still open gets a note-off at the cursor and goes into its own
+     * release; a promoted timeline voice that has not started yet (`Pending`) is dropped, like the scheduled voices
+     * not yet promoted; the HELD realtime voices are released as before; a fixed-gate realtime voice plays out its own
+     * gate, as before (only a key's own note-off may cut it short). Its context and its scheduled voices are dropped.
+     * What a voice still has to live after this is bounded by the engine (`PlaybackEngine`, a voice still playing
+     * 20 s after the stop is released). Until 2026-11-11 a timeline voice rang out its full gate.
      */
     fun cleanup() {
-        // HELD realtime voices would otherwise ring at full sustain to the held-gate horizon —
-        // hours — and keep the engine un-drainable forever. Release them into their tails.
-        // Fixed-gate realtime voices and timeline voices keep their natural ring-out, as before.
+        val cursor = context.clock.cursorFrame
+
         for (i in 0 until active.size) {
             val activeVoice = active[i]
-            val origin = activeVoice.origin
 
-            if (origin is VoiceOrigin.Realtime && origin.held) {
-                releaseRealtimeVoice(activeVoice)
+            when (val origin = activeVoice.origin) {
+                // HELD realtime voices would otherwise ring at full sustain to the held-gate horizon, hours, and
+                // keep the engine un-drainable. Released into their tails; a fixed-gate one keeps its gate.
+                is VoiceOrigin.Realtime -> if (origin.held) {
+                    releaseRealtimeVoice(activeVoice)
+                }
+
+                is VoiceOrigin.Timeline -> stopTimelineVoice(voice = activeVoice.voice, cursor = cursor)
             }
         }
 
+        // The voices the stop dropped (`Pending` ones, killed above) leave the list now, keeping the survivors' order
+        removeDoneVoices()
+
         playback = null
         clearScheduled()
+    }
+
+    /**
+     * A timeline voice at a stop ([cleanup]): one that has not started yet is dropped (killed, it never renders); a
+     * sounding one whose gate is still open after the [cursor] gets its note-off there, the first frame that will
+     * render, so its release begins on the next block's first sample ([Voice.releaseGate]; its precondition holds: a
+     * sounding voice began before the cursor). A voice already in its release, fading or done is left alone.
+     */
+    private fun stopTimelineVoice(voice: Voice, cursor: Double) {
+        when (voice.state) {
+            Voice.State.Pending -> voice.kill()
+
+            Voice.State.Sounding -> if (voice.gateOpenAt(cursor)) {
+                voice.releaseGate(cursor)
+            }
+
+            is Voice.State.Releasing, is Voice.State.Fading, Voice.State.Done -> Unit
+        }
     }
 
     /**

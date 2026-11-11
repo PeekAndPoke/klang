@@ -175,14 +175,43 @@ What makes them visible: the house stage counts the non-finite samples its limit
 count costs nothing on a finite block: it is taken on the branch the limiter's ring write already takes for a
 non-finite sample. Measured in `AuditSafetyRepro` (the "NaN source" and "non-finite" rows, and L4-11's).
 
-### A stored sample
+### A non-finite sample: the rule
 
-A stage that STORES a sample to play it later stores a non-finite one as 0, so one bad sample is not played again:
-the `coarse` hold (`finiteOrZero` on each take: an infinity was held for `factor` frames, audit L4-07) and the
-shimmer's grain ring (a NaN was stored and replayed by a later grain, audit L4-06; an infinity is clamped to the
-ring's rail of 2 as before). Guards: `CoarseLawSpec`, `ShimmerSchedulerSpec`. One rule for a non-finite sample at
-every stage that is not arithmetic (today the same infinity leaves different stages as 0, 1, 2, 1e15 or itself) is
-open: KLANG-00432, "Decide" (audit L4-08).
+Decided (maintainer, 2026-11-11, KLANG-00432, audit L4-08): **a stage that STORES a sample to play it later stores a
+non-finite one as 0, everything else stays raw, and the house stage counts what reaches it.** So one bad sample is
+never played again by a store, a stage that does not store answers it with its own arithmetic (the table below says
+what that is, stage by stage), and nothing adds a per-sample finite guard to the inner math for it. What reaches the
+output is visible: the house limiter's ring stores it as 0 and counts it ("poison seen", above).
+
+The stores: the `coarse` hold (`finiteOrZero` on each take: an infinity was held for `factor` frames, audit L4-07),
+the shimmer's grain ring (a NaN was stored and replayed by a later grain, audit L4-06; an infinity is clamped to the
+ring's rail of 2 as before) and the house limiter's lookahead ring. Guards: `CoarseLawSpec`, `ShimmerSchedulerSpec`,
+`HouseStageSpec`.
+
+What one NaN and one +Infinity SAMPLE become at each stage (read from the code; the stage probe's `nan` and `+inf`
+rows measure most of them, `AuditSafetyRepro` the rest):
+
+| Stage | A NaN sample | A +Infinity sample | Kind |
+|---|---|---|---|
+| `Times` (the tremolo), `Affine` (`safeOut`) | 0 | 1e15 (`SAFE_MAX`) | arithmetic: the output-clamp contract above |
+| `DriveIgnitor` (the bare `drive`) | raw | raw | raw |
+| `AdsrIgnitor` | raw; at a gain of exactly 0 a NaN | raw; at a gain of exactly 0 a NaN (`0 * Inf`) | raw |
+| The SVF (lowpass, highpass, bandpass, notch) | one non-finite output sample, then clean (the output is written before the state's flush) | the same | raw |
+| `OnePoleLowpassIgnitor` | 0 (the output is the flushed state) | 0 | raw |
+| `DcBlocker` (a distort core, the voice's, the house stage's) | two non-finite output samples, then clean | the same | raw |
+| `CrushCore` | 0 | 1.0 (its clamp) | raw |
+| `coarse` | 0, held | 0, held | STORES: 0 |
+| `DistortionCore` | 0 | 1 for the clipping shapes; 0 for `gentle`, `softsat`, `fold`, `linearfold`, `sineshaper` (their `Inf / Inf` or `sin(Inf)` is a NaN, then guarded) | raw |
+| The shimmer's grain ring | stored as 0 | stored as the ring's rail, 2 | STORES: 0 (an infinity the rail) |
+| The phaser | wet path `finiteOrZero`, dry path raw | the same | raw |
+| `Oversampler` | 0 at the input of every stage | 0 | raw (its stages' own guard) |
+| `SemitonesToRatioIgnitor` | ratio 0 | ratio 1e15 (-Infinity: 0) | arithmetic |
+| `DeviationToRatioIgnitor` | raw | raw | raw |
+| The house limiter's lookahead ring | stored as 0, counted | stored as 0, counted | STORES: 0, counts (`HouseStage.nonFiniteSamples`) |
+
+The house DC blockers in front of that limiter pass a bad sample out twice (so one bad sample on the mix counts as 2
+per channel), and since KLANG-00432 (audit L8-01) they drop their feedback state above 1e3 as well
+(`HouseStage.HOUSE_DC_STATE_BOUND`), so a huge FINITE block does not linger as seconds of DC either.
 
 ## Closed gaps
 

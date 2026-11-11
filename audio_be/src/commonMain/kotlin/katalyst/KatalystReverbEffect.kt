@@ -23,8 +23,9 @@ import kotlin.math.min
  * output (`master(...)`), where the mix is the playback's bus.
  *
  * **The `wet` glides** per sample, a LEVEL knob ([KnobGlide.advanceScaled]) into the feed, with the
- * size glide's lifecycle below: the first configure out of Off snaps while the stage is [fresh], and glides
- * up from 0 once the bus has run (the delay's rule, KLANG-00428); [Off.enter] forgets it. Not advanced while
+ * size glide's lifecycle below: the first configure out of Off snaps while the stage is [fresh] or its bus is
+ * silent ([busSilent]), and glides up from 0 over a sounding bus (the delay's rule, KLANG-00428); [Off.enter]
+ * forgets it. Not advanced while
  * Draining, where nothing is fed.
  *
  * **Every switch-off fades the feed with the wet glide** (engine follow-up 42, maintainer Q39,
@@ -36,10 +37,11 @@ import kotlin.math.min
  * off-config needed, so a cylinder whose owner stopped offering drains too. On an owner change the NEW
  * owner's mix feeds the OLD owner's room for the fade's span at a falling level, the bleed accepted with
  * the decision. Back in Active out of Draining the wet glides up from 0, where the fade left it; out of
- * Off it does too once the bus has run since the build or reset (not [fresh]; a snapped wet fed the combs a
- * step of the sounding mix, KLANG-00428, L7a-01 and L7a-02), and it snaps only while fresh, except on a
- * modulated size ([sizeModulated]), whose wet glides up from 0 ([KnobGlide.startFrom]), its first activation
- * included; a return mid-fade turns the glide around.
+ * Off it does too when the bus SOUNDS at that moment (a snapped wet fed the combs a step of the sounding mix,
+ * KLANG-00428, L7a-01 and L7a-02), and it snaps on a silent bus ([busSilent], the host's judgement; KLANG-00428,
+ * maintainer 2026-11-11: "fade in only when already sounding") or while [fresh], except on a modulated size
+ * ([sizeModulated]), whose wet glides up from 0 ([KnobGlide.startFrom]), its first activation included; a return
+ * mid-fade turns the glide around.
  * Without the fades an LFO through the gate cut and restarted the feed in one sample, which the
  * allpasses pass on at once as a step of the room's output.
  *
@@ -143,10 +145,18 @@ class KatalystReverbEffect(
     /**
      * True from construction, [reset] and [release] until a block has been processed, and false after
      * [joinSoundingBus]: while it holds, a switch-on out of [Off] snaps the wet; once the bus has run it glides up
-     * from 0, as a return out of [Draining] does. The delay's rule and reason ([KatalystDelayEffect]'s `fresh`): a
+     * from 0, as a return out of [Draining] does, unless the host judges the bus silent ([busSilent]). The delay's rule and reason ([KatalystDelayEffect]'s `fresh`): a
      * snapped wet fed the combs a step of the sounding mix (KLANG-00428, audit findings L7a-01 and L7a-02).
      */
     private var fresh: Boolean = true
+
+    /**
+     * True while the host judges the bus SILENT ([KatalystEffect.busSilent]): a switch-on out of [Off] then snaps the
+     * wet whatever [fresh] says, so a note that switches the room on over silence keeps its attack (KLANG-00428,
+     * maintainer 2026-11-11). False until a host says otherwise, so a stage without a host keeps the [fresh] rule.
+     * Outlives every state and [reset]: it is the host's word about the bus, not the stage's memory.
+     */
+    private var busSilent: Boolean = false
 
     /** Activating configures the shelf refused a unit for. Counted per cylinder life, like the delay's. */
     override var deniedRents: Int = 0
@@ -229,7 +239,7 @@ class KatalystReverbEffect(
      *
      * | state \ event | `configure`, reverb ON | `configure`, reverb OFF | `process`, the fade lands | `process`, countdown ends | `reset` | `retire` / `release` |
      * |---|---|---|---|---|---|---|
-     * | **Off** | **Active** (a unit is rented if there is none; the size snaps; the wet glides up from 0 unless the stage is [fresh] and its size unmodulated). Stays Off in ONE case: there is no unit AND the shelf refuses one | Off | (never) | (never) | Off | Off |
+     * | **Off** | **Active** (a unit is rented if there is none; the size snaps; the wet glides up from 0 unless the stage is [fresh] or its bus [busSilent], and its size unmodulated). Stays Off in ONE case: there is no unit AND the shelf refuses one | Off | (never) | (never) | Off | Off |
      * | **Active** | Active (the knobs are rewritten, the size glide retargets, an unchanged config writes nothing, see [applied]; mid-fade the wet glide turns around) | Active while the wet glide falls to 0 (the fade); with the wet already at rest at 0, at once what the next column says | **Draining**, or **Off** when the network is already silent OR poisoned (a non-finite countdown) | (never) | Off | Off |
      * | **Draining** | **Active** (the network, its ceiling and the size glide carry on; a new size glides from where the room stands; the wet glides up from 0) | Draining (the countdown keeps running) | (never) | **Off** | Off | Off |
      *
@@ -586,10 +596,10 @@ class KatalystReverbEffect(
             unit.lowpass = lowpass
             sizeGlide.retarget(boundedSize)
 
-            // A switch-on on a bus that has run (not [fresh]), and every return of a modulated size, starts the wet
-            // from 0 out of Off, so it glides up from there (out of Draining the fade left it at 0 already); a return
-            // mid-fade (Active) turns the falling glide around where it stands (class KDoc).
-            if ((sizeModulated || !fresh) && state !== active) {
+            // A switch-on on a bus that sounds (not [fresh], not [busSilent]), and every return of a modulated size,
+            // starts the wet from 0 out of Off, so it glides up from there (out of Draining the fade left it at 0
+            // already); a return mid-fade (Active) turns the falling glide around where it stands (class KDoc).
+            if ((sizeModulated || !(fresh || busSilent)) && state !== active) {
                 wetGlide.startFrom(0.0)
             }
 
@@ -704,6 +714,11 @@ class KatalystReverbEffect(
     /** The bus this stage arrives on already sounds: its first switch-on fades the feed in (see [fresh]). */
     override fun joinSoundingBus() {
         fresh = false
+    }
+
+    /** The host's judgement of the bus: while silent, a switch-on snaps (see [busSilent]). */
+    override fun busSilent(silent: Boolean) {
+        busSilent = silent
     }
 
     /**

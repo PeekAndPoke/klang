@@ -35,7 +35,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
  *   [ScratchBuffers.ensureCapacity], never grown inside `process()`.
  */
 class ResourceWarehouse(
-    sampleRate: Int,
+    private val sampleRate: Int,
     blockFrames: Int,
     /**
      * The backend's sample PCM store — in the warehouse so that every MB-scale thing the backend
@@ -70,6 +70,28 @@ class ResourceWarehouse(
 
     /** True when every idle ring and network is zeroed — what the warmup waits for before `BackendReady`. */
     val isClean: Boolean get() = sized.isClean && reverbs.isClean
+
+    /**
+     * Puts [count] delay rings that hold [seconds] (the class a delay of that time rents, [RING_MARGIN_FRAMES]
+     * included) on the ring shelf: rented, allocated where the shelf has none, and given back, dirty, so the per-block
+     * [housekeep] zeroes them like any return. The warmup's stock of the longer classes (`WarmupRunner`, maintainer
+     * 2026-11-11, KLANG-00428): the one place the shelf is filled by prediction (see [SizedBuffers] rule 2), so a
+     * song's first 1 s or 2 s delay does not allocate its ring in its onset block. Inside the idle budget like every
+     * return: over it, the largest idle rings are dropped first. Not for render code: it allocates.
+     */
+    fun stockDelayRings(seconds: Double, count: Int) {
+        val frames = (seconds * sampleRate).toInt() + RING_MARGIN_FRAMES
+        val rented = arrayOfNulls<StereoBuffer>(count)
+
+        // All rented first, then all given back: a ring given back at once would be the next rent's hit
+        for (i in 0 until count) {
+            rented[i] = sized.rent(minFrames = frames)
+        }
+
+        for (i in 0 until count) {
+            rented[i]?.let { sized.giveBack(it) }
+        }
+    }
 
     // ── Stats: one entry point, maintained by change, read for free ──────────────────────────────
 

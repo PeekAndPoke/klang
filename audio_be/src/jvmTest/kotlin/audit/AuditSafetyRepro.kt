@@ -285,23 +285,7 @@ class AuditSafetyRepro : StringSpec({
         flush()
     }
 
-    // ── L8-01 L8-02: the house stage under huge values ────────────────────────────────────────────────────────────
-
-    "L8-01: the house stage after one block of a huge value on a 0.3 sine".config(enabled = requested) {
-        line("== L8-01: HouseStage alone, 0.3 sine at 220 Hz, one block (128 frames) at frame 4800 replaced by sine + V; compared with the clean run")
-
-        val seconds = 4.0
-        val control = runHouse(seconds = seconds) { 0.0 }
-
-        for (v in listOf(1e15, 1e6, 100.0, 10.0, 2.0, Double.NaN, Double.POSITIVE_INFINITY)) {
-            val poisoned = runHouse(seconds = seconds) { n -> if (n in 4800 until 4928) v else 0.0 }
-            val cmp = compareRuns(poisoned = poisoned, control = control, from = 4800)
-
-            line("L8-01 [V=${fmtE(v)}] ${cmp.text()}")
-        }
-
-        flush()
-    }
+    // ── L8-02: the house stage under a huge constant (L8-01 is guarded by HouseStageSpec since KLANG-00432) ──────────
 
     "L8-02: the house stage under a huge constant with music under it".config(enabled = requested) {
         line("== L8-02: HouseStage alone, 0.3 sine at 220 Hz plus a constant C from 0.5 s to the end (4 s); read over 3..4 s")

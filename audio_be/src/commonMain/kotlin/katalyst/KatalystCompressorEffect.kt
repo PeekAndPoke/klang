@@ -15,8 +15,6 @@ import io.peekandpoke.klang.audio_be.utils.linearFadeWeight
 import io.peekandpoke.klang.audio_be.utils.sameKnob
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SILENCE_FLOOR
-import kotlin.math.exp
-import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -54,7 +52,7 @@ import kotlin.math.min
  *
  * **What glides while it runs** (`audio/ref/knob-glide.md`, measured first in 5c-7): the gain
  * computer's THRESHOLD, RATIO and KNEE, per sample ([Compressor.processGliding]), together as
- * one [CompressorKnobMove] (a shared move that glides like a [KnobGlide], or releases, below), the ratio as its INVERSE (the curve is linear in `1 / ratio - 1`; a glide linear in
+ * one [CompressorKnobMove] (a shared move that glides like a [KnobGlide], or snaps, below), the ratio as its INVERSE (the curve is linear in `1 / ratio - 1`; a glide linear in
  * the ratio bunched a 100 to 1 change into the glide's last blocks, -41 dB). A jump of any of them stepped the gain at once while the
  * follower smoothed the LEVEL before the gain computer (until KLANG-00428; now the attack and release smooth the curve's output, so a
  * jump comes through at the attack's speed at most): a threshold jump measured -9 to -36 dB above 8 kHz, a ratio jump -27 to -43, a knee jump
@@ -62,13 +60,13 @@ import kotlin.math.min
  * of the gain computer (the zipper); the per-sample ramp reaches the steady floor in every row but
  * one kind: a wide RISING threshold swing (-40 to 0 dB) stayed at -62 to -65 dB, part the size of a
  * 25 dB release in 50 ms, part the threshold moving the reduction linearly in dB.
- * **A move that RELAXES the compressor releases instead of gliding** (since 2026-10-17, decided by ear: "the
- * hard swell is not really acceptable, or at least not that fast"): a rising threshold, a falling ratio or a
- * narrower knee approaches its target as a one-pole at the compressor's own RELEASE time constant, so the gain comes
- * back as it does when the input falls, never faster than the 50 ms glide (and since KLANG-00428 the follower's own
- * release after it, see [CompressorKnobMove]). The three knobs move as one, on one
- * fraction, and the law is the move's NET effect at a fixed 0 dBFS: less reduction releases, more or a
- * tie keeps the 50 ms glide. The rules are [CompressorKnobMove]'s; a modulated knob is not part of the move.
+ * **A move that RELAXES the compressor snaps its knobs** (KLANG-00428, maintainer 2026-11-11; before, since the by-ear
+ * decision of 2026-10-17, it released them at the compressor's release time): a rising threshold, a falling ratio or a
+ * narrower knee is in force from the next block, and the follower, which smooths the gain REDUCTION, brings the gain
+ * back at the release time constant, as it does when the input falls, so the release is paid once. Under a release
+ * shorter than the 50 ms glide the move glides instead (the glide is the click safety net). The three knobs move as
+ * one, on one fraction, and the law is the move's NET effect at a fixed 0 dBFS: less reduction snaps, more or a tie
+ * keeps the 50 ms glide. The rules are [CompressorKnobMove]'s; a modulated knob is not part of the move.
  * ATTACK and RELEASE do not glide: they are the follower's own coefficients and its state stays
  * continuous across a jump (measured at the steady floor above 8 kHz, both directions). The old
  * path, literally: [configure] writes the knobs into the instance, and while a glide moves the
@@ -200,7 +198,7 @@ class KatalystCompressorEffect(
     /** True once a [configure] has filled [applied]; false after construction and in [Off.enter]. */
     private var appliedValid: Boolean = false
 
-    /** The three gain-computer knobs as one move ([CompressorKnobMove]): glide, or release when its net effect relaxes. */
+    /** The three gain-computer knobs as one move ([CompressorKnobMove]): glide, or snap when its net effect relaxes. */
     private val knobs = CompressorKnobMove(
         sampleRate = sampleRate,
         blockFrames = blockFrames,
@@ -537,21 +535,12 @@ class KatalystCompressorEffect(
      * the values the last block ended on to this block's.
      */
     private fun compress(c: Compressor, left: AudioBuffer, right: AudioBuffer, n: Int) {
-        // The release's share of this block, for a move that relaxes the compressor ([CompressorKnobMove]): the block
-        // ends where a per-sample one-pole at the release coefficient would. Computed only while a move releases. The
-        // `releaseSeconds` getter is read once per releasing block, accepted (the allocation check stays green).
         val m = knobs
-        val decay = if (m.releasing) {
-            exp(-n / (max(Compressor.MIN_TIME_SECONDS, c.releaseSeconds) * sampleRate))
-        } else {
-            0.0
-        }
-
         val thresholdFrom = m.value(CompressorKnobMove.THRESHOLD)
         val inverseRatioFrom = m.value(CompressorKnobMove.INVERSE_RATIO)
         val kneeFrom = m.value(CompressorKnobMove.KNEE)
 
-        m.advance(decay)
+        m.advance()
 
         val thresholdTo = m.value(CompressorKnobMove.THRESHOLD)
         val inverseRatioTo = m.value(CompressorKnobMove.INVERSE_RATIO)

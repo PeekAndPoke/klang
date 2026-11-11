@@ -808,38 +808,4 @@ class AuditRealtimeRepro : StringSpec({
 
         flush()
     }
-
-    "L2-07: a stopped playback's long note keeps its engine, and a release of 1e6 s".config(enabled = requested) {
-        val rig = RtRig()
-        rig.send(KlangCommLink.Cmd.ScheduleVoices(playbackId = RT_PID, voices = listOf(rtVoice(note = "long", atSec = 0.0, gateSec = 60.0, sound = "sine"))))
-        rig.renderUntil(1.0)
-        rig.send(KlangCommLink.Cmd.Cleanup(playbackId = RT_PID))
-
-        var peakAt30 = 0.0
-
-        while (rig.engine() != null && rig.nowSec < 120.0) {
-            rig.block()
-
-            if (rig.nowSec > 30.0 && rig.nowSec < 30.1) {
-                peakAt30 = max(peakAt30, rtPeak(rig.out.left))
-            }
-        }
-
-        line("== L2-07: one sine voice, gate 60 s, Cmd.Cleanup at 1.0 s, live dispatcher")
-        line("   output peak at 30 s (after the stop): ${rtFx(peakAt30, 4)}; the engine was disposed at ${rtFx(rig.nowSec, 3)} s")
-
-        val registry = IgnitorRegistry().apply { registerDefaults() }
-        val factory = VoiceFactory(sampleRate = RT_SR, blockFrames = RT_BLOCK, scratchBuffers = ScratchBuffers(RT_BLOCK))
-        val sv = rtVoice(note = "x", atSec = 0.0, gateSec = 1.0, sound = "sine", ignitorParams = klangMapOf("adsr.release" to 1e6))
-        val voice = factory.makeVoice(
-            scheduled = sv,
-            backendStartTimeSec = 0.0,
-            playbackCtx = PlaybackCtx(playbackId = RT_PID, ignitorRegistry = registry.fork(), phasePools = PhasePools(Random(1))),
-            getSample = { null },
-        )!!
-
-        line("   a sine with adsr.release 1e6 and a 1 s gate: the voice ends ${rtFx(voice.endFrame / RT_SR, 0)} s after its onset (${rtFx(voice.endFrame / RT_SR / 86400.0, 1)} days)")
-
-        flush()
-    }
 })

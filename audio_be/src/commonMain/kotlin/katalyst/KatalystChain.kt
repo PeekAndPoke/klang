@@ -472,6 +472,16 @@ class KatalystChain internal constructor(
     }
 
     /**
+     * Every stage's [KatalystEffect.busSilent]: the host's judgement of its bus, told on a change and when this chain
+     * enters service, before the block's [applyParams]. Rare, never per block.
+     */
+    fun busSilent(silent: Boolean) {
+        for (i in stages.indices) {
+            stages[i].busSilent(silent)
+        }
+    }
+
+    /**
      * True while an arithmetic stage turns a silent input into sound ([KatalystArithmeticEffect.soundsOnSilence]),
      * also inside a `parallel` branch or a region's body: the one kind of endless output that has no ring-out to wait
      * for. A swap's leaving chain that answers yes is cut at the fade's end instead of drained for

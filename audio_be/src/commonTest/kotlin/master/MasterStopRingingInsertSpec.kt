@@ -116,11 +116,16 @@ class MasterStopRingingInsertSpec : StringSpec({
         }
 
         rig.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = voices))
-        rig.d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
 
         var last = 0.0
 
         for (blk in 0 until 30 * sampleRate / blockFrames) {
+            // Stopped after the first block: a stop drops a note that has not started yet (KLANG-00427), and gives the
+            // started one its note-off, so the tone ends in its 5 ms release
+            if (blk == 1) {
+                rig.d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+            }
+
             last = rig.block(blk)[blockFrames - 1]
 
             if (rig.engine.isIdle()) {
@@ -175,7 +180,9 @@ class MasterStopRingingInsertSpec : StringSpec({
             playbackId = "song",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, gain = 0.5, ignitorParams = klangMapOf("adsr.release" to 0.005)),
+            // A 0.5 s release: the stop at 0.5 s gives the gate its note-off (KLANG-00427), and the tone still sounds
+            // to about 1 s, while the bus is unmastered (a 1 s gate did that before the note-off at stop)
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, gain = 0.5, ignitorParams = klangMapOf("adsr.release" to 0.5)),
             playbackStartTime = 0.0,
         )
 
@@ -245,9 +252,12 @@ class MasterStopRingingInsertSpec : StringSpec({
                 ),
             )
         )
-        rig.d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
-
         for (blk in 0 until holdBlocks + 2 * sampleRate / blockFrames) {
+            // Stopped after the first block: a stop drops a note that has not started yet (KLANG-00427)
+            if (blk == 1) {
+                rig.d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+            }
+
             rig.block(blk)
         }
 

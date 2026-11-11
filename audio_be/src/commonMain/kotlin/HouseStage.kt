@@ -68,6 +68,19 @@ class HouseStage(
          * which is the pre-duck people hear as the mix flinching ahead of a kick.
          */
         const val HOUSE_LIMITER_ATTACK_SECONDS: Double = 0.005
+
+        /**
+         * The magnitude above which the house DC blockers drop their feedback STATE to 0, 1e3 (+60 dBFS; KLANG-00432,
+         * audit L8-01, maintainer 2026-11-11): the compare `flushState` makes, with this bound in place of
+         * `Double.MAX_VALUE`, free per sample. A huge FINITE block on the mix (1e15 for one block) used to sit in the
+         * blockers' state and come out as up to seconds of full-scale DC (26,783 samples on the rail, clean after
+         * 1.13 s; up to 14.7 s at 1.8e308), which the 20:1 limiter cannot bring under the clip. With the bound one bad
+         * block costs about that block plus the limiter's release. Nothing a musical mix reaches: its state stays
+         * orders of magnitude under it. Not a clamp on the signal: the output sample is untouched, only the memory
+         * the blocker carries into the next sample is dropped. The music under such a block (audit L8-02) is NOT
+         * restored by this: the sum had already rounded it away in the mix.
+         */
+        const val HOUSE_DC_STATE_BOUND: Double = 1e3
     }
 
     /**
@@ -101,8 +114,16 @@ class HouseStage(
     //      on onsets: measured, a limited (-1 dBFS) 55 Hz sine switched on cold comes out at
     //      -0.47 dBFS, a +0.53 dB gain decaying over ~21 ms. Downstream of the limiter that
     //      overshoot lands straight on the clip and eats most of the margin the limiter leaves.
-    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = houseDcBlockCoeff(sampleRate = sampleRate))
-    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(coefficient = houseDcBlockCoeff(sampleRate = sampleRate))
+    //
+    // Their state is dropped above [HOUSE_DC_STATE_BOUND], so a huge finite block does not linger as DC (audit L8-01).
+    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(
+        coefficient = houseDcBlockCoeff(sampleRate = sampleRate),
+        stateBound = HOUSE_DC_STATE_BOUND,
+    )
+    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(
+        coefficient = houseDcBlockCoeff(sampleRate = sampleRate),
+        stateBound = HOUSE_DC_STATE_BOUND,
+    )
 
     /**
      * "Poison seen" (KLANG-00425, L8-04 (c), maintainer 2026-11-11: "We make the failures visible but keep the motor

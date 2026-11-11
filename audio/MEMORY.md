@@ -98,8 +98,11 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   authorable; `MasterLimiterDefaults.kt`, `HouseStage.HOUSE_LIMITER_*`), then the clip into the engine's output:
   a floating-point `StereoBuffer`, no quantisation (in `[-1, 1]` a sample passes, above 1 is 1.0, else -1.0). The
   worklet copies it straight into Web Audio; only the JVM line and the WAV writer go to 16 bits, at their edge
-  (`writePcm16` in `_pcm16_edge.kt`, the one home). The lookahead delays the whole output uniformly. The DC pole is
-  `1 - 48 / fs` (`houseDcBlockCoeff`): 0.999 at 48 kHz, a 7.64 Hz corner at every rate. "Poison seen": the limiter's
+  (`writePcm16` in `_pcm16_edge.kt`, the one home; it rounds to nearest, ties away from zero, no dither, since
+  KLANG-00432 L8-06; it truncated before). The lookahead delays the whole output uniformly. The DC pole is
+  `1 - 48 / fs` (`houseDcBlockCoeff`, the Katalyst `distort` stage's too since KLANG-00433): 0.999 at 48 kHz, a 7.64 Hz
+  corner at every rate; the house blockers drop their state above 1e3 (`HOUSE_DC_STATE_BOUND`, audit L8-01), so a huge
+  finite block does not linger as DC. "Poison seen": the limiter's
   ring stores a non-finite sample as 0 and counts it (`HouseStage.nonFiniteSamples`, monotone, a Double), and every
   diagnostics report carries the count (`Diagnostics.nonFiniteSamples`); nothing is clamped for it.
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
@@ -151,11 +154,18 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   at most `MAX_DRAIN_SECONDS` 20 s; a request that waits behind the drain or the release CUTS it (a raised cosine over
   `CUT_SECONDS` 0.15 s, maintainer 2026-10-17), so an edit lands in about 0.2 s, and so does a leaving chain that
   sounds on silence (an offset: `KatalystChain.soundsOnSilence`). The arriving chain is told it joins a sounding bus
-  (`joinSoundingBus`). **A delay or reverb switched on** snaps its wet only while fresh (no block since its build or
-  reset); over a bus that has run it glides up from 0 like the switch-off's fade (KLANG-00428). **A delay ring's
-  reset is O(1)**: an old cell reads as zero (`DelayLine.validFrames`), the tap's cells zeroed a block at a time. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1 (a per-sample recurrence, one multiply), retired
-  under -90 dB. **A stopped playback is never hard-cut**; only an endless tail triggers the release, 20 s after the
-  last note (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
+  (`joinSoundingBus`). **A delay or reverb switched on** snaps its wet while fresh (no block since its build or
+  reset) or over a bus its host judges SILENT (`KatalystEffect.busSilent`: a cylinder's last silence visit found
+  nothing and no voice rendered on it the block before, `Cylinder.judgeBus`; the master keeps the old rule); over a
+  sounding bus it glides up from 0 like the switch-off's fade (KLANG-00428; "fade in only when already sounding",
+  2026-11-11). **A delay ring's reset is O(1)**: an old cell reads as zero (`DelayLine.validFrames`), the tap's cells
+  zeroed a block at a time. **A ring is sized for at most `MAX_DELAY_SECONDS`** (60 s, a memory bound; a longer time
+  plays at what that ring holds, about 64 s at 48 kHz). **The warm-up stocks** four 1 s and two 2 s rings beside its
+  sixteen of 0.5 s (`ResourceWarehouse.stockDelayRings`), inside the idle budget. **The release law** `TailRelease`: 60 dB per 3 s from exactly 1 (a per-sample recurrence, one multiply), retired
+  under -90 dB. **A stopped playback is never hard-cut**: the stop gives every open timeline gate its note-off and
+  drops the voices not yet started (decision (j) changed 2026-11-11, KLANG-00427); only an endless tail triggers the
+  release, 20 s after the last note, and a voice that at the stop has more than 20 s to live counts as one (released
+  20 s after the stop) (`PlaybackEngine.isIdle` KDoc). All in `audio/ref/katalyst.md`. **An engine's end of life** is one
   `PlaybackEngine.Phase` (Playing, Stopped, Releasing, Released, Disposed; the table in its class KDoc); the
   dispatcher keeps only the render order and the disposal order, both exact.
 - **Katalyst knobs** (2026-10-12): a stage knob is a `KatalystKnobDsl`: a number, a `Kat.param`, a modulator
@@ -166,8 +176,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   holds a modulator; **bank crossfade** `BANK_CROSSFADE_SECONDS` 0.05 (by ear 2026-10-17; 20 ms before), counted in
   samples, with two banks and one parking slot, so a material changes at most every 18 blocks at 44.1 kHz (19 at
   48 kHz): 16ths pass, 32nds park above about 143 BPM. A compressor move that RELAXES on balance (its net reduction at a fixed
-  0 dBFS is less; the three knobs on one fraction) releases at the compressor's own release time,
-  never faster than the 50 ms glide (`CompressorKnobMove`, by ear 2026-10-17). The bank
+  0 dBFS is less; the three knobs on one fraction) snaps its knobs and the follower releases the reduction, the
+  release paid once; under a release shorter than the 50 ms glide it glides (`CompressorKnobMove`, KLANG-00428,
+  2026-11-11; it released the knobs at the release time from 2026-10-17). The bank
   crossfade and the compressor's switch fade run one linear law, `utils/linear_crossfade.kt` (the chain swap's
   `Crossfade` and the duck's glide are other laws). Every delay and reverb switch-off fades the feed over the wet
   glide and drains from the block it lands in, no further off-config needed (follow-up 42). Which knob glides how:
@@ -180,8 +191,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `audio/ref/katalyst.md`.
 - **The classic compressor** (no lookahead) smooths the gain REDUCTION: the curve on each sample's level, then the
   smooth decoupled peak detector (Giannoulis, Massberg and Reiss), so no dead time after silence and a release on the
-  reduction whatever follows (KLANG-00428; `Compressor` KDoc). A relaxing knob move's release and the follower's now
-  run in a row (open, KLANG-00428 Decide).
+  reduction whatever follows (KLANG-00428; `Compressor` KDoc). A relaxing knob move snaps and leaves the swell to it.
 - **Authored lookahead** (Katalyst `compressor` / `limiter`): build-time, at most
   `Compressor.MAX_LOOKAHEAD_SECONDS` 0.05, uncompensated by the author's choice; the authored limiter defaults to
   lookahead 0 and a 1 ms attack (`AUTHORED_LIMITER_*`).
@@ -385,6 +395,10 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   build can read (a count only when it reads no `Freq`, `countsAtBuild`); the first block reads the depth and draws,
   when and in the order it always did. Still allocated at render: a count signal's rise past that size, the shared drift lane's `Random` below
   spread 1 (D7), the phase pool's vocabulary while it grows. Guards: `FirstBlockAllocationSpec`, `SeededVoiceRngSpec`.
+- **The SVF cutoff clamp** (`clampSvfCutoff`, the one home, read by the SVF, the one-poles, the EQ and the resonator
+  bank) is `[5 Hz, 0.49 * fs]` since KLANG-00432 (audit L4-10; `fs / 2 - 1` before, a resonator at Nyquist).
+- **A non-finite SAMPLE**: a stage that stores it stores 0, every other stage stays raw, the house stage counts it
+  (maintainer 2026-11-11, KLANG-00432 L4-08; the table per stage in `audio/ref/numerical-safety.md`).
 - **The SVF**: bandpass, notch and the resonators are linear. Lowpass and highpass at `analog > 0` take a
   state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`),
   floored at 0: the polynomial dips under 1 for a small negative state, and negative damping rang for good near fs/3
@@ -483,6 +497,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 Decisions pass B1: a stop gives open gates their note-off and bounds a voice past the 20 s hold, a switch-on fades only over a sounding bus, delay rings bounded at 60 s, 1 s and 2 s rings warmed, a relaxing compressor move snaps, the SVF clamp at 0.49 fs, the house DC state bounded, the 16-bit edge rounds, the distort DC pole per rate: KLANG-00427, KLANG-00428, KLANG-00432, KLANG-00433
 - 2026-11-11 Decisions pass A: the pluck's real pick position (default 0.28), the square's one-sample edge, perlin without a period, white and brown rate-scaled, both middle voices' jitter, the shimmer ring sized, a non-finite drive amount unset: KLANG-00426, KLANG-00429, KLANG-00430
 - 2026-11-11 Docs and KDoc that said what the code does not do, made true (the wire, the shell, the cylinders, the samples, the ref pages); the worklet's dead `isPlaying` flag removed: KLANG-00433
 - 2026-11-11 The per-note stages and the house stage: no negative damping in the analog SVF, the coarse hold and the shimmer ring store no non-finite sample, `expClip`/`stompBox` skip `pow` when saturated, the house DC pole per rate, "poison seen" in the diagnostics: KLANG-00432

@@ -39,8 +39,8 @@ import kotlin.math.min
  *    tap to the new one (its KDoc has the measurement and the rules).
  * The first configure out of [Off] snaps the feedback glide (the ring is empty there), and the wet
  * only while the stage is [fresh] (nothing has run through it since its build or reset, so a song
- * whose delay is on from the start stays identical to a constant feed); otherwise, and always on a
- * modulated time, the wet glides up from 0 (see below); [Draining] keeps the feedback gliding
+ * whose delay is on from the start stays identical to a constant feed) or its host judges the bus
+ * silent ([busSilent]); otherwise, and always on a modulated time, the wet glides up from 0 (see below); [Draining] keeps the feedback gliding
  * towards the last Active value, so a drain is still "Active on silent input"; [Off.enter] forgets
  * both, next to the tail ceiling.
  *
@@ -63,7 +63,10 @@ import kotlin.math.min
  *    ([KnobGlide.startFrom]) once the bus has run since the stage's build or reset (it is not [fresh]),
  *    the mirror of the switch-off's fade: a snapped wet fed the ring a step of the sounding mix, which came
  *    back one delay time later as a click (KLANG-00428, audit finding L7a-01; a chain a swap brings in is
- *    told by [joinSoundingBus], L7a-02). A fresh stage snaps, except on a modulated time ([timeModulated]),
+ *    told by [joinSoundingBus], L7a-02). Only when the bus SOUNDS at that moment: on a bus its host judges
+ *    silent ([busSilent]) it snaps, so a note that switches the delay on over silence keeps its first echo's
+ *    attack (KLANG-00428, maintainer 2026-11-11: "fade in only when already sounding"). A fresh stage snaps,
+ *    except on a modulated time ([timeModulated]),
  *    whose every return glides up from 0, the first activation after a build or a reset included (an LFO
  *    through the gate otherwise restarts the feed with a step twice per cycle).
  *
@@ -180,9 +183,15 @@ class KatalystDelayEffect(
      * [framesFor] before the conversion to `Int`: `ceil(time · sampleRate)` plus the margin, as a double. Exact for
      * every frame count below `Int.MAX_VALUE` (whole numbers far below 2^53), so a compare with it decides what a
      * compare with [framesFor] decides. Inline, so its double never crosses a call (see [ensureRing]).
+     *
+     * A time above [MAX_DELAY_SECONDS] asks for the ring of [MAX_DELAY_SECONDS]: the bound on a ring's size. The tap
+     * of a longer time is then held to what that ring holds by `DelayLine` (the clamp a refused grow already relies
+     * on), so the echo comes at the longest time the ring holds, its class's (about 64 s at 48 kHz). NaN-guard: a NaN
+     * fails the compare and stays NaN, which [framesFor] reads as `Int.MAX_VALUE`, as before.
      */
     @Suppress("NOTHING_TO_INLINE")
-    private inline fun framesNeeded(time: Double): Double = ceil(time * sampleRate) + RING_MARGIN_FRAMES
+    private inline fun framesNeeded(time: Double): Double =
+        ceil((if (time > MAX_DELAY_SECONDS) MAX_DELAY_SECONDS else time) * sampleRate) + RING_MARGIN_FRAMES
 
     /**
      * Ensures a ring that holds [time] is installed, renting or growing as needed. Returns the
@@ -312,7 +321,7 @@ class KatalystDelayEffect(
      *
      * | state \ event | `configure`, delay ON | `configure`, delay OFF | `process`, the fade lands | `process`, countdown ends | `reset` | `retire` / `release` |
      * |---|---|---|---|---|---|---|
-     * | **Off** | **Active** (a ring is rented if needed; the wet glides up from 0 unless the stage is [fresh] and its time unmodulated). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | (never) | Off | Off |
+     * | **Off** | **Active** (a ring is rented if needed; the wet glides up from 0 unless the stage is [fresh] or its bus [busSilent], and its time unmodulated). Stays Off in ONE case: there is no ring at all AND the warehouse refuses one. A refused GROW is not that case, it keeps the ring it has and activates on it, with the time clamped to what that ring holds | Off | (never) | (never) | Off | Off |
      * | **Active** | Active (the knobs are rewritten, an unchanged config writes nothing, see [applied]; mid-fade the wet glide turns around) | Active while the wet glide falls to 0 (the fade); with the wet already at rest at 0, at once what the next column says | **Draining**, or **Off** when the tap window is already silent | (never) | Off | Off |
      * | **Draining** | **Active** (the ring and its ceiling carry on under the new tap; after a self-oscillating drain the ceiling is re-measured first; the wet glides up from 0) | Draining (the countdown keeps running) | (never) | **Off** | Off | Off |
      *
@@ -594,11 +603,19 @@ class KatalystDelayEffect(
      * True from construction, [reset] and [release] until a block has been processed, and false after
      * [joinSoundingBus]: while it holds, a switch-on out of [Off] snaps the wet (nothing has sounded on this bus, so
      * the feed starts with the bus's own first samples). Once the bus has run, a switch-on out of Off glides the wet
-     * up from 0 over its span, as a return out of [Draining] does: a snapped wet fed the ring a step of the sounding
+     * up from 0 over its span (unless the host judges the bus silent, [busSilent]), as a return out of [Draining] does: a snapped wet fed the ring a step of the sounding
      * mix, which came back one delay time later as a click (KLANG-00428, audit finding L7a-01: kink 120.6 and a
      * burst at -22.8 dB under a held tone). The compressor's `fresh` is the model. It outlives every state.
      */
     private var fresh: Boolean = true
+
+    /**
+     * True while the host judges the bus SILENT ([KatalystEffect.busSilent]): a switch-on out of [Off] then snaps the
+     * wet whatever [fresh] says (KLANG-00428, maintainer 2026-11-11: "fade in only when already sounding"). False until
+     * a host says otherwise, so a stage without a host keeps the [fresh] rule. Outlives every state and [reset]: it is
+     * the host's word about the bus, not the stage's memory.
+     */
+    private var busSilent: Boolean = false
 
     /** The holder the four-number [configure] door fills, this stage's own instance ([DelayConfig] says why). */
     private val door = DelayConfig()
@@ -699,10 +716,10 @@ class KatalystDelayEffect(
             line.cap = if (cap.isFinite()) cap else DELAY_CAP
             feedbackGlide.retarget(guardedFeedback)
 
-            // A switch-on on a bus that has run (not [fresh]), and every return of a modulated time, starts the wet
-            // from 0 out of Off, so it glides up from there (out of Draining the fade left it at 0 already); a return
-            // mid-fade (Active) turns the falling glide around where it stands (class KDoc).
-            if ((timeModulated || !fresh) && state !== active) {
+            // A switch-on on a bus that sounds (not [fresh], not [busSilent]), and every return of a modulated time,
+            // starts the wet from 0 out of Off, so it glides up from there (out of Draining the fade left it at 0
+            // already); a return mid-fade (Active) turns the falling glide around where it stands (class KDoc).
+            if ((timeModulated || !(fresh || busSilent)) && state !== active) {
                 wetGlide.startFrom(0.0)
             }
 
@@ -796,6 +813,11 @@ class KatalystDelayEffect(
         fresh = false
     }
 
+    /** The host's judgement of the bus: while silent, a switch-on snaps (see [busSilent]). */
+    override fun busSilent(silent: Boolean) {
+        busSilent = silent
+    }
+
     /**
      * Moves the feedback glide by one block and writes it into the line while it MOVES, before the
      * line processes the block, over whatever [configure] wrote. A settled feedback is not written:
@@ -842,6 +864,16 @@ class KatalystDelayEffect(
          * its drain is measured exactly as before.
          */
         const val MAX_SCANNED_TAP_SECONDS = 1.0
+
+        /**
+         * The longest delay time a ring is sized for, 60 s (KLANG-00428, audit L7a-07, maintainer 2026-11-11: "ok as
+         * recommended"). A resource bound on a ring's MEMORY, like `Compressor.MAX_LOOKAHEAD_SECONDS`, not a taste:
+         * the ring ladder is open, so a time meant in milliseconds (`katp("delay.time", 250)`) asked for 192 MB on the
+         * audio thread. A longer time rents this bound's ring and plays at the longest time that ring holds: the
+         * ring class a 60 s time rents, about 64 s (49 MB at 48 kHz, so a first long delay still allocates in its
+         * onset block, accepted as a per-change cost). The doors say so where they name the time.
+         */
+        const val MAX_DELAY_SECONDS = 60.0
     }
 }
 

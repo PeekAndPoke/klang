@@ -67,7 +67,8 @@ class WarmupRunner(
      * `BackendReady` regardless. The clean shelf is an optimisation, not a correctness condition
      * (`rent` zeroes a dirty buffer itself), and the warehouse is shared state other playbacks
      * return into — an unbounded wait could hold the output silenced forever while the frontend
-     * gives up and starts cold (review round 4). Sixteen rings need sixteen blocks; four times that.
+     * gives up and starts cold (review round 4). Sixteen rings need sixteen blocks and the stocked longer rings
+     * ([WARM_RINGS_ONE_SECOND], [WARM_RINGS_TWO_SECONDS]) sixteen more, thirty-two in all; this is twice that.
      */
     private val maxCleanWaitBlocks: Int = 4 * WARMUP_CYLINDERS,
 ) {
@@ -135,6 +136,16 @@ class WarmupRunner(
          * needs a second cylinder as sidechain and is unused by the corpus (KLANG-00168 (ducking unfinished)).
          */
         private const val EXTRA_EFFECT_KINDS = 4
+
+        /**
+         * Delay rings of the 1 s class (a delay from 0.5 to 1 s) the warmup puts on the shelf beside its sixteen of the
+         * smallest class (maintainer, 2026-11-11, KLANG-00428: "the warehouse should be warmed up to have delay rings
+         * available for normal songs"). Its own voices delay by 0.3 s and rent only the smallest class.
+         */
+        const val WARM_RINGS_ONE_SECOND: Int = 4
+
+        /** Delay rings of the 2 s class (a delay from 1 to 2 s), as [WARM_RINGS_ONE_SECOND]. */
+        const val WARM_RINGS_TWO_SECONDS: Int = 2
     }
 
     /**
@@ -283,6 +294,10 @@ class WarmupRunner(
                 // first real playback. Nothing is zeroed here: the dispatcher's per-block housekeeping
                 // does that, a slice at a time (review round 3).
                 dispatcher.cleanupHard(WARMUP_PLAYBACK_ID)
+                // The longer delay classes, rented and given back: after the disposal, so the warmup's own cylinders
+                // never took one of them for a ring of the smallest class. Zeroed by the same housekeeping.
+                dispatcher.stockDelayRings(seconds = 1.0, count = WARM_RINGS_ONE_SECOND)
+                dispatcher.stockDelayRings(seconds = 2.0, count = WARM_RINGS_TWO_SECONDS)
                 // Wipe limiter state so the first real kick sees unity gain.
                 dispatcher.resetPostChain()
             }

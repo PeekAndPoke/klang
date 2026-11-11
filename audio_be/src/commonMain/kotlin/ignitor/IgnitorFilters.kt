@@ -109,7 +109,7 @@ data class FilterEnvDef(
  * + closure capture) matters in Kotlin/JS.
  *
  * @param mode Filter type: [SvfMode.LOWPASS], [SvfMode.HIGHPASS], [SvfMode.BANDPASS], or [SvfMode.NOTCH].
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs].
  *   Typical: 200–8000 for LP, 100–2000 for HP, 300–5000 for BP/Notch.
  * @param q Resonance / Q factor. 0.707 = flat (Butterworth), higher = sharper peak.
  *   Clamped to [0.1, 200.0]. Default: 0.707. Typical range: 0.5–10.0.
@@ -392,7 +392,7 @@ private class SvfIgnitor(
  * SVF filter with constant cutoff and Q (convenience overload).
  *
  * @param mode Filter type: LOWPASS, HIGHPASS, BANDPASS, or NOTCH.
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs].
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
@@ -450,7 +450,7 @@ internal fun Ignitor.scaledBy(factor: Double): Ignitor = when {
 /**
  * Lowpass filter — lets low frequencies through, dulls the highs.
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 200–8000.
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 200 to 8000.
  * @param q Resonance. 0.707 = flat (Butterworth), higher = peak at cutoff. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
@@ -465,7 +465,7 @@ fun Ignitor.lowpass(
 /**
  * Lowpass filter (convenience overload with fixed values).
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 200–8000.
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 200 to 8000.
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
@@ -476,7 +476,7 @@ fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Fil
 /**
  * Highpass filter — lets high frequencies through, removes the bottom.
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 80–2000.
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 80 to 2000.
  * @param q Resonance. 0.707 = flat, higher = peak at cutoff. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
@@ -491,7 +491,7 @@ fun Ignitor.highpass(
 /**
  * Highpass filter (convenience overload with fixed values).
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 80–2000.
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 80 to 2000.
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Analog character amount. Default: 0 (clean linear). >0 engages OB-X-style state-dependent damping.
@@ -502,7 +502,7 @@ fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Fi
 /**
  * Bandpass filter — keeps only a frequency band, removes everything above and below.
  *
- * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param cutoffHz Center frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 300 to 5000.
  * @param q Width of the pass band (peak at fc is unity since C2). Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
@@ -517,7 +517,7 @@ fun Ignitor.bandpass(
 /**
  * Bandpass filter (convenience overload with fixed values).
  *
- * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param cutoffHz Center frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 300 to 5000.
  * @param q Width of the pass band (peak at fc is unity since C2). Default: 0.707. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Reserved — currently a no-op (BP saturation not implemented).
@@ -528,7 +528,7 @@ fun Ignitor.bandpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Fi
 /**
  * Notch (band-reject) filter — removes one frequency band, keeps everything else.
  *
- * @param cutoffHz Center frequency of the notch in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param cutoffHz Center frequency of the notch in Hz. Clamped to [5, 0.49 * fs]. Typical: 300 to 5000.
  * @param q Width of the notch. Higher = narrower cut. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
@@ -543,7 +543,7 @@ fun Ignitor.notch(
 /**
  * Notch (band-reject) filter (convenience overload with fixed values).
  *
- * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param cutoffHz Center frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 300 to 5000.
  * @param q Width of the notch. Higher = narrower cut. Default: 0.707. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  * @param analog Reserved — currently a no-op.
@@ -567,7 +567,7 @@ fun Ignitor.notch(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Filte
  * Class form (not SAM lambda) so the integrator state lives in a class field rather
  * than a closure-captured `var` (Kotlin/JS ObjectRef). The hot loop reads and writes the field directly.
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs].
  *   Lower = darker/warmer, higher = more transparent. Typical: 1000–8000.
  */
 private class OnePoleLowpassIgnitor(
@@ -598,7 +598,7 @@ fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor = OnePoleLowpassIgnitor(u
 /**
  * One-pole lowpass with constant cutoff (convenience overload).
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 1000–8000.
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 1000 to 8000.
  */
 fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgnitor("cutoffHz", cutoffHz))
 
@@ -616,7 +616,7 @@ fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgni
  * `filters/LowPassHighPassFilters.kt` for the review history and topology rationale. Class form (not SAM
  * lambda) so state stays in class fields; the hot loop reads and writes them directly.
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs].
  *   Frequencies below this are attenuated. Typical: 30–500.
  */
 private class OnePoleHighpassIgnitor(
@@ -653,7 +653,7 @@ fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor = OnePoleHighpassIgnitor
 /**
  * One-pole highpass with constant cutoff (convenience overload).
  *
- * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 30–500.
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, 0.49 * fs]. Typical: 30 to 500.
  */
 fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIgnitor("cutoffHz", cutoffHz))
 

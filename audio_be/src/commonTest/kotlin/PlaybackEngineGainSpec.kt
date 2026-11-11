@@ -155,7 +155,10 @@ class PlaybackEngineGainSpec : StringSpec({
             val r = Rig()
 
             r.d.handle(KlangCommLink.Cmd.SetGain(playbackId = "song", gain = gain, rampSec = 0.0))
-            r.play("song", note("song", gateSec = 0.3))
+            // The stop gives the note's gate its note-off (KLANG-00427), so what outlives the stop is a finite echo
+            val echo = mapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 0.5)
+
+            r.play("song", note("song", gateSec = 0.3, katalystParams = echo))
 
             for (b in 0 until 2000) {
                 if (b == 5) {
@@ -174,7 +177,7 @@ class PlaybackEngineGainSpec : StringSpec({
 
         val atOne = lifetime(1.0)
 
-        withClue("positive control: the note outlives the stop") { (atOne > 50) shouldBe true }
+        withClue("positive control: the echo outlives the stop") { (atOne > 50) shouldBe true }
         lifetime(0.0) shouldBe atOne
     }
 

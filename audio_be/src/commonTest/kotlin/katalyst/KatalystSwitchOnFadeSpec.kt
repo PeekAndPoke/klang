@@ -12,13 +12,17 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.cylinders.Cylinder
 import io.peekandpoke.klang.audio_be.cylinders.CylinderSwapRig
+import io.peekandpoke.klang.audio_be.cylinders.offerAndCommit
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
+import io.peekandpoke.klang.common.infra.klangMapOf
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.round
@@ -29,7 +33,10 @@ import kotlin.math.round
  * every switch-on, so the unit was fed a step of the sounding mix, and the delay returned it one delay time later as
  * a click: kink 120.6 and a burst at -22.8 dB under a held tone (`disproof-sound.md`). A chain arriving through a
  * swap did the same from its first block. What still snaps: the first switch-on of a stage nothing has run through
- * since its build or its reset (a cylinder's first note), so a song whose sends are on from the start is unchanged.
+ * since its build or its reset (a cylinder's first note), so a song whose sends are on from the start is unchanged,
+ * and, since the decisions pass of 2026-11-11, any switch-on over a bus its cylinder judges SILENT (its last silence
+ * visit found nothing and no voice rendered on it the block before), so a note that switches a delay on keeps its
+ * echo's attack.
  *
  * The oracle is the glide's own law: the feed rises linearly from 0 to the wet over [KNOB_GLIDE_SECONDS] in whole
  * blocks, so on a constant mix the delay's first echo can step by no more than one sample of that ramp.
@@ -148,6 +155,93 @@ class KatalystSwitchOnFadeSpec : StringSpec({
         block(fresh, ctx())
 
         fresh.wetInForce shouldBe 0.8
+    }
+
+    // ── Only when the bus sounds (KLANG-00428, maintainer 2026-11-11: "fade in only when already sounding") ─────────
+
+    /**
+     * A cylinder driven as `Cylinders.processAndMix` drives it, one silence visit per block (it is the only one
+     * rented): ten blocks of a held tone owned by a voice with no delay or room, then [quiet] blocks in which nothing
+     * offers and the mix is [tailLevel] (0: silence; above it: a tail that rings with no voice), then [unvisited]
+     * blocks of the tone's voice again with no silence visit (the visits are another cylinder's turn), then the note
+     * whose owner switches [stage] on with a wet of 0.5. Returns the wet in force after that note's first block.
+     */
+    fun wetAfterSwitchOn(stage: String, quiet: Int, tailLevel: Double, unvisited: Int = 0): Double {
+        // A grace far longer than the row: the cylinder stays active through its quiet blocks, never reset
+        val cylinder = Cylinder(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 1000)
+        val first = VoiceTestHelpers.createSynthVoice(sampleRate = sampleRate, blockFrames = blockFrames)
+        val on = when (stage) {
+            "delay" -> klangMapOf("delay.wet" to 0.5, "delay.time" to 0.1, "delay.feedback" to 0.0)
+            else -> klangMapOf("reverb.wet" to 0.5, "reverb.size" to 3.0)
+        }
+        val switchAt = 10 + quiet + unvisited
+        val second = VoiceTestHelpers.createSynthVoice(
+            startFrame = switchAt.toDouble() * blockFrames,
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            katalystParams = on,
+        )
+
+        fun run(b: Int, level: Double, visit: Boolean = true) {
+            cylinder.mixBuffer.left.fill(level)
+            cylinder.mixBuffer.right.fill(level)
+            cylinder.processEffects()
+
+            if (visit) {
+                cylinder.tryDeactivate(blockStart = b.toDouble() * blockFrames)
+            }
+        }
+
+        for (b in 0 until 10) {
+            cylinder.offerAndCommit(first, blockStart = b.toDouble() * blockFrames)
+            run(b, level)
+        }
+
+        for (b in 10 until 10 + quiet) {
+            cylinder.commitOwner()
+            run(b, tailLevel)
+        }
+
+        for (b in 10 + quiet until switchAt) {
+            cylinder.offerAndCommit(first, blockStart = b.toDouble() * blockFrames)
+            run(b, level, visit = false)
+        }
+
+        withClue("the cylinder is still in use: not reset, so not fresh") {
+            cylinder.isActive shouldBe true
+        }
+
+        cylinder.offerAndCommit(second, blockStart = switchAt.toDouble() * blockFrames)
+        run(switchAt, level)
+
+        return when (stage) {
+            "delay" -> cylinder.delay.shouldNotBeNull().wetInForce
+            else -> cylinder.reverb.shouldNotBeNull().wetInForce
+        }
+    }
+
+    "a delay or a reverb switched on over a SILENT bus snaps: the note that switches it on keeps its attack" {
+        for (stage in listOf("delay", "reverb")) {
+            withClue("$stage after ten silent blocks") {
+                wetAfterSwitchOn(stage = stage, quiet = 10, tailLevel = 0.0) shouldBe 0.5
+            }
+        }
+    }
+
+    "over a SOUNDING bus it still fades in: the tone a voice played the block before, or a tail with no voice" {
+        for (stage in listOf("delay", "reverb")) {
+            withClue("$stage, the tone's voice rendered the block before the switch-on") {
+                wetAfterSwitchOn(stage = stage, quiet = 0, tailLevel = 0.0) shouldBe (0.5 / fadeBlocks plusOrMinus 1e-12)
+            }
+
+            withClue("$stage, no voice for ten blocks but the last silence visit found the mix sounding (a tail)") {
+                wetAfterSwitchOn(stage = stage, quiet = 10, tailLevel = 0.1) shouldBe (0.5 / fadeBlocks plusOrMinus 1e-12)
+            }
+
+            withClue("$stage, the last visit found silence, but a voice rendered after it (another cylinder's visit turn)") {
+                wetAfterSwitchOn(stage = stage, quiet = 10, tailLevel = 0.0, unvisited = 2) shouldBe (0.5 / fadeBlocks plusOrMinus 1e-12)
+            }
+        }
     }
 
     "a chain swapped in over a sounding cylinder fades its delay's and its room's feed in from its first block" {

@@ -390,6 +390,68 @@ No row allocates per block (net_B 0 before and after). The duck rows run the sta
 problems. The reproductions of L7b-03 and L7b-04 are deleted from `AuditSoundStagesRepro` (their numbers are above);
 L6-04 and L7b-08 had none.
 
+## Decisions pass B1 (2026-11-11)
+
+What the fix worker of pass B1 built of the decisions of 2026-11-11 (the vowel table stays open).
+
+**The switch-on fade only over a sounding bus, BUILT.** A delay or a reverb switched on out of Off snaps its wet while
+fresh (as before) or while its host judges the bus SILENT (`KatalystEffect.busSilent`, new, told by the host when the
+judgement changes or another chain enters service; `parallel` and a region pass it on); over a sounding bus it glides
+up from 0 as before. A cylinder judges with the tests it already makes (`Cylinder.judgeBus`, once per block before the
+owner's writers): it SOUNDS when its last silence visit (`tryDeactivate`, the `SILENCE_FLOOR` scan it ran anyway) found
+its mix sounding, or when a voice checked in during the block before (the onset block's own note does not count, so a
+note that switches a delay on over silence keeps its first echo's attack). No sample is read for it. A visit comes
+once per rented cylinder in turn, so its answer can be a few blocks old: a stale "sounding" fades in (the safe side),
+and a voice that started since the visit counts through the check-in. A swap's arriving chain is told the cylinder's
+current judgement. The output (`MasterBus`) is unchanged: its chain reads authored defaults only, so a stage there
+switches on at its first block or under a modulated knob (a one-block ramp); a judgement there would have had no
+reachable case to guard (built first, then taken out again). Guards: `KatalystSwitchOnFadeSpec`, through a real
+cylinder with one visit per block: after ten silent blocks a delay and a reverb snap to their wet (0.5); with the
+tone's voice in the block before, with a tail and no voice (the visit found sound), and with a voice that started after
+the last silent visit, they glide (0.5 / 17 after one block). Mutants (KILLED for the expected reason): the bus always
+judged sounding; the delay, and the reverb, ignoring the judgement; the visit never reporting sound; the voice
+check-in not rolled into the next block. Probes: the click table's switch-on rows run a chain with no host and a
+held tone, so they keep the fade: delay switch ON kink 1.50, burst -95.6 dB; reverb switch ON 1.04, -119.9 dB; swap
+into a room 1.05, -114.4 dB; swap into a delay 1.99, -89.5 dB; all identical to before this pass. No corpus song moved
+by it (a run with the judgement taken out: identical hashes).
+
+**The delay ring bound, BUILT (option (a), 60 s).** `KatalystDelayEffect.MAX_DELAY_SECONDS` = 60: a time above it
+asks for the ring a 60 s time rents (`framesNeeded`), never more; the tap of a longer time is then held to what that
+ring holds by `DelayLine`'s existing clamp (the one a refused grow relies on), so the echo comes at the class's length,
+about 64 s at 48 kHz (49 MB). No new clamp on the parameter: the time stays what was written, the ring is bounded.
+Said where the doors name the time: `KatalystDsl` (`@param time`), the script `delay` door and its slot
+(`klangscript-libs`), sprudel's `delay(time)` (both texts), `audio/ref/effects-mixing.md`. Guard: `LazyRingSpec`, "a
+time past MAX_DELAY_SECONDS asks for the bounded ring" (it pinned the open ladder's overflow path, 60000 s asking for
+`Int.MAX_VALUE`; moved), 60.5, 250, 60000 and 1e300 s ask for 128 base rings, 60 s too, 30 s for 64. Mutant: the
+bound taken out, KILLED.
+
+**Warm rings, BUILT.** The warm-up stocks four rings of the 1 s class and two of the 2 s class beside its sixteen of
+0.5 s (`WarmupRunner.WARM_RINGS_ONE_SECOND`, `WARM_RINGS_TWO_SECONDS`; `ResourceWarehouse.stockDelayRings`, a rent and
+a give-back, after the warm-up engine's disposal so its own cylinders never took one): 12.3 MB idle at 48 kHz in all,
+inside `SHELF_BUDGET_BYTES` (32 MB, unchanged; at 192 kHz the budget drops the largest first), zeroed by the same
+housekeeping before `BackendReady` (32 slices instead of 16; the cap on the wait is 64). `SizedBuffers` rule 2 names
+the exception. Guard: `CylinderShelfSpec`, after the warm-up the shelf holds 22 clean rings inside the budget, and a
+song's first 0.8 s and 1.5 s delays rent the 1 s and 2 s classes without an allocation or a clean on the spot; the
+first row's shelf count moved with it. Mutant: the 2 s stock taken out, KILLED.
+
+**A relaxing compressor move snaps, BUILT (classic path; the lookahead path never used the move).** A move whose net
+effect at 0 dBFS is less reduction now snaps its knobs, and the reduction follower carries the swell at the release
+time constant, so the release is paid once; under a release shorter than the 50 ms glide it glides (the floor of the
+second-pass note). `CompressorKnobMove`'s release law (`RELEASING`, the fraction, `LANDING`) is gone. On DC (threshold
+-40 to 0, ratio 8, release 0.2 s) the swell's 10 to 90 percent is ln(9) release time constants, 0.44 s (2.65, 0.53 s,
+before). Guards, `KatalystCompressorEffectSpec`: its knob-law oracle writes the snap law; the swell row (threshold in
+force snapped in the change's block, ln(9) time constants, no step over 0.0041 dB per sample); the net-effect row; the
+modulated-knob row (a relaxing move landed one block after the change, an adding one still travelling); release 0 and
+5 ms still take the glide. Mutants: the snap never taken, the glide floor taken out; both KILLED. Click probe, the
+relaxing rows (bursts unchanged at -110 dB, kink 1.00): threshold -40 to -20 rise 249.6 to 126.7 ms, settle 306.0 to
+149.6 ms; ratio 20 to 4 rise 232.9 to 45.8 ms, settle 251.1 to 55.1 ms; every other compressor row identical. No
+corpus song moved by it (a run with the snap taken out: identical hashes; the corpus' compressors are lookahead ones
+or do not move their knobs).
+
+**Cost** (`KLANG_PROBE=cost`, JVM, net ns per sample, before and after this pass; the median row 0.99): delay 25.91 to
+24.88, reverb default 36.92 to 35.25, compressor default 17.04 to 17.05, lookahead compressor 38.39 to 37.69, limiter
+20.61 to 20.78; no row over 10 percent, no row allocates per block.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

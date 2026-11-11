@@ -40,11 +40,14 @@ reduction the targets give there, judged once per new move and never at the sign
 3, the maintainer's decision of 2026-10-17: "judge at a fixed loud level"; loud material is where
 swells and ceilings are heard). A move that reduces no less, more or a tie (both thresholds above
 0 dBFS), glides as above. A move that reduces strictly less (a rising threshold, a
-lower ratio, a narrower knee, or a mix that relaxes on balance) does not glide: it RELEASES, the move's remaining fraction decaying as a one-pole with the compressor's own release
-time constant, so the gain comes back the way it does when the input falls (`CompressorKnobMove`). Since KLANG-00428
-the classic follower smooths the gain REDUCTION, so the reduction this move asks for passes the follower's own release
-too: two one-poles in a row, 10 to 90 percent in about 2.65 release time constants (1.36 before); a gliding move
-arrives behind the glide by the attack's lag (about 1.7 dB at a 5 ms attack on a 17 dB move). Open: KLANG-00428 Decide.
+lower ratio, a narrower knee, or a mix that relaxes on balance) does not glide: it SNAPS its knobs, and the classic
+follower, which smooths the gain REDUCTION since KLANG-00428, brings the gain back at the compressor's own release time
+constant, the way it does when the input falls (`CompressorKnobMove`; KLANG-00428, maintainer 2026-11-11: "as
+recommended, no ear test needed"). From 2026-10-17 the move released its knobs as a one-pole at that time constant
+itself, and behind the reduction follower the release was paid twice: 10 to 90 percent in about 2.65 release time
+constants; now ln(9), about 2.2, the follower's one-pole alone (on DC, threshold -40 to 0, ratio 8, release 0.2 s:
+0.44 s). Under a release shorter than the 50 ms glide the relaxing move glides instead. A gliding move arrives behind
+the glide by the attack's lag (about 1.7 dB at a 5 ms attack on a 17 dB move).
 The three knobs always travel as ONE move on one shared fraction, so the path through the gain
 curve is the glide's straight line and only its timing changes: a move of mixed directions
 is judged as a whole (review round 1: with a fraction per knob the adding knob arrived in 50 ms
@@ -57,8 +60,7 @@ linearly: 16.2 dB of swell in 20 ms, faster than the swell the ear rejected). A 
 threshold and ratio moving in opposite directions, takes the law of its behaviour on loud material;
 a quiet passage may then see the other direction for a moment, bounded by the two curves'
 difference at that level. A loud note landing during a release is under-compressed for up to the
-release time, as by any compressor letting go. Two owners alternating faster than the release likewise reach the relaxing owner's setting only in part (release 0.3 s, 8ths at 120 BPM: 56 percent of the move, at 16ths 34 percent), as a compressor does on alternating loud and quiet material. A release is never faster than the glide: its fraction is the slower of the one-pole's and
-the glide's at every block end, so a release time under about 50 ms still takes the glide's time.
+release time, as by any compressor letting go. Two owners alternating faster than the release likewise reach the relaxing owner's setting only in part, as a compressor does on alternating loud and quiet material (the 2026-10-17 numbers, 56 percent of the move at 8ths, 34 at 16ths for release 0.3 s at 120 BPM, were the knob release's; not measured again for the follower). A swell is never faster than the glide: under a release shorter than about 50 ms the relaxing move glides over the 50 ms instead of snapping.
 That is a floor on the transition's speed, the click safety net, not a clamp on the release, which
 still sets the envelope. This is the one place where a knob change is not linear, and it is
 deliberate: a relaxing knob is the compressor letting go, and letting go has a time the author
@@ -337,6 +339,11 @@ lookahead loop on the values `applyKnobArgs` wrote at once, and only the detecto
 (at least 4 taps each) spread a step; a threshold that falls by 29 dB under `limiter(lookahead .005, attack 0)`
 reaches the gain within about 8 samples. Accepted as it is (KLANG-00428): a listening task decides whether it wants a
 glide.
+**2026-11-11, a relaxing move snaps and the follower releases** (KLANG-00428 decisions pass B1): since the
+classic follower smooths the reduction, the knob release above ran in a row with it. The relaxing move now snaps its
+knobs (or glides, under a release shorter than the glide), the `CompressorKnobMove` release law and its landing are
+gone. The DC swell's 10 to 90 percent is ln(9) release time constants; the lookahead path is unchanged (it never used
+the move).
 Decided (maintainer, 2026-10-17): the OFF edge (an owner without a compressor, a linear fade of the reduction over
 50 ms, 17 dB in the first 10 ms from 30 dB) and a falling duck `depth` keep the 50 ms fade and do not take the release
 law: "if someone really wants to automate the compressor, they want it almost immediately".

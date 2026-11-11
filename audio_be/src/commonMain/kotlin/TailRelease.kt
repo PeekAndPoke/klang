@@ -17,8 +17,9 @@ import kotlin.math.pow
  * The one home of that law, for its two users:
  *  - [ChainSwap], a chain swapped away whose drain outlived `ChainSwap.MAX_DRAIN_SECONDS` (phase 3
  *    step 12 decision (i));
- *  - [PlaybackEngine], a STOPPED playback still ringing with a tail that can never end when its
- *    hold ends (decision (j): after a stop, no hard cut, ever; finite tails ring out).
+ *  - [PlaybackEngine], a STOPPED playback still ringing with a tail that can never end, or a voice that outlives
+ *    the hold, when its hold ends (decision (j): after a stop, no hard cut, ever; finite tails ring out; changed
+ *    2026-11-11, KLANG-00427: a stop gives every open gate its note-off).
  *
  * The gain is `g(k) = exp(-k / tau)`, k the frames since [restart], computed as the recurrence
  * `g(k + 1) = g(k) * exp(-1 / tau)` from exactly 1: one multiply per sample instead of one `exp`

@@ -5,12 +5,16 @@
 
 package io.peekandpoke.klang.audio_be
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.filters.houseDcBlockCoeff
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.sin
 
 /**
  * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1): [HouseStage.process] runs on the
@@ -279,5 +283,63 @@ class HouseStageSpec : StringSpec({
         at48 shouldBe (0.795 plusOrMinus 0.01)
         gainAt10Hz(44_100) shouldBe (at48 plusOrMinus 0.002)
         gainAt10Hz(96_000) shouldBe (at48 plusOrMinus 0.002)
+    }
+    "a huge FINITE block on the mix does not linger as DC: the DC blockers drop their state above 1e3 (audit L8-01)" {
+        // KLANG-00432, maintainer 2026-11-11. One block (128 frames) of a 0.3 sine at 220 Hz with 1e15 added: the
+        // blockers carried it in their state and put up to seconds of full-scale DC out (the audit at 48 kHz: 26,783
+        // samples on the rail, back within 0.003 of the clean run 1.13 s later). With the state dropped above
+        // `HOUSE_DC_STATE_BOUND` the bad block costs about itself plus the limiter's recovery. Compared with the same
+        // run without the bad block, from the bad block on.
+        fun run(bad: Boolean): DoubleArray {
+            val house = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
+            val mix = StereoBuffer(blockFrames)
+            val out = StereoBuffer(blockFrames)
+            val frames = 2 * sampleRate / blockFrames * blockFrames
+            val result = DoubleArray(frames)
+            var at = 0
+
+            while (at < frames) {
+                for (i in 0 until blockFrames) {
+                    val n = at + i
+                    val x = 0.3 * sin(2.0 * PI * 220.0 * n / sampleRate) + if (bad && n in 4800 until 4928) 1e15 else 0.0
+
+                    mix.left[i] = x
+                    mix.right[i] = x
+                }
+
+                house.process(mix = mix, out = out)
+                out.left.copyInto(destination = result, destinationOffset = at, startIndex = 0, endIndex = blockFrames)
+                at += blockFrames
+            }
+
+            return result
+        }
+
+        val control = run(bad = false)
+        val poisoned = run(bad = true)
+        var rail = 0
+        var lastDeviation = -1
+
+        for (i in 4800 until poisoned.size) {
+            if (abs(poisoned[i]) >= 1.0) {
+                rail++
+            }
+
+            // NaN-guard: a non-finite output counts as a deviation
+            if (!(abs(poisoned[i] - control[i]) < 0.003)) {
+                lastDeviation = i
+            }
+        }
+
+        val recoveredSeconds = (lastDeviation + 1 - 4800).toDouble() / sampleRate
+
+        // Measured with the bound: 2 samples on the rail, back 0.213 s after the bad block began
+        withClue("samples on the rail ($rail): a few, not seconds of DC") {
+            (rail < 50) shouldBe true
+        }
+
+        withClue("back within 0.003 of the clean run $recoveredSeconds s after the bad block began") {
+            (recoveredSeconds < 0.4) shouldBe true
+        }
     }
 })

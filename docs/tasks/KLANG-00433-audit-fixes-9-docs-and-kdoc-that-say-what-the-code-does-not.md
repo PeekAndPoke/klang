@@ -254,6 +254,27 @@ against after: all 18 sound hashes identical (3 frozen, 15 live); no song edited
 | `KatalystDistortEffect`'s fixed DC pole | FIXED (the KDoc and `effects-mixing.md` say its corner moves with the rate); DECIDE 8 |
 | KLANG-00425 N2: `numerical-safety.md` names the four values | ALREADY TRUE (KLANG-00425 wrote the section) |
 
+## Decisions pass B1 (2026-11-11)
+
+What the fix worker of pass B1 built of this ticket's decisions (the rest belongs to other passes).
+
+- **Decide 8, BUILT.** `KatalystDistortEffect` takes the house pole per rate: `houseDcBlockCoeff` at its base rate
+  (inside a region the region's rate shifted down by its stages, then mapped up as before), so its corner is 7.64 Hz
+  at every rate; exactly 0.999 at 48 kHz, so no corpus song moves (the corpus renders at 48 kHz). The sentences that
+  said the corner moves with the rate are gone (the stage's KDoc, `HOUSE_DC_BLOCK_COEFF` and `houseDcBlockCoeff` in
+  `LowPassHighPassFilters.kt`, `audio/ref/effects-mixing.md`, `audio/ref/architecture.md`). Guard:
+  `KatalystDistortEffectSpec`, whose oracle cores now carry `1 - 48 / fs` written out (it pinned the fixed 0.999 at
+  44.1 kHz). Mutant: the pole at 48 kHz whatever the rate, KILLED (five rows).
+- **Decide 2, NOT BUILT.** Removing `VoiceScheduler.scheduleVoice` breaks a production compile outside this pass's
+  modules: `klang/src/jsMain/kotlin/KlangBenchmark.kt:416` calls it (the `klang` module belongs to another pass). Two
+  more main-code callers are the benchmarks `audio_benchmark/src/commonMain/kotlin/IgnitorBenchmark.kt:149` and
+  `src/jvmMain/kotlin/SongBenchmark.kt:231`, so "no production caller" was not quite true. The change is mechanical
+  (each call becomes `scheduleVoices(listOf(voice))`, and the specs that use it: fifteen calls in eleven
+  files of `audio_be`); it waits for the coordinator's word on the `klang` file.
+- **Decide 9, BUILT.** `Compressor.kt`'s header says in one line that the two deferred items (a linear-domain
+  rewrite, RMS smoothing of the peak detector) live in KLANG-00437; the list is gone, and the comment in the
+  companion that pointed at it names the ticket.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

@@ -51,10 +51,10 @@ class WavFileWriterSpec : StringSpec({
                 0x64, 0x61, 0x74, 0x61, 0x0C, 0x00, 0x00, 0x00,
                 // frame 0: L 32767, R -32768
                 0xFF, 0x7F, 0x00, 0x80,
-                // frame 1: L -16383, R 3
-                0x01, 0xC0, 0x03, 0x00,
-                // frame 2: L 16383, R -3
-                0xFF, 0x3F, 0xFD, 0xFF,
+                // frame 1: L -16384, R 3 (the edge rounds to nearest since KLANG-00432, L8-06: -16383.5 is -16384)
+                0x00, 0xC0, 0x03, 0x00,
+                // frame 2: L 16384, R -3
+                0x00, 0x40, 0xFD, 0xFF,
             )
 
             file.readBytes().map { it.toInt() and 0xFF } shouldBe expected

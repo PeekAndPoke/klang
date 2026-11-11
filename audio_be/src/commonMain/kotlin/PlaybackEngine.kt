@@ -29,15 +29,17 @@ import kotlin.math.min
  * | phase \ event | [renderInto]                                                        | [stop]    | [resume]  | [dispose]  |
  * |---------------|---------------------------------------------------------------------|-----------|-----------|------------|
  * | `Playing`     | renders; counts its quiet blocks                                    | `Stopped` | -         | `Disposed` |
- * | `Stopped`     | renders; `Releasing` once the hold is over and an endless tail rings | -         | `Playing` | `Disposed` |
+ * | `Stopped`     | renders; `Releasing` once the hold is over and an endless tail rings, or a voice outlives the hold | -         | `Playing` | `Disposed` |
  * | `Releasing`   | renders under the release; `Released` when it falls under its floor | -         | -         | `Disposed` |
  * | `Released`    | renders under the release, which is 0 from here on                  | -         | -         | `Disposed` |
  * | `Disposed`    | never rendered (the dispatcher drops an engine before disposing it) | -         | -         | -          |
  *
  * - **The hold** ([renderInto], `Stopped` only): [MAX_TAIL_HOLD_SECONDS] of quiet blocks counted from the last
  *   active voice (the count runs while `Playing` too, so a stop after a long silence holds only the rest), the
- *   master swap settled, and a tail that can never end still ringing ([sustainsItself]). A finite tail never
- *   triggers it: it rings out in full.
+ *   master swap settled, and a tail that can never end still ringing ([sustainsItself]). Or, since KLANG-00427
+ *   (audit L2-07, maintainer 2026-11-11): a VOICE still playing [MAX_TAIL_HOLD_SECONDS] after the stop, which is a
+ *   voice that at the stop, after its note-off, had more than that to live (a gate or a release that long: a voice's
+ *   end never moves later), counts as an endless tail. Any other finite tail never triggers it: it rings out in full.
  * - **No way back from a release:** [resume] in `Releasing` or `Released` changes nothing; the dispatcher detaches
  *   such an engine from its id instead and gives the id a fresh one.
  * - **Idle** ([isIdle]), when the dispatcher may dispose a stopped engine: `Playing` and `Stopped` when nothing of
@@ -101,6 +103,13 @@ class PlaybackEngine(
      * waited for the cylinders too would never start.
      */
     private var quietBlocks: Int = 0
+
+    /**
+     * Blocks rendered since the stop, saturated at [maxTailHoldBlocks]: a voice still playing when it reaches the hold
+     * counts as an endless tail ([holdIsOver]; KLANG-00427, audit L2-07: a gate of hours or `release(1e6)` kept a
+     * stopped engine for days).
+     */
+    private var stoppedBlocks: Int = 0
 
     /** The release of the stopped engine's whole output, restarted once when its hold ends ([renderInto]). */
     private val tailRelease: TailRelease = TailRelease(sampleRate = sampleRate, blockFrames = blockFrames)
@@ -184,10 +193,15 @@ class PlaybackEngine(
         // what a stopped playback's endless tails are held for (see [isIdle]).
         quietBlocks = if (scheduler.getActiveVoiceCount() != 0) 0 else min(quietBlocks + 1, maxTailHoldBlocks)
 
-        if (phase == Phase.Stopped && quietBlocks >= maxTailHoldBlocks && masterBus.isSettled && sustainsItself()) {
-            // Decision (j): the hold is over and a tail that can never end still rings. Released,
-            // never dropped, and with it whatever finite tail rings beside it. Waits for a master
-            // swap to settle first: its own drain is capped and released ([ChainSwap]).
+        if (phase == Phase.Stopped) {
+            stoppedBlocks = min(stoppedBlocks + 1, maxTailHoldBlocks)
+        }
+
+        if (phase == Phase.Stopped && masterBus.isSettled && holdIsOver()) {
+            // Decision (j) as changed 2026-11-11: the hold is over and a tail that can never end still rings, or a
+            // voice that outlives the hold still plays. Released, never dropped, and with it whatever finite tail
+            // rings beside it. Waits for a master swap to settle first: its own drain is capped and released
+            // ([ChainSwap]).
             phase = Phase.Releasing
             tailRelease.restart()
         }
@@ -228,6 +242,15 @@ class PlaybackEngine(
         masterBus.markRendered()
     }
 
+    /**
+     * The hold of a stopped engine is over: [MAX_TAIL_HOLD_SECONDS] of quiet blocks with an endless tail ringing
+     * ([sustainsItself]), or [MAX_TAIL_HOLD_SECONDS] since the stop with a voice still playing (it had more than the
+     * hold to live after the stop's note-offs).
+     */
+    private fun holdIsOver(): Boolean =
+        (quietBlocks >= maxTailHoldBlocks && sustainsItself()) ||
+            (stoppedBlocks >= maxTailHoldBlocks && scheduler.getActiveVoiceCount() != 0)
+
     /** True while this engine still has sound of its own (voices or ringing cylinder buses). */
     private fun hasOwnSound(): Boolean =
         scheduler.getActiveVoiceCount() != 0 || cylinders.anyActive()
@@ -240,11 +263,16 @@ class PlaybackEngine(
         cylinders.anySustainsItself() || masterBus.sustainsItself()
 
     /**
-     * The playback was told to stop (`Cmd.Cleanup`): from now on its finite tails ring out and its
-     * endless ones are released after [MAX_TAIL_HOLD_SECONDS] ([isIdle]). `Playing` becomes `Stopped`; in any
-     * other phase nothing changes (a second stop, a release under way).
+     * The playback was told to stop (`Cmd.Cleanup`), after its scheduler's `cleanup` gave every open gate its note-off:
+     * from now on its finite tails ring out and its endless ones are released after [MAX_TAIL_HOLD_SECONDS]
+     * ([isIdle]); a voice that still plays when that hold since the stop is over counts as an endless one.
+     * `Playing` becomes `Stopped`; in any other phase nothing changes (a second stop, a release under way).
      */
     fun stop() {
+        if (phase == Phase.Playing) {
+            stoppedBlocks = 0
+        }
+
         phase = when (phase) {
             Phase.Playing -> Phase.Stopped
             Phase.Stopped, Phase.Releasing, Phase.Released, Phase.Disposed -> phase
@@ -285,17 +313,20 @@ class PlaybackEngine(
      * master fade or drain from being dropped mid-way; the swap caps its own drain.
      *
      * **After a stop, no hard cut, ever** (step 12 decision (j), maintainer 2026-09-28, refined
-     * the same day: release only ENDLESS tails). Every tail that can end on its own rings out in
-     * full, however long it takes. Only a tail that can NEVER end ([KatalystChain.sustainsItself]:
-     * a delay recirculating at `|feedback| >= 1`, or an arithmetic stage that sounds on silence, an
-     * offset, on a cylinder or at the master, while it still sounds) would keep a
-     * stopped engine for ever; while one rings [MAX_TAIL_HOLD_SECONDS] after the notes ended (and
-     * the master swap has settled), the engine's WHOLE output is released ([TailRelease], 60 dB per
-     * 3 s from exactly 1, retired under -90 dB, 4.5 s), and idle once that has run out. The simple
-     * rule: a finite tail still ringing at that moment is released with it. Only a song with an
-     * endless tail is affected, and it is bounded. So a stopped engine lives as long as its longest
-     * finite tail, or the hold plus the release when an endless one is present. A playback that
-     * was not stopped is never released: its drone is the authored sound.
+     * the same day: release only ENDLESS tails; changed 2026-11-11, KLANG-00427, audit L2-07). A stop
+     * gives every open timeline gate its note-off (`VoiceScheduler.cleanup`), as a DAW's stop does, so a
+     * held note goes into its own release. Every tail that can end on its own within the hold rings out
+     * in full. A tail that can NEVER end ([KatalystChain.sustainsItself]: a delay recirculating at
+     * `|feedback| >= 1`, or an arithmetic stage that sounds on silence, an offset, on a cylinder or at the
+     * master, while it still sounds) would keep a stopped engine for ever; while one rings
+     * [MAX_TAIL_HOLD_SECONDS] after the notes ended (and the master swap has settled), the engine's WHOLE
+     * output is released ([TailRelease], 60 dB per 3 s from exactly 1, retired under -90 dB, 4.5 s), and
+     * idle once that has run out. A voice that at the stop still had more than [MAX_TAIL_HOLD_SECONDS] to
+     * live (a fixed realtime gate of hours, a `release(1e6)`) counts as such a tail: while it still plays
+     * [MAX_TAIL_HOLD_SECONDS] after the stop, the output is released the same way. The simple rule: a
+     * finite tail still ringing at that moment is released with it. So a stopped engine lives as long as
+     * its longest finite tail, or the hold plus the release when an endless one is present. A playback
+     * that was not stopped is never released: its drone is the authored sound.
      */
     fun isIdle(): Boolean = when (phase) {
         Phase.Playing, Phase.Stopped -> !hasOwnSound() && masterBus.isSettled && !masterBus.isRinging
@@ -308,10 +339,11 @@ class PlaybackEngine(
          * How long a stopped playback's ENDLESS tails are held before the engine is released
          * ([isIdle]): a delay recirculating at `|feedback| >= 1` never decays, so without a bound a
          * stopped playback with one would render for ever. Counted from the moment its notes
-         * ended. A tail that ends on its own is never bounded by this: it rings out in full. Only
-         * when an endless tail is present can a finite one be released with it (the simple rule in
-         * [isIdle]); a normalized `size` 1.0 Freeverb is ~94 dB down after this long (on its
-         * slowest mode), so a reverb released then is not heard to go.
+         * ended; for a voice that still plays, from the stop. A tail that ends
+         * on its own is never bounded by this: it rings out in full. Only when an endless tail is
+         * present can a finite one be released with it (the simple rule in [isIdle]); a normalized
+         * `size` 1.0 Freeverb is ~94 dB down after this long (on its slowest mode), so a reverb
+         * released then is not heard to go.
          */
         private const val MAX_TAIL_HOLD_SECONDS = 20.0
 

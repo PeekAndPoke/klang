@@ -38,7 +38,8 @@ import kotlin.math.sqrt
  * **The oracles are BARE [DistortionCore]s driven by hand and the input's own definition**, never the stage under
  * test: settled, the stage is two cores at the drive of its amount; off, it is the input;
  * switching, it is `dry + w * (distorted - dry)` with `w` the linear fade of [KNOB_GLIDE_SECONDS]. The oracle cores
- * carry the house DC pole as the LITERAL 0.999, so a stage that slid back to the voice's pole goes red here.
+ * carry the house DC pole written out, `1 - 48 / fs` (KLANG-00433: the corner 7.64 Hz at every rate, 0.999 only at
+ * 48 kHz), so a stage that slid back to the voice's pole, or to the fixed 0.999 at this spec's 44.1 kHz, goes red here.
  */
 class KatalystDistortEffectSpec : StringSpec({
 
@@ -46,6 +47,9 @@ class KatalystDistortEffectSpec : StringSpec({
     val blockFrames = 128
     val fadeLen = (sampleRate * KNOB_GLIDE_SECONDS).toInt()
     val glideBlocks = round(KNOB_GLIDE_SECONDS * sampleRate / blockFrames).toInt()
+
+    // The house DC pole at this rate, written out: 0.998911... at 44.1 kHz, not the fixed 0.999 (KLANG-00433)
+    val housePole = 1.0 - 48.0 / sampleRate
 
     val soft = DistortionShapes.SOFT_INDEX
     val tube = DistortionShapes.indexOf("tube").toInt()
@@ -105,8 +109,8 @@ class KatalystDistortEffectSpec : StringSpec({
      * samples are 0. What a stage that switched on at [fromBlock] with fresh cores distorts.
      */
     fun oracle(shape: Int, amount: Double, blocks: Int, fromBlock: Int = 0): Out {
-        val coreL = DistortionCore(distortionShapeAt(shape.toDouble()), dcBlockCoefficient = 0.999)
-        val coreR = DistortionCore(distortionShapeAt(shape.toDouble()), dcBlockCoefficient = 0.999)
+        val coreL = DistortionCore(distortionShapeAt(shape.toDouble()), dcBlockCoefficient = housePole)
+        val coreR = DistortionCore(distortionShapeAt(shape.toDouble()), dcBlockCoefficient = housePole)
         val drive = DistortionCore.drive(amount)
         val outL = DoubleArray(blocks * blockFrames)
         val outR = DoubleArray(blocks * blockFrames)

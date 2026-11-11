@@ -710,7 +710,7 @@ class EqCoreSpec : StringSpec({
     "extreme freq/q inherit the shared clamps bit-identically" {
         // The core must never add or remove a clamp vs the Ignitor path — pinned at the
         // values where a well-meaning guard would diverge (NaN -> 1000 Hz fallback,
-        // 1e9 -> Nyquist-1, q NaN -> Butterworth, q 1e9 -> 200, q 0 -> 0.1).
+        // 1e9 -> 0.49 * fs, q NaN -> Butterworth, q 1e9 -> 200, q 0 -> 0.1).
         val extremes = listOf(
             Section(type = EqCore.LOWPASS, freq = Double.NaN, q = 1.0),
             Section(type = EqCore.LOWPASS, freq = 1e9, q = 1.0),

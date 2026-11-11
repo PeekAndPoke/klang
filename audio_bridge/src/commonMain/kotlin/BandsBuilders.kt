@@ -41,7 +41,7 @@ private val BUTTERWORTH_Q: Double = 1.0 / sqrt(2.0)
 /**
  * A cut as written, coerced so the bands stay in order: a cut below [previous] is [previous]. A NaN or a negative
  * infinity is [previous] (0 for the first cut), and a positive infinity is "everything below", the largest number,
- * which the engine clamps to just under Nyquist. Out-of-range cuts are the engine's to clamp, as for every filter: its
+ * which the engine clamps to 0.49 of the sample rate. Out-of-range cuts are the engine's to clamp, as for every filter: its
  * floor is 5 Hz, so a lowest band cut at 0 still holds the content below 5 Hz, DC included.
  */
 private fun coerceCut(freq: Double, previous: Double?): Double {

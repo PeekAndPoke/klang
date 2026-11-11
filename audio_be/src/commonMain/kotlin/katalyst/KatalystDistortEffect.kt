@@ -10,7 +10,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.DistortionCore
 import io.peekandpoke.klang.audio_be.KnobGlide
 import io.peekandpoke.klang.audio_be.distortionShapeAt
-import io.peekandpoke.klang.audio_be.filters.HOUSE_DC_BLOCK_COEFF
+import io.peekandpoke.klang.audio_be.filters.houseDcBlockCoeff
 import io.peekandpoke.klang.audio_be.utils.copyRangeInto
 import io.peekandpoke.klang.audio_be.utils.crossfadeLinear
 import io.peekandpoke.klang.audio_be.utils.isFiniteInline
@@ -30,11 +30,9 @@ import kotlin.math.min
  * ([DistortionCore.drive]): the drive and the shaper, the DC blocker after, no soft cap, at the rate of the bus it
  * is in (inside an oversampling region, the region's; its own oversampling factor retired with KLANG-00214
  * (oversampling regions) step 4, and with it its latency and phase twins). One
- * deliberate difference: the DC blocker's pole is the house pole ([HOUSE_DC_BLOCK_COEFF], a knee near 7 Hz)
- * instead of the voice's (near 35 Hz), because a bus carries the whole low end of a mix (measured 2026-10-09: the
- * voice's pole takes about 2.5 dB off 40 Hz). It is the FIXED coefficient 0.999, so its corner moves with the
- * sample rate (7.6 Hz at 48 kHz, 7.0 Hz at 44.1 kHz, 15.3 Hz at 96 kHz), while the house stage holds 7.64 Hz at
- * every rate since KLANG-00432 (`houseDcBlockCoeff`); whether this stage follows is open (KLANG-00433, Decide).
+ * deliberate difference: the DC blocker's pole is the house stage's ([houseDcBlockCoeff], a corner of 7.64 Hz at every
+ * rate, 0.999 at 48 kHz; KLANG-00433) instead of the voice's (near 35 Hz), because a bus carries the whole low end of
+ * a mix (measured 2026-10-09: the voice's pole takes about 2.5 dB off 40 Hz).
  *
  * **How it switches**, the compressor's law ([KatalystCompressorEffect]): every edge fades over
  * [KNOB_GLIDE_SECONDS], linearly, between the distorted mix and the DRY mix, `out = dry + w * (distorted - dry)`.
@@ -87,18 +85,21 @@ class KatalystDistortEffect(
     firstStage: Int = 0,
 ) : KatalystEffect {
 
+    /** The house pole at the base rate ([sampleRate] is the region's inside one), mapped up by [firstStage] below. */
+    private val baseDcBlockCoefficient: Double = houseDcBlockCoeff(sampleRate = sampleRate shr firstStage)
+
     private val fadeLen: Int = (sampleRate * KNOB_GLIDE_SECONDS).toInt().coerceAtLeast(1)
 
     private val invFadeLen: Double = 1.0 / fadeLen
 
     private val coreL = DistortionCore(
         shape = distortionShapeAt(shapeIndex.toDouble()),
-        dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = HOUSE_DC_BLOCK_COEFF, stages = firstStage),
+        dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = baseDcBlockCoefficient, stages = firstStage),
     )
 
     private val coreR = DistortionCore(
         shape = distortionShapeAt(shapeIndex.toDouble()),
-        dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = HOUSE_DC_BLOCK_COEFF, stages = firstStage),
+        dcBlockCoefficient = DistortionCore.dcBlockCoefficientAt(coefficient = baseDcBlockCoefficient, stages = firstStage),
     )
 
     private val amountGlide = KnobGlide(sampleRate = sampleRate, blockFrames = blockFrames, modulated = amountModulated)

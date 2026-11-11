@@ -90,7 +90,7 @@ slots (pitch pipeline step 1), the vibrato as its `vibrato.*` slots (step 2), `a
 | `KatalystPhaserEffect`     | `Phaser`        | `phaser.wet` at or above the engage depth                        |
 | `KatalystCompressorEffect` | `Compressor`    | any of the five `compressor.*` slots set                         |
 | `KatalystDuckEffect`       | `Ducking`       | `duck.cylinder` names a source and `duck.depth` above 0             |
-| `KatalystDistortEffect`    | `DistortionCore` (one per channel, the fixed house DC pole 0.999, its corner moving with the rate) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
+| `KatalystDistortEffect`    | `DistortionCore` (one per channel, the house DC pole `houseDcBlockCoeff`: 7.64 Hz at every rate, 0.999 at 48 kHz) | `distort.amount` finite and above 0 (not in the classic chain; declared with `k.distort(...)`) |
 
 How each stage switches and glides, when a cylinder may deactivate, the chain swap and the output host (`MasterBus`):
 `audio/ref/katalyst.md`.
@@ -138,12 +138,13 @@ Sidechain-triggered gain reduction across cylinders.
 
 ### DelayLine
 
-A circular buffer delay with feedback, its ring rented from the warehouse and grown when a longer time needs it. One
+A circular buffer delay with feedback, its ring rented from the warehouse and grown when a longer time needs it (up to
+the ring of `MAX_DELAY_SECONDS`, 60 s). One
 tap, two during the 50 ms crossfade of a time change.
 
 | Slot             | Meaning                                           |
 |------------------|---------------------------------------------------|
-| `delay.time`     | Delay time in seconds                             |
+| `delay.time`     | Delay time in seconds. The ring is sized for at most `MAX_DELAY_SECONDS` (60 s, a memory bound, KLANG-00428): a longer time rents that ring and echoes at the longest time it holds (its class, about 64 s at 48 kHz) |
 | `delay.feedback` | Feedback coefficient, raw: above 1 the ring grows each lap, the cap decides how loud it settles |
 | `delay.cap`      | Ceiling the feedback saturates toward             |
 | `delay.wet`      | How much of the cylinder mix feeds the line (insert) |

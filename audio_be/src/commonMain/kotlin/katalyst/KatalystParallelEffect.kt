@@ -114,6 +114,13 @@ class KatalystParallelEffect internal constructor(
         }
     }
 
+    /** Every branch hears the stage's bus, see [KatalystEffect.busSilent]. */
+    override fun busSilent(silent: Boolean) {
+        for (i in branches.indices) {
+            branches[i].busSilent(silent)
+        }
+    }
+
     override val deniedRents: Int
         get() {
             var total = 0

@@ -371,8 +371,9 @@ class ResonatorBankSpec : StringSpec({
         (outOff < inOff * 0.75) shouldBe true
     }
 
-    "a cutoff at or past Nyquist is clamped to Nyquist - 1 Hz: finite, and the clamp's own band bit for bit" {
-        // From the `SvfBPF` rows this class absorbed (engine tidy-up step 12 (a)).
+    "a cutoff past 0.49 of the rate is clamped there: finite, and the clamp's own band bit for bit" {
+        // From the `SvfBPF` rows this class absorbed (engine tidy-up step 12 (a)). The clamp's top is 0.49 * fs since
+        // KLANG-00432 (audit L4-10; it was Nyquist - 1 Hz), written out here, not read from the production constant.
         val nyquist = sampleRate / 2.0
         val signal = AudioBuffer(4096) { sin(2.0 * PI * 1000.0 * it / sampleRate) }
 
@@ -384,9 +385,9 @@ class ResonatorBankSpec : StringSpec({
             return run(signal) { buf, o, l -> bank.process(buffer = buf, offset = o, length = l) }
         }
 
-        val clamped = render(nyquist - 1.0)
+        val clamped = render(0.49 * sampleRate)
 
-        for (cutoff in listOf(nyquist, sampleRate, 1e9)) {
+        for (cutoff in listOf(0.49 * sampleRate + 1.0, nyquist - 1.0, nyquist, sampleRate, 1e9)) {
             val got = render(cutoff)
 
             withClue("cutoff $cutoff") {

@@ -19,7 +19,9 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
  *    packing; right-sizing already took memory down 15–30×.
  * 2. **Stocked by return, never by prediction.** Nothing is pre-filled by guessing which classes a
  *    song will want, because any such guess can be exactly wrong. A buffer lands on the shelf only
- *    when its owner gives it back. A request takes the **smallest idle buffer that is big enough,
+ *    when its owner gives it back. The one exception is the warmup's stock of four 1 s and two 2 s rings
+ *    (`ResourceWarehouse.stockDelayRings`, maintainer 2026-11-11, KLANG-00428: "the warehouse should be warmed up
+ *    to have delay rings available"), which it rents and gives back. A request takes the **smallest idle buffer that is big enough,
  *    up to one class above the need** (a 2 s request with only 4 s and 8 s idle takes the 4 s; with
  *    only the 8 s idle it allocates a 2 s — review round 4: an oversized ring makes every later
  *    tail scan and clear proportional to the ring, not the delay); an empty shelf allocates. A

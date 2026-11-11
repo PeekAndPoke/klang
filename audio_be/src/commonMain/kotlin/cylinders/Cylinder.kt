@@ -319,6 +319,30 @@ class Cylinder(
     // Absolute backend frame, Double, see RenderClock.cursorFrame.
     private var lastCheckInFrame: Double = 0.0
 
+    // ── Is the bus sounding? (KLANG-00428, maintainer 2026-11-11: "fade in only when already sounding") ──────────
+    //
+    // The judgement a delay or a reverb switching on asks for ([KatalystChain.busSilent]): the cylinder SOUNDS when its
+    // last silence visit ([tryDeactivate]) found its mix above SILENCE_FLOOR, or when a voice rendered on it in the
+    // block before this one (the onset block's own note does not count, so a note that switches a delay on over
+    // silence keeps its first echo's attack). Both are tests the cylinder already makes; no sample is read for it.
+    // A visit happens once per rented cylinder in turn, so its answer can be a few blocks old: a stale "sounding"
+    // after the sound ended fades in (the safe side), and a voice that started since the visit counts through the
+    // check-in.
+
+    /** A voice checked in during the block being processed ([checkIn]); rolled into [voiceLastBlock] by [judgeBus]. */
+    private var voiceThisBlock: Boolean = false
+
+    /** A voice checked in during the block before the one being processed. */
+    private var voiceLastBlock: Boolean = false
+
+    /** What the last silence visit ([tryDeactivate]) found: the mix above SILENCE_FLOOR. */
+    private var soundAtLastVisit: Boolean = false
+
+    /** The chain [judgeBus] last told, and what it told it: told again on a change or when another chain serves. */
+    private var busToldChain: KatalystChain? = null
+
+    private var busToldSilent: Boolean = false
+
     // ════════════════════════════════════════════════════════════════════════════
     // API
     // ════════════════════════════════════════════════════════════════════════════
@@ -353,6 +377,9 @@ class Cylinder(
      * block-continuous bus driven by per-voice triggers.
      */
     fun commitOwner() {
+        // Before any writer of this block can switch a stage on
+        judgeBus()
+
         val voice = candidate ?: return
 
         candidate = null
@@ -420,6 +447,7 @@ class Cylinder(
 
         checkedIn = true
         lastCheckInFrame = blockStart
+        voiceThisBlock = true
     }
 
     /**
@@ -619,6 +647,7 @@ class Cylinder(
         preDuckHeld = false
         katalystContext.clearBuses()
         activity = Activity.Inactive
+        forgetBus()
     }
 
     /**
@@ -662,8 +691,11 @@ class Cylinder(
 
         if (!isMixBufferSilent()) {
             activity = Activity.Sounding
+            soundAtLastVisit = true
             return
         }
+
+        soundAtLastVisit = false
 
         if (silentVisits < silentBlocksBeforeTailCheck) {
             activity = silentGrace.enter(visits = silentVisits)
@@ -691,6 +723,7 @@ class Cylinder(
         }
 
         activity = Activity.Inactive
+        forgetBus()
         // The mix buffer is not cleared while the cylinder is inactive (see [clear]), so the last
         // block's sub-floor output would otherwise still be in it when a voice reactivates the
         // cylinder: summed into that block's mix and, since step 5b-2, fed into its delay and room.
@@ -716,6 +749,32 @@ class Cylinder(
         checkedIn = false
         ownerParams = null
         ownerParamsAge = OWNER_STATE_BLOCKS
+    }
+
+    /**
+     * Judges the bus for this block (see the fields above) and tells the chain in service when the judgement changed
+     * or the chain did. Once per block from [commitOwner], before the owner's writers run: two field reads, a compare,
+     * and the rare tell. It rolls the voice check-in of the block into the one before.
+     */
+    private fun judgeBus() {
+        val silent = !(soundAtLastVisit || voiceLastBlock)
+
+        voiceLastBlock = voiceThisBlock
+        voiceThisBlock = false
+
+        if (busToldChain !== chain || busToldSilent != silent) {
+            chain.busSilent(silent)
+            busToldChain = chain
+            busToldSilent = silent
+        }
+    }
+
+    /** Forgets the bus judgement: a cylinder that goes inactive starts its next life on a silent bus. */
+    private fun forgetBus() {
+        voiceThisBlock = false
+        voiceLastBlock = false
+        soundAtLastVisit = false
+        busToldChain = null
     }
 
     private fun isMixBufferSilent(): Boolean {
@@ -837,8 +896,11 @@ class Cylinder(
 
         next.reset()
         // It arrives over sound: a delay or a reverb it switches on fades its feed in rather than snapping it, or its
-        // unit would be fed a step of the live mix that comes back after the ramp (KLANG-00428, L7a-02).
+        // unit would be fed a step of the live mix that comes back after the ramp (KLANG-00428, L7a-02), unless the
+        // cylinder judges its bus silent now (the judgement [commitOwner] last made, told to the arriving chain).
         next.joinSoundingBus()
+        next.busSilent(busToldSilent)
+        busToldChain = next
 
         // The arriving chain reads the cylinder's live param state FIRST, without writing anything:
         // `handOverDuck` below asks whether it will duck, and a duck whose cylinder or depth comes

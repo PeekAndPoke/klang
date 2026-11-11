@@ -89,6 +89,11 @@ class KatalystRegionEffect internal constructor(
         body.joinSoundingBus()
     }
 
+    /** The body hears the stage's bus, see [KatalystEffect.busSilent]. */
+    override fun busSilent(silent: Boolean) {
+        body.busSilent(silent)
+    }
+
     override val deniedRents: Int get() = body.deniedRents
 
     override fun process(ctx: KatalystContext) {

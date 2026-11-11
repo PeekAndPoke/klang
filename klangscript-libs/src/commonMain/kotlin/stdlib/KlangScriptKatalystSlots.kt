@@ -120,7 +120,10 @@ internal object KlangScriptKatalystDelaySlots {
     @KlangScript.Property
     val wet: KatalystKnobDsl = KatalystDsl.Slots.delay.wet
 
-    /** `delay.time`. Delay time in seconds, default 0 (off: the delay engages on its time). */
+    /**
+     * `delay.time`. Delay time in seconds, default 0 (off: the delay engages on its time), at most about 60 (a bound on
+     * the delay's memory).
+     */
     @KlangScript.Property
     val time: KatalystKnobDsl = KatalystDsl.Slots.delay.time
 

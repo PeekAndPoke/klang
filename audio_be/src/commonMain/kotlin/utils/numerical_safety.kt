@@ -94,6 +94,19 @@ inline fun Double.flushState(): Double {
     return if (a >= DENORMAL_THRESHOLD && a <= Double.MAX_VALUE) this else 0.0
 }
 
+/**
+ * [flushState] with another upper bound: a NORMAL magnitude up to [bound] is kept, anything else (subnormal, above
+ * [bound], Inf, NaN) is 0. The same `abs`, two compares and a select; at `bound = Double.MAX_VALUE` it is [flushState]
+ * exactly. For a state whose huge finite value must not be carried either (the house DC blockers, audit L8-01).
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun Double.flushStateWithin(bound: Double): Double {
+    val a = abs(this)
+
+    // NaN-guard: NaN fails both compares and is flushed
+    return if (a >= DENORMAL_THRESHOLD && a <= bound) this else 0.0
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Numerical Safety Bounds
 // ═══════════════════════════════════════════════════════════════════════════════

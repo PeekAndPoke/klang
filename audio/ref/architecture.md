@@ -113,7 +113,7 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 |-----------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
 | `Cmd.ScheduleVoices`  | `List<ScheduledVoice>`                  | enqueue voices for future playback, one time snapshot for the batch                             |
 | `Cmd.ReplaceVoices`   | `List<ScheduledVoice>` + `afterTimeSec` | live update: drop scheduled voices past a grace cutoff, reschedule, dedup vs still-active voices; ignored by a stopped engine |
-| `Cmd.Cleanup`         | (none)                                  | stop the playback: its scheduled voices are dropped, its held live notes released, playing voices ring out; the engine is disposed once idle |
+| `Cmd.Cleanup`         | (none)                                  | stop the playback: its scheduled voices and the promoted ones not yet started are dropped, every open timeline gate and every held live note gets its note-off, the tails ring out (a voice with more than 20 s left is released after 20 s, KLANG-00427); the engine is disposed once idle |
 | `Cmd.StartRealtimeVoice` | `RealtimeVoice`                      | start a live note now: no start time on the wire, straight to active                             |
 | `Cmd.StopRealtimeVoice`  | `liveId`                             | release the gate of every live note with that id (a note-off, not a cut)                         |
 | `Cmd.SetGain`         | `gain` + `rampSec`                      | move the playback's output gain over a ramp (`PlaybackGain`)                                     |
@@ -190,5 +190,5 @@ instrument, not an unset sound.
 | Limiter attack       | 5 ms: gain-SMOOTHING length, not a one-pole | `HouseStage`        |
 | Limiter lookahead    | 5 ms: delays the whole output uniformly     | `HouseStage`        |
 | Limiter release      | 100 ms                                       | `MasterLimiterDefaults.kt`, used by `HouseStage` |
-| House DC pole        | `1 - 48 / fs`: 0.999 at 48 kHz, 7.64 Hz at every rate | `houseDcBlockCoeff`, used by `HouseStage` |
+| House DC pole        | `1 - 48 / fs`: 0.999 at 48 kHz, 7.64 Hz at every rate | `houseDcBlockCoeff`, used by `HouseStage` and the Katalyst `distort` stage |
 | Block size           | 128, pinned everywhere (a tone parameter)    | `AudioBackendContext.RENDER_QUANTUM_FRAMES` |

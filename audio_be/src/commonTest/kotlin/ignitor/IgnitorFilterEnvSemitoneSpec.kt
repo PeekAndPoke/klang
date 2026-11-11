@@ -73,10 +73,18 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         return out
     }
 
-    fun envEqualsStatic(depth: Double, expectedMul: Double, base: Double = 800.0) {
+    fun envEqualsStatic(depth: Double, expectedMul: Double, base: Double = 800.0, highpass: Boolean = false) {
         val env = FilterEnvDef(depth = depth, attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.0)
-        val modded = render(noiseSource().lowpass(cutoffHz = base, q = 0.707, env = env))
-        val static = render(noiseSource().lowpass(cutoffHz = base * expectedMul, q = 0.707))
+        val modded = if (highpass) {
+            render(noiseSource().highpass(cutoffHz = base, q = 0.707, env = env))
+        } else {
+            render(noiseSource().lowpass(cutoffHz = base, q = 0.707, env = env))
+        }
+        val static = if (highpass) {
+            render(noiseSource().highpass(cutoffHz = base * expectedMul, q = 0.707))
+        } else {
+            render(noiseSource().lowpass(cutoffHz = base * expectedMul, q = 0.707))
+        }
         var maxDiff = 0.0
         for (i in modded.indices) {
             val d = abs(modded[i] - static[i])
@@ -93,24 +101,24 @@ class IgnitorFilterEnvSemitoneSpec : StringSpec({
         envEqualsStatic(depth = +7.0, expectedMul = 1.4983070768766815)
     }
 
-    "clamp saturation: a deep positive depth on a high base drives HIGHPASS silent" {
-        // base 15000 * 2^(48/12) = 240 kHz, clamped to Nyquist-1: a highpass at Nyquist
-        // passes (near) nothing. The row pins that the semitone law goes THROUGH the
-        // shared clamp rather than around it.
+    "clamp saturation: a deep positive depth on a high base drives the HIGHPASS to the shared clamp" {
+        // base 15000 * 2^(48/12) = 240 kHz, clamped to the shared cutoff clamp, 0.49 * fs since KLANG-00432 (audit
+        // L4-10; Nyquist - 1 Hz before, where this row read the output as near silence; at 0.49 fs the highpass passes
+        // the top 2 percent of the band). The row pins that the semitone law goes THROUGH the shared clamp rather
+        // than around it: bit for bit the static highpass asked for a cutoff far past Nyquist, which the clamp holds.
+        envEqualsStatic(depth = +48.0, expectedMul = 1e9 / 15000.0, base = 15000.0, highpass = true)
+
+        // control: the SAME filter without the envelope passes plenty, the clamped one far less
         val env = FilterEnvDef(depth = +48.0, attack = 0.0, decay = 0.0, sustain = 1.0, release = 0.0)
         val out = render(noiseSource().highpass(cutoffHz = 15000.0, q = 0.707, env = env))
-        var peakTail = 0.0
-        for (i in out.size / 2 until out.size) {
-            if (abs(out[i]) > peakTail) peakTail = abs(out[i])
-        }
-        peakTail shouldBeLessThan 0.02
-
-        // control: the SAME filter without the envelope passes plenty
         val ref = render(noiseSource().highpass(cutoffHz = 15000.0, q = 0.707))
+        var peakTail = 0.0
         var peakRef = 0.0
         for (i in ref.size / 2 until ref.size) {
+            if (abs(out[i]) > peakTail) peakTail = abs(out[i])
             if (abs(ref[i]) > peakRef) peakRef = abs(ref[i])
         }
         peakRef shouldBeGreaterThan 0.1
+        peakTail shouldBeLessThan 0.5 * peakRef
     }
 })

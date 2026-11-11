@@ -192,6 +192,55 @@ The wire schema hash moved from 212461444 to 358149839 (`Diagnostics.nonFiniteSa
 The audit reproductions of L4-06, L4-07 and N1 left `AuditSafetyRepro` (ordinary specs guard them now); L4-01,
 L4-02, L4-08, L4-11, L8-01 and L8-02 stay.
 
+## Decisions pass B1 (2026-11-11)
+
+What the fix worker of pass B1 built of the decisions of 2026-11-11 (L4-02, L4-05 and L8-02's count belong to other
+passes).
+
+- **L4-10, BUILT, a sound change.** `clampSvfCutoff`'s top is `SVF_CUTOFF_MAX_SHARE * fs`, 0.49 (it was `fs / 2 - 1`):
+  the one home, read by the SVF node, the one-poles (through `bilinearK`), the EQ sections and the resonator bank.
+  Every text that named it moved: the fourteen `@param cutoffHz` lines of `IgnitorFilters.kt` ("[5, 0.49 * fs]"),
+  `BandsBuilders.kt` in `audio_bridge`, the stage probe's labels ("freq=23999 (over the 0.49 fs clamp)": the same
+  input, so the rows compare with older runs), the comments of `EqCoreSpec` and `IgnitorFilterEnvSemitoneSpec`.
+  Guards: `SvfNodeLawSpec`, "a cutoff at the top of the range is 0.49 of the rate": a unit step into a q 200 highpass
+  asked for 23999 Hz, 0.49 fs and 1e9 at 48 kHz rings and decays (half a second later under a tenth of its early
+  peak; at `fs / 2 - 1` the ring hardly decays and starts tiny, 6.5e-5); `ResonatorBankSpec`, the clamp's own band is
+  0.49 fs, bit for bit for every cutoff above it. `IgnitorFilterEnvSemitoneSpec`'s clamp row pinned "near silence" for
+  a highpass at the clamp; at 0.49 fs it passes the top 2 percent of the band, so the row now pins the semitone law
+  through the clamp bit for bit (a static highpass asked for 1e9 Hz) and less than half the unclamped filter's peak.
+  Mutant: the clamp back at `fs / 2 - 1`, KILLED. It moves four corpus renders (below).
+- **L8-01, BUILT, no musical change.** The house DC blockers drop their feedback state above 1e3
+  (`HouseStage.HOUSE_DC_STATE_BOUND`, through `DcBlocker(stateBound = ...)` and `flushStateWithin`, the compare
+  `flushState` makes with another bound; every other `DcBlocker` keeps `Double.MAX_VALUE`, bit for bit). One block of
+  1e15 on a 0.3 sine at 44.1 kHz: 2 samples on the rail, back within 0.003 of the clean run 0.213 s after the bad
+  block began (the audit at 48 kHz: 26,783 rail samples, 1.13 s). Guard: `HouseStageSpec`, "a huge FINITE block on the
+  mix does not linger as DC" (under 50 rail samples, back within 0.4 s). Mutant: the bound at `Double.MAX_VALUE`,
+  KILLED. The L8-01 reproduction is deleted from `AuditSafetyRepro`; L8-02's stays. Nothing new on the wire.
+- **L8-06, BUILT.** `pcm16` rounds to nearest, ties away from zero, no dither (`_pcm16_edge.kt`): every WAV render's
+  and the JVM line's lowest bit moves, the corpus (doubles) does not. Guards: `Pcm16EdgeSpec` rewritten (it pinned the
+  truncation bit for bit): a literal table (5e-5 is 2, 0.5 is 16384, `1.0.nextDown()` 32767), a sweep against the rule
+  written out, the error at most half a step and not following the sign; `WavFileWriterSpec` in `klang` (its two
+  bytes of plus and minus 0.5 pinned the truncation; moved). Mutants: the positive side truncating again, KILLED; the
+  negative side rounding half up, KILLED (the table's first negative row, -1e-4: -2 instead of -3).
+- **L4-08, BUILT (text).** `audio/ref/numerical-safety.md`, "A non-finite sample: the rule": the decided rule and the
+  table of what one NaN and one infinity become at every stage (read from the code and the audit's probe rows). The
+  shared L4-08 and L4-11 reproduction stays (L4-11's half is open).
+
+**The corpus**, my run before the first edit against my run after the last (no song text changed between them, the
+code hashes identical): four renders moved, all by L4-10 alone (a run with the clamp taken back gives the before hash
+for all eighteen; a run with the switch-on judgement or the compressor snap taken out moves the same four). Peak and
+RMS of the whole 256-cycle render, before and after (a temporary print in the corpus check, removed byte for byte):
+
+| Render | Peak dBFS | RMS dBFS |
+|---|---|---|
+| Gestrandet | -22.4982, -22.4984 | -43.5739, -43.5738 |
+| Seltsamere Dinge and the frozen `strangerThings_2026_11_03` (one render) | -2.5507, -2.5499 | -17.1344, -17.1370 |
+| Remix: Echo um Echo | -6.1369, -6.1358 | -25.1528, -25.1528 |
+| The Synthsale Piper's Last Rave | -0.9602, -0.9602 | -15.6083, -15.6083 |
+
+By reasoning, not traced per song: the clamp is the only change in that run, so these are the songs whose filters
+reach above 0.49 fs (23.52 kHz) at some point; the levels move by under 0.003 dB.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

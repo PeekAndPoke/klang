@@ -319,7 +319,10 @@ class PlaybackEnginePhaseSpec : StringSpec({
 
         val releasing = rig.engine("song")
 
-        rig.schedule(pid = "other", gateSec = 60.0)
+        // A long FINITE echo keeps "other" stopped and alive through the hold. A long gate did until KLANG-00427: the
+        // stop now gives the gate its note-off. One block first, so the note has sounded into its echo.
+        rig.schedule(pid = "other", gateSec = 60.0, params = mapOf("delay.wet" to 0.5, "delay.time" to 0.5, "delay.feedback" to 0.95))
+        rig.render()
         rig.stop("other")
         rig.stop("song")
         rig.renderUntilReleasing(engine = releasing, bound = holdBlocks + 200)

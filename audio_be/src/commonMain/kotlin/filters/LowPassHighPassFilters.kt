@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be.filters
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_be.utils.flushState
+import io.peekandpoke.klang.audio_be.utils.flushStateWithin
 import io.peekandpoke.klang.audio_be.utils.isFiniteInline
 import io.peekandpoke.klang.audio_be.utils.safeOut
 import io.peekandpoke.klang.audio_bridge.BodyMaterials
@@ -127,10 +128,15 @@ import kotlin.math.tan
 // ─────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * The SVF's cutoff guard: inside the audible band and below Nyquist, a non-finite value
- * substituted by 1 kHz. **The one home of these numbers** (Katalyst 5c-10): [bilinearK] applies
- * it, and `ResonatorBank` applies it BEFORE taking a logarithm of the frequency, which is only
- * safe while the two agree. A caller that has already clamped changes nothing by clamping again.
+ * The SVF's cutoff guard: `[5 Hz, 0.49 * fs]` ([SVF_CUTOFF_MAX_SHARE]), a non-finite value substituted by 1 kHz.
+ * **The one home of these numbers** (Katalyst 5c-10): [bilinearK] applies it (so the SVF, the one-poles and the EQ
+ * sections read it), and `ResonatorBank` applies it BEFORE taking a logarithm of the frequency, which is only safe
+ * while the two agree. A caller that has already clamped changes nothing by clamping again.
+ *
+ * The top was `fs / 2 - 1` until KLANG-00432 (audit L4-10, maintainer 2026-11-11): 1 Hz under Nyquist the filter
+ * is a resonator AT Nyquist, which rang for 0.225 s (Butterworth) to 64 s (q 200) on a step; at `0.49 * fs` that
+ * ring is 22 samples to 0.13 s, and the response at 20 kHz moves by under 0.001 dB. An existing clamp's value moved,
+ * not a new clamp.
  *
  * The finiteness test is [isFiniteInline], an abs and a compare, ON PURPOSE (engine follow-up 31, 2026-10-15), and
  * so is [clampSvfQ]'s: Kotlin's `isFinite()` is a stdlib call on Kotlin/JS, and inside the SVF node's `generate`, whose
@@ -141,7 +147,10 @@ import kotlin.math.tan
  */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun clampSvfCutoff(cutoffHz: Double, sampleRate: Double): Double =
-    if (cutoffHz.isFiniteInline()) clampSvfRange(x = cutoffHz, lo = 5.0, hi = 0.5 * sampleRate - 1.0) else 1000.0
+    if (cutoffHz.isFiniteInline()) clampSvfRange(x = cutoffHz, lo = 5.0, hi = SVF_CUTOFF_MAX_SHARE * sampleRate) else 1000.0
+
+/** The top of [clampSvfCutoff] as a share of the sample rate: 0.49, a margin under Nyquist (KLANG-00432, L4-10). */
+internal const val SVF_CUTOFF_MAX_SHARE: Double = 0.49
 
 /** The q a non-finite q falls back to: Butterworth, `1/sqrt(2)`. */
 internal const val SVF_Q_FALLBACK: Double = 0.7071067811865475
@@ -225,10 +234,9 @@ internal const val SAT_STATE_SCALE: Double = 0.0876
 internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 /**
- * The house pole for [LowPassHighPassFilters.DcBlocker] on a whole MIX: `≈ 7 Hz @ 44.1k, 7.6 Hz @ 48k`, about
- * 0.15 dB at 40 Hz where [DEFAULT_DC_BLOCK_COEFF] takes about 2.5 dB. The Katalyst `distort` stage's cores
- * (`KatalystDistortEffect`), which run on a bus and so on the low end of every voice on it. `HouseStage` takes the
- * same value at 48 kHz and the same corner at every rate ([houseDcBlockCoeff], audit L8-07).
+ * The house pole for [LowPassHighPassFilters.DcBlocker] on a whole MIX at 48 kHz (a corner of 7.64 Hz), about
+ * 0.15 dB at 40 Hz where [DEFAULT_DC_BLOCK_COEFF] takes about 2.5 dB. The engine reads it per rate, through
+ * [houseDcBlockCoeff], which is exactly this value at 48 kHz.
  */
 internal const val HOUSE_DC_BLOCK_COEFF: Double = 0.999
 
@@ -241,8 +249,8 @@ internal const val HOUSE_DC_BLOCK_POLE_PER_SECOND: Double = 48.0
 /**
  * The house stage's DC pole at [sampleRate]: `1 - 48 / fs`, the corner 7.64 Hz at every rate, and bit for bit 0.999
  * at 48 kHz (audit L8-07: the fixed 0.999 moved the corner with the rate, 7.0 Hz at 44.1 kHz, 15.3 Hz at 96 kHz,
- * where a 40 Hz note lost 0.6 dB). Only `HouseStage` reads it; the Katalyst `distort` stage keeps the fixed
- * [HOUSE_DC_BLOCK_COEFF].
+ * where a 40 Hz note lost 0.6 dB). `HouseStage` reads it, and the Katalyst `distort` stage's cores, which run on a bus
+ * and so on the low end of every voice on it (`KatalystDistortEffect`, at its base rate, since KLANG-00433).
  */
 internal fun houseDcBlockCoeff(sampleRate: Int): Double = 1.0 - HOUSE_DC_BLOCK_POLE_PER_SECOND / sampleRate
 
@@ -467,8 +475,15 @@ object LowPassHighPassFilters {
      *
      * Block-based API matches the [AudioFilter] convention so JIT keeps state in
      * registers across the loop. See file header for the dedup history.
+     *
+     * [stateBound]: the feedback state `y` is flushed ([flushStateWithin]) when its magnitude is above it, as well as
+     * when it is subnormal or not finite. `Double.MAX_VALUE` (the default) is [flushState] exactly; only the house
+     * stage passes a lower bound (`HouseStage.HOUSE_DC_STATE_BOUND`, audit L8-01). The output sample is not touched.
      */
-    class DcBlocker(coefficient: Double = DEFAULT_DC_BLOCK_COEFF) {
+    class DcBlocker(
+        coefficient: Double = DEFAULT_DC_BLOCK_COEFF,
+        private val stateBound: Double = Double.MAX_VALUE,
+    ) {
         private val coeff: Double = if (coefficient.isFinite()) {
             coefficient.coerceIn(0.0, 0.99999)
         } else {
@@ -482,12 +497,13 @@ object LowPassHighPassFilters {
             var xp = xPrev
             var yc = y
             val a = coeff
+            val bound = stateBound
             val end = offset + length
             for (i in offset until end) {
                 val x = buffer[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = out.flushState()
+                yc = out.flushStateWithin(bound)
                 buffer[i] = out
             }
             xPrev = xp
@@ -499,12 +515,13 @@ object LowPassHighPassFilters {
             var xp = xPrev
             var yc = y
             val a = coeff
+            val bound = stateBound
             val end = offset + length
             for (i in offset until end) {
                 val x = input[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = out.flushState()
+                yc = out.flushStateWithin(bound)
                 output[i] = out
             }
             xPrev = xp

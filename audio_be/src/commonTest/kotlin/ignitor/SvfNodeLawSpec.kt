@@ -357,4 +357,34 @@ class SvfNodeLawSpec : StringSpec({
             }
         }
     }
+
+    "a cutoff at the top of the range is 0.49 of the rate, not 1 Hz under Nyquist: a q 200 ring decays (audit L4-10)" {
+        // KLANG-00432, maintainer 2026-11-11. At `fs / 2 - 1` the filter was a resonator AT Nyquist: a step started a
+        // ring that hardly decayed (about 64 s at q 200; measured here, the peak half a second later is the same). At
+        // 0.49 fs the q 200 ring decays with a time constant of about 0.13 s: half a second later it is down to a few
+        // percent. A unit step into the highpass, its ring's peak over 50 to 150 ms against 550 to 650 ms.
+        val rate = 48_000
+        val input = DoubleArray(rate * 7 / 10) { 1.0 }
+
+        fun peakIn(buf: DoubleArray, fromSec: Double, toSec: Double): Double {
+            var max = 0.0
+
+            for (i in (fromSec * rate).toInt() until (toSec * rate).toInt()) {
+                max = maxOf(max, abs(buf[i]))
+            }
+
+            return max
+        }
+
+        for (asked in listOf(23_999.0, 0.49 * rate, 1e9)) {
+            val out = renderThroughNode(input, rate) { it.highpass(cutoffHz = asked, q = 200.0) }
+            val early = peakIn(out, fromSec = 0.05, toSec = 0.15)
+            val late = peakIn(out, fromSec = 0.55, toSec = 0.65)
+
+            withClue("cutoff $asked: the ring's peak $early early, $late half a second later") {
+                (early > 1e-3) shouldBe true
+                late shouldBeLessThan 0.1 * early
+            }
+        }
+    }
 })

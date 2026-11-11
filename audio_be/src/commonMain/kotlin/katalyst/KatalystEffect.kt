@@ -73,6 +73,20 @@ interface KatalystEffect {
     fun joinSoundingBus() {}
 
     /**
+     * Whether the bus this stage runs on is SILENT now, as its host judges it with the tests it already makes (a
+     * cylinder: its last silence visit and the voices of the block before, `Cylinder.judgeBus`). Told when the
+     * judgement changes and when a chain enters service, before the block's writers run. The output (`MasterBus`)
+     * tells nothing: its chain is configured from authored defaults only, so a stage there switches on at its first
+     * block (fresh) or under a modulated knob (a one-block ramp), and keeps the fade rule it had. While it holds, the first switch-on of a delay or a reverb snaps its feed: nothing
+     * sounds that a snapped wet could turn into a step, so a note that switches a delay on keeps its echo's attack
+     * (KLANG-00428, maintainer 2026-11-11: "fade in only when already sounding"). Never touches the audio. A stage
+     * that is never told (a chain run without a host, a spec's bare stage) keeps the rule it had: it snaps only while
+     * no block has run since its build or reset. Only the delay and the reverb answer; `parallel` and a region pass it
+     * to their branches.
+     */
+    fun busSilent(silent: Boolean) {}
+
+    /**
      * Hand back what the warehouse lent this stage and clear the rest: the stage is going to the
      * shelf with its cylinder. For a stage that rents nothing this is [reset], stated as such; the
      * delay and the reverb release their unit DIRTY instead (see `KatalystChain.retire`).

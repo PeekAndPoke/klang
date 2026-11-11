@@ -259,7 +259,8 @@ internal fun KatalystBuilder.scriptVowel(
  *
  * @param wet how much of the cylinder goes into the delay (default 0.25; 0.0 = off). Cylinder twin:
  *   `delay(wet = ...)`.
- * @param time delay time in seconds (default 0.25). Cylinder twin: `delay(time = ...)`.
+ * @param time delay time in seconds (default 0.25), at most about 60 (a bound on the delay's memory): a longer time
+ *   echoes at the longest time the delay holds. Cylinder twin: `delay(time = ...)`.
  * @param feedback feedback amount (default 0.3), allowed above 1.0. At exactly 1.0 the echoes
  *   neither fade nor grow: each keeps the level it went in at (a delay time that falls between two
  *   samples dulls its highs a little on every repeat), unless that level reaches `cap`. Above 1.0

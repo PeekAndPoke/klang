@@ -244,7 +244,9 @@ class CylinderShelfSpec : StringSpec({
         feedback.last().shouldBeInstanceOf<KlangCommLink.Feedback.BackendReady>()
         f.dispatcher.engine(WarmupRunner.WARMUP_PLAYBACK_ID).shouldBeNull()
         f.warehouse.cylinders.idleCount shouldBe WarmupRunner.WARMUP_CYLINDERS
-        f.warehouse.sized.shelfCount shouldBe WarmupRunner.WARMUP_CYLINDERS
+        // Sixteen rings of the smallest class, plus the stocked longer ones (the next row)
+        f.warehouse.sized.shelfCount shouldBe
+            WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.WARM_RINGS_ONE_SECOND + WarmupRunner.WARM_RINGS_TWO_SECONDS
         f.warehouse.reverbs.idleCount shouldBe WarmupRunner.WARMUP_CYLINDERS
         f.warehouse.isClean shouldBe true
         (f.warehouse.sized.housekeptFrames > 0.0) shouldBe true // zeroed by housekeeping, not at return
@@ -268,6 +270,53 @@ class CylinderShelfSpec : StringSpec({
         // ...and none of those hits had to zero anything on the spot: the shelves were clean.
         f.warehouse.sized.syncCleans shouldBe 0
         f.warehouse.reverbs.syncCleans shouldBe 0
+    }
+
+    "after warmup the shelf also holds four 1 s and two 2 s rings: a first 0.8 s and a first 1.5 s delay rent without allocating" {
+        // KLANG-00428, maintainer 2026-11-11: "the warehouse should be warmed up to have delay rings available for
+        // normal songs". The warmup's own voices delay by 0.3 s, so before this the shelf held the smallest class only,
+        // and a song's first longer delay allocated its ring in its onset block.
+        val f = fixture()
+        val warmup = WarmupRunner(sampleRate = sampleRate, dispatcher = f.dispatcher, feedback = f.commLink.backend)
+        warmup.start()
+
+        while (warmup.isWarming) {
+            f.render(1)
+            warmup.tick()
+        }
+
+        val base = f.warehouse.sized.baseFrames
+
+        withClue("the stocked rings are on the shelf, zeroed, inside the idle budget") {
+            f.warehouse.isClean shouldBe true
+            (f.warehouse.sized.shelfBytes <= ResourceWarehouse.SHELF_BUDGET_BYTES) shouldBe true
+            f.warehouse.sized.shelfCount shouldBe
+                WarmupRunner.WARMUP_CYLINDERS + WarmupRunner.WARM_RINGS_ONE_SECOND + WarmupRunner.WARM_RINGS_TWO_SECONDS
+        }
+
+        val allocations = f.warehouse.sized.allocations
+
+        // Two cylinders of a song, a 0.8 s delay and a 1.5 s delay: the 1 s class and the 2 s class
+        fun echo(cylinder: Int, time: Double) = wetVoice("song", cylinder = cylinder).let { v ->
+            v.copy(data = v.data.copy(katalystParams = klangMapOf("delay.wet" to 0.5, "delay.time" to time, "delay.feedback" to 0.3)))
+        }
+
+        f.dispatcher.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(echo(0, 0.8), echo(1, 1.5))))
+        f.render(8)
+
+        withClue("no ring allocated: both came off the shelf") {
+            f.warehouse.sized.allocations shouldBe allocations
+            f.warehouse.sized.hits shouldBe 2
+            f.warehouse.sized.syncCleans shouldBe 0
+        }
+
+        withClue("the classes they took: ${2 * base} and ${4 * base} frames") {
+            val rings = f.dispatcher.engine("song").shouldNotBeNull().cylinders.cylinders
+                .map { it.delay.shouldNotBeNull().delayLine.shouldNotBeNull().ring.left.size }
+                .sorted()
+
+            rings shouldBe listOf(2 * base, 4 * base)
+        }
     }
 
     "BackendReady is held while the shelves are still dirty — a warmup that ends before housekeeping is not ready" {

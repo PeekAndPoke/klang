@@ -17,11 +17,15 @@ import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.katalyst.KatalystRegistry
 import io.peekandpoke.klang.audio_be.katalyst.delay
+import io.peekandpoke.klang.audio_be.voices.DoorAdsr
+import io.peekandpoke.klang.audio_be.voices.DoorFields
+import io.peekandpoke.klang.audio_be.voices.withClassicSlots
 import io.peekandpoke.klang.audio_be.warehouse.ResourceWarehouse
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
+import io.peekandpoke.klang.audio_bridge.RealtimeVoice
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -30,7 +34,9 @@ import kotlin.math.abs
 
 /**
  * After a playback STOPS, no hard cut, ever (phase 3 step 12 decision (j), maintainer 2026-09-28,
- * refined the same day: release only ENDLESS tails). A finite tail rings out in full, however long;
+ * refined the same day: release only ENDLESS tails; changed 2026-11-11, KLANG-00427: a stop gives every open gate its
+ * note-off, and a voice that still has more than the hold to live counts as an endless tail). A finite tail rings
+ * out in full, however long;
  * a tail that can never end (a delay at |feedback| >= 1, at the master or on a cylinder) still
  * ringing `PlaybackEngine.MAX_TAIL_HOLD_SECONDS` (20 s) after the notes ended gets the engine's
  * whole output released by [TailRelease], and the engine is idle only after it; a master swap in
@@ -585,6 +591,105 @@ class EngineStopReleaseSpec : StringSpec({
         }
 
         return -1
+    }
+
+    // ── A voice that outlives the hold (KLANG-00427, audit L2-07, maintainer 2026-11-11: option (c)) ─────────────
+
+    /**
+     * A sustained sine whose own release is [releaseSeconds] (sustain 1, so "still sounding" is a statement about the
+     * release, not about a decay), on the timeline with a gate of [gateSeconds].
+     */
+    fun longNote(releaseSeconds: Double, gateSeconds: Double) = ScheduledVoice(
+        playbackId = "song",
+        startTime = 0.0,
+        gateEndTime = gateSeconds,
+        data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, gain = 0.5).withClassicSlots(
+            DoorFields(adsr = DoorAdsr(attack = 0.001, decay = 0.01, sustain = 1.0, release = releaseSeconds)),
+        ),
+        playbackStartTime = 0.0,
+    )
+
+    /**
+     * Stops [a] at block 100 and renders it until it is idle or [bound] blocks have passed. Returns the block the
+     * release began (-1: never) and the block it went idle (-1: not within the bound).
+     */
+    fun stopAndWatch(a: Rig, bound: Int): Pair<Int, Int> {
+        var releaseAt = -1
+
+        for (blk in 0 until bound) {
+            if (blk == 100) {
+                a.d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+            }
+
+            a.block(blk)
+
+            if (releaseAt < 0 && a.engine.releaseStarted) {
+                releaseAt = blk
+            }
+
+            if (a.engine.isIdle()) {
+                return releaseAt to blk
+            }
+        }
+
+        return releaseAt to -1
+    }
+
+    "a stopped voice whose own release outlives the hold counts as an endless tail: released 20 s after the stop, then idle" {
+        // A gate of 10 s, stopped at block 100: the note-off puts the voice into its 100 s release, which still has
+        // about 100 s to live, more than the 20 s hold. Before, decision (j) let it ring however long (release 1e6
+        // lived 11.6 days); now the engine is released when the hold since the stop is over, by the law.
+        val a = Rig()
+
+        val note = longNote(releaseSeconds = 100.0, gateSeconds = 10.0)
+
+        a.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(note)))
+
+        val (releaseAt, idleAt) = stopAndWatch(a, bound = 100 + holdBlocks + law.floorFrame / blockFrames + 400)
+
+        withClue("the release began one hold after the stop (block 100), at block $releaseAt") {
+            releaseAt shouldBeGreaterThan 100 + holdBlocks - 2
+            releaseAt shouldBeLessThan 100 + holdBlocks + 2
+        }
+
+        withClue("idle in the block the release's gain reached 0 (block $idleAt)") {
+            idleAt shouldBe releaseAt + law.floorFrame / blockFrames
+        }
+    }
+
+    "a fixed realtime gate that outlives the hold counts as an endless tail too: released 20 s after the stop" {
+        // A key started with a 60 s gate is not cut by the stop (only its own note-off may), and still has about
+        // 60 s to live: the bound applies to it as to a timeline voice.
+        val a = Rig()
+        val data = longNote(releaseSeconds = 0.01, gateSeconds = 1.0).data
+
+        a.d.handle(KlangCommLink.Cmd.StartRealtimeVoice("song", RealtimeVoice(liveId = 1, data = data, gateDurSec = 60.0)))
+
+        val (releaseAt, idleAt) = stopAndWatch(a, bound = 100 + holdBlocks + law.floorFrame / blockFrames + 400)
+
+        withClue("the release began one hold after the stop, at block $releaseAt, and the engine went idle at $idleAt") {
+            releaseAt shouldBeGreaterThan 100 + holdBlocks - 2
+            releaseAt shouldBeLessThan 100 + holdBlocks + 2
+            idleAt shouldBe releaseAt + law.floorFrame / blockFrames
+        }
+    }
+
+    "a stopped voice whose release ends inside the hold rings out in full and is never released" {
+        // The same note with a 5 s release: after the note-off it has about 5 s to live, under the hold, so nothing
+        // counts as endless and the engine goes idle when the voice has ended, about 5 s after the stop.
+        val a = Rig()
+
+        val note = longNote(releaseSeconds = 5.0, gateSeconds = 10.0)
+
+        a.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(note)))
+
+        val (releaseAt, idleAt) = stopAndWatch(a, bound = 100 + holdBlocks + 400)
+
+        withClue("never released (release from block $releaseAt), idle at block $idleAt, inside the hold") {
+            releaseAt shouldBe -1
+            idleAt shouldBeGreaterThan 100
+            idleAt shouldBeLessThan 100 + holdBlocks
+        }
     }
 
     "a stopped playback whose FINITE cylinder tail outlasts the hold rings out in full, then idle" {

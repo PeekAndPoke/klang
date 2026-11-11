@@ -479,9 +479,11 @@ class RealtimeVoiceSpec : StringSpec({
         renderBlocks(d, 8.0 * blockFrames, 40).takeLast(10).all { hasAudio(it) }.shouldBeTrue()
     }
 
-    "Cmd.Cleanup lets an active TIMELINE voice ring out its full gate" {
-        // Guards the WIDTH of cleanup's release predicate: widening it to all voices would chop
-        // every song's final chord into its release tail the moment playback stops.
+    "Cmd.Cleanup gives an active TIMELINE voice's open gate its note-off: it goes into its own release" {
+        // KLANG-00427, audit L2-07, maintainer 2026-11-11 ("held notes release at stop"), which changed decision (j):
+        // this row pinned the opposite until then, a timeline voice ringing out its full gate after the stop (a 60 s
+        // gate sounded at full level 29 s after it). Now a stop is a DAW's stop: the 2 s gate is cut to the cursor and
+        // the voice ends after its 10 ms release, so the last 30 of 40 blocks are silent.
         val d = newDispatcher()
         d.handle(
             KlangCommLink.Cmd.ScheduleVoices(
@@ -500,7 +502,32 @@ class RealtimeVoiceSpec : StringSpec({
         renderBlocks(d, 0.0, 8) // promoted + sounding
 
         d.handle(KlangCommLink.Cmd.Cleanup("rt"))
-        renderBlocks(d, 8.0 * blockFrames, 40).takeLast(10).all { hasAudio(it) }.shouldBeTrue()
+        renderBlocks(d, 8.0 * blockFrames, 40).takeLast(30).any { hasAudio(it) }.shouldBeFalse()
+    }
+
+    "a stop does not start a promoted timeline voice that has not sounded yet" {
+        // The voices not yet started are dropped at a stop, the promoted ones too (KLANG-00427): a note the schedule
+        // promoted into the first block (its onset inside it, before any block rendered) never sounds after a stop
+        // that lands before that block. Before, a promoted voice played out its whole gate.
+        val d = newDispatcher()
+        d.handle(
+            KlangCommLink.Cmd.ScheduleVoices(
+                "rt",
+                listOf(
+                    ScheduledVoice(
+                        playbackId = "rt",
+                        data = sustained,
+                        // Inside the first block: promoted by the schedule, not rendered yet
+                        startTime = 0.5 * blockFrames / sampleRate,
+                        gateEndTime = 2.0,
+                        playbackStartTime = 0.0,
+                    )
+                ),
+            )
+        )
+        d.engine("rt")?.scheduler?.getActiveVoiceCount() shouldBe 1
+        d.handle(KlangCommLink.Cmd.Cleanup("rt"))
+        renderBlocks(d, 0.0, 20).any { hasAudio(it) }.shouldBeFalse()
     }
 
     "a stop for an unknown playback never creates (or revives) an engine" {

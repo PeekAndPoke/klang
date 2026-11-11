@@ -114,6 +114,39 @@ between the runs; each fix attributed by a run with it switched off):
 zero crossing): before L2-01's fix kink 15.97 and a burst of -65.2 dB (the old blind row read 0.95 and -102.4 dB);
 after it kink 1.13 and -105.8 dB. The supersine: 8.74 and -69.0 dB before, 0.99 and -107.2 dB after.
 
+## Decisions pass B1 (2026-11-11)
+
+**L2-07, BUILT (options (b) and (c); decision (j) changes).**
+
+- **(b) A stop is a DAW's stop.** `VoiceScheduler.cleanup` gives every TIMELINE voice that is sounding with its gate
+  still open a note-off at the cursor (`Voice.releaseGate`), so it goes into its own release. A promoted timeline
+  voice that has not started yet (`Pending`, its onset inside the next block) is dropped, like the scheduled voices not
+  yet promoted; before, it played its whole gate. Realtime voices are as before: a held key is released, a fixed-gate
+  key plays out its own gate (only its own note-off may cut it; option (b) names timeline voices only).
+- **(c) The bound.** A voice still playing `MAX_TAIL_HOLD_SECONDS` (20 s) after the stop counts as an endless tail:
+  the engine's whole output is released (`TailRelease`), as for a delay at feedback 1 (`PlaybackEngine.holdIsOver`,
+  counted in `stoppedBlocks`). That is the decided "a voice whose remaining life at the stop exceeds the hold", read
+  at the hold's end instead of at the stop: a voice's end never moves later, so a voice alive 20 s after the stop is
+  exactly one that had more than 20 s left after the note-offs (a first build that set a flag at the stop as well was
+  dropped: its mutant survived, the flag added nothing). It catches a fixed realtime gate of minutes too.
+- Texts: `PlaybackEngine` (the class KDoc, its table, `isIdle`, `stop`, `MAX_TAIL_HOLD_SECONDS`),
+  `VoiceScheduler.cleanup`, `TailRelease`, `PlaybackEngineDispatcher.cleanup`, `audio/ref/katalyst.md`,
+  `audio/ref/architecture.md` (`Cmd.Cleanup`), `audio/MEMORY.md`.
+- **Guards.** `RealtimeVoiceSpec` "Cmd.Cleanup gives an active TIMELINE voice's open gate its note-off" (it pinned the
+  opposite, "lets an active TIMELINE voice ring out its full gate"; moved with the decision) and "a stop does not
+  start a promoted timeline voice that has not sounded yet" (new). `EngineStopReleaseSpec`: a voice whose own release
+  (100 s) outlives the hold is released 20 s after the stop and idle when the release law ends; a fixed 60 s realtime
+  gate likewise; a 5 s release rings out in full, never released. Specs that leaned on the old rule, moved with a
+  note each: `PlaybackEngineGainSpec` (its stopped note outlives the stop by a finite echo now, not by its gate),
+  `PlaybackEnginePhaseSpec` (the second stopped engine stays alive by a finite echo), `MasterStopRingingInsertSpec`
+  (three rows stop after the first block, so the note has started; one tone's release is 0.5 s). The reproduction of
+  L2-07 is deleted from `AuditRealtimeRepro`.
+- **Mutants** (KILLED for the expected reason): the timeline note-off taken out; a `Pending` voice not dropped; the
+  voice clause of the hold taken out; the hold's wait taken out; the voice clause without the active-voice test
+  (every stopped engine released at the hold: the finite-tail rows go red).
+- **Sound:** a stop changes what plays after it, nothing before it. No corpus render moves (the offline renderer stops
+  its playback after the last block). The click probe has no stop row; not measured.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

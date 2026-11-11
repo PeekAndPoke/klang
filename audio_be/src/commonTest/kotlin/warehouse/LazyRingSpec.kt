@@ -501,25 +501,36 @@ class LazyRingSpec : StringSpec({
         fx.delayLine.shouldNotBeNull().capacityFrames shouldBe base
     }
 
-    "a hopeless time (past Int range, or non-finite) degrades to null rather than renting the smallest ring" {
-        // Review round 1: framesFor's toInt() saturated at Int.MAX and the + margin wrapped
-        // NEGATIVE, classFrames(negative) returned the base, and delaytime(60000) got a 0.5 s ring.
-        // One fresh effect per case: the first refusal latches (round 1's fix), so a second call on
-        // the same effect never reaches the allocator, and `all {}` on an empty list is true —
-        // the first cut of this row proved only the finite case (review round 2, both reviewers).
-        for (hopeless in listOf(60_000.0, Double.POSITIVE_INFINITY, Double.NaN)) {
-            val alloc = Recording()
+    "a time past MAX_DELAY_SECONDS asks for the bounded ring, never more; a non-finite one asks for nothing" {
+        // KLANG-00428, audit L7a-07, maintainer 2026-11-11: the ring ladder was open, so 60000 s (a time meant in ms)
+        // asked for Int.MAX_VALUE frames, and `katp("delay.time", 250)` for 192 MB. Now every time above 60 s asks for
+        // the ring a 60 s time rents, the class of 128 base rings (about 64 s at 44.1 kHz). The overflow this row
+        // guarded since review round 1 (framesFor's toInt() saturating and the + margin wrapping NEGATIVE, a 0.5 s
+        // ring for delaytime(60000)) cannot be reached by a finite time any more.
+        // The allocator refuses here (a 45 MB ring per case is no test's business): what was asked is the point.
+        val bounded = 128 * base
+
+        for (hopeless in listOf(60.5, 250.0, 60_000.0, 1e300, Double.POSITIVE_INFINITY, Double.NaN)) {
+            val alloc = Recording(failing = true)
             val (rings, _) = shelf(alloc)
             val fx = effect(rings)
 
             fx.configure(time = hopeless, feedback = 0.0, cap = 1.0, wet = 1.0)
 
             withClue("time = $hopeless") {
-                // A non-finite time is the OFF branch (2026-09-16: never the previous owner's
-                // time) and asks for nothing. The finite one asks for Int.MAX_VALUE, which the
-                // recording allocator (like production's allocateOrNull) cannot serve.
-                alloc.asked shouldBe if (hopeless.isFinite()) listOf(Int.MAX_VALUE) else emptyList()
+                // A non-finite time is the OFF branch (2026-09-16: never the previous owner's time) and asks for nothing
+                alloc.asked shouldBe if (hopeless.isFinite()) listOf(bounded) else emptyList()
                 fx.delayLine.shouldBeNull()
+            }
+        }
+
+        withClue("60 s itself fits the bounded class, and 30 s asks for the class below") {
+            for ((time, cls) in listOf(60.0 to bounded, 30.0 to 64 * base)) {
+                val alloc = Recording(failing = true)
+                val (rings, _) = shelf(alloc)
+
+                effect(rings).configure(time = time, feedback = 0.0, cap = 1.0, wet = 1.0)
+                alloc.asked shouldBe listOf(cls)
             }
         }
     }

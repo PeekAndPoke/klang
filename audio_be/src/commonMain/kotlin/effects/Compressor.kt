@@ -58,11 +58,7 @@ import kotlin.math.max
  *   2. The house brickwall limiter in `HouseStage`.
  *
  * **Round 5 review (2026-04-30)** kept the topology and applied a code-quality cleanup pass.
- * Deferred-but-known items (no ticket holds them yet):
- *   - Linear-domain rewrite (would eliminate 2 `exp`/`ln` per sample on top of the constant
- *     caching done here; deferred to the future dedicated `MasterLimiter` work).
- *   - Peak-detector RMS smoothing (secondary britzeling fix; deferred).
- *   - ~~Lookahead support~~ — DONE 2026-08-06, see [lookaheadSeconds] and `lookaheadStep`.
+ * The two items it deferred (a linear-domain rewrite, RMS smoothing of the peak detector) live in KLANG-00437.
  *
  * @param sampleRate Sample rate in Hz
  * @param thresholdDb Threshold in dB (default: -20.0). Signals above this are compressed.
@@ -924,7 +920,7 @@ class Compressor(
     companion object {
         // Compile-time constants for the dB↔linear math — saves one `ln(10.0)` per sample
         // in the hot loop. Full elimination of `exp`/`ln` would require a linear-domain
-        // rewrite (deferred — see file KDoc).
+        // rewrite (deferred, KLANG-00437).
         private const val DB20_OVER_LN10: Double = 8.685889638065035   // 20 / ln(10)
         private const val LN10_OVER_20: Double = 0.11512925464970229   // ln(10) / 20
 

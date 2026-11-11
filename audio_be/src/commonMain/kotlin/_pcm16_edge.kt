@@ -17,22 +17,29 @@ const val PCM16_MIN: Int = -32768
 
 /**
  * One output sample to a 16-bit PCM value, as an [Int] in `PCM16_MIN..PCM16_MAX`: in `(-1, 1]` it
- * scales by [PCM16_MAX] and truncates toward zero; above 1 it is [PCM16_MAX]; anything else (-1.0 and
- * below, and NaN, which fails both comparisons) is [PCM16_MIN].
+ * scales by [PCM16_MAX] and ROUNDS TO NEAREST, a half away from zero (KLANG-00432, audit L8-06, maintainer
+ * 2026-11-11: half the peak error of the truncation it replaced, and an error that no longer follows the sign);
+ * above 1 it is [PCM16_MAX]; anything else (-1.0 and below, and NaN, which fails both comparisons) is [PCM16_MIN].
+ * No dither (an export option later, not this edge's job).
  *
- * It reproduces the 16-bit values the engine wrote before its output became floating point (2026-10-07)
- * for every mix sample but one: the old rule put a mix sample of exactly -1.0 on -32767 and everything
- * below it on -32768. The float output's clip ([clipSample]) writes -1.0 for both, so no edge can tell
- * them apart any more. This one keeps the case that happens (a negative clip, which the 20:1 house
- * limiter lets through on a mix far too loud for it) bit-identical, and a mix sample of exactly -1.0
- * now lands one count lower, on [PCM16_MIN].
+ * Until 2026-11-11 it truncated toward zero, the 16-bit rule the engine had before its output became floating
+ * point (2026-10-07), so every WAV render's lowest bit moved with the change; the corpus, which hashes the doubles
+ * before this edge, did not. A mix sample of exactly -1.0 lands on [PCM16_MIN], as every clip below it (the float
+ * clip, [clipSample], writes -1.0 for both).
  *
  * Inline so the loop in [writePcm16] stays one flat body.
  */
 @Suppress("NOTHING_TO_INLINE")
 inline fun pcm16(sample: AudioSample): Int {
     return if (sample > -1.0 && sample <= 1.0) {
-        (sample * PCM16_MAX).toInt()
+        val scaled = sample * PCM16_MAX
+
+        // The cast truncates toward zero, so a half added on the sample's own side rounds to nearest, ties away from 0
+        if (scaled >= 0.0) {
+            (scaled + 0.5).toInt()
+        } else {
+            (scaled - 0.5).toInt()
+        }
     } else if (sample > 1.0) {
         PCM16_MAX
     } else {

@@ -60,7 +60,7 @@ private fun svfCases(stage: String, door: String, passes: Boolean): List<StagePr
 
     return listOfNotNull(
         classicCase(stage = stage, knobs = "freq=1000", params = mapOf(freq to 1000.0)),
-        classicCase(stage = stage, knobs = "freq=23999 (Nyquist-1)", params = mapOf(freq to 23999.0)),
+        classicCase(stage = stage, knobs = "freq=23999 (over the 0.49 fs clamp)", params = mapOf(freq to 23999.0)),
         classicCase(stage = stage, knobs = "freq=1 (floor 5)", params = mapOf(freq to 1.0)),
         classicCase(stage = stage, knobs = "freq=1000 q=200 (max)", params = mapOf(freq to 1000.0, q to 200.0)),
         classicCase(stage = stage, knobs = "freq=23999 q=200", params = mapOf(freq to 23999.0, q to 200.0)),
@@ -74,7 +74,7 @@ private fun svfCases(stage: String, door: String, passes: Boolean): List<StagePr
 /** Every per-note stage that processes an input: the stages `classic()` places, then the other effect nodes. */
 fun ignitorStageProbeCases(): List<StageProbeCase> = buildList {
     add(classicCase(stage = "onepole", knobs = "freq=1000", params = mapOf("onepole" to 1000.0)))
-    add(classicCase(stage = "onepole", knobs = "freq=23999 (Nyquist-1)", params = mapOf("onepole" to 23999.0)))
+    add(classicCase(stage = "onepole", knobs = "freq=23999 (over the 0.49 fs clamp)", params = mapOf("onepole" to 23999.0)))
     add(classicCase(stage = "onepole", knobs = "freq=1", params = mapOf("onepole" to 1.0)))
 
     add(classicCase(stage = "crush", knobs = "bits=8", params = mapOf("crush.bits" to 8.0)))

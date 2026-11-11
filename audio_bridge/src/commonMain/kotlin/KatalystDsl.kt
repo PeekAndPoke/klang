@@ -343,7 +343,8 @@ sealed interface KatalystStageDsl {
      * sprudel `delay(...)` door; the same stage runs at the output (`master(...)`).
      *
      * @param wet how much of the cylinder goes into the delay (0.0 = off). Cylinder twin: `delay(wet = x)`.
-     * @param time delay time in seconds. Cylinder twin: `delay(time = ...)`.
+     * @param time delay time in seconds, at most about 60 (the ring's memory bound, `MAX_DELAY_SECONDS` in the
+     *   engine): a longer time echoes at the longest time that ring holds. Cylinder twin: `delay(time = ...)`.
      * @param feedback feedback amount; allowed above 1.0 (raw engine). At exactly 1.0 the echoes
      *   neither fade nor grow: each keeps the level it went in at (a delay time that falls between
      *   two samples dulls its highs a little on every repeat), unless that level reaches [cap].

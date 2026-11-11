@@ -18,7 +18,6 @@ import io.peekandpoke.klang.audio_be.effects.Compressor
 import io.peekandpoke.klang.audio_bridge.constants.KNOB_GLIDE_SECONDS
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.log10
 import kotlin.math.pow
@@ -411,17 +410,18 @@ class KatalystCompressorEffectSpec : StringSpec({
     // ── How it changes while it runs ────────────────────────────────────────────────────────────
 
     /**
-     * The knob law, oracle side, written from the decided law (by-ear decision 2026-10-17, review rounds 1 and 2): the
-     * three knobs move as ONE move on one shared progress `p`, each from its value in force to its target. The move's law
-     * is its NET effect on the curve at the fixed reference input of 0 dBFS ([curve], computed here; the
-     * maintainer's decision of 2026-10-17, review round 3): a move that reduces no
-     * less (more, or a tie) glides linearly, `p = k / glideBlocks` after k blocks, landing on the target. A move that
-     * reduces strictly less releases: `p` is the
-     * SLOWER of the glide's and the one-pole's `1 - decay^k`, `decay = exp(-blockFrames / (release * sampleRate))`,
-     * landing once the glide's time has passed and `decay^k <= 1e-7`. Inside a block every knob runs linearly per
-     * sample to the block's end value. A new target starts a new move from the values in force; the first values snap.
+     * The knob law, oracle side, written from the decided law (review rounds 1 and 2; KLANG-00428, maintainer
+     * 2026-11-11): the three knobs move as ONE move on one shared progress `p`, each from its value in force to its
+     * target. The move's law is its NET effect on the curve at the fixed reference input of 0 dBFS ([curve], computed
+     * here; the maintainer's decision of 2026-10-17, review round 3): a move that reduces no less (more, or a tie)
+     * glides linearly, `p = k / glideBlocks` after k blocks, landing on the target. A move that reduces strictly less
+     * SNAPS (the values in force are the targets at once, and the compressor's follower releases the reduction), unless
+     * the release is shorter than the glide's span, `glideBlocks * blockFrames / sampleRate`: then it glides too. Until
+     * KLANG-00428's decisions pass it released its knobs as a one-pole at the release time, and the follower released
+     * after it. Inside a block every knob runs linearly per sample to the block's end value. A new target starts a new
+     * move from the values in force; the first values snap.
      */
-    class MoveLaw(val glideBlocks: Int) {
+    class MoveLaw(val glideBlocks: Int, val glideSeconds: Double) {
         /** The soft-knee curve, written out from its definition: the reduction in dB at [env] dB. */
         fun curve(env: Double, threshold: Double, inverseRatio: Double, knee: Double): Double {
             val over = env - threshold
@@ -439,11 +439,9 @@ class KatalystCompressorEffectSpec : StringSpec({
         val start = DoubleArray(3)
         val target = DoubleArray(3)
         var k = 0
-        var releasing = false
         var moving = false
-        var fraction = 1.0
 
-        fun retarget(next: DoubleArray) {
+        fun retarget(next: DoubleArray, release: Double) {
             val env = 0.0
 
             if (value[0].isNaN()) {
@@ -459,27 +457,25 @@ class KatalystCompressorEffectSpec : StringSpec({
 
             value.copyInto(start)
             next.copyInto(target)
-            releasing = curve(env, target[0], target[1], target[2]) > curve(env, value[0], value[1], value[2])
+            val relaxes = curve(env, target[0], target[1], target[2]) > curve(env, value[0], value[1], value[2])
             moving = (0 until 3).any { target[it] != value[it] }
             k = 0
-            fraction = 1.0
+
+            if (moving && relaxes && release >= glideSeconds) {
+                next.copyInto(value)
+                moving = false
+            }
         }
 
-        fun advance(decay: Double) {
+        fun advance() {
             if (!moving) {
                 return
             }
 
             k++
 
-            var p = minOf(1.0, k.toDouble() / glideBlocks)
-            var land = k >= glideBlocks
-
-            if (releasing) {
-                fraction *= decay
-                p = minOf(p, 1.0 - fraction)
-                land = land && fraction <= 1e-7
-            }
+            val p = minOf(1.0, k.toDouble() / glideBlocks)
+            val land = k >= glideBlocks
 
             for (i in 0 until 3) {
                 value[i] = if (land) target[i] else start[i] + (target[i] - start[i]) * p
@@ -502,23 +498,20 @@ class KatalystCompressorEffectSpec : StringSpec({
         val ref = Take(l = DoubleArray(total), r = DoubleArray(total))
         val one = AudioBuffer(1)
         val two = AudioBuffer(1)
-        val law = MoveLaw(glideBlocks = glideBlocks)
-        var release = first.releaseSeconds
+        val law = MoveLaw(glideBlocks = glideBlocks, glideSeconds = glideBlocks * blockFrames.toDouble() / sampleRate)
 
         for (b in 0 until blocks) {
             schedule[b]?.let { z ->
                 c.attackSeconds = z.attackSeconds
                 c.releaseSeconds = z.releaseSeconds
-                release = z.releaseSeconds
-                law.retarget(next = doubleArrayOf(z.thresholdDb, 1.0 / z.ratio, z.kneeDb))
+                law.retarget(next = doubleArrayOf(z.thresholdDb, 1.0 / z.ratio, z.kneeDb), release = z.releaseSeconds)
             }
 
-            val decay = exp(-blockFrames / (release * sampleRate))
             val t0 = law.value[0]
             val i0 = law.value[1]
             val k0 = law.value[2]
 
-            law.advance(decay)
+            law.advance()
 
             val t1 = law.value[0]
             val i1 = law.value[1]
@@ -578,7 +571,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         }
     }
 
-    /** Blocks a release at [releaseSeconds] needs to land (its fraction at 1e-7, and at least the glide), plus slack. */
+    /** Blocks for the follower's release at [releaseSeconds] to settle (to 1e-7 of a move, and at least the glide), plus slack. */
     fun releaseBlocks(releaseSeconds: Double): Int =
         maxOf(glideBlocks, (ln(1e7) * releaseSeconds * sampleRate / blockFrames).toInt()) + 3
 
@@ -589,8 +582,9 @@ class KatalystCompressorEffectSpec : StringSpec({
         )
     }
 
-    "moves that RELAX the compressor release at its release time (a rising threshold, a lower ratio, a narrower knee)" {
-        // The by-ear decision of 2026-10-17. Each knob relaxes on its own here, and all three together.
+    "moves that RELAX the compressor snap the knobs and the follower releases (a rising threshold, a lower ratio, a narrower knee)" {
+        // KLANG-00428, maintainer 2026-11-11 (the release of 2026-10-17 was paid twice behind the reduction follower).
+        // Each knob relaxes on its own here, and all three together.
         val a = settings(thresholdDb = -25.0, ratio = 8.0, kneeDb = 12.0, attackSeconds = 0.005, releaseSeconds = 0.1)
 
         knobRow(a = a, z = settings(thresholdDb = -12.0), after = releaseBlocks(0.1))
@@ -608,7 +602,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         )
     }
 
-    "a change of mixed directions moves as one, on the release law (review round 1)" {
+    "a change of mixed directions moves as one: relaxing on balance, it snaps (review round 1)" {
         knobRow(
             a = settings(thresholdDb = -25.0, ratio = 2.0, kneeDb = 0.0, attackSeconds = 0.005, releaseSeconds = 0.1),
             z = settings(thresholdDb = -12.0, ratio = 8.0, kneeDb = 12.0, attackSeconds = 0.02, releaseSeconds = 0.3),
@@ -616,16 +610,16 @@ class KatalystCompressorEffectSpec : StringSpec({
         )
     }
 
-    "a wide ratio swing: more reduction glides linearly in the inverse ratio, less releases" {
+    "a wide ratio swing: more reduction glides linearly in the inverse ratio, less snaps" {
         knobRow(a = settings(ratio = 1.0), z = settings(ratio = 100.0))
         knobRow(a = settings(ratio = 100.0), z = settings(ratio = 1.0), after = releaseBlocks(0.1))
     }
 
-    "the direction is judged against the value in force: a turn mid-release glides from where it stands, and back" {
-        // Release 0.1 s, about 34 blocks. Rising at block 25 (a release, about -21.2 dB in force at block 40); falling below the value in force at block 40 (a linear glide from there);
-        // at block 46, mid-glide, a target ABOVE the glide's target but BELOW the value in force (about -23.6 dB), which
-        // is more reduction and so a fresh linear glide; at block 55, mid-glide again, a target above the value in
-        // force: a release from where the glide stands.
+    "the direction is judged against the value in force: a turn mid-glide snaps or glides from where it stands" {
+        // Release 0.1 s. Rising at block 25 (relaxes: snapped to -5 dB); falling at block 40 (a linear glide from
+        // there); at block 46, mid-glide, a target ABOVE the glide's target but BELOW the value in force, which is more
+        // reduction and so a fresh linear glide; at block 55, mid-glide again, a target above the value in force:
+        // relaxes, so it snaps from where the glide stands.
         scheduleRow(
             schedule = mapOf(
                 0 to settings(thresholdDb = -30.0),
@@ -638,13 +632,13 @@ class KatalystCompressorEffectSpec : StringSpec({
         )
     }
 
-    "a rising threshold swells at the release's time constant, not over the 50 ms glide, and without a step" {
+    "a rising threshold snaps, and the gain swells back at the release's time constant once, without a step" {
         // The listening pair's case on a DC input, so the output IS the gain: 0.5 (-6 dBFS), threshold -40 dB to
-        // 0 dB, ratio 8, knee 6, release 0.2 s. Before the fix the reduction (about 29.75 dB) was gone 50 ms after
-        // the change; now the threshold in force is -40 * exp(-t / 0.2 s), and the reduction, linear in it until the
-        // knee, goes from 10 % to 90 % of its change in about 1.36 time constants (0.27 s). Since KLANG-00428 the
-        // follower smooths the curve's output, so the reduction that the moving threshold asks for also passes the
-        // follower's own release: two one-poles of 0.2 s in a row, and the swell is slower (pinned below, measured).
+        // 0 dB, ratio 8, knee 6, release 0.2 s. A memoryless gain computer had the reduction (about 29.75 dB) gone 50 ms
+        // after the change, the swell the ear rejected (2026-10-17). Since KLANG-00428 the follower smooths the
+        // REDUCTION, so the threshold snaps (decisions pass, maintainer 2026-11-11) and the reduction falls as the
+        // follower's release: one one-pole of 0.2 s, 10 % to 90 % in ln(9), about 2.2, time constants. Before this
+        // pass the threshold itself released at 0.2 s too, and the two one-poles in a row took 2.65.
         val release = 0.2
         val low = settings(thresholdDb = -40.0, ratio = 8.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = release)
         val high = settings(thresholdDb = 0.0, ratio = 8.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = release)
@@ -676,10 +670,9 @@ class KatalystCompressorEffectSpec : StringSpec({
             settled shouldBe (0.0 plusOrMinus 1e-4)
         }
 
-        withClue("the threshold in force follows the release's one-pole, block by block") {
-            for (m in 1..100) {
-                inForce[changeAt - 1 + m] shouldBe ((-40.0 * exp(-m * blockFrames / (release * sampleRate))) plusOrMinus 1e-9)
-            }
+        withClue("the threshold in force is the new one from the change's block on: snapped") {
+            inForce[changeAt - 1] shouldBe -40.0
+            inForce[changeAt] shouldBe 0.0
         }
 
         fun crossing(fraction: Double): Double {
@@ -691,8 +684,8 @@ class KatalystCompressorEffectSpec : StringSpec({
 
         val rise = crossing(0.9) - crossing(0.1)
 
-        withClue("10 % to 90 % of the swell takes about 2.65 release time constants (1.36 before KLANG-00428) ($rise s): the knob's one-pole and the follower's release in a row") {
-            rise shouldBe (2.65 * release plusOrMinus 0.01)
+        withClue("10 % to 90 % of the swell takes ln(9) release time constants ($rise s): the follower's release alone (2.65 before)") {
+            rise shouldBe (ln(9.0) * release plusOrMinus 0.01)
         }
 
         withClue("50 ms after the change more than 20 dB of the reduction is still there (the glide had none left)") {
@@ -806,10 +799,11 @@ class KatalystCompressorEffectSpec : StringSpec({
         }
     }
 
-    "the law is the move's NET effect: a mixed move that relaxes on balance releases (review round 2)" {
+    "the law is the move's NET effect: a mixed move that relaxes on balance snaps (review round 2)" {
         // The compressor's default (-20 dB, 4:1, knee 6) to the limiter's (-1 dB, 20:1, knee 2) at an envelope of
         // -6 dBFS: the ratio and the knee add, the threshold relaxes, and the net is 10.5 dB of reduction to none. The
-        // threshold in force follows the release's one-pole (0.1 s), and 50 ms in more than 3 dB of reduction is left.
+        // knobs snap (KLANG-00428, 2026-11-11), the follower releases at 0.1 s, and 50 ms in more than 3 dB of reduction
+        // is left.
         val a = settings(thresholdDb = -20.0, ratio = 4.0, kneeDb = 6.0, attackSeconds = 0.003, releaseSeconds = 0.1)
         val z = settings(thresholdDb = -1.0, ratio = 20.0, kneeDb = 2.0, attackSeconds = 0.001, releaseSeconds = 0.1)
         val changeAt = 40
@@ -834,12 +828,9 @@ class KatalystCompressorEffectSpec : StringSpec({
             gainDb[changeAt * blockFrames - 1] shouldBe (-10.5 plusOrMinus 0.05)
         }
 
-        withClue("the threshold in force on the release's one-pole") {
-            for (m in 1..30) {
-                val fraction = exp(-m * blockFrames / (0.1 * sampleRate))
-
-                inForce[changeAt - 1 + m] shouldBe ((-1.0 + (-20.0 + 1.0) * fraction) plusOrMinus 1e-9)
-            }
+        withClue("the threshold in force snapped to the limiter's") {
+            inForce[changeAt - 1] shouldBe -20.0
+            inForce[changeAt] shouldBe -1.0
         }
 
         withClue("50 ms in, more than 3 dB of reduction left: ${gainDb[changeAt * blockFrames + 2205]}") {
@@ -925,8 +916,9 @@ class KatalystCompressorEffectSpec : StringSpec({
     "a relaxing move after a rest swells at the release, not over the glide: the follower's envelope is not asked" {
         // Review round 3, the reviewer's cases. Judged at the follower's envelope, a rest left it near -100 dB, the
         // move read as a tie and glided, and the note met the old threshold moving linearly: 16.2 dB in 20 ms at
-        // -6 dBFS, 21.3 dB in 25 ms at 0 dBFS, 11 dB in 30 ms for the second pair. Judged at 0 dBFS the move releases,
-        // and the swell's 10 to 90 percent takes at least 1.2 release time constants.
+        // -6 dBFS, 21.3 dB in 25 ms at 0 dBFS, 11 dB in 30 ms for the second pair. Judged at 0 dBFS the move relaxes
+        // (it snaps since KLANG-00428, 2026-11-11, and the reduction the follower still holds releases), and the
+        // swell's 10 to 90 percent takes at least 1.2 release time constants.
         val pairA = settings(thresholdDb = -40.0, ratio = 8.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.2)
         val pairZ = settings(thresholdDb = 0.0, ratio = 8.0, kneeDb = 6.0, attackSeconds = 0.005, releaseSeconds = 0.2)
         val otherA = settings(thresholdDb = -30.0, ratio = 4.0, kneeDb = 6.0, attackSeconds = 0.003, releaseSeconds = 0.1)
@@ -948,13 +940,13 @@ class KatalystCompressorEffectSpec : StringSpec({
     "a modulated knob counts at its value in force on both sides of the judgement" {
         // The threshold holds a modulator (a one-block glide outside the move) and jumps in the same block in which the
         // owner moves the ratio. Judged with the threshold at its value in force on both sides, only the ratio counts:
-        // 8 to 6 relaxes (a release, still travelling after the glide's blocks), 6 to 8 adds (a glide, landed). Judged
-        // at the threshold's new target instead, the jump would decide the other way round both times.
+        // 8 to 6 relaxes (snapped, landed one block after the change), 6 to 8 adds (a glide, still travelling then).
+        // Judged at the threshold's new target instead, the jump would decide the other way round both times.
         fun ratioInForceAfterGlide(ratioFrom: Double, ratioTo: Double, thresholdFrom: Double, thresholdTo: Double): Double {
             val effect = KatalystCompressorEffect(sampleRate = sampleRate, blockFrames = blockFrames, thresholdModulated = true)
             val ctx = createCtx()
 
-            for (b in 0 until 40 + glideBlocks + 1) {
+            for (b in 0 until 40 + 1) {
                 val after = b >= 40
 
                 effect.configure(
@@ -972,15 +964,15 @@ class KatalystCompressorEffectSpec : StringSpec({
             return effect.inverseRatioInForce
         }
 
-        withClue("8 to 6 with the threshold jumping -10 to -30: a release, still travelling") {
-            (ratioInForceAfterGlide(8.0, 6.0, -10.0, -30.0) < 1.0 / 6.0 - 1e-6) shouldBe true
+        withClue("8 to 6 with the threshold jumping -10 to -30: snapped") {
+            ratioInForceAfterGlide(8.0, 6.0, -10.0, -30.0) shouldBe 1.0 / 6.0
         }
-        withClue("6 to 8 with the threshold jumping -30 to -10: a glide, landed") {
-            ratioInForceAfterGlide(6.0, 8.0, -30.0, -10.0) shouldBe 1.0 / 8.0
+        withClue("6 to 8 with the threshold jumping -30 to -10: a glide, still travelling") {
+            (ratioInForceAfterGlide(6.0, 8.0, -30.0, -10.0) > 1.0 / 8.0 + 1e-6) shouldBe true
         }
     }
 
-    "a negative release releases like release 0: the move's floor is the follower's (Compressor.MIN_TIME_SECONDS)" {
+    "a negative release moves like release 0: both are under the glide, so the relaxing move glides" {
         fun trace(release: Double) = dcGainDb(
             schedule = mapOf(
                 0 to settings(thresholdDb = -40.0, ratio = 8.0, kneeDb = 6.0, releaseSeconds = release),
@@ -1000,9 +992,10 @@ class KatalystCompressorEffectSpec : StringSpec({
         withClue("and it lands") { negative[negative.size - 1] shouldBe (0.0 plusOrMinus 1e-4) }
     }
 
-    "a return to the move's exact start, mid-release and after landing, glides back from where the knobs stand" {
-        // Rising at block 25 (a release), back to the exact starting threshold at block 35 (more reduction: a linear
-        // glide from the value in force), rising again at block 60 and, after it landed, back to the start once more.
+    "a return to the move's exact start, after a snap and mid-glide, glides back from where the knobs stand" {
+        // Rising at block 25 (relaxes: a snap), back to the exact starting threshold at block 35 (more reduction: a
+        // linear glide from the value in force), rising again at block 60 and, after it landed, back to the start once
+        // more.
         val a = settings(thresholdDb = -30.0)
         val z = settings(thresholdDb = -5.0)
         val landed = 60 + releaseBlocks(0.1)

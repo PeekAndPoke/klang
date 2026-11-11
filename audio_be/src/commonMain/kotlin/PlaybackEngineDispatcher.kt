@@ -271,7 +271,10 @@ class PlaybackEngineDispatcher(
         }
     }
 
-    /** Stop scheduling for a playback and let it ring out; disposed once drained (see [renderBlock]). */
+    /**
+     * Stop scheduling for a playback: its open gates get their note-off, and it rings out; disposed once drained (see
+     * [renderBlock], `VoiceScheduler.cleanup`).
+     */
     private fun cleanup(playbackId: String) {
         val engine = engines[playbackId] ?: return
 
@@ -498,6 +501,9 @@ class PlaybackEngineDispatcher(
 
     /** True when every idle ring and network on the warehouse's shelves is zeroed (see [WarmupRunner.tick]). */
     val isWarehouseClean: Boolean get() = context.warehouse.isClean
+
+    /** Puts [count] delay rings of [seconds] on the warehouse's shelf, for the warmup ([ResourceWarehouse.stockDelayRings]). */
+    fun stockDelayRings(seconds: Double, count: Int) = context.warehouse.stockDelayRings(seconds = seconds, count = count)
 
     /**
      * Frames of latency the output adds: the house stage's (the house limiter's lookahead) plus the longest master

@@ -102,7 +102,8 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * ```
  *
  * @param wet How much of the cylinder goes into the delay, 0 to 1, default 0.25. Cylinder-wide.
- * @param time Delay time in seconds, default 0.25. Cylinder-wide.
+ * @param time Delay time in seconds, default 0.25, at most about 60 (a bound on the delay's memory: a longer time echoes
+ *   at the longest time the delay holds). Cylinder-wide.
  * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Cylinder-wide.
  * @param cap Ceiling the repeats may not exceed, default 1. Cylinder-wide.
  * @tool SprudelDelayEditor
@@ -188,7 +189,7 @@ object delay {
      * The setter, see [SprudelPattern.delay].
      *
      * @param wet How much of the cylinder goes into the delay, 0 to 1, default 0.25. Cylinder-wide.
-     * @param time Delay time in seconds, default 0.25. Cylinder-wide.
+     * @param time Delay time in seconds, default 0.25, at most about 60 (a bound on the delay's memory). Cylinder-wide.
      * @param feedback Feedback, 0 to 1, default 0.3. Above 1 builds up. Cylinder-wide.
      * @param cap Ceiling the repeats may not exceed, default 1. Cylinder-wide.
      */
