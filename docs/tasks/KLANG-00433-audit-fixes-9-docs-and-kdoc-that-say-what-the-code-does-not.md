@@ -1,6 +1,6 @@
 # KLANG-00433: Audit fixes 9: docs and KDoc that say what the code does not do, dead code, and the tests the audit found missing
 
-> **Status (2026-11-11): IN PROGRESS.** Fix worker started.
+> **Status (2026-11-11): PAUSED.** Landed; nine decisions pending with the maintainer.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -246,3 +246,4 @@ against after: all 18 sound hashes identical (3 frozen, 15 live); no song edited
 
 - 2026-11-10: created.
 - 2026-11-11: IN PROGRESS. Fix worker started.
+- 2026-11-11: PAUSED. Landed; nine decisions pending with the maintainer.
