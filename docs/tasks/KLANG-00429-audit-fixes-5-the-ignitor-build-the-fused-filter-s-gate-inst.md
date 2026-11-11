@@ -100,6 +100,13 @@ run with `KLANG_PROBE=audit`), fix it, and turn the reproduction's row into an o
 - **L5-08:** "leave" (accepted).
 - **L5-10, L5-11:** the maintainer asked for an explanation; open.
 
+### Decided, second round (maintainer, 2026-11-11)
+
+- **L5-10:** "that is ok". The built trees go with the playback's engine; only the names stay until the page reloads.
+- **L5-11:** both parts, "as long as the added complexity is worth it". Owed; a part that turns out heavier than a
+  small change goes to the backlog (KLANG-00437) instead.
+- The optimizations backlog the maintainer asked for is KLANG-00437.
+
 ## Notes from the work (2026-11-10)
 
 **Per finding.**

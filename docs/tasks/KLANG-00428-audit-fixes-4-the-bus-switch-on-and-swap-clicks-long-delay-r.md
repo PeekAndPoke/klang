@@ -139,6 +139,14 @@ comparison at a time).
   releases. Owed.
 - **The listening pass** of the eleven moved renders: the maintainer listens.
 
+### Decided, second round (maintainer, 2026-11-11)
+
+- **Warm rings:** "we should increase the idle budget and have big rings ready. Multiple songs now use a delay of 9 up
+  to 10 on the master." The songs in the repo carry a master REVERB of size 9 to 10 (its network is pooled and warm
+  already, whatever the size); their delays are 0.05 to 0.6. Asked back which was meant; the ring counts wait for the
+  answer.
+- **The listening pass:** nothing owed; the maintainer revisits the songs.
+
 ## Notes from the work (2026-11-10)
 
 **Per finding.**

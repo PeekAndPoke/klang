@@ -89,6 +89,10 @@ maintainer, since they change decision (j)'s promise.
   remaining life exceeds the 20 s hold counts as an endless tail. This changes decision (j) and the behaviour
   `RealtimeVoiceSpec` pins. Owed.
 
+### Decided, second round (maintainer, 2026-11-11)
+
+- **L2-07:** "yes that is ok": held notes release at stop, the 20 s hold bounds the rest. Decision (j) changes.
+
 ## Notes from the work (2026-11-10)
 
 **Sound changes, and the songs they move** (the corpus read as before against after, 256 cycles, no song edited

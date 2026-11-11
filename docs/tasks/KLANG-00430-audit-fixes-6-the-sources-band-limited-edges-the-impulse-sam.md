@@ -181,6 +181,14 @@ renders other dice. Recommendation: do it with the noise cost work, as one delib
 - **L3-12:** "yes as proposed for both center voices, no listening pair needed": option 2. Owed.
 - **L3-16:** "yes fix together with the noise cost work".
 
+### Decided, second round (maintainer, 2026-11-11)
+
+- **L3-02 cost:** "band-limiting is a real good thing and we keep it."
+- **L3-02 flank floor:** "let the square have the same edge width as the saw": `PULSE_MIN_FLANK_SAMPLES` 2 to 1, no
+  listening pair. Every square and pulse gets brighter (1.3 dB down at 10 kHz, was 2.6 before the audit). Owed.
+- **L3-05, L9-07:** "yes first now and follow-up ticket for the second": the browser decodes at the engine's rate
+  (owed); the JVM converter is KLANG-00438.
+
 ## Notes from the work (2026-11-10)
 
 The fixer's record. Before and after are the tree as found (`6c10fe418`) against the tree with these changes; the probes

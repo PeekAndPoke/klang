@@ -82,6 +82,13 @@ Recommendation: 1, with the default decided by ear (0.5 keeps every song's numbe
   default changes colour). Owed.
 - **L3-07:** the cubic read landed in KLANG-00430; the lossless allpass read is not built.
 
+### Decided, second round (maintainer, 2026-11-11)
+
+- **L3-08, the default:** "can we choose a different default position to not lose the harmonic? If yes please choose
+  a different sensible default." Every pick position takes some harmonics out (the comb); the default moves from 0.5
+  to 0.28 (beta 0.14, a seventh of the string, where a guitar is picked): the first harmonic that goes weak is the
+  7th, where 0.5 took out the 4th, 8th and 12th. Owed.
+
 ## Notes (the fixer, 2026-11-10)
 
 - L3-01 and L3-06 fixed, sound changes on purpose. The corpus before against after moves four songs, each through its
