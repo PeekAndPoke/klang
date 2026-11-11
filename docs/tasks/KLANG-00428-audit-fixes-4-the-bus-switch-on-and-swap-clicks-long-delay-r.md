@@ -128,6 +128,17 @@ What this ticket did not force, each with the options and a recommendation. The 
 The three "to do" items run as a second pass of this ticket, after KLANG-00429 has landed (one build, one corpus
 comparison at a time).
 
+### Decided (maintainer, 2026-11-11)
+
+- **The switch-on fade:** "yes, fade in only when already sounding". A stage that joins a silent bus starts at once;
+  the 50 ms fade applies only when the bus is sounding. Owed.
+- **The delay ring bound:** "ok as recommended" (`MAX_DELAY_SECONDS` 60), and "the warehouse should be warmed up to
+  have delay rings available for normal songs". The warm-up shelves 16 rings of the smallest class today (half a
+  second); rings of the next classes are owed, the count to be agreed.
+- **A compressor knob move that relaxes it:** "as recommended, no ear test needed": snap the knob, the follower
+  releases. Owed.
+- **The listening pass** of the eleven moved renders: the maintainer listens.
+
 ## Notes from the work (2026-11-10)
 
 **Per finding.**

@@ -168,6 +168,19 @@ their samples (not their statistics) depend on where the block borders fall. Sai
 inline xorshift): it also removes a virtual call per sample (about 1 ns on the JVM, 3 to 4 on JS), and every noise voice
 renders other dice. Recommendation: do it with the noise cost work, as one deliberate sound change.
 
+### Decided (maintainer, 2026-11-11)
+
+- **L3-02 cost:** kept while the maintainer reads an explanation of band-limiting ("if so the additional cost is ok").
+- **L3-02 flank floor:** a listening pair (2 samples against 1). Owed.
+- **L3-03:** "yes accept".
+- **L3-05, L9-07 rate conversion:** the maintainer asked for an explanation; open.
+- **L3-07:** not built (KLANG-00426, "no listening pairs needed").
+- **L3-09:** "ok fix the songs": option 2, hash the lattice; the songs that move are named. Owed.
+- **L3-10:** "ok fix and document": white and brown rate-scaled, pink and crackle documented. Owed.
+- **L3-11:** "the volume difference is fine, keep, no listening pair".
+- **L3-12:** "yes as proposed for both center voices, no listening pair needed": option 2. Owed.
+- **L3-16:** "yes fix together with the noise cost work".
+
 ## Notes from the work (2026-11-10)
 
 The fixer's record. Before and after are the tree as found (`6c10fe418`) against the tree with these changes; the probes

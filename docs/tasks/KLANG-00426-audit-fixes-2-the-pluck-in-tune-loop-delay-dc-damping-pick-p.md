@@ -74,6 +74,14 @@ Options:
 
 Recommendation: 1, with the default decided by ear (0.5 keeps every song's number but changes every pluck's colour).
 
+### Decided (maintainer, 2026-11-11)
+
+"All as you suggest, no listening pairs needed."
+
+- **L3-08:** option 1, a real pick position. The default stays 0.5 (every song keeps its number; every pluck at its
+  default changes colour). Owed.
+- **L3-07:** the cubic read landed in KLANG-00430; the lossless allpass read is not built.
+
 ## Notes (the fixer, 2026-11-10)
 
 - L3-01 and L3-06 fixed, sound changes on purpose. The corpus before against after moves four songs, each through its

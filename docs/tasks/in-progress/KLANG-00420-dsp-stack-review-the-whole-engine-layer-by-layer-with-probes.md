@@ -344,6 +344,16 @@ Notes so far (each report also ends in a section "For the audit ruleset"):
 - The probes run with one command each and are in the register.
 - No engine code changed except what a probe needed to be callable.
 
+### Decided (maintainer, 2026-11-11)
+
+Two rule questions of the audit:
+
+- **An allocation once per note in render code:** "if we are able to avoid it or reduce it through the warehouse we
+  should do it." Not forbidden; reduced where the warehouse can hold the buffer (see KLANG-00429, L5-03).
+- **The aliasing verdict on the health page:** "Judge below 5 kHz. Maybe we can also flip it and measure / display up
+  until which frequency the aliasing is healthy (-60 dB) and if this is below 5kHz it is healthy." Owed: the meter
+  reports the frequency up to which the aliasing stays under -60 dB, and the page judges by it.
+
 ## History
 
 - 2026-11-10: created.

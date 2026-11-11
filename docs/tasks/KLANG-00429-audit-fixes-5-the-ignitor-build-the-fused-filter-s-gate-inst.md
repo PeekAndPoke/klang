@@ -91,6 +91,15 @@ run with `KLANG_PROBE=audit`), fix it, and turn the reproduction's row into an o
    (clamp-free arithmetic over an unset default) still renders an all-NaN voice: the numerical-safety contract would
    read a non-finite amount as unset at `DriveIgnitor`'s read. Recommendation: both, as one small change, after a yes.
 
+### Decided (maintainer, 2026-11-11)
+
+- **L5-03:** "yes size it to what it needs": option (b) for the shimmer's ring. Owed. The rule answer of the same day
+  ("allocation per note: if we are able to avoid it or reduce it through the warehouse we should do it") asks for
+  option (a), the per-voice rental, as well; it is planned with the maintainer before it is built.
+- **L5-05:** "leave, that is fine" (accepted, documented).
+- **L5-08:** "leave" (accepted).
+- **L5-10, L5-11:** the maintainer asked for an explanation; open.
+
 ## Notes from the work (2026-11-10)
 
 **Per finding.**

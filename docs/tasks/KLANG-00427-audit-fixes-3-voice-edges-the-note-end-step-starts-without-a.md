@@ -78,6 +78,17 @@ tail ring however long. Options:
 Recommendation: (b) for musical sense, with (c) as the bound for a release that is itself absurd. Both need the
 maintainer, since they change decision (j)'s promise.
 
+### Decided (maintainer, 2026-11-11)
+
+"All as you recommend."
+
+- **L2-05:** (a), the start of a voice without its own envelope is the author's. One sentence in `teardown_fade.kt`
+  and `audio/ref/voice-synthesis.md`. Owed.
+- **L2-06:** (c), the build cost was lowered in KLANG-00429; build at schedule time is not built.
+- **L2-07:** (b) a note-off at stop for every timeline voice whose gate is open, with (c) as the bound: a voice whose
+  remaining life exceeds the 20 s hold counts as an endless tail. This changes decision (j) and the behaviour
+  `RealtimeVoiceSpec` pins. Owed.
+
 ## Notes from the work (2026-11-10)
 
 **Sound changes, and the songs they move** (the corpus read as before against after, 256 cycles, no song edited
