@@ -88,6 +88,18 @@ class StoredStateSpec : StringSpec({
         }
     }
 
+    "what is kept of a song" {
+        val song = SongKept(code = "sound(\"bd\")", title = "Mine", rpm = 37.5, bookmarks = mapOf(1 to 12, 9 to 3))
+        val text = json.encodeToString(SongKept.serializer(), song)
+
+        text shouldBe """{"code":"sound(\"bd\")","title":"Mine","rpm":37.5,"bookmarks":{"1":12,"9":3}}"""
+        json.decodeFromString(SongKept.serializer(), text) shouldBe song
+        withClue("nothing changed: the song's own code, title and tempo, no bookmarks") {
+            json.decodeFromString(SongKept.serializer(), "{}") shouldBe
+                SongKept(code = null, title = null, rpm = null, bookmarks = emptyMap())
+        }
+    }
+
     "what was opened last" {
         val opened = LastOpened(
             entries = listOf(

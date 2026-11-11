@@ -16,6 +16,9 @@ interface KeyValueStore {
     /** Forgets what is kept under [key]. */
     fun remove(key: String)
 
+    /** Every key something is kept under; none where the store cannot say. */
+    fun keys(): List<String>
+
     /**
      * Tells when what is kept under [key] was changed from elsewhere (another tab, a server), with the new text, null
      * when it was removed; never for this store's own [write]. The way to stop comes back.
@@ -43,6 +46,8 @@ class MemoryKeyValueStore(initial: Map<String, String> = emptyMap()) : KeyValueS
     override fun remove(key: String) {
         kept.remove(key)
     }
+
+    override fun keys(): List<String> = kept.keys.toList()
 
     override fun watch(key: String, onChange: (text: String?) -> Unit): Unsubscribe {
         val watcher = key to onChange

@@ -35,6 +35,27 @@ class StorageKeysSpec : StringSpec({
         }
     }
 
+    "a song's document has its key: a built-in song's with the release, the user's own without; both in the Songs part" {
+        StorageKeys.song(songId = "der-schmetterling", release = "0.9.1") shouldBe "klang-song-0.9.1-der-schmetterling"
+        StorageKeys.song(songId = "der-schmetterling", release = "n/a") shouldBe "klang-song-n/a-der-schmetterling"
+        StorageKeys.song(songId = "new", release = null) shouldBe "klang-song-new"
+        StorageKeys.song(songId = "new") shouldBe "klang-song-new"
+
+        val songs = StorageKeys.parts.first { it.name == "Songs" }
+
+        songs.precious shouldBe true
+        listOf(
+            StorageKeys.song(songId = "new") to "Songs",
+            StorageKeys.song(songId = "der-schmetterling", release = "0.9.1") to "Songs",
+            StorageKeys.songCode(version = "0.9.1", songId = "new") to "Songs",
+            // What could not be read is kept from a reset of the songs
+            StorageKeys.song(songId = "new") + DocumentStorage.UNREADABLE to "Put aside",
+            StorageKeys.song(songId = "new") + DocumentStorage.NEWER to "Put aside",
+        ).forEach { (key, part) ->
+            withClue(key) { StorageKeys.parts.filter { it.covers(key) }.map { it.name } shouldBe listOf(part) }
+        }
+    }
+
     "a song's bookmarks sit beside them" {
         withClue("the bookmarks") {
             StorageKeys.songBookmarks(version = "0.9.1", songId = "der-schmetterling") shouldBe

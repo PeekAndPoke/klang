@@ -81,6 +81,8 @@ maintainer's folder. One more reason for one builder: the worklet's production c
   `song-<version>-<songId>-...` (`StorageKeys`, used by `CodeSongPage`): after a bump, what a user changed in a song,
   and a user's own new song, no longer show. Meant (a built-in song starts fresh when a release changes it), or to
   be changed; KLANG-00422 turns the songs' storage into a data class anyway.
+  **Settled in KLANG-00422 (2026-11-11):** a built-in song keeps the version in its key (`klang-song-<version>-<songId>`)
+  and so starts fresh with a release; the user's own song has no version in its key and stays.
 - **D4, without the performance pages first?** The skill can ship with the three pages there are and take the new
   ones up when KLANG-00424 has them.
 

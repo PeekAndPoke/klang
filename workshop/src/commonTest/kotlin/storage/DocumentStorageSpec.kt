@@ -50,6 +50,8 @@ private class RefusingStore(private val kept: MutableMap<String, String>, privat
         kept.remove(key)
     }
 
+    override fun keys(): List<String> = kept.keys.toList()
+
     override fun watch(key: String, onChange: (text: String?) -> Unit) = {}
 }
 
@@ -86,6 +88,18 @@ class DocumentStorageSpec : StringSpec({
 
         mergeFields(kept = kept, patch = JsonObject(mapOf("a" to JsonPrimitive(1)))) shouldBe
             JsonObject(mapOf("a" to JsonPrimitive(1), "z" to JsonPrimitive("kept")))
+    }
+
+    "the store in memory lists the keys something is kept under" {
+        val store = MemoryKeyValueStore(initial = mapOf("a" to "1"))
+
+        store.keys() shouldBe listOf("a")
+
+        store.write(key = "b", text = "2")
+        store.keys().toSet() shouldBe setOf("a", "b")
+
+        store.remove("a")
+        store.keys() shouldBe listOf("b")
     }
 
     "nothing kept: no value; the first write keeps a document, with its version" {

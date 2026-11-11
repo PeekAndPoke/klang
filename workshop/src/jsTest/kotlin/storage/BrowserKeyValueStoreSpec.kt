@@ -21,11 +21,16 @@ class BrowserKeyValueStoreSpec : StringSpec({
 
     /** A storage whose every call throws, as a browser's with the site's data blocked. */
     fun blocked(): Storage = js(
-        """({
-            getItem: function () { throw new Error("blocked") },
-            setItem: function () { throw new Error("blocked") },
-            removeItem: function () { throw new Error("blocked") }
-        })"""
+        """(function () {
+            var storage = {
+                getItem: function () { throw new Error("blocked") },
+                setItem: function () { throw new Error("blocked") },
+                removeItem: function () { throw new Error("blocked") },
+                key: function () { throw new Error("blocked") }
+            };
+            Object.defineProperty(storage, "length", { get: function () { throw new Error("blocked") } });
+            return storage;
+        })()"""
     ).unsafeCast<Storage>()
 
     fun changeElsewhere(area: Storage, changed: String?, text: String?) {
@@ -40,11 +45,18 @@ class BrowserKeyValueStoreSpec : StringSpec({
             store.write(key = key, text = "kept") shouldBe true
             store.read(key) shouldBe "kept"
             withClue("in the browser's storage") { sessionStorage.getItem(key) shouldBe "kept" }
+            withClue("among the store's keys, with what else the storage holds") {
+                sessionStorage.setItem("$key-other", "x")
+
+                store.keys().filter { it.startsWith(key) }.toSet() shouldBe setOf(key, "$key-other")
+            }
 
             store.remove(key)
             store.read(key) shouldBe null
+            withClue("forgotten: no longer among the keys") { (key in store.keys()) shouldBe false }
         } finally {
             sessionStorage.removeItem(key)
+            sessionStorage.removeItem("$key-other")
         }
     }
 
@@ -74,8 +86,9 @@ class BrowserKeyValueStoreSpec : StringSpec({
         store.read(key) shouldBe null
         store.write(key = key, text = "kept") shouldBe false
         store.remove(key)
+        store.keys() shouldBe emptyList()
 
-        problems shouldBe listOf("Could not read $key", "Could not keep $key", "Could not forget $key")
+        problems shouldBe listOf("Could not read $key", "Could not keep $key", "Could not forget $key", "Could not list the keys")
     }
 
     "a browser that gives no storage: memory in its place, and told; one that gives it: the browser's" {

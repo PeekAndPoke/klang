@@ -62,7 +62,7 @@ The plan, the decisions and what is open: KLANG-00325.
 | `DocumentStorage.kt` | A data class as one versioned JSON document under one key: a write merges the changed top-level fields into what is kept; an unreadable document is put aside; old keys are read once. |
 | `JsonMerge.kt` | `changedFields`, `mergeFields`: the two pure functions a browser's store and a server share. |
 | `StoredDocument.kt` | The document's shape (`v`, `data`) and the one `Json` that reads and writes it. |
-| `KeyValueStore.kt` | Texts under keys, with `watch`; the store in memory. |
+| `KeyValueStore.kt` | Texts under keys, with `watch` and the list of `keys`; the store in memory. |
 | `BrowserKeyValueStore.kt` (JS) | `localStorage` or `sessionStorage` as a store; the browser's `storage` event behind `watch`; `orMemory` where the browser gives no storage. |
 
 Shared code (`commonMain`), so the JVM runs its specs too: a server keeps and merges the same documents. The plan,

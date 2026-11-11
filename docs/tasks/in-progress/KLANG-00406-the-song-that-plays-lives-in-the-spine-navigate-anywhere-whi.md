@@ -16,7 +16,7 @@ live in the Spine as well".
 
 How it is today:
 
-- **The page owns the song.** `CodeSongPage` makes its own `KlangCodePlaybackCtrl` from its `SongStorage` and calls
+- **The page owns the song.** `CodeSongPage` makes its own `KlangCodePlaybackCtrl` from what `spine.songs` keeps (`SongStorage` until KLANG-00422) and calls
   `ctrl.stop()` when it unmounts: leaving the song page silences it.
 - **A second owner already exists.** `KlangampDeck` (`visuals/`) holds one exclusive controller for Klang Amp's
   playlist, made once, and follows what plays through `Player.nowPlaying`.
@@ -63,7 +63,7 @@ its signals and how long it has been heard. It is the one controller where today
 - **The logic and the state of all this live in the Spine** (the maintainer, 2026-11-01: "Logic and state handling
   for this should then also live in the spine"): which song is on the deck, which examples play, whether the song
   is faded out, when it fades in. The pages only ask (play this example, stop it) and show what the Spine says.
-- **What lives where:** the deck and the song's state in the Spine; the edits in `SongStorage` (into
+- **What lives where:** the deck and the song's state in the Spine; the edits in `spine.songs` (`SongStorage` until KLANG-00422) (into
   `spine/storage/` with the other stores, KLANG-00389), as today saved while one types. The deck plays the code last
   sent to it, so a song edited and not yet updated plays on as it was, as on the page today.
 - **A reload ends it.** Audio needs a user gesture after a reload, so the song does not go on by itself; the

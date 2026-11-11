@@ -130,7 +130,23 @@ object StorageKeys {
     /** The lessons done, one document (KLANG-00422): each lesson's slug with `true`, or `false` when taken back. */
     const val LESSONS_DONE = "klang-lessons-done"
 
-    /** A song's code; [version] is the app's version, [songId] the song's id (a built-in song's, or "new"). */
+    /**
+     * What is kept of the song [songId], one document (KLANG-00422): `SongKept`. A built-in song's has the app's
+     * version as its [release], so a new release starts the song fresh and never touches what another one kept; the
+     * user's own song ("new") has none (null) and stays whatever the release.
+     */
+    fun song(songId: String, release: String? = null): String = when (release) {
+        null -> "$SONG_PREFIX$songId"
+        else -> "$SONG_PREFIX$release-$songId"
+    }
+
+    /** What every song's document's key starts with. */
+    private const val SONG_PREFIX = "klang-song-"
+
+    /**
+     * Until KLANG-00422, read once into [song]: a song's code; [version] is the app's version,
+     * [songId] the song's id.
+     */
     fun songCode(version: String, songId: String): String = songKey(version = version, songId = songId, part = "code")
 
     /** A song's title; [version] and [songId] as for [songCode]. */
@@ -172,7 +188,9 @@ object StorageKeys {
     /** Every part, one per kept setting; a new key gets a part here, or the storage page lists it as unknown. */
     val parts: List<Part> = listOf(
         Part(name = "Songs", about = "Your songs: their code, titles, tempos and bookmarks", precious = true) {
-            it.startsWith("song-")
+            // A song's document put aside is the "Put aside" part's, so a reset of the songs leaves it
+            (it.startsWith(SONG_PREFIX) || it.startsWith("song-")) &&
+                !it.endsWith(DocumentStorage.UNREADABLE) && !it.endsWith(DocumentStorage.NEWER)
         },
         Part(
             name = "Your own looks",

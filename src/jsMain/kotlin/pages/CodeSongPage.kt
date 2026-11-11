@@ -20,10 +20,10 @@ import io.peekandpoke.klang.comp.transportSpanTwo
 import io.peekandpoke.klang.layouts.PageWorkbench
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl
+import io.peekandpoke.klang.spine.Songs
 import io.peekandpoke.klang.spine.VisualState
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
-import io.peekandpoke.klang.storage.SongStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.BookmarkOptions
 import io.peekandpoke.klang.ui.codemirror.Bookmarks
@@ -112,12 +112,15 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
 
     /** What the browser keeps of this song: its code, title, rpm and bookmarks. */
-    private val songStorage = SongStorage(
-        version = v,
+    private val songKept = spine.songs.open(
         songId = songId,
-        defaultCode = builtIn?.code ?: defaultCode,
-        defaultTitle = builtIn?.title ?: "New Song",
-        defaultRpm = builtIn?.rpm ?: 30.0,
+        version = v,
+        builtIn = builtIn != null,
+        original = Songs.Original(
+            code = builtIn?.code ?: defaultCode,
+            title = builtIn?.title ?: "New Song",
+            rpm = builtIn?.rpm ?: 30.0,
+        ),
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -127,9 +130,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
      * errors of a failed start), so the page goes on with it (KLANG-00406); else one from what the browser keeps.
      */
     private val ctrl = spine.playbacks.song.ctrlFor(songId) ?: spine.playbacks.ctrl()
-        .code(songStorage.code())
-        .rpm(songStorage.rpm())
-        .title(songStorage.title())
+        .code(songKept.code)
+        .rpm(songKept.rpm)
+        .title(songKept.title)
         .build()
 
     /** The page shows [ctrl] till it unmounts: the deck releases it once it is neither on the deck nor shown. */
@@ -137,8 +140,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     /** The editor's bookmarks (KLANG-00323): it starts from the stored ones, and every change is stored. */
     private val bookmarks = BookmarkOptions(
-        initial = songStorage.bookmarks().map { (digit, line) -> Bookmarks.Line(digit = digit, line = line) },
-        onChanged = { lines -> songStorage.bookmarks(lines.associate { it.digit to it.line }) },
+        initial = songKept.bookmarks.map { (digit, line) -> Bookmarks.Line(digit = digit, line = line) },
+        onChanged = { lines -> songKept.keepBookmarks(lines.associate { it.digit to it.line }) },
         askToMove = { move, answer -> askToMoveBookmark(move = move, answer = answer) },
     )
 
@@ -185,10 +188,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         bottomTabs(helpPanel.tabs())
     }
 
-    // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
+    // On rpm changes: keep the rpm AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
     private val rpmChange by subscribingTo(ctrl.state.map { it.rpm }.distinct()) { newRpm ->
-        songStorage.rpm(newRpm)
+        songKept.keepRpm(newRpm)
         codeEditorRef { editor -> editor.cancelHighlights() }
     }
 
@@ -200,11 +203,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
-    // Persist title changes back to the localStorage-backed stream.
+    // Keep a title the user changed.
     @Suppress("unused")
     private val titlePersist by subscribingTo(ctrl.state.map { it.title }.distinct()) { newTitle ->
         if (newTitle != null) {
-            songStorage.title(newTitle)
+            songKept.keepTitle(newTitle)
         }
     }
 
@@ -246,8 +249,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
      * ([VisualState.openSong]). The song before stops; this one plays on when the page is left.
      */
     private fun playSong() {
-        // Persist the current code before starting (matches original strategy of persist-on-play).
-        songStorage.code(ctrl.state().code)
+        // Keep the current code before starting (the song is kept when it is played).
+        songKept.keepCode(ctrl.state().code)
         spine.playbacks.song.play(songId = songId, ctrl = ctrl)
     }
 
@@ -268,7 +271,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             ctrl.setCode(b.code)
             ctrl.setRpm(b.rpm)
             ctrl.setTitle(b.title)
-            songStorage.code(b.code)
+            songKept.keepCode(b.code)
             codeEditorRef { it.setCode(b.code) }
 
             // As the Update key does: the playback takes the original's code and keeps going

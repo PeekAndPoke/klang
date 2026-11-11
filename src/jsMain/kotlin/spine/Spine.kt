@@ -56,6 +56,9 @@ class Spine(
     /** The tutorials the user marked as done. */
     val tutorials = Tutorials(stores = stores)
 
+    /** What the browser keeps of the songs, a document each, opened by the song's page. */
+    val songs = Songs(stores = stores)
+
     /** The user's looks: the one worn, the slots, the looks of the user's own. */
     val looks = Looks(stores = stores)
 

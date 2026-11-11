@@ -218,6 +218,47 @@ This ticket holds the work that follows from the map. The map itself, with every
     before); a text that cannot be read stays. Only the page's own old default: nothing is kept, and its key stays.
   - **The storage page** has one part "MIDI setup" where "MIDI loadout" and "Laptop keys' layout" were.
 
+- **Step 3, the songs (2026-11-11):** `spine.songs.open(...)` gives a song's page what is kept of the song, one
+  document per song, the user's (`SongKept`: code, title, rpm, bookmarks). `SongStorage`, which was Ultra's
+  `persistInLocalStorage` four times with the app's version in each key, is gone.
+  - **A built-in song's key has the release, the user's own song's has none** (the maintainer, 2026-11-11, "Option
+    B, go ahead"): `klang-song-<version>-<songId>` and `klang-song-new`. A new release starts a built-in song fresh
+    because nothing is kept under its key yet (the maintainer: "when a new version is released all builtin songs
+    are reset automatically"), and no release reads, changes or forgets what another one kept: across a version
+    bump, a tab still on an older build and a deploy taken back each find their own song. **This change ships with
+    a version bump** (review round 3): an older build of the same version goes on writing the old keys, which the
+    new build read once and no longer looks at. The cost is the one of the old keys: a built-in
+    song the user changed leaves one document per release. The store can list its keys, so a song's documents of
+    earlier releases could be removed when its page opens; left out until it is wanted.
+  - **Tried first and dropped: the release as a field of the document**, with a built-in song's document forgotten
+    when an earlier release had written it. Two review rounds each found a way for it to delete work (round 1: any
+    other release counted as earlier; round 2: an older build's write lowered the release, and the newer build then
+    forgot the document). A rule that deletes the user's songs needs to be right in every order of events; a key
+    per release needs no rule.
+  - **The user's own song ("new") stays whatever the release.** Before, it went out of sight with every version
+    bump, as a side effect of the key. This settles KLANG-00423's D3. At the one-time reading it is brought along
+    from the old keys: this version's, or, where those hold nothing of the user's, the latest earlier version whose
+    keys do (the old page wrote the title and the tempo on every visit, so a version's keys may hold only the
+    song's own values; review round 2). An earlier version's keys are copied, not moved, so a deploy taken back
+    to it still finds the song (review round 3). For that the workshop's `KeyValueStore` can list its keys.
+  - **While the app's version is not known** (`n/a`: the version file not read yet), a built-in song is kept under
+    `klang-song-n/a-<songId>`, as the old keys did. The app as it is deployed knows its version from the start;
+    this is a development build's case.
+  - **Only what the user changed is kept:** a field never changed is null and shows the song's own code, title and
+    tempo. A value changed back to the song's own is null again. The old page wrote the title and the tempo on
+    every visit and the code on every play: at the one-time reading a value that is the song's own is not taken for
+    a change.
+  - **Not following another tab, and nothing held between two visits:** the document is read when the page opens
+    the song (as the old streams were), so an editor is not changed under the writer's hands and no list of songs
+    grows in the Spine. A write is merged field by field. The storage page forgets the songs by their keys; a page
+    of a song open at that moment writes what it holds again with its next change.
+  - **What was kept before** is read once from the old four keys, each only when it could be read. A built-in
+    song's keys of another version are that release's and stay where they are; the storage page's "Songs" part
+    covers them and the new keys. A song's document put aside is the "Put aside" part's, so a reset of the songs
+    leaves it.
+  - **Not tested:** the song page's own lines that hand the code, title, tempo and bookmarks to `spine.songs` and
+    back; no spec draws `CodeSongPage`.
+
 ## Decided (the maintainer, 2026-11-10)
 
 - **One Spine.** "There should only be one global object if at all and components will find what they need through
@@ -273,7 +314,7 @@ after.
    - the walkthroughs (`KlangGuiDance`'s two keys, with step 4);
    - the looks and the tools' switch: **done** (`spine.looks`, `spine.settings.tools`);
    - the MIDI play code and setup: **done** (`MidiKept`);
-   - the songs (`SongStorage`, today built by the song page).
+   - the songs: **done** (`spine.songs`, a document per song).
 4. **The state held in the UI moves in:** `VisualsScreen`'s companion (`shown`, `open`, the tiles, the rain),
    `LearnSearch`, `KlangGuiDance`, and the top-level values `version` and `fs` (`KlangampDeck` moved with step 1).
 5. **KLANG-00413 on top** (the app's workbench parts, parts that draw their own label), which ends the values
@@ -333,3 +374,9 @@ after.
   NOT CLEAN, 1 MAJOR (the sections did not follow, so a rig that starts late played a stale play code and the next
   Apply wrote it over the user's last), 2 MINOR, 3 NIT; fixed: both follow. Round 2 (reviewer-high): CLEAN, 1 MINOR
   (two mutants of the reviewer's survived: the old draft's key) and 3 NIT applied. 24 of 24 mutants killed.
+- 2026-11-11: step 3, the songs: `spine.songs` (`SongKept`, one document per song), `SongStorage` gone; the
+  workshop's `KeyValueStore` lists its keys. First built with the release as a field of the document and a rule
+  that forgot a built-in song of an earlier release: review rounds 1 and 2 (reviewer-high) NOT CLEAN, a MAJOR each
+  (the rule could delete work). The maintainer chose the release in a built-in song's key ("Option B, go ahead").
+  Round 3 (reviewer-high): CLEAN, 3 MINOR (another song's key read as this one's; an earlier version's keys moved
+  where a copy is safer; ship with a version bump) and 1 NIT applied. 15 of 15 mutants killed.

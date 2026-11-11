@@ -53,6 +53,13 @@ class BrowserKeyValueStore(
         }
     }
 
+    override fun keys(): List<String> = try {
+        (0 until storage.length).mapNotNull { storage.key(it) }
+    } catch (e: Throwable) {
+        onProblem("Could not list the keys", e)
+        emptyList()
+    }
+
     /** The browser's `storage` event: for `localStorage`, fired in every other tab of the site when one writes, never in
      * the writer; a tab's `sessionStorage` has no other writer. */
     override fun watch(key: String, onChange: (text: String?) -> Unit): Unsubscribe {

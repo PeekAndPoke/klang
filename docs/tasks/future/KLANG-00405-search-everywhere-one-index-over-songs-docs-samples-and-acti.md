@@ -15,7 +15,7 @@ stays as it is today.
 - `LibraryDocSearch` (`KlangScriptLibraryDocsPage.kt`): terms and prefixes (`category:`, `tag:`, `function:`) over the
   KlangScript library's symbols.
 - `LearnSearch` (`LearnTracksColumn.kt`): the Learn column's search text, a stream.
-- The songs (the built-ins and the user's, `SongStorage`), the samples' index (`Samples.Index`), the key actions
+- The songs (the built-ins and the user's, `spine.songs` since KLANG-00422), the samples' index (`Samples.Index`), the key actions
   (`KlangKeyBindings`).
 
 ## What it finds (the maintainer's list, 2026-11-01, and proposals)
