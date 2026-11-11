@@ -1,6 +1,6 @@
 # KLANG-00431: Audit fixes 7: the shell and the wire (revived playbacks, restarts, leaks, sample decoding on both platforms, latency, replaceVoices)
 
-> **Status (2026-11-11): IN PROGRESS.** Fix worker started.
+> **Status (2026-11-11): PAUSED.** Landed; twelve decisions pending with the maintainer.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -234,3 +234,4 @@ timer. Suites green: `:audio_be:jvmTest` 3141, `:audio_be:jsBrowserTest` 2961, `
 
 - 2026-11-10: created.
 - 2026-11-11: IN PROGRESS. Fix worker started.
+- 2026-11-11: PAUSED. Landed; twelve decisions pending with the maintainer.
