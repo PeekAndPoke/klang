@@ -19,8 +19,8 @@ import kotlinx.serialization.builtins.serializer
  * Which tutorials the user marked as done, a part of the Spine (KLANG-00370, stored as a section since KLANG-00422);
  * [done] as a stream, so the Learn column, the tiles and the tutorial page show a lesson marked done at once.
  *
- * The one section that is no data class: the document's fields are the lessons' slugs, each with `true` or
- * `false`. A write merges fields, so a lesson done on one computer and another done on a second both stay; a
+ * A section that is no data class (the user's keys are the other): the document's fields are the lessons' slugs, each
+ * with `true` or `false`. A write merges fields, so a lesson done on one computer and another done on a second both stay; a
  * list of slugs in one field would keep only the later writer's. A mark taken back is `false`, not left out: a
  * write cannot remove a field.
  */

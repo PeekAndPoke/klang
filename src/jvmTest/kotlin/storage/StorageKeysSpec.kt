@@ -59,7 +59,8 @@ class StorageKeysSpec : StringSpec({
         StorageKeys.MASTER_VOLUME shouldBe "klang-master-volume"
     }
 
-    "the keymap's key stays as it is" {
+    "the user's keys keep their key, and the key they had before it" {
+        StorageKeys.USER_KEYS shouldBe "klang-keys"
         StorageKeys.KEYMAP shouldBe "klang-keymap"
     }
 
@@ -98,6 +99,8 @@ class StorageKeysSpec : StringSpec({
         val keys = listOf(
             StorageKeys.OUTPUT to "Master volume",
             StorageKeys.MASTER_VOLUME to "Master volume",
+            StorageKeys.USER_KEYS to "Keys",
+            StorageKeys.KEYMAP to "Keys",
             StorageKeys.WORKBENCH to "Workbench",
             StorageKeys.WORKBENCH_LAYOUT to "Workbench",
             StorageKeys.LAST_OPENED to "Last opened",

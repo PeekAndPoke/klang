@@ -41,7 +41,13 @@ object StorageKeys {
     /** Until KLANG-00422, read once into [OUTPUT]: the master volume, a linear gain from 0.0 to 1.0 (KLANG-00330). */
     const val MASTER_VOLUME = "klang-master-volume"
 
-    /** The keys the user gave Klang's actions, over the defaults (KLANG-00325). */
+    /**
+     * The keys the user gave Klang's actions, over the defaults (KLANG-00325), one document (KLANG-00422): each
+     * action's id with its keys, or `null` when put back to its defaults.
+     */
+    const val USER_KEYS = "klang-keys"
+
+    /** Until KLANG-00422, read once into [USER_KEYS]: the user's keys as one JSON object, no version. */
     const val KEYMAP = "klang-keymap"
 
     /** The look the user chose, a look's id (KLANG-00339). */
@@ -157,7 +163,7 @@ object StorageKeys {
         ) { it.endsWith(DocumentStorage.UNREADABLE) || it.endsWith(DocumentStorage.NEWER) },
         Part(name = "The look worn", about = "The look you chose last", covers = exactly(LOOK)),
         Part(name = "Master volume", about = "The Motor's output level", covers = exactly(OUTPUT, MASTER_VOLUME)),
-        Part(name = "Keys", about = "The keys you gave Klang's actions", precious = true, covers = exactly(KEYMAP)),
+        Part(name = "Keys", about = "The keys you gave Klang's actions", precious = true, covers = exactly(USER_KEYS, KEYMAP)),
         Part(
             name = "Editor",
             about = "The code highlights on or off, per sound event and their strength, quick help on hover",

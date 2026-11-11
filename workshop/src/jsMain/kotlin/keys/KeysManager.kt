@@ -3,6 +3,7 @@ package io.peekandpoke.klang.workshop.keys
 import io.peekandpoke.ultra.common.TypedKey
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.Element
@@ -306,6 +307,14 @@ class KeysManager(
         rebuild()
     }
 
+    /** The store's keys changed from elsewhere (another tab, a reset): they are the user's keys from now. */
+    private val unwatchStore: Unsubscribe = store.watch { kept ->
+        if (kept != userKeys) {
+            userKeys = kept
+            rebuild()
+        }
+    }
+
     //  HANDLERS  ///////////////////////////////////////////////////////////////////////////////////////////////
 
     /** Opens a layer over everything open before it; see [LayerHandle]. */
@@ -355,7 +364,7 @@ class KeysManager(
         return registered
     }
 
-    /** Stops listening; for tests and a page that goes for good. */
+    /** Stops listening, to the keys and to the store; for tests and a page that goes for good. */
     fun dispose() {
         target.removeEventListener("keydown", onKeyDown)
         target.removeEventListener("keydown", onHintKeyDown, true)
@@ -364,6 +373,7 @@ class KeysManager(
         target.removeEventListener("wheel", onPointer, true)
         target.removeEventListener("pointermove", onPointerMove, true)
         window.removeEventListener("blur", onBlur)
+        unwatchStore()
         hideHints()
         stopWaiting()
     }

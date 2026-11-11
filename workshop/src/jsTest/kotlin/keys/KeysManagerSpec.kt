@@ -5,6 +5,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
@@ -156,6 +157,64 @@ class KeysManagerSpec : StringSpec({
             registration.remove()
             keys.keymap().actions shouldContainExactly emptyList()
         }
+    }
+
+    "keys the store says changed from elsewhere are the user's keys at once, and are not written back" {
+        var kept = mapOf("play" to listOf("F5"))
+        var saves = 0
+        var tell: (Map<String, List<String>>) -> Unit = {}
+        var watching = false
+
+        val store = object : KeymapStore {
+            override fun load(): Map<String, List<String>> = kept
+
+            override fun save(userKeys: Map<String, List<String>>) {
+                kept = userKeys
+                saves++
+            }
+
+            override fun watch(onChange: (Map<String, List<String>>) -> Unit): Unsubscribe {
+                tell = onChange
+                watching = true
+
+                return { watching = false }
+            }
+        }
+
+        withManager(store = store) { keys, host ->
+            keys.define(bag)
+            var played = 0
+            keys.handle(play) { played++ }
+            val keymaps = mutableListOf<Keymap>()
+            val unsubscribe = keys.keymap.subscribeToStream { keymaps.add(it) }
+
+            try {
+                val before = keymaps.size
+                tell(mapOf("play" to listOf("F5")))
+                withClue("the keys it has already: no new keymap") { keymaps.size shouldBe before }
+
+                tell(mapOf("play" to listOf("F7")))
+                host.dispatchEvent(keyEvent(key = "F5", code = "F5"))
+                withClue("the old key is off") { played shouldBe 0 }
+
+                host.dispatchEvent(keyEvent(key = "F7", code = "F7"))
+                withClue("the key from elsewhere works") { played shouldBe 1 }
+                keys.labelOf(play) shouldBe "F7"
+                withClue("shown, not written back") { saves shouldBe 0 }
+
+                tell(emptyMap())
+                host.dispatchEvent(ctrlShiftEnter())
+                withClue("a reset elsewhere: the default key again") { played shouldBe 2 }
+
+                keys.setUserKeys(actionId = "stop", keys = listOf("F9"))
+                withClue("a change here builds on the keys from elsewhere") { kept shouldBe mapOf("stop" to listOf("F9")) }
+                watching shouldBe true
+            } finally {
+                unsubscribe()
+            }
+        }
+
+        withClue("a manager that is gone no longer listens to the store") { watching shouldBe false }
     }
 
     "the user's keys: the handler follows without registering again, and they are kept in the store" {

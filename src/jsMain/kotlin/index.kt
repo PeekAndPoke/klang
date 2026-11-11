@@ -14,7 +14,6 @@ import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.spine.Spine
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
-import io.peekandpoke.klang.storage.KeymapStorage
 import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
@@ -53,13 +52,19 @@ private val logging = run {
     consoleLog.captureUncaught()
 }
 
+/** The app's one Spine: built here, registered on the app, reached by every component as `spine` (KLANG-00422). */
+private val appSpine = Spine.inBrowser(console = consoleLog).also {
+    // The samples load while the user looks at the start page, as ever
+    it.player.preloadSamples()
+}
+
 private val keymapLog = Logger(area = LogArea.App, source = "Keymap")
 
 /**
- * Every key of the app (KLANG-00325): Klang's actions, the user's keys kept in localStorage, hints on a held Ctrl or Alt
+ * Every key of the app (KLANG-00325): Klang's actions, the user's keys kept by the Spine, hints on a held Ctrl or Alt
  * (Cmd or Option on a Mac; the maintainer, 2026-11-01).
  */
-val keysManager = KeysManager(store = KeymapStorage, hintTriggers = listOf("Mod", "Alt")).apply {
+val keysManager = KeysManager(store = appSpine.userKeys.store, hintTriggers = listOf("Mod", "Alt")).apply {
     define(KlangKeyBindings)
     // The code editor's keys: the editor runs them through EditorKeyTable, the user's keys included
     define(KlangEditorKeyBindings)
@@ -68,12 +73,6 @@ val keysManager = KeysManager(store = KeymapStorage, hintTriggers = listOf("Mod"
     keymap.subscribeToStream { keymap ->
         keymap.problems.forEach { keymapLog.error("A problem in the keymap: $it") }
     }
-}
-
-/** The app's one Spine: built here, registered on the app, reached by every component as `spine` (KLANG-00422). */
-private val appSpine = Spine.inBrowser(console = consoleLog).also {
-    // The samples load while the user looks at the start page, as ever
-    it.player.preloadSamples()
 }
 
 val kraft = kraftApp {

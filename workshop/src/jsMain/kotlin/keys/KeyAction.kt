@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.workshop.keys
 
+import io.peekandpoke.ultra.streams.Unsubscribe
+
 /**
  * Something the user can do by key: `Play`, `Stop`, `Undo`. Components ask for an action, never for a key; which key
  * triggers it is the [Keymap]'s business, so a hint always shows the key that is set, and the user can change it.
@@ -75,6 +77,12 @@ interface KeymapStore {
 
     /** Keeps [userKeys], all of them, replacing what was kept. */
     fun save(userKeys: Map<String, List<String>>)
+
+    /**
+     * Calls [onChange] with the user's keys whenever the store's keys change (another tab, a reset, also a [save]);
+     * the way to stop comes back. A store nothing else changes tells nothing, which is the default.
+     */
+    fun watch(onChange: (Map<String, List<String>>) -> Unit): Unsubscribe = {}
 
     /** Keeps the user's keys for as long as the page lives. */
     class InMemory(initial: Map<String, List<String>> = emptyMap()) : KeymapStore {

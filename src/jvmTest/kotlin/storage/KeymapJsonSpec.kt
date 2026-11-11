@@ -10,15 +10,14 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
 /**
- * The user's keys as stored text (KLANG-00325): there and back, and what an unreadable text or entry becomes.
+ * The user's keys as the text they were stored as until KLANG-00422: read, and what an unreadable text or entry
+ * becomes.
  */
 class KeymapJsonSpec : StringSpec({
 
-    "there and back, an empty list (every key taken off) included" {
-        val keys = mapOf("klang.stop" to listOf("F8", "Mod-Shift-."), "klang.play-or-update" to emptyList())
-
-        KeymapJson.write(keys) shouldBe """{"klang.stop":["F8","Mod-Shift-."],"klang.play-or-update":[]}"""
-        KeymapJson.read(KeymapJson.write(keys)) shouldBe keys
+    "the old text is read, an empty list (every key taken off) included" {
+        KeymapJson.read("""{"klang.stop":["F8","Mod-Shift-."],"klang.play-or-update":[]}""") shouldBe
+            mapOf("klang.stop" to listOf("F8", "Mod-Shift-."), "klang.play-or-update" to emptyList())
     }
 
     "an unreadable text is no keys at all" {

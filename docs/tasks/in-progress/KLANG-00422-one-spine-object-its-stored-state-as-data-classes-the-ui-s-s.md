@@ -113,7 +113,7 @@ This ticket holds the work that follows from the map. The map itself, with every
   - **The bench knows nothing of storage:** `BenchLayout` is the app's class, mapped to and from
     `KlangWorkbench.Layout` by two pure functions (`layouts/BenchLayouts.kt`). A height that is the bench's own is
     kept as null, so a changed default of the bench reaches everyone who never dragged the panel.
-  - **The lessons done are the one section that is no data class:** the document's fields are the slugs, so the
+  - **The lessons done are a section that is no data class** (the user's keys became the second): the document's fields are the slugs, so the
     merge works per lesson and two computers each keep theirs. A mark taken back is `false`, since a write cannot
     remove a field.
   - **The seed is written when it is made** (its default is no constant): `spine.seeds.metal` makes it when first
@@ -124,10 +124,30 @@ This ticket holds the work that follows from the map. The map itself, with every
     keeps for itself (`Spine.resetAllStored()`), which is in no list of the browser's keys.
   - **A part read without a listener:** Ultra's `distinct()` gives the last value it passed on, which with no
     listener is the one it was made with, so `spine.recents.entries()` read stale. `Stored.part` now gives the
-    part as it is when asked. Sent to Ultra-Main-Dev as a bug request on 2026-11-11 (the maintainer's word); the
-    ULTRA ticket number goes here when it comes back.
-  - **Left for their own slices:** the keymap, the looks and the tools' switch, the songs, the MIDI play code and
-    setup (with the laptop keys' layout), and the walkthroughs, which move with `KlangGuiDance` in step 4.
+    part as it is when asked. Sent to Ultra-Main-Dev as a bug request on 2026-11-11 (the maintainer's word): ULTRA-00302,
+    which also covers `cutoff()`, read the same way. `Stored.part` can use plain `distinct()` again once that is
+    released.
+  - **Left for their own slices:** the keymap (done, below), the looks and the tools' switch, the songs, the MIDI
+    play code and setup (with the laptop keys' layout), and the walkthroughs, which move with `KlangGuiDance` in
+    step 4.
+
+- **Step 3, the keymap (2026-11-11):** the keys the user gave Klang's actions are a stored section, `UserKeys`
+  (`spine.userKeys`), the user's, under `klang-keys`; the old `klang-keymap` is read once. `KeymapStorage` is gone,
+  `KeymapJson` keeps only its reader for the old key.
+  - **A field per action id** (`Map<String, List<String>?>`), so two tabs that change different actions both keep
+    theirs.
+  - **"Back to the defaults" is `null`:** a write cannot remove a field, and the key manager always saves all the
+    user's keys, so an action kept before and missing now is written as `null`. Every tab reads that the same way.
+  - **The key manager follows its store:** the workshop's `KeymapStore` has `watch` (a no-op by default), and
+    `KeysManager` takes the keys it is told when they differ from its own, without writing them back. So a key
+    changed in another tab works at once, and the storage page's reset puts the defaults back at once (before, the
+    keys stayed in memory and were written back with the next change).
+  - **An old text with nothing readable in it** stays under the old key; no document is made up.
+  - **Seen by the reviewer, in the machinery of the earlier slices, not changed:** `DocumentStorage.watch` shows
+    the text the browser's event carries, not what the store holds by then. A tab that writes between another
+    tab's write and the arrival of its event then shows the older text until its next change or a reload, though
+    the store holds both. One of the rare overlaps of two tabs the maintainer accepted; the cure, if wanted, is to
+    read the store when the event arrives.
 
 ## Decided (the maintainer, 2026-11-10)
 
@@ -180,7 +200,8 @@ after.
    are gone):
    - the editor's settings (`EditorSettings`, four keys), first, as the pattern: **done**;
    - the workbench's layout, the output volume, the recents, the tutorials finished, the metal's seed: **done**;
-   - the keymap (`KeymapJson` goes), the walkthroughs (`KlangGuiDance`'s two keys, with step 4);
+   - the keymap: **done** (`KeymapJson` stays as the old key's reader);
+   - the walkthroughs (`KlangGuiDance`'s two keys, with step 4);
    - the looks (`LookStorage` goes into `spine.looks`, `KlangLookText` as a serializer), the tools' switch;
    - the songs (`SongStorage`, today built by the song page), the MIDI play code and setup.
 4. **The state held in the UI moves in:** `VisualsScreen`'s companion (`shown`, `open`, the tiles, the rain),
@@ -228,3 +249,7 @@ after.
   output volume, what was opened last, the lessons done, the metal's seed. Review round 1 (reviewer-high): CLEAN, 4
   MINOR and 6 NIT; applied but one (no spec draws the app's `WorkbenchLayout`, so its two lines that hand the layout
   to the bench and back are untested, as before; the mapping itself is). 37 of 37 mutants killed.
+- 2026-11-11: the `distinct()` fault sent to Ultra (ULTRA-00302); the workshop's storage pieces stay here to be
+  battle tested (the maintainer).
+- 2026-11-11: step 3, the keymap: `UserKeys`, a field per action, `null` for "back to the defaults"; the key
+  manager follows its store. One review round, clean (2 MINOR, applied); 11 of 11 mutants killed.

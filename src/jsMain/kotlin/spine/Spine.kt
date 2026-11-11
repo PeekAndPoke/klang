@@ -53,6 +53,9 @@ class Spine(
     /** The tutorials the user marked as done. */
     val tutorials = Tutorials(stores = stores)
 
+    /** The keys the user gave Klang's actions: what the key manager keeps them in. */
+    val userKeys = UserKeys(stores = stores)
+
     /** The user's random seeds: the metal's. */
     val seeds = Seeds(stores = stores)
 
@@ -79,7 +82,8 @@ class Spine(
 
     /** Every stored section of the parts above. */
     private val sections: List<Stored<*>> =
-        settings.sections + recents.sections + tutorials.sections + seeds.sections + workbench.sections + player.sections
+        settings.sections + recents.sections + tutorials.sections + userKeys.sections + seeds.sections +
+            workbench.sections + player.sections
 
     /**
      * Forgets the stored sections kept under [key], if there are any: each shows its default at once (the storage

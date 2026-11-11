@@ -7,14 +7,14 @@ package io.peekandpoke.klang.storage
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 
 /**
- * The text form of the user's keys (KLANG-00325): a JSON object from action id to the list of keys,
- * `{"klang.stop": ["F8"]}`. In common code so its spec runs on the JVM; `KeymapStorage` keeps the text.
+ * The text form the user's keys had until KLANG-00422: a JSON object from action id to the list of keys,
+ * `{"klang.stop": ["F8"]}`. Only read, once, into the stored section (the Spine's `UserKeys`). Scaffolding: it goes
+ * with the old key. In common code so its spec runs on the JVM.
  */
 object KeymapJson {
 
@@ -38,8 +38,4 @@ object KeymapJson {
             }
         }.toMap()
     }
-
-    /** [userKeys] as text. */
-    fun write(userKeys: Map<String, List<String>>): String =
-        JsonObject(userKeys.mapValues { (_, keys) -> JsonArray(keys.map { JsonPrimitive(it) }) }).toString()
 }
