@@ -1,6 +1,6 @@
 # KLANG-00430: Audit fixes 6: the sources (band-limited edges, the impulse, sample interpolation and the last frame, the noises)
 
-> **Status (2026-11-11): PAUSED.** Landed; decisions pending with the maintainer (cost of the box and the cubic read, rate conversion, L3-03, L3-09 to L3-12, L3-16).
+> **Status (2026-11-11): IN PROGRESS.** Decisions pass: building what the maintainer decided on 2026-11-11.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -387,3 +387,4 @@ expected reason (the message matched), every file restored byte for byte, the fi
 - 2026-11-10: created.
 - 2026-11-10: IN PROGRESS. Started.
 - 2026-11-11: PAUSED. Landed; decisions pending with the maintainer (cost of the box and the cubic read, rate conversion, L3-03, L3-09 to L3-12, L3-16).
+- 2026-11-11: IN PROGRESS. Decisions pass: building what the maintainer decided on 2026-11-11.

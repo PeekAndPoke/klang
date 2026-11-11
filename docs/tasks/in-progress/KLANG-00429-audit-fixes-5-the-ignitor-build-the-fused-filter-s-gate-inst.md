@@ -1,6 +1,6 @@
 # KLANG-00429: Audit fixes 5: the Ignitor build (the fused filter's gate, instrument names, per-note buffers, the off stages' build cost)
 
-> **Status (2026-11-10): PAUSED.** Findings landed. Waiting for the maintainer: five decisions (see Decide).
+> **Status (2026-11-11): IN PROGRESS.** Decisions pass: building what the maintainer decided on 2026-11-11.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -183,3 +183,4 @@ burst test stays: it carries L2-06 (KLANG-00427) and the open L5-03.
 - 2026-11-10: created.
 - 2026-11-10: IN PROGRESS. Started.
 - 2026-11-10: PAUSED. Findings landed. Waiting for the maintainer: five decisions (see Decide).
+- 2026-11-11: IN PROGRESS. Decisions pass: building what the maintainer decided on 2026-11-11.
