@@ -29,7 +29,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | `src/commonMain/kotlin/ScheduledVoice.kt`              | Voice scheduling message (VoiceData + timing)  |
 | `src/commonMain/kotlin/MonoSamplePcm.kt`               | Decoded sample data (DoubleArray + metadata)   |
 | `src/commonMain/kotlin/infra/KlangCommLink.kt`         | Ring-buffer IPC; Cmd + Feedback sealed classes |
-| `src/commonMain/kotlin/KlangTime.kt`                   | expect/actual monotonic clock                  |
+| `src/commonMain/kotlin/KlangTime.kt`                   | expect/actual monotonic clock (in a worklet scope without `performance`: `Date.now()`, read once at start-up) |
 
 ### audio_be — DSP backend
 

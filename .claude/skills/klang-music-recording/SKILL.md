@@ -77,7 +77,8 @@ Since KLANG-00399 step 4 it runs the live playback path, driven instead of timed
    over the link
 4. Loops: `tick` with the backend's exact position, render one block, deliver the feedback (the playback's anchor);
    until the musical end, the tail and the output latency
-5. Calls `onBlock(StereoBuffer, frames)` for each block with the engine's clipped float output; the buffer is
+5. Calls `onBlock(StereoBuffer, frames)` for each block with the engine's clipped float output, the engine's latency
+   at the head trimmed (the first block handed out may hold fewer frames; KLANG-00431 D11); the buffer is
    reused, so a caller copies what it keeps (caller decides what to do with the audio)
 
 A pattern query that fails makes `render` fail. The engine-only harness `KlangAudioRenderer` stays for the benchmarks

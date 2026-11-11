@@ -219,7 +219,7 @@ Ignitor.supersaw(55, x => x.voices(7))
 | Knob          | On                | Meaning                                                                                    |
 |---------------|-------------------|--------------------------------------------------------------------------------------------|
 | `color`       | `whitenoise`      | Spectral tilt −1..1: `0` flat (default), `<0` darken toward pink/brown, `>0` brighten      |
-| `leak`        | `brownnoise`      | Per-sample white-leak (default 0.02): lower = deeper/slower brown, higher = brighter       |
+| `leak`        | `brownnoise`      | White-leak per sample at 48 kHz, scaled to the device's rate (default 0.02): lower = deeper/slower brown, higher = brighter       |
 | `rate`        | `perlin`/`berlin` | Walk speed per second: `1` is 144 noise cells a second (default) at every sample rate        |
 | `octaves`     | `perlin`/`berlin` | fBm octaves: `1` plain (default, perf-neutral), higher = more fractal detail (capped at 8) |
 | `persistence` | `perlin`/`berlin` | fBm amplitude falloff per octave (default 0.5; lower = quieter upper octaves)              |
@@ -234,7 +234,7 @@ Ignitor.supersaw(55, x => x.voices(7))
 
 | Method                                    | Description                     |
 |-------------------------------------------|---------------------------------|
-| `Ignitor.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `feedback` (0.996, the loop feedback per pass), `brightness` (0.5), `pickPosition` (0.5), `stiffness` (0), `analog` |
+| `Ignitor.pluck(freq?, configure?)`      | Karplus-Strong plucked string; knobs `feedback` (0.996, the loop feedback per pass), `brightness` (0.5), `pickPosition` (0.28), `stiffness` (0), `analog` |
 | `Ignitor.superpluck(freq?, configure?)` | Unison plucked strings; adds `voices` (8), `spread` (0.2) and `analogSpread` (1): `Ignitor.superpluck(x => x.voices(6).feedback(0.995))` |
 
 ### Utility

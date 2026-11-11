@@ -11,7 +11,7 @@ gone is removed when someone notices, not kept for history.
 
 - **Raw Motor**: no defensive checks in the inner math, no safety clamps on user-facing params;
   defend at integration points (`ShapingFuncs.kt`, the KDoc at the top).
-- **Reverb's `+ ANTI_DENORMAL` is a deliberate exception** to the engine-wide `flushDenormal()`
+- **Reverb's `+ ANTI_DENORMAL` is a deliberate exception** to the engine-wide `flushState()`
   convention; the consistent version cost about +11 % per sample and was reverted 2026-05-19.
 - **The SVF's feedback is never capped with a tanh.** Two saturation attempts that did that failed and were
   reverted. What exists instead: lowpass and highpass at `analog > 0` take the diode-pair damping path in

@@ -124,6 +124,11 @@ frame. Work moves, timing does not.
 
 ### 6. A second ring for sample uploads
 
+**Overtaken 2026-11-11 (KLANG-00431 D5):** a sample now crosses as one `Cmd.Sample.Complete` whose PCM buffer is
+transferred; `toChunks`, `sampleUploadBuffer` and the chunk drip are gone, and `pump()` copies one PCM per sample on
+the main thread. What is left of this idea: whether that copy should leave the `sendControl` call stack. The text
+below describes the state before.
+
 Not latency on its own, but it keeps `pump()` bounded. Today a `Sample.Complete` arriving means
 `toChunks` runs its multi-megabyte split inside the `sendControl` call stack. Route `Cmd.Sample` to
 its own ring, let `pump()` drain only musical commands, and leave the timer draining samples at its
