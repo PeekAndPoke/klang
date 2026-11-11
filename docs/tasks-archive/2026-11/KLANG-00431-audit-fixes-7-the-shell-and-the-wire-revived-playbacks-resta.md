@@ -1,6 +1,6 @@
 # KLANG-00431: Audit fixes 7: the shell and the wire (revived playbacks, restarts, leaks, sample decoding on both platforms, latency, replaceVoices)
 
-> **Status (2026-11-11): PAUSED.** Landed; twelve decisions pending with the maintainer.
+> **Status (2026-11-11): DONE.** the shell and wire decisions are built; sample memory is KLANG-00440, D7 is parked
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -331,3 +331,4 @@ and the root `:compileKotlinJs` build.
 - 2026-11-10: created.
 - 2026-11-11: IN PROGRESS. Fix worker started.
 - 2026-11-11: PAUSED. Landed; twelve decisions pending with the maintainer.
+- 2026-11-11: DONE. the shell and wire decisions are built; sample memory is KLANG-00440, D7 is parked

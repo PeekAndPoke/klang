@@ -1,6 +1,6 @@
 # KLANG-00420: DSP stack review: the whole engine, layer by layer, with probes that stay
 
-> **Status (2026-11-10): IN PROGRESS.** Started: the three small probes first (hot-path lint, dead-knob finder, stage probe).
+> **Status (2026-11-11): DONE.** the audit, its fixes, the decisions passes and the closing measurement run are done; what is left is listed under 'Closed 2026-11-11'
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -316,6 +316,36 @@ Notes so far (each report also ends in a section "For the audit ruleset"):
   from the reports.
 - Reproductions kept as gated specs give every fix its guard for free.
 
+- Decisions belong in passes: after the fixes, the maintainer's answers were built in four passes (A sources, B1
+  stages, B2 shell and wire, C filter envelope and metric), each by one writer and reviewed and rerun by the
+  coordinator. A pass that changes the sound says so and names the corpus rows it moves.
+- A closing measurement run on the final tree found one click the fixes had brought (`reverb.lowpass`): rerun every
+  probe at the end, not only the ones a fix names.
+- Twice the auditor's or the coordinator's proposed design was wrong when measured (the 16/32 frame grid for the
+  filter envelope, "no production caller" of `scheduleVoice`): the writer measures before building and may replace
+  the design, with numbers.
+
+## Closed 2026-11-11: what is left, and where
+
+Every finding is fixed, decided or has a home. Left, each with its home:
+
+- The JVM decoders' rate conversion: KLANG-00438. The phaser's feedback door: KLANG-00439. Sample memory: KLANG-00440.
+  Optimizations (the gate through `Variants`, the noise cost with L3-16, the compressor items): KLANG-00437.
+- Showing a failed playback and the new counts in the UI (poison seen, crushed, refused sends, the note ring counts
+  in the warehouse panel): KLANG-00407, another session's.
+- The vowel table (L7b-02), deferred by the maintainer ("They need tweaking later"); D7, the phone measurement, parked.
+  Neither has a ticket: taken up with the next vowel or mobile work.
+- By ear, the maintainer's: the songs after the sound changes (pick position, the one distort law, the filter
+  envelope); the sprudel editor's pluck presets (Guitar and Pizzicato sit at pick 0.5, hollow now).
+- Published text now untrue: `src/jsMain/resources/whitepaper/fig-source-families.html` says flank 2 samples and
+  pick 0.5 (now 1 and 0.28). The `KlangScriptIgnitor` example still writes `pickPosition(0.5)`.
+- Measured and not explained: the superpluck about 4 % dearer since the rings are rented; `distort:hard` at amount 3
+  27 to 29 % dearer on the JVM (one run); the static SVF rows 2 to 5 % dearer since the knots; the first activation
+  of a 10 s delay at 87 % of a block (one sample). A rented line holds 32 KB for its 20 KB (power-of-two classes).
+- Not measured: the Node song profile, the browser's cost of diagnostics and denormals, a filter envelope inside an
+  oversampling region, the cost of the note-off at stop (estimate only).
+- The hot-path lint flags `ResourceWarehouse.stockDelayRings` (warm-up only): the lint's scope, not the code.
+
 ## Decide before starting (the list as proposed)
 
 1. **Depth**: the full sweep (about 10 to 12 agents, a real share of a week's budget), or first only the layers
@@ -517,3 +547,4 @@ every offset, and the quote described the block law pass C retired.
 - 2026-11-11: decisions pass C: the aliasing meter's healthy limit, judged on the health page.
 - 2026-11-11: closing measurement run: every probe and reproduction rerun into `docs/audio-audit/2026-11-11/`, verdicts updated, page rebuilt; the corpus is red against the pre-audit reference, not accepted.
 - 2026-11-11: after the closing run: the `reverb.lowpass` click fixed (the damping glides on its pole), the stale L4-02 reproductions deleted.
+- 2026-11-11: DONE. the audit, its fixes, the decisions passes and the closing measurement run are done; what is left is listed under 'Closed 2026-11-11'

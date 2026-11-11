@@ -1,6 +1,6 @@
 # KLANG-00433: Audit fixes 9: docs and KDoc that say what the code does not do, dead code, and the tests the audit found missing
 
-> **Status (2026-11-11): PAUSED.** Landed; nine decisions pending with the maintainer.
+> **Status (2026-11-11): DONE.** all doc decisions built; the phaser's feedback door is KLANG-00439
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -323,3 +323,4 @@ What the fix worker of pass B2 built of this ticket's decisions. No change moves
 - 2026-11-10: created.
 - 2026-11-11: IN PROGRESS. Fix worker started.
 - 2026-11-11: PAUSED. Landed; nine decisions pending with the maintainer.
+- 2026-11-11: DONE. all doc decisions built; the phaser's feedback door is KLANG-00439

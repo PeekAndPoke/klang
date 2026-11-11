@@ -1,6 +1,6 @@
 # KLANG-00425: Audit fixes 1: no pattern crashes or silences the engine (the render's safety net, non-finite inputs, the duck)
 
-> **Status (2026-11-10): PAUSED.** 10 of 13 fixed and landed; L6-01, L8-04, N2 and showing a failed playback in the UI wait for the maintainer (Decide).
+> **Status (2026-11-11): DONE.** all findings fixed or decided; the decisions built in the passes of 2026-11-11
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -90,3 +90,4 @@ Filled by the fixer (2026-11-10). The rest of the ticket landed without these.
 - 2026-11-10: created.
 - 2026-11-10: IN PROGRESS. Started.
 - 2026-11-10: PAUSED. 10 of 13 fixed and landed; L6-01, L8-04, N2 and showing a failed playback in the UI wait for the maintainer (Decide).
+- 2026-11-11: DONE. all findings fixed or decided; the decisions built in the passes of 2026-11-11

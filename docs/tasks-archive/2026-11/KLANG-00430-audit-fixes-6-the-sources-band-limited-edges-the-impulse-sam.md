@@ -1,6 +1,6 @@
 # KLANG-00430: Audit fixes 6: the sources (band-limited edges, the impulse, sample interpolation and the last frame, the noises)
 
-> **Status (2026-11-11): PAUSED.** The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
+> **Status (2026-11-11): DONE.** all source decisions built; the JVM rate converter is KLANG-00438, L3-16 is in KLANG-00437
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -476,3 +476,4 @@ Gestrandet +0.64 dB. The shimmer ring and the drive read move no song (none has 
 - 2026-11-11: PAUSED. Landed; decisions pending with the maintainer (cost of the box and the cubic read, rate conversion, L3-03, L3-09 to L3-12, L3-16).
 - 2026-11-11: IN PROGRESS. Decisions pass: building what the maintainer decided on 2026-11-11.
 - 2026-11-11: PAUSED. The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
+- 2026-11-11: DONE. all source decisions built; the JVM rate converter is KLANG-00438, L3-16 is in KLANG-00437

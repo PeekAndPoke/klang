@@ -1,6 +1,6 @@
 # KLANG-00429: Audit fixes 5: the Ignitor build (the fused filter's gate, instrument names, per-note buffers, the off stages' build cost)
 
-> **Status (2026-11-11): PAUSED.** The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
+> **Status (2026-11-11): DONE.** the shimmer's ring is sized and the per-note rings are rented from the warehouse; the gate through Variants is in KLANG-00437
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -317,3 +317,4 @@ hand), and the mutant is KILLED (second campaign, with the spec's other two muta
 - 2026-11-11: IN PROGRESS. Decisions pass: building what the maintainer decided on 2026-11-11.
 - 2026-11-11: PAUSED. The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
 - 2026-11-11: the per-note rings pooled (L5-03 option (a), planned with the maintainer and built).
+- 2026-11-11: DONE. the shimmer's ring is sized and the per-note rings are rented from the warehouse; the gate through Variants is in KLANG-00437

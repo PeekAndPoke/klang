@@ -1,6 +1,6 @@
 # KLANG-00432: Audit fixes 8: the per-note stages (the filter envelope's grid, fastExp, the doors' soft cap, non-finite samples, the house stage)
 
-> **Status (2026-11-11): PAUSED.** Landed; eight decisions pending with the maintainer.
+> **Status (2026-11-11): DONE.** the filter envelope's knots, the one distort law, the cutoff clamp, the crushed count are built
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -457,3 +457,4 @@ whole render (its change is in the attacks).
 - 2026-11-11: IN PROGRESS. Fix worker started.
 - 2026-11-11: PAUSED. Landed; eight decisions pending with the maintainer.
 - 2026-11-11: decisions pass C: L4-02 (the filter envelope's knots) and L4-05 (the doors on the fused law) built; see the section.
+- 2026-11-11: DONE. the filter envelope's knots, the one distort law, the cutoff clamp, the crushed count are built

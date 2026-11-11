@@ -1,6 +1,6 @@
 # KLANG-00428: Audit fixes 4: the bus (switch-on and swap clicks, long delay rings, compressor, reverb lowpass, vowel, phaser, duck order)
 
-> **Status (2026-11-10): PAUSED.** Second pass landed (answers 4, 5, 6). Open: the fade's length, the delay ring's bound, the vowel table, and the second pass's five notes.
+> **Status (2026-11-11): DONE.** the feed fade, the delay bound, the warm rings, the compressor snap and the reverb's gliding damping are built; the vowel table is deferred by the maintainer
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -466,3 +466,4 @@ or do not move their knobs).
 - 2026-11-10: PAUSED. 22 of 29 findings fixed, pinned or accepted with a reason. Waiting for the maintainer: seven decisions (see Decide).
 - 2026-11-10: IN PROGRESS. Second pass: the maintainer's answers 4, 5, 6.
 - 2026-11-10: PAUSED. Second pass landed (answers 4, 5, 6). Open: the fade's length, the delay ring's bound, the vowel table, and the second pass's five notes.
+- 2026-11-11: DONE. the feed fade, the delay bound, the warm rings, the compressor snap and the reverb's gliding damping are built; the vowel table is deferred by the maintainer

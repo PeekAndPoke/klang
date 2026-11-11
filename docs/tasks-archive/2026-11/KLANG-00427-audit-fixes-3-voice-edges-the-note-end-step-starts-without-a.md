@@ -1,6 +1,6 @@
 # KLANG-00427: Audit fixes 3: voice edges (the note-end step, starts without an envelope, cuts, the one-frame-early onset, stop)
 
-> **Status (2026-11-10): PAUSED.** Nine of twelve findings landed. Waiting for the maintainer: L2-05, L2-06, L2-07 (see Decide).
+> **Status (2026-11-11): DONE.** notes release at stop, a held voice is cut after 20 s; L2-05 and L2-06 accepted
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -159,3 +159,4 @@ after it kink 1.13 and -105.8 dB. The supersine: 8.74 and -69.0 dB before, 0.99 
 - 2026-11-10: created.
 - 2026-11-10: IN PROGRESS. Started.
 - 2026-11-10: PAUSED. Nine of twelve findings landed. Waiting for the maintainer: L2-05, L2-06, L2-07 (see Decide).
+- 2026-11-11: DONE. notes release at stop, a held voice is cut after 20 s; L2-05 and L2-06 accepted

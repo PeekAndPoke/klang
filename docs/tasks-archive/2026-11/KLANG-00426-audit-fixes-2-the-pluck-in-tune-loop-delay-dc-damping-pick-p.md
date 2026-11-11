@@ -1,6 +1,6 @@
 # KLANG-00426: Audit fixes 2: the pluck in tune (loop delay, DC, damping, pick position)
 
-> **Status (2026-11-11): PAUSED.** The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
+> **Status (2026-11-11): DONE.** the real pick position is built (default 0.28); the lossless allpass read was not built
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -154,3 +154,4 @@ section of this pass.
 - 2026-11-10: PAUSED. L3-01 and L3-06 fixed and landed; L3-07 (the read's interpolation) moves to KLANG-00430 with the sample player's kernel; L3-08 (what pickPosition means, its default by ear) waits for the maintainer.
 - 2026-11-11: IN PROGRESS. Decisions pass: building what the maintainer decided on 2026-11-11.
 - 2026-11-11: PAUSED. The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
+- 2026-11-11: DONE. the real pick position is built (default 0.28); the lossless allpass read was not built
