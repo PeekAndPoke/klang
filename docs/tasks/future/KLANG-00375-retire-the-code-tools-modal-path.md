@@ -10,7 +10,8 @@ Since KLANG-00374 step 3 the editor's tools show in the Sprudel tab only, embedd
 in a modal any more, except two fallbacks no sprudel tool reaches: the Sprudel tab's `render` branch for a tool that
 is not `KlangUiToolEmbeddable`, and the sequence editor's atom-modal button (`CodeToolModal`) for a non-embeddable atom
 tool. Reachable only through them (review of step 3, 2026-10-27): every tool's modal `render` branch,
-`ToolButtonBar`, `KlangToolAutoUpdate` and its stored key `klang-tool-auto-update` (`StorageKeys.kt`),
+`ToolButtonBar`, `KlangToolAutoUpdate` with its stored section (`spine.settings.tools` and `attachTools`, the key
+`klang-tools` and the old `klang-tool-auto-update` in `StorageKeys.kt`, since KLANG-00422),
 `CodeToolModal`.
 
 ## Decide before implementing

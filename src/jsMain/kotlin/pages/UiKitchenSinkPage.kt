@@ -24,7 +24,6 @@ import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.SongDeck
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.state.LastOpened
-import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangBackLink
 import io.peekandpoke.klang.ui.comp.KlangButton
@@ -211,7 +210,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                 put("margin-bottom", "36px")
             }
 
-            KlangLookPicker(onChosen = { LookStorage.save(it) })
+            KlangLookPicker(onChosen = { spine.looks.wear(it) })
         }
     }
 
@@ -806,7 +805,7 @@ class UiKitchenSinkPage(ctx: NoProps) : PureComponent(ctx) {
                                 onOpen = {},
                             )
                         },
-                        loadouts = { KlangLookPicker(onChosen = { LookStorage.save(it) }) },
+                        loadouts = { KlangLookPicker(onChosen = { spine.looks.wear(it) }) },
                     )
                 }
             }

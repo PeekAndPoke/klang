@@ -8,6 +8,8 @@ package io.peekandpoke.klang.ui.feel
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.Unsubscribe
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Every look there is, built-in and the user's own, and which are equipped (KLANG-00382): what the drawer's LOOK row
@@ -75,12 +77,13 @@ object KlangLookShelf : Stream<KlangLookShelf.State> {
         update { state -> state.copy(own = state.own.filter { it.id != id }, loadout = state.loadout.without(id)) }
     }
 
-    /** An id no look has yet, for a new one of the user's own. */
-    fun newId(): String {
-        val taken = invoke().all.map { it.id }.toSet()
-
-        return generateSequence(1) { it + 1 }.map { "own-$it" }.first { it !in taken }
-    }
+    /**
+     * An id no look has, for a new one of the user's own: `own-` and a random UUID, so it repeats neither on another
+     * shelf (a second tab, a second computer of the same user) nor after a look was deleted. Looks made before
+     * KLANG-00422 keep their counted ids (`own-3`).
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    fun newId(): String = "own-${Uuid.random()}"
 
     private fun update(change: (State) -> State) {
         source(change(source()))

@@ -10,7 +10,6 @@ import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlateComposition
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangCloseKey
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangSwatchButton
@@ -402,7 +401,7 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
                     pressed = preset == chosen,
                     onClick = {
                         KlangTheme.choose(preset)
-                        LookStorage.save(preset)
+                        spine.looks.wear(preset)
                     },
                 )
             }

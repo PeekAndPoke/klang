@@ -53,6 +53,9 @@ class Spine(
     /** The tutorials the user marked as done. */
     val tutorials = Tutorials(stores = stores)
 
+    /** The user's looks: the one worn, the slots, the looks of the user's own. */
+    val looks = Looks(stores = stores)
+
     /** The keys the user gave Klang's actions: what the key manager keeps them in. */
     val userKeys = UserKeys(stores = stores)
 
@@ -82,7 +85,7 @@ class Spine(
 
     /** Every stored section of the parts above. */
     private val sections: List<Stored<*>> =
-        settings.sections + recents.sections + tutorials.sections + userKeys.sections + seeds.sections +
+        settings.sections + recents.sections + tutorials.sections + looks.sections + userKeys.sections + seeds.sections +
             workbench.sections + player.sections
 
     /**

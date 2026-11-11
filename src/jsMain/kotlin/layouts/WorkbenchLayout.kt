@@ -17,7 +17,6 @@ import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.pages.docs.tutorials.LearnSearch
 import io.peekandpoke.klang.spine.UiWork
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangDrawer
 import io.peekandpoke.klang.ui.comp.KlangLookPicker
@@ -238,7 +237,7 @@ class WorkbenchLayout(ctx: Ctx<Props>) : Component<WorkbenchLayout.Props>(ctx) {
                         loadouts = {
                             KlangLookPicker(
                                 onChosen = {
-                                    LookStorage.save(it)
+                                    spine.looks.wear(it)
 
                                     // The Looks walkthrough goes on with any look picked: a lit look the user took
                                     // off the drawer cannot hold it up

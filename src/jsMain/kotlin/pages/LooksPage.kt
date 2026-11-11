@@ -18,7 +18,6 @@ import io.peekandpoke.klang.pages.docs.tutorials.soundDesignBasicsTrack
 import io.peekandpoke.klang.spine.Playbacks
 import io.peekandpoke.klang.spine.SongDeck
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangGauge
@@ -244,7 +243,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         val look = if (dirty) apply() else selected
 
         KlangTheme.choose(look)
-        LookStorage.save(look)
+        spine.looks.wear(look)
         KlangTheme.preview(draft)
     }
 
@@ -298,7 +297,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
                         if (KlangTheme.worn.id == look.id) {
                             KlangTheme.choose(KlangLooks.Classic)
-                            LookStorage.save(KlangLooks.Classic)
+                            spine.looks.wear(KlangLooks.Classic)
                         }
 
                         select(KlangTheme.worn)

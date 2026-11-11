@@ -64,8 +64,16 @@ class StorageKeysSpec : StringSpec({
         StorageKeys.KEYMAP shouldBe "klang-keymap"
     }
 
-    "the look's key stays as it is" {
+    "the looks keep their keys, and the keys they had before them" {
+        StorageKeys.LOOK_CHOICE shouldBe "klang-look-choice"
+        StorageKeys.OWN_LOOKS shouldBe "klang-own-looks"
         StorageKeys.LOOK shouldBe "klang-look"
+        StorageKeys.LOOKS shouldBe "klang-looks"
+    }
+
+    "the code tools' settings keep their key, and the key the widgets kept before it" {
+        StorageKeys.TOOLS shouldBe "klang-tools"
+        StorageKeys.TOOL_AUTO_UPDATE shouldBe "klang-tool-auto-update"
     }
 
     "the editor's settings keep their key, and the keys they had before it" {
@@ -101,6 +109,12 @@ class StorageKeysSpec : StringSpec({
             StorageKeys.MASTER_VOLUME to "Master volume",
             StorageKeys.USER_KEYS to "Keys",
             StorageKeys.KEYMAP to "Keys",
+            StorageKeys.LOOK_CHOICE to "The look worn",
+            StorageKeys.LOOK to "The look worn",
+            StorageKeys.OWN_LOOKS to "Your own looks",
+            StorageKeys.LOOKS to "Your own looks",
+            StorageKeys.TOOLS to "Code tools",
+            StorageKeys.TOOL_AUTO_UPDATE to "Code tools",
             StorageKeys.WORKBENCH to "Workbench",
             StorageKeys.WORKBENCH_LAYOUT to "Workbench",
             StorageKeys.LAST_OPENED to "Last opened",

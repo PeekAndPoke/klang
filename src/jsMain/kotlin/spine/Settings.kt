@@ -8,9 +8,12 @@ package io.peekandpoke.klang.spine
 import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.klang.spine.storage.Stored
 import io.peekandpoke.klang.state.EditorSettings
+import io.peekandpoke.klang.state.ToolSettings
 import io.peekandpoke.klang.storage.StorageKeys
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.workshop.storage.DocumentStorage
 import io.peekandpoke.klang.workshop.storage.KeyValueStore
+import io.peekandpoke.ultra.streams.Unsubscribe
 
 /**
  * The user's settings (KLANG-00422), each kind a stored section of its own: a component reads
@@ -57,6 +60,21 @@ class Settings(stores: SectionStores) {
                     .keys.mapNotNull { fields[it] }.toSet(),
             )
         }
+
+        /**
+         * The tools' switch as `klangui` kept it itself until KLANG-00422: `true` or `false` under its own key.
+         * Scaffolding, as [editorBefore].
+         */
+        private fun toolsBefore(store: KeyValueStore): DocumentStorage.Legacy<ToolSettings>? {
+            val kept = store.read(StorageKeys.TOOL_AUTO_UPDATE) ?: return null
+
+            return DocumentStorage.Legacy(
+                // On unless switched off, as a text that is neither was read before
+                value = ToolSettings(autoUpdate = kept != "false"),
+                keys = listOf(StorageKeys.TOOL_AUTO_UPDATE),
+                chosen = setOf("autoUpdate"),
+            )
+        }
     }
 
     /** The editor: the code highlights on or off, per sound event and their strength, the quick help on hover. */
@@ -71,5 +89,29 @@ class Settings(stores: SectionStores) {
         legacy = ::editorBefore,
     )
 
-    internal val sections: List<Stored<*>> = listOf(editor)
+    /** The code tools: whether a tool writes each change into the code at once. */
+    val tools = Stored(
+        key = StorageKeys.TOOLS,
+        version = 1,
+        serializer = ToolSettings.serializer(),
+        default = ToolSettings(),
+        store = stores.user,
+        legacy = ::toolsBefore,
+    )
+
+    internal val sections: List<Stored<*>> = listOf(editor, tools)
+
+    /**
+     * Ties the tools' kept switch to the widgets' one (`klangui`'s [KlangToolAutoUpdate], which knows nothing of
+     * storage), once, at the app's start: the switch shows what is kept and follows it (another tab, a reset), and a
+     * press on it is kept. The way to untie comes back.
+     */
+    fun attachTools(): Unsubscribe {
+        val unsubscribes = listOf(
+            tools.part { it.autoUpdate }.subscribeToStream { KlangToolAutoUpdate.set(it) },
+            KlangToolAutoUpdate.subscribeToStream { on -> tools.update { it.copy(autoUpdate = on) } },
+        )
+
+        return { unsubscribes.forEach { it() } }
+    }
 }

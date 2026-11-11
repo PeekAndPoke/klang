@@ -14,9 +14,6 @@ import io.peekandpoke.klang.workshop.storage.DocumentStorage
  * The browsers of our users hold values under these keys today, their songs among them: a key that changes loses what
  * is stored under it, so `StorageKeysSpec` pins each one. They live in common code so that spec runs on the JVM; the
  * storage that reads and writes them is `src/jsMain/kotlin/storage/` and, for the Spine's parts, `spine/storage/`.
- *
- * One key lives outside the app: `klang-tool-auto-update`, kept by `KlangToolAutoUpdate` in the `klangui` module,
- * which cannot reach the app's code.
  */
 object StorageKeys {
 
@@ -50,11 +47,26 @@ object StorageKeys {
     /** Until KLANG-00422, read once into [USER_KEYS]: the user's keys as one JSON object, no version. */
     const val KEYMAP = "klang-keymap"
 
-    /** The look the user chose, a look's id (KLANG-00339). */
+    /** The look worn and the equipped slots, one document (KLANG-00422): `LookChoice`. */
+    const val LOOK_CHOICE = "klang-look-choice"
+
+    /** The user's own looks, one document (KLANG-00422): each look's id with an `OwnLook`, or `null` when deleted. */
+    const val OWN_LOOKS = "klang-own-looks"
+
+    /** Until KLANG-00422, read once into [LOOK_CHOICE]: the look the user chose, a look's id (KLANG-00339). */
     const val LOOK = "klang-look"
 
-    /** The user's own looks and the equipped slots, as JSON (KLANG-00382). */
+    /**
+     * Until KLANG-00422, read once into [OWN_LOOKS] and [LOOK_CHOICE]: the user's own looks and the equipped slots,
+     * as JSON (KLANG-00382).
+     */
     const val LOOKS = "klang-looks"
+
+    /** The code tools' settings, one document (KLANG-00422): `ToolSettings`. */
+    const val TOOLS = "klang-tools"
+
+    /** Until KLANG-00422, read once into [TOOLS]: the tools' auto-update switch, kept by `klangui` itself. */
+    const val TOOL_AUTO_UPDATE = "klang-tool-auto-update"
 
     /** The editor's settings, one document (KLANG-00422): `EditorSettings`, in the Spine's envelope. */
     const val EDITOR = "klang-editor"
@@ -152,16 +164,26 @@ object StorageKeys {
         },
         Part(
             name = "Your own looks",
-            about = "The looks you made and the eight equipped",
+            about = "The looks you made",
             precious = true,
-            covers = exactly(LOOKS),
+            covers = exactly(OWN_LOOKS, LOOKS),
         ),
         Part(
             name = "Put aside",
             about = "What a Klang of this browser could not read, or read only in part, kept as it was",
             precious = true,
         ) { it.endsWith(DocumentStorage.UNREADABLE) || it.endsWith(DocumentStorage.NEWER) },
-        Part(name = "The look worn", about = "The look you chose last", covers = exactly(LOOK)),
+        Part(
+            name = "The look worn",
+            about = "The look you chose last and the looks equipped",
+            precious = true,
+            covers = exactly(LOOK_CHOICE, LOOK),
+        ),
+        Part(
+            name = "Code tools",
+            about = "Whether a tool writes each change into the code at once",
+            covers = exactly(TOOLS, TOOL_AUTO_UPDATE),
+        ),
         Part(name = "Master volume", about = "The Motor's output level", covers = exactly(OUTPUT, MASTER_VOLUME)),
         Part(name = "Keys", about = "The keys you gave Klang's actions", precious = true, covers = exactly(USER_KEYS, KEYMAP)),
         Part(

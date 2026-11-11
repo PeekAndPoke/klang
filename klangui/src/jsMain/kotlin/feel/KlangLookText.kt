@@ -50,20 +50,32 @@ object KlangLookText {
         }
 
         val values = (json["values"] as? JsonObject).orEmpty().mapNotNull { (name, value) ->
-            val role = KlangRole.ofCssVar(name) ?: return@mapNotNull null
             val text = (value as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull ?: return@mapNotNull null
 
-            if (role.accepts(text)) role to text else null
+            name to text
         }.toMap()
 
-        return KlangLookPreset(
+        return own(
             id = id ?: json.string("id") ?: return null,
-            name = cleanName(json.string("name").orEmpty()),
+            name = json.string("name").orEmpty(),
+            author = json.string("author").orEmpty(),
             values = values,
-            author = json.string("author").orEmpty().take(AUTHOR_MAX),
-            own = true,
         )
     }
+
+    /**
+     * A look of the user's own from its parts, as an app kept them: [values] by CSS variable. What a look may not
+     * hold is put right as [fromJson] does it: a value no role accepts is left out, the name cleaned, the author cut.
+     */
+    fun own(id: String, name: String, author: String, values: Map<String, String>): KlangLookPreset = KlangLookPreset(
+        id = id,
+        name = cleanName(name),
+        values = values.mapNotNull { (cssVar, text) ->
+            KlangRole.ofCssVar(cssVar)?.takeIf { it.accepts(text) }?.let { it to text }
+        }.toMap(),
+        author = author.take(AUTHOR_MAX),
+        own = true,
+    )
 
     /** A pasted look under [id]; null when [text] is not one. */
     fun decode(text: String, id: String): KlangLookPreset? {

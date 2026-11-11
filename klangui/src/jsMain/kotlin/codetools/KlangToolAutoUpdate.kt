@@ -8,12 +8,14 @@ package io.peekandpoke.klang.ui.codetools
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.Unsubscribe
-import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
-import kotlinx.serialization.builtins.serializer
 
+/**
+ * Whether a code tool writes each change into the code at once, or waits for its Update button; one switch for all
+ * tools, on until someone says otherwise. It holds the value for as long as the page lives and knows nothing of
+ * storage: an app that wants it remembered listens to it and gives it what it kept ([set]).
+ */
 object KlangToolAutoUpdate : Stream<Boolean> {
     private val source = StreamSource(true)
-        .persistInLocalStorage("klang-tool-auto-update", Boolean.serializer())
 
     override fun invoke(): Boolean = source()
 
@@ -21,5 +23,12 @@ object KlangToolAutoUpdate : Stream<Boolean> {
 
     fun toggle() {
         source(!source())
+    }
+
+    /** The switch [on] or off: what the app kept, or what another tab chose. */
+    fun set(on: Boolean) {
+        if (on != source()) {
+            source(on)
+        }
     }
 }

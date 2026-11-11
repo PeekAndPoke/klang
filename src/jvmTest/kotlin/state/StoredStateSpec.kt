@@ -49,6 +49,29 @@ class StoredStateSpec : StringSpec({
         BenchLayout(bottomHeight = 120.0, pinned = setOf("help")).inRange() shouldBe BenchLayout(bottomHeight = 120.0, pinned = setOf("help"))
     }
 
+    "the look worn with the slots, a look of the user's own, the tools' switch" {
+        val choice = LookChoice(worn = "own-1", slots = listOf("own-1", null, "classic"))
+        val choiceText = json.encodeToString(LookChoice.serializer(), choice)
+
+        choiceText shouldBe """{"worn":"own-1","slots":["own-1",null,"classic"]}"""
+        json.decodeFromString(LookChoice.serializer(), choiceText) shouldBe choice
+        withClue("a first visit: no look chosen, the slots never arranged") {
+            json.decodeFromString(LookChoice.serializer(), "{}") shouldBe LookChoice(worn = null, slots = null)
+        }
+
+        val look = OwnLook(name = "Rust", author = "Someone", values = mapOf("--kl-accent" to "#b04fd6"))
+        val lookText = json.encodeToString(OwnLook.serializer(), look)
+
+        lookText shouldBe """{"name":"Rust","author":"Someone","values":{"--kl-accent":"#b04fd6"}}"""
+        json.decodeFromString(OwnLook.serializer(), lookText) shouldBe look
+        json.decodeFromString(OwnLook.serializer(), "{}") shouldBe OwnLook(name = "", author = "", values = emptyMap())
+
+        json.encodeToString(ToolSettings.serializer(), ToolSettings(autoUpdate = false)) shouldBe """{"autoUpdate":false}"""
+        withClue("a first visit: a tool writes each change at once") {
+            json.decodeFromString(ToolSettings.serializer(), "{}") shouldBe ToolSettings(autoUpdate = true)
+        }
+    }
+
     "what was opened last" {
         val opened = LastOpened(
             entries = listOf(

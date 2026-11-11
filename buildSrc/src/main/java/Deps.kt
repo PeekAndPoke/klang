@@ -121,10 +121,6 @@ object Deps {
         private const val excelkt_version = "1.0.2"
         const val excelkt = "io.github.evanrupert:excelkt:$excelkt_version"
 
-        // https://mvnrepository.com/artifact/com.benasher44/uuid
-        private const val uuid_version = "0.8.4"
-        const val uuid = "com.benasher44:uuid:$uuid_version"
-
         // https://mvnrepository.com/artifact/io.github.g0dkar/qrcode-kotlin
         private const val qrcode_version = "4.5.0"
         const val qrcode = "io.github.g0dkar:qrcode-kotlin:$qrcode_version"

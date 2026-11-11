@@ -28,6 +28,21 @@ class KlangLookTextSpec : StringSpec({
         pasted shouldBe look.copy(id = "own-9")
     }
 
+    "a look from the parts an app kept: a value no role accepts and a name no role has dropped, the name cleaned" {
+        KlangLookText.own(
+            id = "own-4",
+            name = "  A rather long name ",
+            author = "x".repeat(60),
+            values = mapOf("--kl-accent" to "#b04fd6", "--kl-focus" to "url(evil)", "--kl-nope" to "#ffffff"),
+        ) shouldBe KlangLookPreset(
+            id = "own-4",
+            name = "A rather l",
+            values = mapOf(KlangRole.Accent to "#b04fd6"),
+            author = "x".repeat(40),
+            own = true,
+        )
+    }
+
     "the store's JSON keeps the id" {
         val look = KlangLookPreset(id = "own-1", name = "Mine", values = emptyMap(), own = true)
 

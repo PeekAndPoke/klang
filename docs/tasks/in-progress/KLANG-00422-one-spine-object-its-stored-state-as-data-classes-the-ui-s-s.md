@@ -125,8 +125,10 @@ This ticket holds the work that follows from the map. The map itself, with every
   - **A part read without a listener:** Ultra's `distinct()` gives the last value it passed on, which with no
     listener is the one it was made with, so `spine.recents.entries()` read stale. `Stored.part` now gives the
     part as it is when asked. Sent to Ultra-Main-Dev as a bug request on 2026-11-11 (the maintainer's word): ULTRA-00302,
-    which also covers `cutoff()`, read the same way. `Stored.part` can use plain `distinct()` again once that is
-    released.
+    which also covers `cutoff()`, read the same way. Fixed on Ultra's master (bb30ad30, 2026-11-11), not released
+    yet. With the Ultra version that has it: `Stored.part` goes back to plain `distinct()`; and the same release
+    makes a value written by a handler during a publish win (ULTRA-00307), which is the fault `persist` writes
+    first to avoid, so its comment and the note for Ultra are to be read again then.
   - **Left for their own slices:** the keymap (done, below), the looks and the tools' switch, the songs, the MIDI
     play code and setup (with the laptop keys' layout), and the walkthroughs, which move with `KlangGuiDance` in
     step 4.
@@ -148,6 +150,53 @@ This ticket holds the work that follows from the map. The map itself, with every
     tab's write and the arrival of its event then shows the older text until its next change or a reload, though
     the store holds both. One of the rare overlaps of two tabs the maintainer accepted; the cure, if wanted, is to
     read the store when the event arrives.
+
+- **Step 3, the looks and the tools' switch (2026-11-11):** `spine.looks` keeps the look worn, the equipped slots
+  and the looks of the user's own; `spine.settings.tools` keeps the code tools' auto-update switch. `LookStorage`
+  is gone, and `klangui` no longer stores anything itself.
+
+  | Section | Data class | Scope | Key (old key read once) | Follows another tab |
+  |---|---|---|---|---|
+  | The look worn and the slots | `LookChoice` | the user | `klang-look-choice` (`klang-look`, the slots of `klang-looks`) | no |
+  | The own looks | a map from a look's id to `OwnLook` | the user | `klang-own-looks` (the looks of `klang-looks`) | no |
+  | The code tools | `ToolSettings` | the user | `klang-tools` (`klang-tool-auto-update`) | yes |
+
+  - **The widgets stay the owners, as decided:** `KlangTheme`, `KlangLookShelf` and `KlangToolAutoUpdate` are
+    `klangui`'s and know nothing of storage. The Spine ties itself to them once, at the app's start
+    (`looks.attach(firstVisit)`, `settings.attachTools()`, both called in `index.kt`): what is kept goes onto the
+    shelf, the theme and the switch, what they become is kept, and a reset on the storage page shows at once. A
+    Spine that is never attached (a spec's) leaves the widgets alone.
+  - **A tab keeps its look until it is loaded again** (the maintainer, 2026-11-11: "Keep the look per tab until
+    reload"): the two look sections do not follow another tab. A look chosen, made, changed or deleted elsewhere
+    shows after a reload; what this tab writes is still merged field by field, so it does not undo the other
+    tab's. The tools' switch follows, as the other settings do.
+  - **The own looks are a field per look**, so two tabs that each change or delete a different look both keep
+    theirs; a deleted look is `null`.
+  - **A new look's id is `own-` and a random UUID** (the maintainer, 2026-11-11: "Yes use the stdlib uuid";
+    `kotlin.uuid.Uuid`, in `KlangLookShelf.newId`). Before, it was the next free `own-N` on the tab's own shelf: two
+    tabs that do not follow each other gave two looks the same id, and the later replaced the earlier for good; and
+    a deleted look's id was given again. Looks made before keep their counted ids. The unused `com.benasher44:uuid`
+    line is gone from `Deps.kt`.
+  - **The slots are one field** (a list): of two tabs that arrange them, the later one wins. Slots never arranged
+    are kept as `null`, so a change of the looks equipped by default reaches everyone who never arranged theirs.
+    On the storage page the slots are now with "The look worn", which asks before a reset as "Your own looks" does.
+  - **A change the shelf makes is kept, never shown back** (review round 1, MAJOR): the page that deletes or
+    changes the look worn tells the theme itself. A look kept as worn that the page does not have (its looks reset,
+    a built-in look of a newer build) stays kept, and the page wears the first-visit look meanwhile.
+  - **A look the shelf holds as it is kept is not rewritten** (review round 2): a value this build cannot take (a
+    role of a newer build) is not on the shelf, and a page that merely starts no longer drops it from the document.
+    A look changed on this page is kept as this page holds it.
+  - **The old text of the looks holds two sections' worth**, so it is forgotten only once both are kept (review
+    round 1, MAJOR): a document that could not be written leaves it for the next start. Old keys still there when
+    both documents are kept (a write that failed once and was made good later) go at the next start.
+  - **The look worn is kept when told** (`looks.wear(look)`, where `LookStorage.save` was called); the theme is
+    still changed by the widget or the page that lets the user choose.
+  - **No hand-written JSON in the app:** `OwnLook` holds a look's values by CSS variable; `klangui` builds the look
+    from those parts and puts right what a look may not hold (`KlangLookText.own`, the same rules a pasted look
+    goes through). `KlangLookText` itself stays for copy and paste.
+  - **Stricter on what was kept before:** an old text of the looks with an entry that is no object is not read at
+    all and stays under its key (the old reader left the entry out).
+  - **D2, the look drafts, is still open** and untouched.
 
 ## Decided (the maintainer, 2026-11-10)
 
@@ -202,7 +251,7 @@ after.
    - the workbench's layout, the output volume, the recents, the tutorials finished, the metal's seed: **done**;
    - the keymap: **done** (`KeymapJson` stays as the old key's reader);
    - the walkthroughs (`KlangGuiDance`'s two keys, with step 4);
-   - the looks (`LookStorage` goes into `spine.looks`, `KlangLookText` as a serializer), the tools' switch;
+   - the looks and the tools' switch: **done** (`spine.looks`, `spine.settings.tools`);
    - the songs (`SongStorage`, today built by the song page), the MIDI play code and setup.
 4. **The state held in the UI moves in:** `VisualsScreen`'s companion (`shown`, `open`, the tiles, the rain),
    `LearnSearch`, `KlangGuiDance`, and the top-level values `version` and `fs` (`KlangampDeck` moved with step 1).
@@ -253,3 +302,8 @@ after.
   battle tested (the maintainer).
 - 2026-11-11: step 3, the keymap: `UserKeys`, a field per action, `null` for "back to the defaults"; the key
   manager follows its store. One review round, clean (2 MINOR, applied); 11 of 11 mutants killed.
+- 2026-11-11: step 3, the looks and the tools' switch: `spine.looks` (the look worn with the slots, the own looks a
+  field each), `spine.settings.tools`; the look per tab until reload, a new look's id a UUID (both the maintainer).
+  Review round 1 (reviewer-high): NOT CLEAN, 2 MAJOR (a deleted worn look put on the first-visit look and stayed
+  kept as worn; a failed write in the one-time reading lost the own looks), 3 MINOR, 1 NIT; fixed. Round 2
+  (reviewer-high): CLEAN, 3 MINOR applied. 39 of 39 compiling mutants killed (one of 40 did not compile and was rewritten).

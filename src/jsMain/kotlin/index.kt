@@ -14,7 +14,6 @@ import io.peekandpoke.klang.spine.ConsoleLog
 import io.peekandpoke.klang.spine.Spine
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
-import io.peekandpoke.klang.storage.LookStorage
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.codemirror.KlangEditorKeyBindings
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
@@ -104,11 +103,13 @@ val version = VersionController()
 fun main() {
     // Read CSS custom properties and establish the active look-and-feel before render
     KlangTheme.initialize()
-    // The user's own looks and the equipped slots (KLANG-00382), then the look the user chose last time (KLANG-00339)
-    LookStorage.restoreShelf()
-    // A first visit, nothing kept, wears Sun, gold on the start page (the maintainer, 2026-10-28: "Ok on the golden
-    // start page"); not stored, so a later first-visit look reaches everyone who never chose one
-    KlangTheme.choose(LookStorage.load() ?: KlangLooks.Sun)
+    // The user's own looks and the equipped slots (KLANG-00382), then the look the user chose last time (KLANG-00339),
+    // as the Spine keeps them. A first visit, nothing kept, wears Sun, gold on the start page (the maintainer,
+    // 2026-10-28: "Ok on the golden start page"); not stored, so a later first-visit look reaches everyone who never
+    // chose one
+    appSpine.looks.attach(firstVisit = KlangLooks.Sun)
+    // The code tools' auto-update switch, kept by the Spine too
+    appSpine.settings.attachTools()
     // The brushed metal's tile for the parts that wear it, painted once (KLANG-00366)
     KlangBrushedMetal.install(seed = appSpine.seeds.metal)
     // The buttons' grain from the same seed: the user's own sheet of metal
