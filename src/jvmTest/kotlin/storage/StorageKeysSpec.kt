@@ -48,6 +48,9 @@ class StorageKeysSpec : StringSpec({
             StorageKeys.MIDI_INSTRUMENT_DRAFT shouldBe "klang-midi-instrument-draft"
             StorageKeys.MIDI_PLAY_CODE shouldBe "klang-midi-play-code"
             StorageKeys.MIDI_LOADOUT shouldBe "klang-midi-loadout"
+            StorageKeys.MIDI_KEY_LAYOUT shouldBe "klang-midi-key-layout"
+            StorageKeys.MIDI_PLAY shouldBe "klang-midi-play"
+            StorageKeys.MIDI_DESK shouldBe "klang-midi-desk"
         }
 
         withClue("the tutorials") {
@@ -115,6 +118,13 @@ class StorageKeysSpec : StringSpec({
             StorageKeys.LOOKS to "Your own looks",
             StorageKeys.TOOLS to "Code tools",
             StorageKeys.TOOL_AUTO_UPDATE to "Code tools",
+            StorageKeys.MIDI_PLAY to "MIDI play code",
+            StorageKeys.MIDI_PLAY_CODE to "MIDI play code",
+            StorageKeys.MIDI_INSTRUMENTS to "MIDI play code",
+            StorageKeys.MIDI_INSTRUMENT_DRAFT to "MIDI play code",
+            StorageKeys.MIDI_DESK to "MIDI setup",
+            StorageKeys.MIDI_LOADOUT to "MIDI setup",
+            StorageKeys.MIDI_KEY_LAYOUT to "MIDI setup",
             StorageKeys.WORKBENCH to "Workbench",
             StorageKeys.WORKBENCH_LAYOUT to "Workbench",
             StorageKeys.LAST_OPENED to "Last opened",

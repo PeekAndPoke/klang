@@ -72,6 +72,22 @@ class StoredStateSpec : StringSpec({
         }
     }
 
+    "the MIDI play code and this machine's MIDI setup" {
+        json.encodeToString(MidiPlay.serializer(), MidiPlay(code = "x => x")) shouldBe """{"code":"x => x"}"""
+        withClue("a first visit: no play code of the user's") {
+            json.decodeFromString(MidiPlay.serializer(), "{}") shouldBe MidiPlay(code = null)
+        }
+
+        val desk = MidiDesk(loadout = listOf("lead", "\"saw\""), keyLayout = "French")
+        val text = json.encodeToString(MidiDesk.serializer(), desk)
+
+        text shouldBe """{"loadout":["lead","\"saw\""],"keyLayout":"French"}"""
+        json.decodeFromString(MidiDesk.serializer(), text) shouldBe desk
+        withClue("a first visit: an empty loadout, the layout Automatic") {
+            json.decodeFromString(MidiDesk.serializer(), "{}") shouldBe MidiDesk(loadout = emptyList(), keyLayout = null)
+        }
+    }
+
     "what was opened last" {
         val opened = LastOpened(
             entries = listOf(

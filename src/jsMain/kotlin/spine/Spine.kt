@@ -44,8 +44,11 @@ class Spine(
     /** The user's settings, each kind a stored section. */
     val settings = Settings(stores = stores)
 
+    /** What the MIDI rig and the MIDI settings keep: the play code, this machine's loadout and laptop keys' layout. */
+    private val midiKept = MidiKept(stores = stores)
+
     /** The MIDI playground's settings: the laptop keys' layout and letters, the key bed's offset. */
-    val midiSettings = MidiSettings()
+    val midiSettings = MidiSettings(kept = midiKept)
 
     /** What was opened lately: the songs and the lessons the Motor's menu offers. */
     val recents = Recents(stores = stores)
@@ -72,7 +75,7 @@ class Spine(
     val player = Player(stores = stores)
 
     /** What plays: the song deck, the previews, the live MIDI rig, and what holds the stage. */
-    val playbacks = Playbacks(engine = player)
+    val playbacks = Playbacks(engine = player, midi = midiKept)
 
     /** Klang Amp's deck: the built-in songs played from the visuals. */
     val klangamp = KlangampDeck(playbacks = playbacks)
@@ -86,7 +89,7 @@ class Spine(
     /** Every stored section of the parts above. */
     private val sections: List<Stored<*>> =
         settings.sections + recents.sections + tutorials.sections + looks.sections + userKeys.sections + seeds.sections +
-            workbench.sections + player.sections
+            workbench.sections + player.sections + midiKept.sections
 
     /**
      * Forgets the stored sections kept under [key], if there are any: each shows its default at once (the storage

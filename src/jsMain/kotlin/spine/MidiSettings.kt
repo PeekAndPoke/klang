@@ -8,7 +8,7 @@ package io.peekandpoke.klang.spine
 import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.midi.KeyLayout
-import io.peekandpoke.klang.spine.storage.MidiSettingsStorage
+import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.combinedWith
@@ -22,16 +22,19 @@ private val log = Logger(area = LogArea.Midi, source = "MidiSettings")
  * say which letters a drawing prints (D9; what plays goes by the keys' positions), and the device keybed's alignment
  * ([keyBedOffset]). Shared by every drawing of the rig, the MIDI page's and the MIDI tool's.
  */
-class MidiSettings {
+class MidiSettings(
+    /** Where the layout chosen is kept, this machine's; the default lives and dies with these settings (a spec's). */
+    private val kept: MidiKept = MidiKept(stores = SectionStores.inMemory()),
+) {
 
-    private val layoutSource = StreamSource(MidiSettingsStorage.loadLayout())
-
-    /** The layout chosen by hand; null for "Automatic" (the browser's map where it has one, else learned key by key). */
-    val layout: Stream<KeyLayout?> = layoutSource
+    /**
+     * The layout chosen by hand; null for "Automatic" (the browser's map where it has one, else learned key by key),
+     * and for a name no layout has (one from another version).
+     */
+    val layout: Stream<KeyLayout?> = kept.desk.part { desk -> KeyLayout.entries.firstOrNull { it.name == desk.keyLayout } }
 
     fun chooseLayout(layout: KeyLayout?) {
-        layoutSource(layout)
-        MidiSettingsStorage.saveLayout(layout)
+        kept.desk.update { it.copy(keyLayout = layout?.name) }
     }
 
     /** The browser's own letters by key position, where it tells them (Chrome, Edge); null elsewhere. */

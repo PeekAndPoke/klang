@@ -198,6 +198,26 @@ This ticket holds the work that follows from the map. The map itself, with every
     all and stays under its key (the old reader left the entry out).
   - **D2, the look drafts, is still open** and untouched.
 
+- **Step 3, the MIDI play code and setup (2026-11-11):** `MidiKept`, built with the Spine and handed to the MIDI
+  rig and the MIDI settings, holds two sections. The four storage objects with their hand-written JSON are gone.
+
+  | Section | Data class | Scope | Key (old keys read once) | Follows another tab |
+  |---|---|---|---|---|
+  | The play code | `MidiPlay` | the user | `klang-midi-play` (`klang-midi-play-code`; before it the saved instruments and the draft) | yes |
+  | The loadout and the laptop keys' layout | `MidiDesk` | this machine | `klang-midi-desk` (`klang-midi-loadout`, `klang-midi-key-layout`) | yes |
+
+  - **Both follow another tab** (review round 1, MAJOR; first written as not following): the old storage was read
+    when the rig started, which is made on first use, so a rig that starts late played the play code applied last
+    in any tab. A section read only when the Spine is built would play a stale one there, and the next Apply or
+    sound chosen would write it over the user's last. A rig that runs is not changed by another tab's play code: it
+    reads it when it starts. The loadout and the layout show another tab's change at once.
+  - **Built with the Spine, not with the rig**, so the storage page forgets a section whether the rig ran or not. A
+    reset shows at once in the layout and the loadout; the rig plays its play code until the page is loaded again.
+  - **The instruments saved before the one play code** become one play code once, as before. Their two keys now go
+    when the play code is kept, also where it was made from them by an earlier build (they stayed for ever
+    before); a text that cannot be read stays. Only the page's own old default: nothing is kept, and its key stays.
+  - **The storage page** has one part "MIDI setup" where "MIDI loadout" and "Laptop keys' layout" were.
+
 ## Decided (the maintainer, 2026-11-10)
 
 - **One Spine.** "There should only be one global object if at all and components will find what they need through
@@ -252,7 +272,8 @@ after.
    - the keymap: **done** (`KeymapJson` stays as the old key's reader);
    - the walkthroughs (`KlangGuiDance`'s two keys, with step 4);
    - the looks and the tools' switch: **done** (`spine.looks`, `spine.settings.tools`);
-   - the songs (`SongStorage`, today built by the song page), the MIDI play code and setup.
+   - the MIDI play code and setup: **done** (`MidiKept`);
+   - the songs (`SongStorage`, today built by the song page).
 4. **The state held in the UI moves in:** `VisualsScreen`'s companion (`shown`, `open`, the tiles, the rain),
    `LearnSearch`, `KlangGuiDance`, and the top-level values `version` and `fs` (`KlangampDeck` moved with step 1).
 5. **KLANG-00413 on top** (the app's workbench parts, parts that draw their own label), which ends the values
@@ -307,3 +328,8 @@ after.
   Review round 1 (reviewer-high): NOT CLEAN, 2 MAJOR (a deleted worn look put on the first-visit look and stayed
   kept as worn; a failed write in the one-time reading lost the own looks), 3 MINOR, 1 NIT; fixed. Round 2
   (reviewer-high): CLEAN, 3 MINOR applied. 39 of 39 compiling mutants killed (one of 40 did not compile and was rewritten).
+- 2026-11-11: step 3, the MIDI play code and setup: `MidiKept` (the play code the user's; the loadout and the laptop
+  keys' layout this machine's, one document), handed to the rig and the settings. Review round 1 (reviewer-high):
+  NOT CLEAN, 1 MAJOR (the sections did not follow, so a rig that starts late played a stale play code and the next
+  Apply wrote it over the user's last), 2 MINOR, 3 NIT; fixed: both follow. Round 2 (reviewer-high): CLEAN, 1 MINOR
+  (two mutants of the reviewer's survived: the old draft's key) and 3 NIT applied. 24 of 24 mutants killed.

@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.spine
 
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
+import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.steady
@@ -20,7 +21,11 @@ import io.peekandpoke.ultra.streams.ops.ticker
  * what plays now for the visuals and Klang Amp ([nowPlaying]), and [live] play, the MIDI rig. The sounds' lane is still
  * to come.
  */
-class Playbacks(private val engine: PlaybackEngine) {
+class Playbacks(
+    private val engine: PlaybackEngine,
+    /** What the MIDI rig keeps; the default lives and dies with these playbacks (a spec's). */
+    private val midi: MidiKept = MidiKept(stores = SectionStores.inMemory()),
+) {
 
     companion object {
         /** How often [heardSeconds] looks at the playback: a second's change shows within a quarter of a second. */
@@ -38,7 +43,7 @@ class Playbacks(private val engine: PlaybackEngine) {
      * nothing and stopped by nothing but a panic. Made on first use; brought up by what first shows it, or at the app's
      * start where MIDI was granted before ([MidiRig.start], [MidiRig.connectIfGranted]).
      */
-    val live: MidiRig by lazy { MidiRig(engine = engine) }
+    val live: MidiRig by lazy { MidiRig(engine = engine, kept = midi) }
 
     /**
      * Snapshot of whatever is considered the "primary" playback across the app.

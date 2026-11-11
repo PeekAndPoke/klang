@@ -18,7 +18,9 @@ import io.peekandpoke.klang.midi.MidiPlayCode
 import io.peekandpoke.klang.midi.SourceId
 import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.klang.storage.StorageKeys
-import kotlinx.browser.localStorage
+import io.peekandpoke.klang.workshop.storage.MemoryKeyValueStore
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 
 /**
  * The MIDI rig (KLANG-00402, step 4): what it lights, by source, as the drawings show it. A rig of the spec's own, started
@@ -29,16 +31,14 @@ class MidiRigSpec : StringSpec({
     /** The engine every rig of this spec plays on: one, as the app has one. Never started: no case calls `startEngine()`. */
     val engine = Player(stores = SectionStores.inMemory())
 
-    /** This browser's own play code, to put back after a row that applies. */
-    fun keptPlayCode(): String? = localStorage.getItem(StorageKeys.MIDI_PLAY_CODE)
+    /** A rig on [store], a browser's storage of the spec's own: the user's and the machine's in one. */
+    fun rigOn(store: MemoryKeyValueStore) = MidiRig(
+        engine = engine,
+        kept = MidiKept(stores = SectionStores(user = store, machine = store, tab = MemoryKeyValueStore())),
+    )
 
-    fun putBack(kept: String?) {
-        if (kept == null) {
-            localStorage.removeItem(StorageKeys.MIDI_PLAY_CODE)
-        } else {
-            localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, kept)
-        }
-    }
+    /** The play code's document as it is kept, holding [code]. */
+    fun playKept(code: String) = """{"v":1,"data":{"code":${Json.encodeToString(String.serializer(), code)}}}"""
 
     /** The next instrument key (the laptop's `]`), pressed and let go. */
     fun step(rig: MidiRig) {
@@ -160,93 +160,82 @@ class MidiRigSpec : StringSpec({
     }
 
     "the play code: its instruments, what a key plays, one chosen or stepped to; one that fails keeps the one before" {
-        // An apply keeps its play code for the next visit: this browser's own is put back
-        val kept = keptPlayCode()
-        val rig = MidiRig(engine = engine)
+        val store = MemoryKeyValueStore()
+        val rig = rigOn(store)
 
-        try {
-            rig.apply("let lead = Ign.saw()\nlet n = 3\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
+        rig.apply("let lead = Ign.saw()\nlet n = 3\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
 
-            withClue("its instruments: the lets holding an Ignitor; it plays its function's sound") {
-                rig.state().instruments shouldBe listOf("lead", "pad")
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
-                rig.state().playCodeError shouldBe null
-            }
+        withClue("its instruments: the lets holding an Ignitor; it plays its function's sound") {
+            rig.state().instruments shouldBe listOf("lead", "pad")
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
+            rig.state().playCodeError shouldBe null
+        }
 
-            rig.apply("x => x.sound(")
+        rig.apply("x => x.sound(")
 
-            withClue("one that fails: said, the one before plays on") {
-                rig.state().playCodeError shouldNotBe null
-                rig.state().instruments shouldBe listOf("lead", "pad")
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
-            }
+        withClue("one that fails: said, the one before plays on") {
+            rig.state().playCodeError shouldNotBe null
+            rig.state().instruments shouldBe listOf("lead", "pad")
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
+        }
 
-            step(rig)
+        step(rig)
 
-            withClue("a step after one that failed: from the one that plays; the user's text and its error kept") {
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("pad")
-                rig.state().playCodeError shouldNotBe null
-                rig.state().playCode shouldBe "x => x.sound("
-            }
+        withClue("a step after one that failed: from the one that plays; the user's text and its error kept") {
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("pad")
+            rig.state().playCodeError shouldNotBe null
+            rig.state().playCode shouldBe "x => x.sound("
+        }
 
-            rig.apply("let lead = Ign.saw()\n\n3")
+        rig.apply("let lead = Ign.saw()\n\n3")
 
-            withClue("one that ends in no function: said") { rig.state().playCodeError.shouldNotBeNull() shouldContain "ends in a function" }
+        withClue("one that ends in no function: said") { rig.state().playCodeError.shouldNotBeNull() shouldContain "ends in a function" }
 
-            rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead).gain(0.5)")
-            rig.choose(MidiPlayCode.Sound.BuiltIn("pluck"))
+        rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead).gain(0.5)")
+        rig.choose(MidiPlayCode.Sound.BuiltIn("pluck"))
 
-            withClue("a built-in chosen: in the place of the sound a key plays, the rest kept") {
-                rig.state().playCode.trim().lines().last() shouldBe "x => x.sound(\"pluck\").gain(0.5)"
-                rig.state().sound shouldBe MidiPlayCode.Sound.BuiltIn("pluck")
-            }
+        withClue("a built-in chosen: in the place of the sound a key plays, the rest kept") {
+            rig.state().playCode.trim().lines().last() shouldBe "x => x.sound(\"pluck\").gain(0.5)"
+            rig.state().sound shouldBe MidiPlayCode.Sound.BuiltIn("pluck")
+        }
 
-            step(rig)
+        step(rig)
 
-            withClue("the next instrument key: the one after it") {
-                rig.state().sound shouldBe MidiPlayCode.Sound.BuiltIn("superpluck")
-            }
+        withClue("the next instrument key: the one after it") {
+            rig.state().sound shouldBe MidiPlayCode.Sound.BuiltIn("superpluck")
+        }
 
-            rig.apply("let lead = Ign.saw()\n\nx => x.gain(0.5)")
-            rig.choose(MidiPlayCode.Sound.Own("lead"))
+        rig.apply("let lead = Ign.saw()\n\nx => x.gain(0.5)")
+        rig.choose(MidiPlayCode.Sound.Own("lead"))
 
-            withClue("no sound to choose in: said, the code as it was") {
-                rig.state().playCode.trim().lines().last() shouldBe "x => x.gain(0.5)"
-                rig.state().playCodeError.shouldNotBeNull() shouldContain "name its sound"
-            }
-        } finally {
-            putBack(kept)
+        withClue("no sound to choose in: said, the code as it was") {
+            rig.state().playCode.trim().lines().last() shouldBe "x => x.gain(0.5)"
+            rig.state().playCodeError.shouldNotBeNull() shouldContain "name its sound"
         }
     }
 
     "a reload plays the play code the user applied; a first visit's is not saved, so it stays the app's" {
-        val kept = keptPlayCode()
+        val store = MemoryKeyValueStore()
 
-        try {
-            localStorage.removeItem(StorageKeys.MIDI_PLAY_CODE)
+        val first = rigOn(store)
 
-            val first = MidiRig(engine = engine)
+        first.start()
 
-            first.start()
+        withClue("a first visit: the app's play code plays, nothing saved") {
+            first.state().sound shouldBe MidiPlayCode.Sound.Own("warmSaw")
+            store.read(StorageKeys.MIDI_PLAY) shouldBe null
+        }
 
-            withClue("a first visit: the app's play code plays, nothing saved") {
-                first.state().sound shouldBe MidiPlayCode.Sound.Own("warmSaw")
-                localStorage.getItem(StorageKeys.MIDI_PLAY_CODE) shouldBe null
-            }
+        store.write(key = StorageKeys.MIDI_PLAY, text = playKept("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)"))
 
-            localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, "let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
+        val rig = rigOn(store)
 
-            val rig = MidiRig(engine = engine)
+        rig.start()
 
-            rig.start()
-
-            withClue("the play code the user applied plays, and shows") {
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
-                rig.state().playCode shouldBe rig.state().playing
-                rig.state().playCodeError shouldBe null
-            }
-        } finally {
-            putBack(kept)
+        withClue("the play code the user applied plays, and shows") {
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
+            rig.state().playCode shouldBe rig.state().playing
+            rig.state().playCodeError shouldBe null
         }
     }
 
@@ -264,175 +253,171 @@ class MidiRigSpec : StringSpec({
     }
 
     "a reload whose play code fails now: the text comes back, its error said, never an empty editor" {
-        val kept = keptPlayCode()
+        val store = MemoryKeyValueStore()
         val failing = "let lead = Ign.saw().lowpas(1800)\n\nx => x.sound(lead)"
 
-        try {
-            localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, failing)
+        store.write(key = StorageKeys.MIDI_PLAY, text = playKept(failing))
 
-            val rig = MidiRig(engine = engine)
+        val rig = rigOn(store)
 
-            rig.start()
+        rig.start()
 
-            withClue("the text back, its error said") {
-                rig.state().playCode shouldBe failing
-                rig.state().playCodeError shouldNotBe null
-            }
-        } finally {
-            putBack(kept)
+        withClue("the text back, its error said") {
+            rig.state().playCode shouldBe failing
+            rig.state().playCodeError shouldNotBe null
         }
     }
 
     "a step saves nothing: the stored play code stays the user's, whatever any tab steps to" {
-        val kept = keptPlayCode()
+        val store = MemoryKeyValueStore()
 
-        try {
-            val rig = MidiRig(engine = engine)
-            val applied = "let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)"
+        val rig = rigOn(store)
+        val applied = "let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)"
 
-            rig.apply(applied)
-            step(rig)
+        rig.apply(applied)
+        step(rig)
 
-            withClue("the step plays for the session; the stored play code as the user applied it") {
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("pad")
-                localStorage.getItem(StorageKeys.MIDI_PLAY_CODE) shouldBe applied
-            }
-        } finally {
-            putBack(kept)
+        withClue("the step plays for the session; the stored play code as the user applied it") {
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("pad")
+            store.read(StorageKeys.MIDI_PLAY) shouldBe playKept(applied)
         }
     }
 
     "a play code that ends in a mapper value is none: it ends in a function" {
-        val kept = keptPlayCode()
+        val store = MemoryKeyValueStore()
 
-        try {
-            val rig = MidiRig(engine = engine)
+        val rig = rigOn(store)
 
-            rig.apply("reverb(wet = 0.2)")
+        rig.apply("reverb(wet = 0.2)")
 
-            rig.state().playCodeError.shouldNotBeNull() shouldContain "ends in a function"
-        } finally {
-            putBack(kept)
-        }
+        rig.state().playCodeError.shouldNotBeNull() shouldContain "ends in a function"
     }
 
     "a step keeps the error of the user's play code that fails: after a reload, and after an Apply" {
-        val kept = keptPlayCode()
+        val store = MemoryKeyValueStore()
 
-        try {
-            localStorage.setItem(StorageKeys.MIDI_PLAY_CODE, "let lead = Ign.saw().lowpas(1800)\n\nx => x.sound(lead)")
+        store.write(key = StorageKeys.MIDI_PLAY, text = playKept("let lead = Ign.saw().lowpas(1800)\n\nx => x.sound(lead)"))
 
-            val reloaded = MidiRig(engine = engine)
+        val reloaded = rigOn(store)
 
-            reloaded.start()
-            step(reloaded)
+        reloaded.start()
+        step(reloaded)
 
-            withClue("nothing plays to step from: the stored code's own error stays") {
-                reloaded.state().playCodeError.shouldNotBeNull() shouldContain "lowpas"
-            }
+        withClue("nothing plays to step from: the stored code's own error stays") {
+            reloaded.state().playCodeError.shouldNotBeNull() shouldContain "lowpas"
+        }
 
-            val rig = MidiRig(engine = engine)
+        val rig = rigOn(store)
 
-            rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
-            rig.apply("let lead = Ign.saw().lowpas(1800)\n\nx => x.sound(lead)")
-            step(rig)
+        rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.sound(lead)")
+        rig.apply("let lead = Ign.saw().lowpas(1800)\n\nx => x.sound(lead)")
+        step(rig)
 
-            withClue("a step plays on from what plays; the failed text's error stays") {
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("pad")
-                rig.state().playCodeError.shouldNotBeNull() shouldContain "lowpas"
-            }
-        } finally {
-            putBack(kept)
+        withClue("a step plays on from what plays; the failed text's error stays") {
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("pad")
+            rig.state().playCodeError.shouldNotBeNull() shouldContain "lowpas"
         }
     }
 
     "a step from a sound not in the list starts at the list's first" {
-        val kept = keptPlayCode()
+        val store = MemoryKeyValueStore()
 
-        try {
-            val rig = MidiRig(engine = engine)
+        val rig = rigOn(store)
 
-            rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.s(\"bd\")")
-            step(rig)
+        rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\n\nx => x.s(\"bd\")")
+        step(rig)
 
-            rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
-        } finally {
-            putBack(kept)
-        }
+        rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
     }
 
     "an old save that is only the page's own default stays the app's: not stored as the user's play code" {
-        val kept = keptPlayCode()
-        val keptDraft = localStorage.getItem(StorageKeys.MIDI_INSTRUMENT_DRAFT)
-        val keptSaved = localStorage.getItem(StorageKeys.MIDI_INSTRUMENTS)
+        val store = MemoryKeyValueStore()
 
-        try {
-            localStorage.removeItem(StorageKeys.MIDI_PLAY_CODE)
-            localStorage.removeItem(StorageKeys.MIDI_INSTRUMENTS)
-            localStorage.setItem(
-                StorageKeys.MIDI_INSTRUMENT_DRAFT,
-                """{"name":"Warm saw","ignitor":"Ign.saw()\n  .plus(Ign.sine().detune(12).mul(0.3))\n  .lowpass(1800)\n  .adsr(0.01, 0.3, 0.6, 0.4)","mapper":"reverb(wet = 0.2)"}""",
-            )
+        store.write(
+            key = StorageKeys.MIDI_INSTRUMENT_DRAFT,
+            text = """{"name":"Warm saw","ignitor":"Ign.saw()\n  .plus(Ign.sine().detune(12).mul(0.3))\n  .lowpass(1800)""" +
+                """\n  .adsr(0.01, 0.3, 0.6, 0.4)","mapper":"reverb(wet = 0.2)"}""",
+        )
 
-            MidiRig(engine = engine).start()
+        val rig = rigOn(store)
 
-            localStorage.getItem(StorageKeys.MIDI_PLAY_CODE) shouldBe null
-        } finally {
-            putBack(kept)
-            listOf(StorageKeys.MIDI_INSTRUMENT_DRAFT to keptDraft, StorageKeys.MIDI_INSTRUMENTS to keptSaved).forEach { (key, value) ->
-                if (value == null) {
-                    localStorage.removeItem(key)
-                } else {
-                    localStorage.setItem(key, value)
-                }
-            }
+        rig.start()
+
+        rig.state().sound shouldBe MidiPlayCode.Sound.Own("warmSaw")
+        withClue("nothing kept as the user's, the old draft left where it is") {
+            store.all.keys shouldBe setOf(StorageKeys.MIDI_INSTRUMENT_DRAFT)
         }
     }
 
-    "the instrument keys step through the loadout, in its order; it is kept for the next visit" {
-        val kept = keptPlayCode()
-        val keptLoadout = localStorage.getItem(StorageKeys.MIDI_LOADOUT)
+    "a rig that starts after another tab applied a play code plays that one; an Apply here is then kept over it" {
+        val mine = "let lead = Ign.saw()\n\nx => x.sound(lead)"
+        val theirs = "let pad = Ign.supersaw()\n\nx => x.sound(pad)"
+        val store = MemoryKeyValueStore(initial = mapOf(StorageKeys.MIDI_PLAY to playKept(mine)))
+        // The page loaded, the rig not started yet
+        val rig = rigOn(store)
 
-        try {
-            val rig = MidiRig(engine = engine)
+        store.changeFromElsewhere(key = StorageKeys.MIDI_PLAY, text = playKept(theirs))
+        rig.start()
 
-            rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\nlet bass = Ign.square()\n\nx => x.sound(lead)")
-            // As the loadout's end takes a drop
-            rig.equip(MidiPlayCode.Sound.Own("bass"), slot = rig.state().loadout.sounds.size)
-            rig.equip(MidiPlayCode.Sound.Own("lead"), slot = rig.state().loadout.sounds.size)
+        withClue("the play code applied last, in whichever tab") { rig.state().sound shouldBe MidiPlayCode.Sound.Own("pad") }
 
-            withClue("from lead, the loadout's next: round to bass, then lead; pad is not in it") {
-                step(rig)
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("bass")
-                step(rig)
-                rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
-            }
+        rig.apply(mine)
 
-            withClue("kept, in its order") { localStorage.getItem(StorageKeys.MIDI_LOADOUT) shouldBe """["bass","lead"]""" }
-
-            withClue("read back by the next visit's rig") {
-                val next = MidiRig(engine = engine)
-
-                next.start()
-                next.state().loadout.sounds shouldBe listOf(MidiPlayCode.Sound.Own("bass"), MidiPlayCode.Sound.Own("lead"))
-            }
-
-            // lead dropped on bass's slot: swapped
-            rig.equip(MidiPlayCode.Sound.Own("lead"), slot = 0)
-
-            withClue("two slots swapped: kept so") { localStorage.getItem(StorageKeys.MIDI_LOADOUT) shouldBe """["lead","bass"]""" }
-
-            rig.unequip(0)
-
-            withClue("a slot out: kept so") { localStorage.getItem(StorageKeys.MIDI_LOADOUT) shouldBe """["bass"]""" }
-        } finally {
-            putBack(kept)
-
-            if (keptLoadout == null) {
-                localStorage.removeItem(StorageKeys.MIDI_LOADOUT)
-            } else {
-                localStorage.setItem(StorageKeys.MIDI_LOADOUT, keptLoadout)
-            }
+        withClue("the code this tab loaded with, applied again: kept, the last Apply wins") {
+            store.read(StorageKeys.MIDI_PLAY) shouldBe playKept(mine)
         }
+    }
+
+    "a rig that runs shows a loadout kept elsewhere at once, and an empty one after a reset" {
+        val store = MemoryKeyValueStore()
+        val kept = MidiKept(stores = SectionStores(user = store, machine = store, tab = MemoryKeyValueStore()))
+        val rig = MidiRig(engine = engine, kept = kept)
+
+        rig.start()
+        store.changeFromElsewhere(key = StorageKeys.MIDI_DESK, text = """{"v":1,"data":{"loadout":["\"saw\""]}}""")
+
+        rig.state().loadout.codes shouldBe listOf("\"saw\"")
+
+        kept.desk.reset()
+
+        withClue("the storage page's reset") { rig.state().loadout.codes shouldBe emptyList() }
+    }
+
+    "the instrument keys step through the loadout, in its order; it is kept for the next visit" {
+        val store = MemoryKeyValueStore()
+
+        val rig = rigOn(store)
+
+        rig.apply("let lead = Ign.saw()\nlet pad = Ign.supersaw()\nlet bass = Ign.square()\n\nx => x.sound(lead)")
+        // As the loadout's end takes a drop
+        rig.equip(MidiPlayCode.Sound.Own("bass"), slot = rig.state().loadout.sounds.size)
+        rig.equip(MidiPlayCode.Sound.Own("lead"), slot = rig.state().loadout.sounds.size)
+
+        withClue("from lead, the loadout's next: round to bass, then lead; pad is not in it") {
+            step(rig)
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("bass")
+            step(rig)
+            rig.state().sound shouldBe MidiPlayCode.Sound.Own("lead")
+        }
+
+        withClue("kept, in its order") { store.read(StorageKeys.MIDI_DESK) shouldBe """{"v":1,"data":{"loadout":["bass","lead"]}}""" }
+
+        withClue("read back by the next visit's rig") {
+            val next = rigOn(store)
+
+            next.start()
+            next.state().loadout.sounds shouldBe listOf(MidiPlayCode.Sound.Own("bass"), MidiPlayCode.Sound.Own("lead"))
+        }
+
+        // lead dropped on bass's slot: swapped
+        rig.equip(MidiPlayCode.Sound.Own("lead"), slot = 0)
+
+        withClue("two slots swapped: kept so") {
+            store.read(StorageKeys.MIDI_DESK) shouldBe """{"v":1,"data":{"loadout":["lead","bass"]}}"""
+        }
+
+        rig.unequip(0)
+
+        withClue("a slot out: kept so") { store.read(StorageKeys.MIDI_DESK) shouldBe """{"v":1,"data":{"loadout":["bass"]}}""" }
     }
 })

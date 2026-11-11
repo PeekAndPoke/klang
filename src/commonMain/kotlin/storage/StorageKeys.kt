@@ -17,19 +17,31 @@ import io.peekandpoke.klang.workshop.storage.DocumentStorage
  */
 object StorageKeys {
 
-    /** The Midi Playground's saved instruments. */
-    const val MIDI_INSTRUMENTS = "klang-midi-instruments"
+    /**
+     * The MIDI play code, one document (KLANG-00422): `MidiPlay`, one KlangScript input with the instruments and what
+     * a key plays (KLANG-00402, D7).
+     */
+    const val MIDI_PLAY = "klang-midi-play"
 
-    /** The instrument the Midi Playground's editors held when last applied. */
-    const val MIDI_INSTRUMENT_DRAFT = "klang-midi-instrument-draft"
+    /**
+     * This machine's MIDI setup, one document (KLANG-00422): `MidiDesk`, the instruments the instrument keys step
+     * through (KLANG-00402, step 5c) and the laptop keys' layout chosen by hand (D9).
+     */
+    const val MIDI_DESK = "klang-midi-desk"
 
-    /** The MIDI play code (KLANG-00402, D7): one KlangScript input with the instruments and what a key plays. */
+    /** Until KLANG-00422, read once into [MIDI_PLAY]: the play code as a plain text. */
     const val MIDI_PLAY_CODE = "klang-midi-play-code"
 
-    /** The MIDI loadout (KLANG-00402, step 5c): the instruments the instrument keys step through, as their codes. */
+    /** Before the one play code, read once into [MIDI_PLAY] where no play code is kept: the saved instruments. */
+    const val MIDI_INSTRUMENTS = "klang-midi-instruments"
+
+    /** As [MIDI_INSTRUMENTS]: the instrument the MIDI page's editors held when last applied. */
+    const val MIDI_INSTRUMENT_DRAFT = "klang-midi-instrument-draft"
+
+    /** Until KLANG-00422, read once into [MIDI_DESK]: the loadout, its sounds' codes as a JSON list. */
     const val MIDI_LOADOUT = "klang-midi-loadout"
 
-    /** The laptop keys' layout chosen by hand, a layout's name; absent for "Automatic" (KLANG-00402, D9). */
+    /** Until KLANG-00422, read once into [MIDI_DESK]: the layout chosen by hand, its name; absent for "Automatic". */
     const val MIDI_KEY_LAYOUT = "klang-midi-key-layout"
 
     /** This machine's audio output, one document (KLANG-00422): `AudioOutput`, the master volume. */
@@ -215,10 +227,13 @@ object StorageKeys {
             name = "MIDI play code",
             about = "The MIDI play code with your instruments, and the instruments saved before it",
             precious = true,
-            covers = exactly(MIDI_PLAY_CODE, MIDI_INSTRUMENTS, MIDI_INSTRUMENT_DRAFT),
+            covers = exactly(MIDI_PLAY, MIDI_PLAY_CODE, MIDI_INSTRUMENTS, MIDI_INSTRUMENT_DRAFT),
         ),
-        Part(name = "MIDI loadout", about = "The instruments the instrument keys step through", covers = exactly(MIDI_LOADOUT)),
-        Part(name = "Laptop keys' layout", about = "The letters the laptop keyboard prints", covers = exactly(MIDI_KEY_LAYOUT)),
+        Part(
+            name = "MIDI setup",
+            about = "The instruments the instrument keys step through, and the letters the laptop keyboard prints",
+            covers = exactly(MIDI_DESK, MIDI_LOADOUT, MIDI_KEY_LAYOUT),
+        ),
         // The random seeds (the maintainer, 2026-10-28: "Make a random seeds "section" in the storage and the first
         // entry will be the seed for grain noise and the metal brushes"); reset, one is made anew on the next load
         Part(

@@ -24,8 +24,7 @@ import io.peekandpoke.klang.midi.Routing
 import io.peekandpoke.klang.midi.SourceId
 import io.peekandpoke.klang.script.runtime.FunctionValue
 import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
-import io.peekandpoke.klang.spine.storage.MidiLoadoutStorage
-import io.peekandpoke.klang.spine.storage.MidiPlayCodeStorage
+import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.sound
@@ -50,9 +49,13 @@ private val log = Logger(area = LogArea.Midi, source = "MidiRig")
  * releases nothing, so a chord held rings on while one goes elsewhere.
  *
  * Live play is no one's stage: the rig plays along with a song and stops none (KLANG-00406, the lanes); only a panic
- * stops it. The app has one, [Playbacks.live]; the specs make their own, and start one only to read a reload.
+ * stops it. The app has one, [Playbacks.live]; the specs make their own, and start one only to read what is kept.
  */
-class MidiRig(private val engine: PlaybackEngine) {
+class MidiRig(
+    private val engine: PlaybackEngine,
+    /** Where the play code and the loadout are kept; the default lives and dies with this rig (a spec's). */
+    private val kept: MidiKept = MidiKept(stores = SectionStores.inMemory()),
+) {
 
     /** One row per distinct controller seen, for discovering a device's map. */
     data class ObservedControl(val raw: Int, val channel: Int, val hits: Int)
@@ -227,9 +230,10 @@ class MidiRig(private val engine: PlaybackEngine) {
         // The play code the user applied last plays again (one stored code, the maintainer, 2026-11-02: a step is for
         // the session); one that fails now shows with its error, never as an empty editor. Nothing is saved here: the
         // play code a first visit starts with stays the app's until the user applies one
-        run(code = MidiPlayCodeStorage.load() ?: MidiPlayCode.DEFAULT, byUser = true)
+        run(code = kept.play().code ?: MidiPlayCode.DEFAULT, byUser = true)
 
-        _state { it.copy(loadout = MidiLoadoutStorage.load()) }
+        // The loadout as it is kept, now and whenever that changes: another tab's, a reset on the storage page
+        kept.desk.part { it.loadout }.subscribeToStream { codes -> _state { it.copy(loadout = MidiLoadout.ofCodes(codes)) } }
 
         // The Motor running, whoever started it: the keys play along at once
         engine.status.subscribeToStream { status ->
@@ -356,7 +360,7 @@ class MidiRig(private val engine: PlaybackEngine) {
      * fails keeps the one before playing, so a typo never silences the keyboard mid-play.
      */
     fun apply(code: String) {
-        MidiPlayCodeStorage.save(code)
+        kept.play.update { it.copy(code = code) }
         run(code = code, byUser = true)
     }
 
@@ -652,7 +656,7 @@ class MidiRig(private val engine: PlaybackEngine) {
     private fun changeLoadout(change: (MidiLoadout) -> MidiLoadout) {
         val next = change(_state().loadout)
 
-        MidiLoadoutStorage.save(next)
+        kept.desk.update { it.copy(loadout = next.codes) }
         _state { it.copy(loadout = next) }
     }
 
