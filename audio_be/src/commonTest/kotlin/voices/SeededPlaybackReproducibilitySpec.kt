@@ -62,14 +62,16 @@ class SeededPlaybackReproducibilitySpec : StringSpec({
         private val mix = StereoBuffer(blockFrames)
 
         fun schedule(startSec: Double, data: VoiceData) {
-            engine.scheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = pid,
-                    startTime = startSec,
-                    gateEndTime = startSec + 0.5,
-                    data = data,
-                    playbackStartTime = 0.0,
-                )
+            engine.scheduler.scheduleVoices(
+                listOf(
+                    ScheduledVoice(
+                        playbackId = pid,
+                        startTime = startSec,
+                        gateEndTime = startSec + 0.5,
+                        data = data,
+                        playbackStartTime = 0.0,
+                    )
+                ),
             )
         }
 

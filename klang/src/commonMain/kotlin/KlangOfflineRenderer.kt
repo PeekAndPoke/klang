@@ -50,6 +50,7 @@ class KlangOfflineRenderer(
 
     data class Result(
         val durationSec: Double,
+        /** The frames handed to `onBlock`: the music and its tail, the engine's latency at the head trimmed. */
         val totalFrames: Int,
         val elapsedMs: Double,
     )
@@ -62,8 +63,10 @@ class KlangOfflineRenderer(
      * @param cyclesPerSecond tempo (cps = rpm / 60.0)
      * @param tailSec extra seconds after last note for reverb/delay tails
      * @param onBlock called for each rendered block with the engine's clipped floating-point stereo
-     *   output and its frame count. The buffer is reused for the next block: copy what you keep. A
-     *   16-bit consumer converts with `writePcm16` (audio_be), the one home of that conversion.
+     *   output and its frame count, the first [frames] of the buffer. The buffer is reused for the next block: copy
+     *   what you keep. A 16-bit consumer converts with `writePcm16` (audio_be), the one home of that conversion. The
+     *   first frame handed out is the first frame of the music: the engine's latency at the head is trimmed (see the
+     *   loop), so a block near the start may hold fewer frames than a block.
      */
     suspend fun render(
         pattern: KlangPattern,
@@ -151,23 +154,56 @@ class KlangOfflineRenderer(
             uiMs = nowMs,
         )
 
-        // Render past the end by the engine's own output latency, otherwise the last samples are still sitting in a
-        // delay ring (the house limiter's lookahead, a master chain's lookahead or oversampler) when the loop stops.
-        // Matters at tailSec = 0.0, where the truncated tail is the actual music rather than a reverb tail. Read again
-        // after every block: a master event later in the song swaps the chain in the middle of the render.
+        // The engine's output latency (the house limiter's lookahead, a master chain's lookahead or oversampler) delays
+        // everything it renders. At the HEAD those frames are the delay's silence, not music: they are trimmed, so a WAV
+        // and a corpus render begin at the first frame the engine was asked for (KLANG-00431 D11, audit L8-11; until
+        // 2026-11-11 every render began with the house limiter's 240 frames of silence at 48 kHz, and renders with
+        // different master chains were offset against each other). The head's latency is read after the first block,
+        // when a master that lands at the song's start is in service.
+        //
+        // At the END the render runs past the music by the latency, otherwise the last samples are still sitting in a
+        // delay ring when the loop stops (matters at tailSec = 0.0, where the truncated tail is the actual music rather
+        // than a reverb tail). Read again after every block: a master event later in the song swaps the chain in the
+        // middle of the render. So the frames handed out are the music and its tail, [musicalAndTailFrames], plus
+        // only what a latency that grew after the head adds (a later chain makes what follows it late by that much):
+        // the render is as long as the music, and as many frames shorter than before as the head trimmed.
         val totalDurationSec = cycles.toDouble() / cps + tailSec
         val musicalAndTailFrames = (totalDurationSec * sampleRate).toInt()
-        var totalFrames = musicalAndTailFrames + backend.latencyFrames
+        var runOutFrames = musicalAndTailFrames + backend.latencyFrames
+        var headFrames = -1
+        var trimLeft = 0
+        var handedOut = 0
 
         try {
             scheduler.startDriven(cyclesPerSecond = cps)
 
-            while (backend.cursorFrame < totalFrames) {
+            while (backend.cursorFrame < runOutFrames) {
                 // The playback started at the backend's second 0: its time is the backend's position
                 scheduler.tick(nowSec = backend.nowSec - backend.startTimeSec)
-                backend.render(blocks = 1) { out -> onBlock(out, blockFrames) }
+                backend.render(blocks = 1) { out ->
+                    if (headFrames < 0) {
+                        headFrames = backend.latencyFrames
+                        trimLeft = headFrames
+                    }
+
+                    if (trimLeft >= blockFrames) {
+                        trimLeft -= blockFrames
+                    } else {
+                        if (trimLeft > 0) {
+                            // The block that holds the music's first frame: its frames moved to the front, in place
+                            out.left.copyInto(destination = out.left, destinationOffset = 0, startIndex = trimLeft, endIndex = blockFrames)
+                            out.right.copyInto(destination = out.right, destinationOffset = 0, startIndex = trimLeft, endIndex = blockFrames)
+                        }
+
+                        val frames = blockFrames - trimLeft
+
+                        trimLeft = 0
+                        handedOut += frames
+                        onBlock(out, frames)
+                    }
+                }
                 deliverFeedback(commLink = commLink, scheduler = scheduler)
-                totalFrames = musicalAndTailFrames + backend.latencyFrames
+                runOutFrames = musicalAndTailFrames + backend.latencyFrames
             }
         } finally {
             scheduler.stop()
@@ -176,7 +212,7 @@ class KlangOfflineRenderer(
 
         return Result(
             durationSec = totalDurationSec,
-            totalFrames = totalFrames,
+            totalFrames = handedOut,
             elapsedMs = klangTime.internalMsNow() - startMs,
         )
     }

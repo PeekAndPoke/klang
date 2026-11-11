@@ -154,11 +154,11 @@ class JvmAudioBackend(
 
     internal companion object {
         /**
-         * The output latency of the JVM host in ms: the line's buffer, [lineBufferBytes] of 16-bit stereo frames, plus
-         * the house limiter's lookahead, which delays the whole output inside the engine (the browser adds the same
-         * to its own figures, `JsAudioBackend`).
+         * The output latency only the JVM host knows, in ms: the line's buffer, [lineBufferBytes] of 16-bit stereo
+         * frames. The engine's own latency (the house limiter's lookahead, a master chain's) the dispatcher adds to it
+         * in every report (`PlaybackEngineDispatcher.outputLatencyMs`, KLANG-00431 D3).
          */
         fun outputLatencyMs(lineBufferBytes: Int, sampleRate: Int): Double =
-            lineBufferBytes / 4.0 / sampleRate * 1000.0 + HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * 1000.0
+            lineBufferBytes / 4.0 / sampleRate * 1000.0
     }
 }

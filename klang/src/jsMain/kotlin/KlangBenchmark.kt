@@ -413,6 +413,6 @@ class KlangBenchmark(
                 katalystParams = klangMapOf("reverb.wet" to 0.2, "reverb.size" to 0.5),
             )
         )
-        scheduler.scheduleVoice(voice)
+        scheduler.scheduleVoices(listOf(voice))
     }
 }

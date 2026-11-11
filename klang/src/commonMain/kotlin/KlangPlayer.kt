@@ -103,6 +103,7 @@ class KlangPlayer(
         ticks = ticker(intervalMs = KlangDiagnostics.TICK_MS),
         capacity = KlangDiagnostics.TWO_MINUTES,
         nowMs = KlangTime.create()::internalMsNow,
+        readRefusedSends = { commLink.frontend.refusedControlSends },
     )
 
     // The Motor's own metrics, the player their owner: posted from every diagnostics the backend sends, closed at
@@ -128,6 +129,10 @@ class KlangPlayer(
 
     private var feedbackDispatcherJob: Job? = null
     private var hasLoggedDiagnostics = false
+
+    // True from a refused send to the next accepted one ([sendControl]): one log line per burst. Read and written by
+    // every sending thread unguarded; a race costs one log line more or less, never a command.
+    private var refusing = false
 
     // Centralized sample preloader (shared across all playbacks)
     val samplePreloader = SamplePreloader(
@@ -336,7 +341,18 @@ class KlangPlayer(
      * This is the only way playbacks should communicate with the backend.
      */
     fun sendControl(cmd: KlangCommLink.Cmd) {
-        commLink.frontend.control.send(cmd)
+        val accepted = commLink.frontend.control.send(cmd)
+
+        // A full control ring drops the command (KLANG-00431 D10, audit L1-11). The ring counts it
+        // ([KlangDiagnostics.refusedSends]); the log says so once per burst of refusals, not per message.
+        if (!accepted) {
+            if (!refusing) {
+                refusing = true
+                println("[KlangPlayer] the control ring is full: commands are dropped until it drains, the first a ${cmd::class.simpleName}")
+            }
+        } else {
+            refusing = false
+        }
 
         // Hand it over immediately rather than leaving it for the backend's next poll. On JS that
         // poll is a 10 ms `setTimeout`, which is invisible for scheduled voices (they carry their

@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.WorkletContract.sendCmd
+import io.peekandpoke.klang.audio_be.WorkletContract.sendSample
 import io.peekandpoke.klang.audio_be.utils.jsObject
 import io.peekandpoke.klang.audio_bridge.AnalyserNode
 import io.peekandpoke.klang.audio_bridge.AudioContext
@@ -16,7 +17,6 @@ import io.peekandpoke.klang.audio_bridge.GainNode
 import io.peekandpoke.klang.audio_bridge.analyzer.SPECTRUM_FFT_SIZE
 import io.peekandpoke.klang.audio_bridge.guessDeviceLatencyMs
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.common.infra.KlangRingBuffer
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +36,9 @@ class JsAudioBackend(
 ) : AudioBackend {
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
 
-    private val sampleUploadBuffer = KlangRingBuffer<KlangCommLink.Cmd.Sample.Chunk>(8192 * 4)
+    // Samples whose copy to transfer could not be allocated on this thread (see [drainControl]); added to the
+    // warehouse's `sampleAllocationFailures` in every diagnostics forwarded. Main thread only.
+    private var uploadAllocationFailures = 0
 
     // The analysers for the visualisations, one on each side of the master volume (KLANG-00346, maintainer,
     // 2026-10-26: the volume "should only influence the osci but not the spectrum"): the spectrum reads the song as it
@@ -165,20 +167,15 @@ class JsAudioBackend(
                 // We pass all feedback through to the frontend
                 val decoded = WorkletContract.decodeFeed(message)
 
-                // Augment Diagnostics with real output latency from the actual AudioContext.
-                // The worklet has no access to AudioContext properties, so we enrich here.
+                // What only the main thread knows joins the worklet's report: the context's latency figures, the
+                // refusals of the ring this forwards into, the sample copies that could not be made here.
                 val enriched = if (decoded is KlangCommLink.Feedback.Diagnostics) {
-                    val baseLat = ctx.baseLatency * 1000.0
-                    val deviceLat = guessDeviceLatencyMs(ctx.outputLatency * 1000.0)
-                    // The master limiter's lookahead delay happens INSIDE the worklet, downstream of
-                    // the clock — `AudioContext.outputLatency` cannot see it. Without adding it here
-                    // every visual that aligns to audio (code highlight, block highlight) fires
-                    // early by exactly that much.
-                    val masterLat = HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * 1000.0
-                    decoded.copy(
-                        baseLatencyMs = baseLat,
-                        outputDeviceLatencyMs = deviceLat,
-                        outputLatencyMs = baseLat + deviceLat + masterLat,
+                    withMainThreadFigures(
+                        diagnostics = decoded,
+                        baseLatencyMs = ctx.baseLatency * 1000.0,
+                        deviceLatencyMs = guessDeviceLatencyMs(ctx.outputLatency * 1000.0),
+                        refusedFeedbackSends = commLink.refusedFeedbackSends,
+                        uploadAllocationFailures = uploadAllocationFailures,
                     )
                 } else {
                     decoded
@@ -197,27 +194,10 @@ class JsAudioBackend(
             console.log("JsAudioBackend MessagePort started")
 
             fun pumpTimerTick() {
-                // Upload the next sample chunk ... we send them one at a time.
-                //
-                // This drip is why the timer still exists. One chunk is 1 MB ([drainControl] asks
-                // `toChunks` for 128 * 1024 frames, and it counts DoubleArray elements of 8 bytes),
-                // i.e. about 100 MB/s of structured clone onto the same MessagePort the audio thread
-                // services between render callbacks, each chunk cloned and then copied once more by
-                // `SampleStore.addSample`; the first chunk of a sample allocates its whole PCM there
-                // (audit L9-09; the transfer of one buffer instead: KLANG-00431, Decide). Draining
-                // the whole upload buffer here would hand the audio thread an unbounded burst
-                // mid-load. Control commands do not go through this valve, see [pump].
-                //
-                // Read through the FIELD, not the captured local: a timer already scheduled when
-                // teardown runs fires once more afterwards, and the field is null by then. Check
-                // before receiving, so a chunk is never popped and then dropped.
-                workletNode?.let { live ->
-                    sampleUploadBuffer.receive()?.let { cmd -> live.port.sendCmd(cmd) }
-                }
-
                 // Kept for commands queued before the worklet exists: [pump] is inert while
                 // [workletNode] is null. NOT a fallback for a second writer - `sendControl` is the
-                // only writer of this ring in the tree.
+                // only writer of this ring in the tree. (It also dripped the sample chunks out, one per
+                // tick, until each sample became one transferred buffer, KLANG-00431 D5.)
                 //
                 // Nothing reaches that window today, because `klangPlayer()` awaits BackendReady
                 // before handing the player out. It is one gating change away from live though
@@ -233,11 +213,8 @@ class JsAudioBackend(
                 // thing keeping this chain alive, so an escaping throw kills the timer forever.
                 //
                 // That used to be loud - it killed control delivery too, so all audio stopped at
-                // once. Now pump() keeps control flowing, so an unguarded throw here would leave
-                // the music playing while sample uploads silently stall: every later
-                // Sample.Complete still lands in [sampleUploadBuffer] and is never sent, so
-                // SampleStore never acks, SamplePreloader never completes, and Play on any
-                // sample-based pattern hangs with no error anywhere.
+                // once. Now pump() keeps control flowing, but a dead timer would leave a command queued
+                // before the worklet existed undelivered for good.
                 try {
                     pumpTimerTick()
                 } catch (t: Throwable) {
@@ -264,7 +241,7 @@ class JsAudioBackend(
             ctx.onstatechange = null
 
             // Cleanup when the coroutine is cancelled (Player.stop()). Drop the node reference
-            // FIRST: BOTH post paths (drainControl and the timer's chunk drip) read the field, so
+            // FIRST: the post path (drainControl, from pump() and the timer) reads the field, so
             // after this nothing can post to a port that is about to be disconnected.
             val liveNode = workletNode
             workletNode = null
@@ -338,11 +315,10 @@ class JsAudioBackend(
      * tick. That wait used to be up to 10 ms (`setTimeout`, longer under main-thread load) and it
      * was pure latency on the realtime path.
      *
-     * The whole ring is drained in order, so CONTROL commands cannot overtake each other: a
-     * `StartRealtimeVoice` still arrives after the `RegisterIgnitor` that names its sound. Sample
-     * PCM is a different story and always was - `Cmd.Sample.Complete` leaves here into
-     * [sampleUploadBuffer] and is dripped out by the timer, so a voice queued behind a sample
-     * still reaches the engine long before that sample's bytes do.
+     * The whole ring is drained in order, so commands cannot overtake each other: a
+     * `StartRealtimeVoice` still arrives after the `RegisterIgnitor` that names its sound, and a
+     * sample (one `Cmd.Sample.Complete`, its PCM a transferred buffer, KLANG-00431 D5) arrives in
+     * its place among them. Until 2026-11-11 a sample left in 1 MB chunks dripped out by the timer.
      *
      * Must not throw; see [AudioBackend.pump]. Re-entrancy is not a concern (`sendCmd` is an async
      * postMessage and nothing here calls back into the link), and a second call finds the ring
@@ -360,22 +336,13 @@ class JsAudioBackend(
             val cmd = commLink.control.receive() ?: break
 
             when (cmd) {
-                // Special handling for Samples ... we split the data for big samples
-                is KlangCommLink.Cmd.Sample -> when (cmd) {
-                    // Direct forwarding
-                    is KlangCommLink.Cmd.Sample.NotFound,
-                    is KlangCommLink.Cmd.Sample.Chunk,
-                        -> node.port.sendCmd(cmd)
-
-                    is KlangCommLink.Cmd.Sample.Complete -> {
-                        // Complete samples will be split and put into the [cmdBuffer]
-                        val chunks = cmd.toChunks(128 * 1024)
-
-                        chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
-                    }
+                // A whole sample: one message, its PCM a copy made here and transferred (`WorkletContract.sendSample`)
+                is KlangCommLink.Cmd.Sample.Complete -> if (!node.port.sendSample(cmd)) {
+                    uploadAllocationFailed(cmd)
                 }
 
-                // Direct forwarding for control commands
+                // Direct forwarding for everything else
+                is KlangCommLink.Cmd.Sample.NotFound,
                 is KlangCommLink.Cmd.Cleanup,
                 is KlangCommLink.Cmd.RegisterIgnitor,
                 is KlangCommLink.Cmd.RegisterKatalyst,
@@ -387,6 +354,19 @@ class JsAudioBackend(
                     -> node.port.sendCmd(cmd)
             }
         }
+    }
+
+    /**
+     * The copy of [cmd]'s PCM could not be allocated on this thread (KLANG-00431 D5; the store's own allocation
+     * failure before, resource warehouse 2g): the sample is silent, as a missing one is. The worklet is told it is not
+     * found, so a voice that asks for it is counted soundless and it is not asked for again; the frontend's preloader
+     * gets the ack a success sends, as it awaits that with no timeout; the diagnostics count it.
+     */
+    private fun uploadAllocationFailed(cmd: KlangCommLink.Cmd.Sample.Complete) {
+        uploadAllocationFailures++
+        console.error("JsAudioBackend: no memory for the sample ${cmd.req.sound}, it stays silent")
+        workletNode?.port?.sendCmd(KlangCommLink.Cmd.Sample.NotFound(req = cmd.req))
+        commLink.feedback.send(KlangCommLink.Feedback.SampleReceived(playbackId = cmd.playbackId, req = cmd.req))
     }
 
     /**
@@ -407,4 +387,33 @@ class JsAudioBackend(
 
         return hash
     }
+}
+
+/**
+ * The worklet's [diagnostics] with what only the main thread knows: the audio context's latency figures (in ms) added
+ * to the engine's own latency the worklet reports (KLANG-00431 D3: the house limiter's lookahead and the longest
+ * master chain's, which the context's figures cannot see), the refusals of the main thread's feedback ring added to
+ * the worklet's (D10), and the sample copies the main thread could not make added to the warehouse's allocation
+ * failures (D5). Reporting only: nothing compensates the audio.
+ */
+internal fun withMainThreadFigures(
+    diagnostics: KlangCommLink.Feedback.Diagnostics,
+    baseLatencyMs: Double,
+    deviceLatencyMs: Double,
+    refusedFeedbackSends: Double,
+    uploadAllocationFailures: Int,
+): KlangCommLink.Feedback.Diagnostics {
+    val warehouse = diagnostics.warehouse
+
+    return diagnostics.copy(
+        baseLatencyMs = baseLatencyMs,
+        outputDeviceLatencyMs = deviceLatencyMs,
+        outputLatencyMs = diagnostics.outputLatencyMs + baseLatencyMs + deviceLatencyMs,
+        refusedFeedbackSends = diagnostics.refusedFeedbackSends + refusedFeedbackSends,
+        warehouse = if (uploadAllocationFailures == 0) {
+            warehouse
+        } else {
+            warehouse.copy(sampleAllocationFailures = warehouse.sampleAllocationFailures + uploadAllocationFailures)
+        },
+    )
 }

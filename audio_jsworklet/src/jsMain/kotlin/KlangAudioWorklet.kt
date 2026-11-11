@@ -42,7 +42,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         }
 
         val commLink = KlangCommLink()
-        val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
+        val klangTime = KlangTime.create()  // Read once, for the backend's epoch (below)
 
         // DSP graph + Cmd dispatch — shared with the JVM backend (see PlaybackEngineDispatcher).
         private val dispatcher = PlaybackEngineDispatcher.create(
@@ -137,10 +137,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
             val ctx = Ctx(sampleRate, blockFrames)
 
-            // Initialize KlangTime with current frame
-            ctx.klangTime.updateCurrentFrame(ctx.cursorFrame)
-
-            // Set backend start time
+            // Set backend start time: the one read of the worklet's clock; the timeline runs on frames from here
             ctx.setBackendStartTime(ctx.klangTime.internalMsNow() / 1000.0)
 
             // Kick off JIT / cache warmup — real playback is gated on BackendReady feedback.
@@ -197,9 +194,6 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
     /** One render quantum into Web Audio's [outputs]; always true (keep the processor alive). */
     private fun Ctx.renderInto(outputs: Array<Array<Float32Array>>): Boolean {
-        // Update KlangTime with current frame for accurate timing
-        klangTime.updateCurrentFrame(cursorFrame)
-
         // Port 0
         val output = outputs[0]
         val numChannels = output.size

@@ -14,8 +14,12 @@ import io.kotest.matchers.shouldBe
 /**
  * **The browser decodes a stereo file to the mean of its channels, as the JVM does** (KLANG-00430, audit findings L3-13
  * and L9-07). It used to keep channel 0 only: a sample whose sound sat on the right was silent in the browser and at half
- * level offline. The files are 16-bit WAVs at 48 kHz, the decoder's own rate, so the browser does not resample them; it
- * scales an integer by its own rule (Chrome divides a positive one by 32767), so the values are read to 1e-3.
+ * level offline. The files are 16-bit WAVs at 48 kHz, decoded for an engine at 48 kHz, so the browser does not resample
+ * them; it scales an integer by its own rule (Chrome divides a positive one by 32767), so the values are read to 1e-3.
+ *
+ * **The browser decodes at the ENGINE's rate** (KLANG-00430, audit L3-05 and L9-07, option 3): a file decoded for an
+ * engine at 44.1 kHz comes back at 44.1 kHz, so the browser resamples once and the engine's playhead reads it 1:1. Until
+ * 2026-11-11 the decoder ran at a fixed 48 kHz, and a 44.1 kHz engine converted every file twice.
  */
 class BrowserAudioDecoderSpec : StringSpec({
 
@@ -67,7 +71,7 @@ class BrowserAudioDecoderSpec : StringSpec({
     }
 
     "a stereo file decodes to the mean of its two channels, the right channel included" {
-        val decoder = BrowserAudioDecoder()
+        val decoder = BrowserAudioDecoder(sampleRate = 48000)
 
         for ((levels, want) in listOf(
             intArrayOf(16384, 8192) to 0.375, // left 0.5, right 0.25
@@ -84,6 +88,21 @@ class BrowserAudioDecoderSpec : StringSpec({
                     pcm.pcm[i] shouldBe (want plusOrMinus 1e-3)
                 }
             }
+        }
+    }
+    "a file decoded for an engine at 44.1 kHz comes back at 44.1 kHz, resampled once by the browser" {
+        // 4800 frames at 48 kHz, a tenth of a second: at 44.1 kHz that is 4410 frames
+        val pcm = BrowserAudioDecoder(sampleRate = 44100).decodeMonoFloatPcm(wav(levels = intArrayOf(8192), frames = 4800)).shouldNotBeNull()
+
+        pcm.sampleRate shouldBe 44100
+        pcm.pcm.size shouldBe 4410
+        // the constant level survives the conversion away from its edges
+        pcm.pcm[2205] shouldBe (0.25 plusOrMinus 1e-3)
+
+        // and at the file's own rate nothing is converted
+        BrowserAudioDecoder(sampleRate = 48000).decodeMonoFloatPcm(wav(levels = intArrayOf(8192), frames = 4800)).shouldNotBeNull().let {
+            it.sampleRate shouldBe 48000
+            it.pcm.size shouldBe 4800
         }
     }
 })

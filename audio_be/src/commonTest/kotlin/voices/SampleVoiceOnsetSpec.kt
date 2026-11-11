@@ -79,14 +79,16 @@ class SampleVoiceOnsetSpec : StringSpec({
 
         fun schedule(startFrame: Double, data: VoiceData = VoiceData.empty.copy(sound = soundName)) {
             val startSec = startFrame.toDouble() / sampleRate
-            engine.scheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = "song",
-                    startTime = startSec,
-                    gateEndTime = startSec + 0.2,
-                    data = data,
-                    playbackStartTime = 0.0,
-                )
+            engine.scheduler.scheduleVoices(
+                listOf(
+                    ScheduledVoice(
+                        playbackId = "song",
+                        startTime = startSec,
+                        gateEndTime = startSec + 0.2,
+                        data = data,
+                        playbackStartTime = 0.0,
+                    )
+                ),
             )
         }
 

@@ -105,7 +105,10 @@ the clock (which promotes due voices).
 
 File: `audio_bridge/src/commonMain/kotlin/infra/KlangCommLink.kt`
 
-Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→frontend` (Feedback).
+Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→frontend` (Feedback). A full ring refuses a
+send and the message is dropped; each ring counts its refusals (`refusedSends`, KLANG-00431 D10): the backend's ride
+every `Diagnostics`, the frontend's are `KlangDiagnostics.refusedSends`, and `KlangPlayer.sendControl` logs the first of
+each burst.
 
 ### Cmd (frontend → backend)
 
@@ -119,9 +122,8 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | `Cmd.SetGain`         | `gain` + `rampSec`                      | move the playback's output gain over a ramp (`PlaybackGain`)                                     |
 | `Cmd.RegisterIgnitor` | name + `IgnitorDsl`                     | register an inline instrument on the playback's ignitor fork                                    |
 | `Cmd.RegisterKatalyst`| name + `KatalystDsl`                    | register a chain on the playback's Katalyst fork (for `katalyst(...)` and `master(...)`)        |
-| `Cmd.Sample.Complete` | `SampleRequest` + note, pitch, `MonoSamplePcm` (doubles) | deliver decoded sample to backend (the JS host sends it as chunks) |
+| `Cmd.Sample.Complete` | `SampleRequest` + note, pitch, `MonoSamplePcm` (doubles) | deliver decoded sample to backend, whole (the JS host transfers its PCM buffer, KLANG-00431 D5) |
 | `Cmd.Sample.NotFound` | `SampleRequest`                         | signal that a sample could not be decoded                                                        |
-| `Cmd.Sample.Chunk`    | partial PCM data                        | streaming delivery for large samples                                                             |
 
 ### Feedback (backend → frontend)
 
@@ -132,7 +134,7 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | `Feedback.SampleReceived`   | `SampleRequest` | confirm a sample was accepted                                           |
 | `Feedback.PlaybackAnchored` | `epochSec`      | where the backend started a playback; its time counts from there        |
 | `Feedback.PlaybackFailed`   | `reason`        | the playback's engine threw; it is out of the render, the others play on |
-| `Feedback.Diagnostics`      | engine stats    | voice count, headroom, the timeline the frontend's clock runs on, the output latency the host knows, and "poison seen": the non-finite samples the house limiter stored as 0 (`nonFiniteSamples`, monotone) |
+| `Feedback.Diagnostics`      | engine stats    | voice count, headroom, the timeline the frontend's clock runs on, the output latency (the engine's own, the house lookahead and the longest master chain's, plus the host's; KLANG-00431 D3), "poison seen": the non-finite samples the house limiter stored as 0 (`nonFiniteSamples`), the blocks the house limiter ended more than 200 dB down (`crushedBlocks`, KLANG-00432 L8-02), the feedback sends a full ring refused (`refusedFeedbackSends`, D10), and the dropped and soundless voices since the backend started (D6); every count monotone |
 
 **The net** (audit L8-03, L9-01; the `PlaybackEngineDispatcher` KDoc): a throw from one playback's engine, in a block
 or in a command, is caught by the dispatcher. That engine leaves the render and is disposed, `Feedback.PlaybackFailed`
@@ -169,8 +171,9 @@ instrument, not an unset sound.
 - Latency hint: `"playback"` (stability over low latency)
 - AudioContext auto-resumes on first voice (no user-gesture gate needed)
 - ES2015 class output required for AudioWorkletProcessor inheritance
-- `KlangTime.internalMsNow()` → `Date.now()` at creation plus the `performance.now()` elapsed since, in ms (in the
-  worklet: plus the frames it was given, read once at start-up)
+- `KlangTime.internalMsNow()` → `Date.now()` at creation plus the `performance.now()` elapsed since, in ms; in a
+  worklet whose scope has no `performance`, `Date.now()`. The worklet reads it once, at start-up, for the backend's
+  epoch, and runs on the frames it renders from there (its per-block frame update left with KLANG-00433 Decide 7)
 
 ### audio_jsworklet (`src/jsMain/`)
 

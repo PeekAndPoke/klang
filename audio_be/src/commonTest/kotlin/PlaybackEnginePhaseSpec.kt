@@ -489,9 +489,9 @@ class PlaybackEnginePhaseSpec : StringSpec({
             playbackStartTime = 0.0,
         )
 
-        first.scheduler.scheduleVoice(voice(pid = "first", cylinder = 0, freqHz = 331.0))
-        second.scheduler.scheduleVoice(voice(pid = "second", cylinder = 1, freqHz = 443.0))
-        second.scheduler.scheduleVoice(voice(pid = "second", cylinder = 2, freqHz = 557.0))
+        first.scheduler.scheduleVoices(listOf(voice(pid = "first", cylinder = 0, freqHz = 331.0)))
+        second.scheduler.scheduleVoices(listOf(voice(pid = "second", cylinder = 1, freqHz = 443.0)))
+        second.scheduler.scheduleVoices(listOf(voice(pid = "second", cylinder = 2, freqHz = 557.0)))
 
         val mix = StereoBuffer(blockFrames)
         var throughABus = 0

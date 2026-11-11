@@ -8,9 +8,8 @@ package io.peekandpoke.klang.audio_bridge
 import kotlin.js.Date
 
 /**
- * JS implementation with context detection:
- * - Main thread: uses performance.now()
- * - AudioWorklet: uses frame-based timing
+ * JS implementation: `Date.now()` at creation plus the `performance.now()` elapsed since, wherever the scope has
+ * `performance` (the main thread, and an AudioWorklet that has it); else, in a worklet without it, `Date.now()`.
  */
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class KlangTime private constructor(
@@ -21,9 +20,9 @@ actual class KlangTime private constructor(
     }
 
     /**
-     * Main thread implementation using Date.now() + performance.now() for precision
+     * Date.now() at creation + the performance.now() elapsed since: monotonic, it never jumps with the wall clock
      */
-    private class MainThreadTimeSource : TimeSource {
+    private class PerformanceTimeSource : TimeSource {
         private val baseTimeMs = Date.now()
         private val perfStart = js("performance.now()") as Double
 
@@ -34,61 +33,29 @@ actual class KlangTime private constructor(
     }
 
     /**
-     * AudioWorklet implementation using Date.now() + frame count for precision.
+     * For an AudioWorklet whose scope has no `performance` (the render timer's reason, `renderTimerMs`): the wall clock,
+     * `Date.now()`. Its one reader is the worklet's start-up, which
+     * takes the backend's epoch from it once; from there the worklet's timeline runs on the frames it renders
+     * (`RenderClock`), never on this clock.
      *
-     * Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via
-     * a wrapper object), causing heap allocation on every arithmetic operation on the audio thread.
-     *
-     * Frames here are **Double**, not Int. This counter tracks the worklet's absolute timeline and
-     * grows for the life of the audio thread; as an Int it overflowed after ~12.4 h at 48 kHz and
-     * the resulting clock went backwards, silently. Double is a native JS number, exact for integers
-     * to 2^53 (~5,950 years at 48 kHz), and cannot drift here — only subtraction and division by a
-     * constant are applied. See `RenderClock.cursorFrame` in audio_be for the full reasoning.
+     * Until 2026-11-11 (KLANG-00433 Decide 7, audit L9-14) it counted frames: the worklet set its frame every block
+     * (`updateCurrentFrame`), nothing read it after the start-up, and it stood still from block 0 to block 1.
      */
-    private class AudioWorkletTimeSource(
-        private val sampleRate: Double,
-    ) : TimeSource {
-        private val baseTimeMs = Date.now()
-        private var startFrame: Double = 0.0
-        var currentFrame: Double = 0.0
-            set(value) {
-                if (field == 0.0 && value > 0.0) {
-                    startFrame = value  // Capture first non-zero frame as start
-                }
-                field = value
-            }
-
-        override fun now(): Double {
-            val elapsedMs = ((currentFrame - startFrame) / sampleRate) * 1000.0
-            return baseTimeMs + elapsedMs
-        }
+    private class WallClockTimeSource : TimeSource {
+        override fun now(): Double = Date.now()
     }
 
     actual fun internalMsNow(): Double = impl.now()
 
-    /**
-     * For AudioWorklet context: update the current frame count
-     */
-    fun updateCurrentFrame(frame: Double) {
-        (impl as? AudioWorkletTimeSource)?.let {
-            it.currentFrame = frame
-        }
-    }
-
     actual companion object {
         actual fun create(): KlangTime {
-            val isAudioWorklet = js(
-                """
-                typeof AudioWorkletProcessor !== 'undefined' &&
-                typeof registerProcessor === 'function'
-            """
-            ) as Boolean
+            // An AudioWorkletGlobalScope need not have `performance`; every other scope here has it
+            val hasPerformance = js("typeof performance !== 'undefined' && typeof performance.now === 'function'") as Boolean
 
-            return if (isAudioWorklet) {
-                val sampleRate = js("sampleRate") as Double
-                KlangTime(AudioWorkletTimeSource(sampleRate))
+            return if (hasPerformance) {
+                KlangTime(PerformanceTimeSource())
             } else {
-                KlangTime(MainThreadTimeSource())
+                KlangTime(WallClockTimeSource())
             }
         }
     }

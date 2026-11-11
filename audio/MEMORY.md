@@ -104,7 +104,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   corner at every rate; the house blockers drop their state above 1e3 (`HOUSE_DC_STATE_BOUND`, audit L8-01), so a huge
   finite block does not linger as DC. "Poison seen": the limiter's
   ring stores a non-finite sample as 0 and counts it (`HouseStage.nonFiniteSamples`, monotone, a Double), and every
-  diagnostics report carries the count (`Diagnostics.nonFiniteSamples`); nothing is clamped for it.
+  diagnostics report carries the count (`Diagnostics.nonFiniteSamples`); nothing is clamped for it. "Crushed": a block
+  the limiter ends more than 200 dB down (a huge finite value on the mix, past about +210 dBFS) is counted, one compare
+  per block (`HouseStage.crushedBlocks`, `Diagnostics.crushedBlocks`, KLANG-00432 L8-02 (c)); a huge value that moves
+  counts, a huge constant does not (the DC blockers take it out within a sample).
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
   `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
@@ -129,13 +132,16 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   count from there. The frontend's `PlaybackClock` runs on the reports (at most 0.5 s past the last, never backwards),
   the scheduler is asked `tick(now)` with it, looks ahead at least 1.5 s (`LOOKAHEAD_MIN_SEC`), skips what a long
   stall let go by but keeps its `master`, `katalyst` and running solo controls (at their own times), and puts the UI's
-  times on `Date.now()` plus the output latency (the browser's context figures plus the house lookahead; the JVM's
-  line buffer plus the house lookahead, `PlaybackEngineDispatcher.outputLatencyMs`; an authored master's lookahead is
-  not in it, KLANG-00431 Decide). A playback sends nothing after its stop's `Cleanup` until it starts again, and a
+  times on `Date.now()` plus the output latency: the engine's own (`PlaybackEngineDispatcher.latencyFrames`, the house
+  lookahead plus the longest master chain's, an authored lookahead and a region's delay, every report) plus the
+  host's (the browser's context figures, `JsAudioBackend`; the JVM's line buffer). Reporting only, KLANG-00431 D3:
+  nothing compensates the audio. A playback sends nothing after its stop's `Cleanup` until it starts again, and a
   start sends what a fresh engine needs (`audio/ref/architecture.md`, "A playback's life on the wire"). `OfflineBackend` renders only when told, for the specs
   (`KlangPlaybackSyncSpec`) and `KlangOfflineRenderer`, which drives the scheduler on it in lockstep (`startDriven`,
-  `tick`); `VoiceWatch` tells each voice's fate there. Voices without their sample are counted
-  (`Diagnostics.soundlessVoices`). The scheduled-voice heap is stable (`KlangMinHeap`): voices that start together are
+  `tick`); `VoiceWatch` tells each voice's fate there, and its head is trimmed by the engine's latency, so a render
+  begins at the music's first frame (KLANG-00431 D11). Voices without their sample are counted
+  (`Diagnostics.soundlessVoices`), late ones too (`droppedVoices`), both since the backend started: the dispatcher
+  keeps a stopped playback's counts (D6). A full ring's refused sends are counted on both sides (D10). The scheduled-voice heap is stable (`KlangMinHeap`): voices that start together are
   promoted in the order they were scheduled, live and offline alike.
 - **The envelope law** is `EnvelopeCore` (its KDoc). Voice defaults `VOICE_ADSR_*` (0.01, 0.1, 1.0, 0.05); curves
   are index knobs with the reader's default, both Exponential; `ADSR_EXP_K` 3.0; de-click `ENV_DECLICK_SECONDS`
@@ -351,7 +357,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields. The playhead reads with a cubic Lagrange kernel,
   silence around the PCM, a loop's seam read across both ways (KLANG-00430); both hosts decode to the mean of the
-  channels, but the browser converts the rate at decode and the JVM in this read (`audio/ref/sample-management.md`).
+  channels, but the browser converts the rate at decode, once, to the engine's rate, and the JVM in this read
+  (`audio/ref/sample-management.md`). A sample reaches the worklet whole, its PCM buffer transferred (a main-thread
+  copy; the audio thread allocates and copies nothing, KLANG-00431 D5).
 - **The band-limited trapezoid** (KLANG-00430): the saw, ramp, rounded pulse and their stacks read the shape through a
   box of the sample's own increment (`waveTrapezoidBoxed`; for the saw's one-sample flyback the two-point PolyBLEP's
   kernel). The triangle, the raw shapes, the tremolo's LFO and the Katalyst knob LFOs stay the plain `waveTrapezoid`
@@ -450,7 +458,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   (`./gradlew :audio_be:jvmTest -Pkotest.tags=ClickHunt --tests io.peekandpoke.klang.audio_be.ignitor.GuitarClickHuntTest`);
   add a setup to it for every new click symptom or ignitor archetype.
 - **KlangScript doors forbid mixing positional and named arguments**: `distort(amount = 0.5, shape = "tube")`.
-- **Platform facts**: `KlangTime.internalMsNow()` is monotonic, not wall clock; the JS targets compile to
+- **Platform facts**: `KlangTime.internalMsNow()` is monotonic, not wall clock (in a worklet scope without
+  `performance` it is `Date.now()`, read there once, at start-up); the JS targets compile to
   ES2015 classes (an `AudioWorkletProcessor` must extend a real class); `MonoSamplePcm` is always mono, stereo
   happens at pan and mix; a null `VoiceData` field means "the engine default".
 - **Proving a change**: identity renders in raw doubles with an engagement control, a metric floor before a
@@ -497,6 +506,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 Decisions pass B2: the browser decodes at the engine's rate, the UI's clock hears an authored master, a sample crosses as one transferred buffer, the dropped and soundless counts monotone, the codec format in the schema hash, refused sends counted, crushed blocks counted, the offline render's head trimmed, `Long` refused on the wire, the worklet clock's frame counting dropped, the census models every gate, `scheduleVoice` removed: KLANG-00430, KLANG-00431, KLANG-00432, KLANG-00433
 - 2026-11-11 Decisions pass B1: a stop gives open gates their note-off and bounds a voice past the 20 s hold, a switch-on fades only over a sounding bus, delay rings bounded at 60 s, 1 s and 2 s rings warmed, a relaxing compressor move snaps, the SVF clamp at 0.49 fs, the house DC state bounded, the 16-bit edge rounds, the distort DC pole per rate: KLANG-00427, KLANG-00428, KLANG-00432, KLANG-00433
 - 2026-11-11 Decisions pass A: the pluck's real pick position (default 0.28), the square's one-sample edge, perlin without a period, white and brown rate-scaled, both middle voices' jitter, the shimmer ring sized, a non-finite drive amount unset: KLANG-00426, KLANG-00429, KLANG-00430
 - 2026-11-11 Docs and KDoc that said what the code does not do, made true (the wire, the shell, the cylinders, the samples, the ref pages); the worklet's dead `isPlaying` flag removed: KLANG-00433

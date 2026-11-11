@@ -228,15 +228,17 @@ class SongBenchmark(
         val secPerCycle = 1.0 / cps
         for (ev in events) {
             val start = ev.start * secPerCycle
-            voiceScheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = "bench",
-                    data = ev.data,
-                    startTime = start,
-                    // The pattern language's gate (`legato`), folded in by the frontend as the live path does
-                    gateEndTime = start + ev.event.gateSeconds(ev.dur * secPerCycle),
-                    playbackStartTime = 0.0,
-                )
+            voiceScheduler.scheduleVoices(
+                listOf(
+                    ScheduledVoice(
+                        playbackId = "bench",
+                        data = ev.data,
+                        startTime = start,
+                        // The pattern language's gate (`legato`), folded in by the frontend as the live path does
+                        gateEndTime = start + ev.event.gateSeconds(ev.dur * secPerCycle),
+                        playbackStartTime = 0.0,
+                    )
+                ),
             )
         }
 

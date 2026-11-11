@@ -58,14 +58,16 @@ class SharedScratchSpec : StringSpec({
     fun renderPeak(context: AudioBackendContext, clock: BackendClock, pid: String, sound: String, blocks: Int): Double {
         val engine = PlaybackEngine.create(context = context, playbackId = pid)
         engine.scheduler.registerIgnitor(sound, deepChain())
-        engine.scheduler.scheduleVoice(
-            ScheduledVoice(
-                playbackId = pid,
-                startTime = 0.0,
-                gateEndTime = 1.0,
-                data = VoiceData.empty.copy(sound = sound, freqHz = 220.0),
-                playbackStartTime = 0.0,
-            )
+        engine.scheduler.scheduleVoices(
+            listOf(
+                ScheduledVoice(
+                    playbackId = pid,
+                    startTime = 0.0,
+                    gateEndTime = 1.0,
+                    data = VoiceData.empty.copy(sound = sound, freqHz = 220.0),
+                    playbackStartTime = 0.0,
+                )
+            ),
         )
         val mix = StereoBuffer(blockFrames)
         var peak = 0.0
@@ -144,12 +146,14 @@ class SharedScratchSpec : StringSpec({
         scratch.doubleCapacity shouldBe ResourceWarehouse.SCRATCH_DEPTH
 
         val engine = PlaybackEngine.create(context = context, playbackId = "vib")
-        engine.scheduler.scheduleVoice(
-            ScheduledVoice(
-                playbackId = "vib", startTime = 0.0, gateEndTime = 1.0,
-                data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, ignitorParams = klangMapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)),
-                playbackStartTime = 0.0,
-            )
+        engine.scheduler.scheduleVoices(
+            listOf(
+                ScheduledVoice(
+                    playbackId = "vib", startTime = 0.0, gateEndTime = 1.0,
+                    data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0, ignitorParams = klangMapOf("vibrato.rate" to 5.0, "vibrato.semitones" to 0.3)),
+                    playbackStartTime = 0.0,
+                )
+            ),
         )
         val mix = StereoBuffer(blockFrames)
         var peak = 0.0

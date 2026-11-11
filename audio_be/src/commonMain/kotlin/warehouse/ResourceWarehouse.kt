@@ -106,9 +106,10 @@ class ResourceWarehouse(
      * not need to do any calculations again and again"). Every part bumps a `version` when it
      * changes; this rebuilds the snapshot only when the combined version moved, otherwise it hands
      * back the same object. [droppedVoices] and [deniedRents] live in the engines, not here, so the
-     * caller sums them and passes them in; each is compared on its own, not folded into the version: they fall when a
-     * playback stops or its engine goes, so in a sum a fall could cancel the parts' rise and serve a stale snapshot
-     * (audit L9-11). The parts' versions only ever rise, so their sum moves with any of them.
+     * caller sums them and passes them in; each is compared on its own, not folded into the version: [deniedRents] falls
+     * when a playback stops or its engine goes, so in a sum a fall could cancel the parts' rise and serve a stale
+     * snapshot (audit L9-11; [droppedVoices] no longer falls since KLANG-00431 D6, the dispatcher keeps a stopped
+     * playback's count). The parts' versions only ever rise, so their sum moves with any of them.
      */
     fun stats(droppedVoices: Int, deniedRents: Int): KlangCommLink.Feedback.Diagnostics.WarehouseStats {
         val version = sized.version + reverbs.version + cylinders.version + scratch.version + samples.version
@@ -145,7 +146,9 @@ class ResourceWarehouse(
             scratchUnbalancedReleases = scratch.unbalancedReleases,
             sampleBytes = samples.residentBytes,
             sampleCount = samples.residentCount,
-            sampleAllocationFailures = samples.allocationFailures,
+            // The store allocates no PCM since KLANG-00431 D5: the browser's main thread makes the copy it transfers
+            // and adds the copies it could not make (`JsAudioBackend`); the JVM hands the decoded PCM over in process.
+            sampleAllocationFailures = 0,
             droppedVoices = droppedVoices,
             deniedRents = deniedRents,
         )

@@ -239,6 +239,86 @@ timer. Suites green: `:audio_be:jvmTest` 3141, `:audio_be:jsBrowserTest` 2961, `
 `:audio_bridge:jsBrowserTest` 299, `:audio_fe:jvmTest` 28, `:audio_fe:jsBrowserTest` 30, `:klang:jvmTest` 89, root
 `:jvmTest` 172. Corpus before against after: all 18 sound hashes identical, no song edited between the runs.
 
+## Decisions pass B2 (2026-11-11)
+
+What the fix worker of pass B2 built of the decisions of 2026-11-11 (D1, D2/D12, D4, D7, D9 are not this pass's).
+The wire changed once for all of it: `WIRE_SCHEMA_HASH` moved from 358149839 to -1036617280 (the codec format joined
+the signature, `Cmd.Sample.Chunk` left, `Diagnostics.crushedBlocks` and `Diagnostics.refusedFeedbackSends` joined),
+pinned in `WireCodecRoundTripSpec`, every new field with its round-trip row.
+
+- **D3, BUILT (reporting only).** Every diagnostics report's `outputLatencyMs` carries the engine's own latency,
+  `PlaybackEngineDispatcher.latencyFrames` in ms (the house limiter's lookahead plus the longest master chain in
+  service: an authored lookahead, an oversampling region's delay), plus what the host set: the JVM its line's buffer
+  (`JvmAudioBackend.outputLatencyMs` no longer adds the house lookahead itself), the worklet nothing. `JsAudioBackend`
+  adds the audio context's figures on the main thread (`withMainThreadFigures`) instead of the house constant. Nothing
+  compensates the audio. Guards: `PlaybackEngineDispatcherDiagnosticsTest` (220 frames at 44.1 kHz with no host
+  figure, plus the host's 250 ms, plus 441 frames under a master with a 10 ms lookahead), `JvmAudioBackendLatencySpec`
+  (the line only: 250 and 100 ms, was 255 and 105), `WorkletUploadSpec` (the context's figures on top: 15 + 10 + 30).
+- **D5, BUILT, option (a).** Read first, as asked: the codec passes a `DoubleArray` through as the `Float64Array` it is
+  (`isPassthrough`), so the encoded `Complete` holds the PCM as a typed array field, and a transfer list can name its
+  buffer. The design held. A sample now crosses as ONE message with its PCM buffer in the transfer list
+  (`WorkletContract.sendSample`): no structured clone of the PCM, no chunk copy on the audio thread, the allocation on
+  the main thread. The sender transfers a COPY made on the main thread: the `Complete` a frontend sends carries
+  `Samples`' cached PCM itself (`SamplePreloader` hands `loaded.pcm` on), which a transfer would detach. A copy that
+  cannot be allocated is sent to the worklet as `NotFound` (the voice silent and counted soundless, not asked for
+  again), acknowledged to the preloader with the `SampleReceived` a success sends (it waits with no timeout), and
+  counted in `WarehouseStats.sampleAllocationFailures` (the main thread adds its count to every report it forwards;
+  the field stays, the app's warehouse panel reads it). Removed, as nothing else needed them: `Cmd.Sample.Chunk`,
+  `Complete.toChunks`, `JsAudioBackend`'s upload ring and its drip, `SampleStore`'s `Partial` and `AllocationFailed`
+  states, its `allocatePcm` and `allocationFailures`, `SampleChunkRoundTripSpec`. The timer stays, for the commands
+  queued before the worklet exists (its comment says so). The JVM path (`JvmAudioBackend`, the offline renderer)
+  hands a `Complete` over in process, unchanged. Guards: `WorkletUploadSpec` (through a real `MessageChannel`: the
+  sent copy detached on the sender, the frontend's PCM whole, the receiver decodes the whole sample and its meta; the
+  default copy leaves the cache whole; a failed copy sends nothing), `SampleStoreSpec` (the store keeps the very PCM it
+  was given), the `Complete` rows of `WireCodecRoundTripSpec` (the PCM and the meta envelope through a structured clone).
+- **D6, BUILT, option (a), for both counts.** The dispatcher keeps a playback context's dropped and soundless voices
+  when the context goes (`retireCounts`, at the stop's `cleanup` and at a failure; not at the warm-up's `cleanupHard`),
+  and every report adds the live engines' counts to them: monotone since the backend started. The soundless count is
+  the same mechanism (the same context, gone at the same moment) and free, so it is monotone too. KDocs corrected:
+  `WarehouseStats` (only `deniedRents` falls now), `Diagnostics.soundlessVoices`, the scheduler's `droppedVoiceCount`
+  and `soundlessVoiceCount`, `ResourceWarehouse.stats`. Guard: `PlaybackEngineDispatcherDiagnosticsTest` (1 dropped and
+  1 soundless kept through the stop and the engine's disposal; a second playback adds its own; a second stop adds
+  nothing; the warm-up's teardown is left out).
+- **D8, BUILT, option (a).** `WireCodecProcessor.WIRE_CODEC_FORMAT` (1), folded into the signature first
+  (`schemaSignature`); its KDoc says to raise it by hand, by one, in the change that alters how the generator encodes or
+  decodes any shape. Guards: `WireCodecRoundTripSpec`'s pin, `WireCodecProcessorRulesSpec`.
+- **D10, BUILT.** A `KlangRingBuffer` counts the sends it refused (`refusedSends`, a Double, monotone, `clear` leaves it).
+  Backend: `BackendEndpoint.refusedFeedbackSends`, carried in every report (`Diagnostics.refusedFeedbackSends`); in the
+  browser the main thread adds the refusals of the ring it forwards into. Frontend: `KlangPlayer.sendControl` logs the
+  first refusal of each burst (until a send is accepted again), and the count is `KlangDiagnostics.refusedSends` (read
+  from the control ring; no file another session had modified was touched, nothing is shown in the UI). The upload
+  path is the control ring since D5. Guards: `PlaybackEngineDispatcherDiagnosticsTest` (a ring of 4, six reports
+  unread: three refused, the next report says 3), `KlangPlayerRefusedSendsSpec` (JVM: two bursts of 3 and 2 refused,
+  the count 5, two log lines), `WorkletUploadSpec` (the main thread's refusals on top: 2 + 3).
+- **D11, BUILT.** `KlangOfflineRenderer` trims the engine's latency at its head: the latency read after the first block
+  (a master that lands at the song's start is in service by then) is dropped from the frames handed to `onBlock`, the
+  block that holds the music's first frame moved to the front in place, so a WAV and a corpus render begin at the first
+  frame the engine was asked for (240 frames at 48 kHz, more under a latent master). The length rule: the render still
+  runs past its end by the latency it reads at every block (the last samples leave the delay rings), so the frames
+  handed out are the music and its tail plus only what a latency that grew after the head adds; the render is as many
+  frames SHORTER than before as the head trimmed, and loses no music (those frames were the delay's silence).
+  `Result.totalFrames` is the frames handed out. Guards: `KlangOfflineRendererMasterTest` (the first sound within 8
+  frames, plain and under a 10 ms master from the first frame; the length within a block of the music; a master landing
+  halfway adds its 441 frames at the end), `BlockSizeParitySpec` moved (it pinned every block at 128: the first block
+  handed out now holds 16 frames at 48 kHz). The corpus, my run before the first edit against my run after the last (`runSongBenchmark --args=corpus`, 48 kHz,
+  a temporary print of each render's hash in a throwaway worktree, removed with it; no song text changed between the
+  runs): every one of the 18 renders moved, as decided, and only by the trim. Nine are the before render minus its
+  first 240 frames, byte for byte (the hash of the before render from frame 240 on equals the after hash; 240 frames
+  shorter): Drunken Synthlor, Final Synthasy VII Prelude, Gestrandet, Greensleeves Chant, Remix: Echo um Echo,
+  Smalltown Synth, Synthsturm, The Synthsale Piper's Farewell, the frozen piece `derSchmetterling_2026_09_16`. The
+  Synthsale Piper's Last Rave is 243 frames shorter (a master of 3 frames at its head). Eight have a latent master at
+  the head and are 484 frames shorter (240 plus the master's 244): A Synth Worth Lying For, Der Schmetterling, Die
+  Kirschblüte, Kokon, Seltsamere Dinge, Stein um Stein, the frozen `derSchmetterling_2026_11_03` and
+  `strangerThings_2026_11_03`. The proof for all 18: a third run, the after tree with only the trim taken out
+  (`headFrames = 0`), gives the before run's hash, its hash from frame 240 and its length for every render, identical.
+  So no other change of this pass moves the sound
+
+Mutation-checked (`console/tools/mutate`), every mutant KILLED for the expected reason unless said: 26 mutants in six campaigns for the pass, every one KILLED for the expected reason. This ticket's: the report without the engine's latency (D3), the report with the house latency only (the master's 441 frames lost), the JVM figure with the house lookahead again, the context's figures not on top in the browser; the retired dropped count, the retired soundless count, a retire at the warm-up's hard cleanup (D6); the transfer list dropped (the copy arrives cloned, not detached), the default copy taken out (the cache's own PCM transferred), the failed copies not added, the store copying the PCM it is given (D5); the report without the backend's refusals, the ring not counting, the main thread's refusals not on top, the log on every refusal, the frontend's count not exposed (D10); the format left out of the signature (D8, the pin); the head not trimmed, the head's latency read as if before a master lands (D11). One verdict first read KILLED-OTHER and was rerun: the browser prints the Double 5.0 as `5`, the regex was widened to both forms, KILLED.
+Suites (test-digest, each exit 0, 0 failed): `:audio_be:jvmTest` 3157, `:audio_be:jsBrowserTest` 2983,
+`:audio_bridge:jvmTest` 160, `:audio_bridge:jsBrowserTest` 299, `:audio_fe:jvmTest` 28, `:audio_fe:jsBrowserTest` 31,
+`:klang:jvmTest` 92, root `:jvmTest` 176, `:common:jvmTest` 153, `:audio-wire-codec-ksp:test` 3; `:audio_jsworklet:compileKotlinJs`
+and the root `:compileKotlinJs` build.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

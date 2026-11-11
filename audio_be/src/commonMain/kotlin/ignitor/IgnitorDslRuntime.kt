@@ -833,6 +833,41 @@ private fun IgnitorDsl.gatedOffInner(ignitorParams: KlangMap<Double>?): IgnitorD
 }
 
 /**
+ * The child a stage gated off for this note IS, or null when the stage is built or is no gated stage: the amplitude rows
+ * ([gatedOffInner]), the switched-off envelope (`Adsr.on`) and the unity `mul` over a signal (`Times`, and the bare
+ * `Affine` the optimizer folds `.mul(k)` into), each asked exactly as [buildIgnitor] and `buildRaw` ask it. For
+ * `GraphCensus` (KLANG-00433 Decide 6), so its count of what a note builds keeps no second copy of the rows. The pitch
+ * arms are not here (the census models them, `gatedPitchChild`). [isSignal] answers the unity row's survivor question,
+ * which the build asks of the BUILT side (`survivesUnityFold`) and the census of the DSL (its `isScalar`).
+ */
+internal fun IgnitorDsl.gatedStageChild(ignitorParams: KlangMap<Double>?, isSignal: (IgnitorDsl) -> Boolean): IgnitorDsl? {
+    val amplitude = gatedOffInner(ignitorParams = ignitorParams)
+
+    if (amplitude != null) {
+        return amplitude
+    }
+
+    return when (this) {
+        is IgnitorDsl.Adsr -> inner.takeIf { on.switchedOff(ignitorParams = ignitorParams) }
+
+        // The right side first, as `buildRaw` asks it: a unity right over a block-constant left is built, the left
+        // side is not asked then
+        is IgnitorDsl.Times -> when {
+            right.gatedOffAtUnity(ignitorParams) -> left.takeIf(isSignal)
+            left.gatedOffAtUnity(ignitorParams) -> right.takeIf(isSignal)
+            else -> null
+        }
+
+        is IgnitorDsl.Affine -> inner.takeIf {
+            IgnitorDsl.Affine.isAbsentAddend(pre) && IgnitorDsl.Affine.isAbsentAddend(add) &&
+                mul.gatedOffAtUnity(ignitorParams) && isSignal(inner)
+        }
+
+        else -> null
+    }
+}
+
+/**
  * The `vibrato` row of the gate: off at a FINITE off value only; a non-finite knob keeps the stage.
  *
  * **Why the vibrato differs from the other four pitch arms.** The gate reads a non-finite knob as

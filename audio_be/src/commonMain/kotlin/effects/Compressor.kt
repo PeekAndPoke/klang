@@ -287,6 +287,13 @@ class Compressor(
      */
     internal var nonFiniteSamples: Int = 0
 
+    /**
+     * The gain the lookahead path applied to its last sample: the two boxes' output, 1.0 at rest, linear. The house
+     * stage reads it once per block to count the blocks the limiter ended crushed (`HouseStage.crushedBlocks`,
+     * KLANG-00432 L8-02 (c)). Meaningless on an instance without lookahead, which reads it never.
+     */
+    internal val lookaheadGain: Double get() = boxBSum / boxLen
+
     // Monotonic-increasing deque for the running MINIMUM of the required gain over a window of
     // `delayFrames + 1`. Primitive-backed: ArrayDeque<Double> boxes on Kotlin/JS.
     // Sized delayFrames + 3, and the +3 is load-bearing. The window holds up to `delayFrames + 1`

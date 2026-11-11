@@ -16,7 +16,16 @@ import org.khronos.webgl.Int8Array
 
 private val log = Logger(area = LogArea.Engine, source = "BrowserAudioDecoder")
 
-class BrowserAudioDecoder : AudioDecoder {
+/**
+ * Decodes a sample file with the browser's own decoder, at [sampleRate], the rate the ENGINE runs at (KLANG-00430, audit
+ * L3-05 and L9-07, option 3): the browser resamples a file not at that rate once, here, and the engine's playhead
+ * reads it 1:1. Until 2026-11-11 every file was decoded at a fixed 48 kHz, so on an engine at any other rate a file
+ * was converted twice (the browser to 48 kHz, the playhead to the engine's rate).
+ */
+class BrowserAudioDecoder(
+    /** The engine's sample rate (the player's resolved rate, `resolveBestSampleRate`), in Hz. */
+    private val sampleRate: Int,
+) : AudioDecoder {
     // We need an AudioContext to decode, even if we don't play anything with it.
     // Ideally reuse the one from the player, but for decoding a transient one is fine/standard.
     private val defaultCtx: AudioContext by lazy { AudioContext() }
@@ -28,11 +37,12 @@ class BrowserAudioDecoder : AudioDecoder {
             val int8Array = Int8Array(audioBytes.toTypedArray())
             val arrayBuffer = int8Array.buffer
 
+            val rate = sampleRate
             val ctx: AudioContext = try {
-                js("new OfflineAudioContext(1, 1, 48000)")
+                js("new OfflineAudioContext(1, 1, rate)")
             } catch (e: Throwable) {
-                log.error("Failed to create OfflineAudioContext", e)
-                // Use the default context
+                log.error("Failed to create an OfflineAudioContext at $sampleRate Hz", e)
+                // Use the default context, at the device's own rate: the engine's playhead converts what it decodes
                 defaultCtx
             }
 

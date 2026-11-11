@@ -275,6 +275,42 @@ What the fix worker of pass B1 built of this ticket's decisions (the rest belong
   rewrite, RMS smoothing of the peak detector) live in KLANG-00437; the list is gone, and the comment in the
   companion that pointed at it names the ticket.
 
+## Decisions pass B2 (2026-11-11)
+
+What the fix worker of pass B2 built of this ticket's decisions. No change moves the sound.
+
+- **Decide 1, BUILT.** `WireCodecProcessor` refuses `kotlin.Long` and `kotlin.ULong` by name (`refusedScalar`, asked
+  first for every type the walk meets; `kotlin.Long` left the pass-through scalars): the error names the type, the field
+  path and the stone rule ("'kotlin.Long' at VoiceData.x is not a wire type: a Kotlin/JS Long is an object the
+  structured clone strips, and the stone rule bans boxed types on the wire ..."), and fails the build as the other
+  refusals do. The processor's other refusals had no test; this one has a pure spec in a new test source set,
+  `audio-wire-codec-ksp/src/test` (`WireCodecProcessorRulesSpec`, task `:audio-wire-codec-ksp:test`). That the walk
+  asks it was checked once by hand: in a throwaway worktree, a `val atFrame: Long` on `Cmd.Cleanup` failed `:audio_bridge:kspKotlinJs` with "'kotlin.Long' at Cleanup.atFrame is not a wire type: ...". Mutant: `kotlin.Long` dropped from the refusal,
+  KILLED (`WireCodecProcessorRulesSpec`, the error null).
+- **Decide 2, BUILT.** `VoiceScheduler.scheduleVoice` is removed. Its callers take `scheduleVoices(listOf(voice))`:
+  `klang/src/jsMain/kotlin/KlangBenchmark.kt`, `audio_benchmark/src/commonMain/kotlin/IgnitorBenchmark.kt`,
+  `src/jvmMain/kotlin/SongBenchmark.kt` (none of the three modified by another session when this pass reached it) and 15
+  calls in 11 specs of `audio_be` (`MasterChainPrepareSpec`'s row for the single-voice path now says it is a batch of
+  one). Guard: the compile (a call to the removed function does not build); no spec can tell a removed function back.
+- **Decide 6, BUILT.** `GraphCensus` models the build gate for every gated stage. The amplitude rows (the four
+  filters at an unset cutoff, onepole, distort, drive, crush, coarse, tremolo, shimmer), the switched-off envelope and
+  the unity `mul` over a signal (`Times` and the optimizer's bare `Affine`) are the runtime's own rows, asked through
+  one new internal function beside them (`gatedStageChild` in `IgnitorDslRuntime.kt`; the census keeps no second
+  copy); a gated stage is its inner, as the build builds it, so two references to it are two to the inner. The pitch
+  stages were modelled already. The song benchmark's `work` and `traffic` columns move for every `classic()` voice
+  (its unwritten stages no longer count); the sound does not. Guard: `GraphCensusSpec`, "every gated stage counts as
+  the build builds it": nine trees (a pitch stage at 0, a lowpass at an unset cutoff, a tremolo at depth 0, a crush at
+  0 bits, a switched-off envelope, a unity `mul`, the optimizer's unity multiply, a gated stage used twice, `classic()`
+  with nothing written) each against the tree the build builds for it: the census of both equal, and the REAL build
+  of both renders the same bits; a written cutoff, a depth and a gain off unity counted. Mutants: the walker asking no gate, the envelope row and the unity `mul` row taken out of `gatedStageChild`, each KILLED with the row it names.
+- **Decide 7, BUILT.** No reader of the worklet clock's frame exists (searched: `klang`, `src`, `klangui`, `sprudel`,
+  every test; the one reader is the worklet's start-up, which reads it once, at frame 0, for the backend's epoch).
+  `KlangTime.updateCurrentFrame` (public in `audio_bridge`) and the frame counting are gone, and the worklet's two calls
+  with them. The JS `KlangTime` is now `Date.now()` at creation plus the `performance.now()` elapsed since wherever the
+  scope has `performance`, else `Date.now()` (an `AudioWorkletGlobalScope` need not have it); the start-up read is the
+  same `Date.now()` it was. `audio/ref/architecture.md` says so. Guard: the compile of `:audio_jsworklet` (a call to the
+  removed function does not build); the worklet scope is not reachable from a browser test, so not mutation-checked.
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

@@ -241,6 +241,27 @@ RMS of the whole 256-cycle render, before and after (a temporary print in the co
 By reasoning, not traced per song: the clamp is the only change in that run, so these are the songs whose filters
 reach above 0.49 fs (23.52 kHz) at some point; the levels move by under 0.003 dB.
 
+## Decisions pass B2 (2026-11-11)
+
+- **L8-02, option (c), BUILT, no sound change, with a reach to report.** Once per block the house stage reads the
+  gain its limiter ended the block at (`Compressor.lookaheadGain`, the two boxes' output) and counts a block under
+  1e-10, -200 dB (`HouseStage.HOUSE_CRUSHED_GAIN`, `HouseStage.crushedBlocks`, a monotone Double that `reset` leaves).
+  One division and one compare per block, no allocation. Every diagnostics report carries it beside `nonFiniteSamples`
+  (`Diagnostics.crushedBlocks`, in the one wire change of this pass, with its round-trip row; the hash moved from
+  358149839 to -1036617280 for this and KLANG-00431's changes together). Measured at 44.1 kHz, 64-frame blocks, a 0.3
+  sine under it: one block of 1e15 counts 1; 1e15 flipping its sign every block from block 100 of 400 counts 297; a
+  mix at +60 dBFS counts 0, a NaN 0. **The reach:** a huge CONSTANT (the audit's L8-02 case, 1e15 from 0.5 s on)
+  counts 0: since L8-01's state bound (pass B1) the house DC blockers take a constant out within a sample, so the
+  limiter hears one sample of it and its gain never ends a block that low, while the sum has rounded the music under
+  it away all the same. So option (c) as decided makes a huge MOVING value visible and not a huge constant. The
+  options, for the maintainer: (a) keep it so (the constant's crushed music stays invisible); (b) one more compare per
+  block on the mix's first sample BEFORE the DC blockers (say `abs(x) > 1e10`), counted into the same field: catches a
+  constant from its first block, free in the same sense. Recommendation: (b), if the count is to cover L8-02's own case.
+  Guards: `HouseStageSpec`, "crushed: ..." (the measured counts, the constant pinned at 0 as the reach), and
+  `PlaybackEngineDispatcherDiagnosticsTest` (a sample voice at 1e15 through the dispatcher reports crushed blocks, a
+  voice at 1e3 none, monotone). The L8-02 reproduction in `AuditSafetyRepro` stays: the constant's case is open.
+  Mutants: the count taken out, the threshold at 1e-20, the dispatcher not carrying it: each KILLED (`HouseStageSpec`: `expected:<1.0> but was:<0.0>`; the dispatcher row: `0.0 should be > 0.0`).
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

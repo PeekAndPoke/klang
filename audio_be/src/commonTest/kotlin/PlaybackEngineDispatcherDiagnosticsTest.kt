@@ -14,6 +14,8 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -103,17 +105,47 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
         commLink.readAllDiagnostics().single().backendNowMs shouldBe (endSec * 1000.0 plusOrMinus 1e-6)
     }
 
-    "a report carries the output latency its host set, 0 until it sets one (audit L8-08)" {
+    "a report carries the engine's own latency plus the host's: the house lookahead, an authored master's, the line (KLANG-00431 D3)" {
         val (d, commLink) = createDispatcher { 0.0 }
         val out = StereoBuffer(blockFrames)
+        val houseFrames = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames).latencyFrames
+        fun ms(frames: Int) = frames * 1000.0 / sampleRate
 
+        // No host figure yet: the house limiter's lookahead alone (220 frames at 44.1 kHz)
         d.render(out)
-        commLink.readAllDiagnostics().single().outputLatencyMs shouldBe 0.0
+        commLink.readAllDiagnostics().single().outputLatencyMs shouldBe (ms(houseFrames) plusOrMinus 1e-9)
 
-        // What the JVM host sets: its line's buffer plus the house limiter's lookahead
-        d.outputLatencyMs = 255.0
+        // What the JVM host sets, its line's buffer (audit L8-08), comes on top
+        d.outputLatencyMs = 250.0
         d.render(out)
-        commLink.readAllDiagnostics().single().outputLatencyMs shouldBe 255.0
+        commLink.readAllDiagnostics().single().outputLatencyMs shouldBe (250.0 + ms(houseFrames) plusOrMinus 1e-9)
+
+        // A master chain with an authored 10 ms lookahead in service: 441 frames more, which the UI's clock must hear
+        d.handle(
+            KlangCommLink.Cmd.RegisterKatalyst(
+                playbackId = "song",
+                name = "late",
+                dsl = KatalystDsl.of(KatalystStageDsl.Compressor(lookahead = 0.01)),
+            )
+        )
+        d.handle(
+            KlangCommLink.Cmd.ScheduleVoices(
+                playbackId = "song",
+                voices = listOf(
+                    ScheduledVoice(
+                        playbackId = "song",
+                        startTime = 0.0,
+                        gateEndTime = 0.1,
+                        data = VoiceData.empty.copy(master = "late", control = true),
+                        playbackStartTime = 0.0,
+                    ),
+                    voice("song"),
+                ),
+            )
+        )
+        d.render(out, blocks = 2 * blocksPerReport)
+        d.latencyFrames shouldBe houseFrames + 441
+        commLink.readAllDiagnostics().last().outputLatencyMs shouldBe (250.0 + ms(houseFrames + 441) plusOrMinus 1e-9)
     }
 
     "a report carries the house stage's poison count: 0 on a clean mix, more once a voice put a NaN on it (KLANG-00425 L8-04 (c))" {
@@ -222,5 +254,130 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
         ids shouldHaveSize 2
         ids.contains(0) shouldBe true
         ids.contains(3) shouldBe true
+    }
+    "the dropped and soundless voice counts stay after the stop: monotone since the backend started (KLANG-00431 D6)" {
+        val (d, commLink) = createDispatcher { 0.0 }
+        val out = StereoBuffer(blockFrames)
+
+        // A voice whose start was rendered past is dropped at admission; a voice whose sample never came is soundless
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song"))))
+        d.render(out, blocks = 4)
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice("song", freqHz = 330.0))))
+        d.handle(
+            KlangCommLink.Cmd.ScheduleVoices(
+                playbackId = "song",
+                voices = listOf(
+                    ScheduledVoice(
+                        playbackId = "song",
+                        startTime = 0.03,
+                        gateEndTime = 0.1,
+                        data = VoiceData.empty.copy(sound = "never-sent", freqHz = 440.0),
+                        playbackStartTime = 0.0,
+                    ),
+                ),
+            )
+        )
+        d.render(out, blocks = 2 * blocksPerReport)
+
+        val playing = commLink.readAllDiagnostics().last()
+
+        playing.warehouse.droppedVoices shouldBe 1
+        playing.soundlessVoices shouldBe 1
+
+        // The stop drops the playback's context; the reports keep its counts, through the engine's disposal
+        d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+        d.render(out, blocks = 400)
+
+        d.engine("song") shouldBe null
+
+        val stopped = commLink.readAllDiagnostics().last()
+
+        stopped.warehouse.droppedVoices shouldBe 1
+        stopped.soundlessVoices shouldBe 1
+
+        // A second playback adds its own; a second stop of the first adds nothing
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "next", voices = listOf(voice("next"))))
+        d.render(out, blocks = 4)
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "next", voices = listOf(voice("next", freqHz = 330.0))))
+        d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "song"))
+        d.handle(KlangCommLink.Cmd.Cleanup(playbackId = "next"))
+        d.render(out, blocks = blocksPerReport)
+
+        commLink.readAllDiagnostics().last().warehouse.droppedVoices shouldBe 2
+
+        // The warm-up's teardown (a hard cleanup) is left out
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "warmup", voices = listOf(voice("warmup"))))
+        d.render(out, blocks = 4)
+        d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "warmup", voices = listOf(voice("warmup", freqHz = 330.0))))
+        d.cleanupHard("warmup")
+        d.render(out, blocks = blocksPerReport)
+
+        commLink.readAllDiagnostics().last().warehouse.droppedVoices shouldBe 2
+    }
+
+    "a report carries the feedback sends the full ring refused, monotone (KLANG-00431 D10)" {
+        // A ring of 4 holds 3: the frontend reads nothing for six reports, so three are refused
+        val commLink = KlangCommLink(capacity = 4)
+        val d = PlaybackEngineDispatcher.create(
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            commLink = commLink.backend,
+            performanceTimeMs = { 0.0 },
+        ).also { it.setBackendStartTime(0.0) }
+        val out = StereoBuffer(blockFrames)
+
+        d.render(out)
+        commLink.readAllDiagnostics().single().refusedFeedbackSends shouldBe 0.0
+
+        d.render(out, blocks = 6 * blocksPerReport)
+        commLink.readAllDiagnostics() shouldHaveSize 3
+        commLink.backend.refusedFeedbackSends shouldBe 3.0
+
+        d.render(out)
+        commLink.readAllDiagnostics().single().refusedFeedbackSends shouldBe 3.0
+    }
+
+    "a report carries the house stage's crushed blocks: 0 on a loud mix, more once a huge value sat on it (KLANG-00432 L8-02 (c))" {
+        val (d, commLink) = createDispatcher { 0.0 }
+        val out = StereoBuffer(blockFrames)
+
+        fun play(sound: String, level: Double, startTime: Double) {
+            val req = SampleRequest(bank = null, sound = sound, index = null, note = null)
+
+            d.handle(
+                KlangCommLink.Cmd.Sample.Complete(
+                    req = req, note = null, pitchHz = 440.0,
+                    sample = MonoSamplePcm(sampleRate = sampleRate, pcm = DoubleArray(4410) { level }),
+                )
+            )
+            d.handle(
+                KlangCommLink.Cmd.ScheduleVoices(
+                    playbackId = sound,
+                    voices = listOf(
+                        ScheduledVoice(
+                            playbackId = sound,
+                            startTime = startTime,
+                            gateEndTime = startTime + 0.05,
+                            data = VoiceData.empty.copy(sound = sound, freqHz = 440.0),
+                            playbackStartTime = 0.0,
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        // A thousand times too loud (+60 dBFS) is limited, not crushed
+        play(sound = "loud", level = 1e3, startTime = 0.03)
+        d.render(out, blocks = 4 * blocksPerReport)
+        commLink.readAllDiagnostics().last().crushedBlocks shouldBe 0.0
+
+        play(sound = "huge", level = 1e15, startTime = 0.03)
+        d.render(out, blocks = 8 * blocksPerReport)
+
+        val reports = commLink.readAllDiagnostics()
+
+        reports.last().crushedBlocks shouldBeGreaterThan 0.0
+        // Monotone: every report carries the total so far
+        reports.zipWithNext().all { (a, b) -> b.crushedBlocks >= a.crushedBlocks } shouldBe true
     }
 })

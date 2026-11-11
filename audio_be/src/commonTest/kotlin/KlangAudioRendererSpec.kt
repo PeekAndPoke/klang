@@ -66,16 +66,18 @@ class KlangAudioRendererSpec : StringSpec({
         val playing = createRenderer()
 
         playing.setBackendStartTime(0.0)
-        playing.voices.scheduleVoice(
-            ScheduledVoice(
-                playbackId = "p",
-                startTime = 0.0,
-                gateEndTime = 1.0,
-                data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0).withClassicSlots(
-                    DoorFields(adsr = DoorAdsr(attack = 0.01, decay = 0.0, sustain = 1.0, release = 0.01))
-                ),
-                playbackStartTime = 0.0,
-            )
+        playing.voices.scheduleVoices(
+            listOf(
+                ScheduledVoice(
+                    playbackId = "p",
+                    startTime = 0.0,
+                    gateEndTime = 1.0,
+                    data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0).withClassicSlots(
+                        DoorFields(adsr = DoorAdsr(attack = 0.01, decay = 0.0, sustain = 1.0, release = 0.01))
+                    ),
+                    playbackStartTime = 0.0,
+                )
+            ),
         )
 
         var heard = false

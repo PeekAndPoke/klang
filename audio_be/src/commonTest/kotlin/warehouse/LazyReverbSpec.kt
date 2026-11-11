@@ -292,9 +292,8 @@ class LazyReverbSpec : StringSpec({
 
     "the default allocator builds a unit at the backend's rate (the catch itself is not reachable from here)" {
         // Reverb(sampleRate) cannot be made to fail without exhausting the JVM; the catch is the
-        // same shape as SizedBuffers.allocateOrNull / SampleStore.allocatePcmOrNull, whose specs
-        // exercise a real OOM. This row pins only the happy path (review round 3: the old name
-        // claimed the catch).
+        // same shape as SizedBuffers.allocateOrNull, whose spec exercises a real OOM. This row pins
+        // only the happy path (review round 3: the old name claimed the catch).
         ReverbUnits(sampleRate).rent().shouldNotBeNull().sampleRate shouldBe sampleRate
     }
 

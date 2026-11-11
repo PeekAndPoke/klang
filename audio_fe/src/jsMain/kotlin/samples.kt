@@ -10,7 +10,12 @@ import io.peekandpoke.klang.audio_fe.samples.SampleIndexLoader
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 
+/**
+ * The browser's samples: the catalogue's index, and files decoded at [sampleRate], the rate the engine runs at
+ * ([BrowserAudioDecoder]; the player's resolved rate), so a file is resampled once, by the browser.
+ */
 suspend fun Samples.Companion.create(
+    sampleRate: Int,
     assetLoader: AssetLoader = AssetLoader.default,
     catalogue: SampleCatalogue = SampleCatalogue.default,
 ): Samples {
@@ -20,7 +25,7 @@ suspend fun Samples.Companion.create(
 
     return Samples(
         index = index,
-        decoder = BrowserAudioDecoder(),
+        decoder = BrowserAudioDecoder(sampleRate = sampleRate),
         loader = assetLoader,
     )
 }

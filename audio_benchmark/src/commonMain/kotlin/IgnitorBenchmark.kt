@@ -146,14 +146,16 @@ class IgnitorBenchmark(
 
         // Schedule voices
         for (i in 0 until case.voiceCount) {
-            scheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = "bench",
-                    startTime = 0.0,
-                    gateEndTime = 9999.0, // sustain throughout benchmark
-                    playbackStartTime = 0.0,
-                    data = case.voiceData.copy(
-                        freqHz = (case.voiceData.freqHz ?: 440.0) + (i * 2),
+            scheduler.scheduleVoices(
+                listOf(
+                    ScheduledVoice(
+                        playbackId = "bench",
+                        startTime = 0.0,
+                        gateEndTime = 9999.0, // sustain throughout benchmark
+                        playbackStartTime = 0.0,
+                        data = case.voiceData.copy(
+                            freqHz = (case.voiceData.freqHz ?: 440.0) + (i * 2),
+                        ),
                     ),
                 ),
             )

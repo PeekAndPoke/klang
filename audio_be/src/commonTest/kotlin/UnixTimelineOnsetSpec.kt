@@ -85,8 +85,10 @@ class UnixTimelineOnsetSpec : StringSpec({
                 val rig = Rig(startTimeSec = start, cursorFrame = cursor)
 
                 // A start asked for in the past: the epoch snaps to "now", the cursor
-                rig.engine.scheduler.scheduleVoice(
-                    ScheduledVoice(playbackId = "song", data = saw, startTime = 0.0, gateEndTime = 0.5, playbackStartTime = start),
+                rig.engine.scheduler.scheduleVoices(
+                    listOf(
+                        ScheduledVoice(playbackId = "song", data = saw, startTime = 0.0, gateEndTime = 0.5, playbackStartTime = start),
+                    ),
                 )
 
                 withClue("cursor block $k: the attack's first frame is the block's first") { startsAt(rig.renderLeft(), 0) shouldBe true }
@@ -110,8 +112,10 @@ class UnixTimelineOnsetSpec : StringSpec({
             val notes = 12
 
             for (n in 0 until notes) {
-                rig.engine.scheduler.scheduleVoice(
-                    ScheduledVoice(playbackId = "song", data = saw, startTime = n * 0.125, gateEndTime = n * 0.125 + 0.01, playbackStartTime = start),
+                rig.engine.scheduler.scheduleVoices(
+                    listOf(
+                        ScheduledVoice(playbackId = "song", data = saw, startTime = n * 0.125, gateEndTime = n * 0.125 + 0.01, playbackStartTime = start),
+                    ),
                 )
             }
 

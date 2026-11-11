@@ -108,12 +108,14 @@ class WarmupVocabularySpec : StringSpec({
             val engine = PlaybackEngine.create(context = context, playbackId = name)
             engine.scheduler.registerIgnitor(name, dsl)
             val start = 0.5 * blockFrames / sampleRate
-            engine.scheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = "warm", startTime = start, gateEndTime = start + 0.1,
-                    data = VoiceData.empty.copy(sound = name, freqHz = 220.0, cylinder = 0),
-                    playbackStartTime = 0.0,
-                )
+            engine.scheduler.scheduleVoices(
+                listOf(
+                    ScheduledVoice(
+                        playbackId = "warm", startTime = start, gateEndTime = start + 0.1,
+                        data = VoiceData.empty.copy(sound = name, freqHz = 220.0, cylinder = 0),
+                        playbackStartTime = 0.0,
+                    )
+                ),
             )
             var peak = 0.0
             var finite = true

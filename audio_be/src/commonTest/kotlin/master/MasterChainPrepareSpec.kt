@@ -234,13 +234,14 @@ class MasterChainPrepareSpec : StringSpec({
     }
 
     "a master in a single scheduled voice is built ahead too" {
-        // `VoiceScheduler.scheduleVoice`, the benchmarks' path
+        // A batch of one straight into the scheduler, the benchmarks' path (the single-voice `scheduleVoice` it went
+        // through left with KLANG-00433 Decide 2)
         val rig = EngineRig()
         rig.d.handle(KlangCommLink.Cmd.RegisterKatalyst(playbackId = "song", name = "room", dsl = room))
         rig.d.handle(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(tone())))
         val born = rig.bus.builtChains
 
-        rig.engine.scheduler.scheduleVoice(masterEvent("room", at = 0.5))
+        rig.engine.scheduler.scheduleVoices(listOf(masterEvent("room", at = 0.5)))
 
         rig.bus.builtChains shouldBe born + 1
     }

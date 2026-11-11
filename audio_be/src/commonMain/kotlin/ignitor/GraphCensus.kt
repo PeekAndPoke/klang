@@ -41,11 +41,14 @@ import kotlin.random.Random
  *   it borrows while rendering. A model with round numbers per kind, a lower bound where a count is
  *   not a literal (a partial count that is a slot).
  *
- * The build gate is modelled for the pitch stages only: a vibrato, accelerate, pitch envelope,
- * `pitchModSemitones` or fm whose switch is a LITERAL off value (a `Constant`, or a `Param` read
- * through [params]; the rows of `audio/ref/off-values.md`) is not built, its knobs included, and
- * counts nothing. Every other gated stage (a filter at an unset cutoff, the tremolo, the shapers,
- * the envelope) counts as built, set or not.
+ * The build gate is modelled for every gated stage (KLANG-00433 Decide 6; until 2026-11-11 for the pitch stages only,
+ * and a classic voice counted the stages it does not build): a stage whose switch is a LITERAL off value (a
+ * `Constant`, or a `Param` read through [params]; the rows of `audio/ref/off-values.md`) is not built, its knobs
+ * included, and counts nothing. The pitch stages (a vibrato, accelerate, pitch envelope, `pitchModSemitones`, fm) are
+ * modelled here; the amplitude stages (the four filters at an unset cutoff, onepole, distort, drive, crush, coarse,
+ * the tremolo, the shimmer), the switched-off envelope and the unity `mul` over a signal are the runtime's own rows
+ * (`gatedStageChild`): such a stage IS its inner, as the build builds it, so two references to it are two references
+ * to the inner.
  *
  * Sharing is by IDENTITY, as the runtime's build cache keys it: two structurally equal subtrees
  * that are different instances build twice and are counted twice. What the model does not see
@@ -227,7 +230,23 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
             return node.childNodes()
         }
 
+        /**
+         * The inner a gated AMPLITUDE stage, a switched-off envelope or a unity `mul` is for this note, or null (the
+         * runtime's rows, `gatedStageChild`; a signal survivor is what [isScalar] says is not one value per block).
+         * The build builds the inner in the node's place, so the node is transparent: [count] and [visit] go through.
+         */
+        private fun gatedStageChild(node: IgnitorDsl): IgnitorDsl? =
+            node.gatedStageChild(ignitorParams = params, isSignal = { !isScalar(it) })
+
         fun count(node: IgnitorDsl) {
+            val gated = gatedStageChild(node)
+
+            if (gated != null) {
+                count(gated)
+
+                return
+            }
+
             if (refs.increment(node) == 1) {
                 for (child in renderedChildren(node)) {
                     count(child)
@@ -266,6 +285,12 @@ data class GraphCensus(val passes: Int, val traffic: Int, val bytes: Int) {
         fun visit(node: IgnitorDsl): GraphCensus {
             if (isScalar(node)) {
                 return NONE
+            }
+
+            val gated = gatedStageChild(node)
+
+            if (gated != null) {
+                return visit(gated)
             }
 
             // The note clocks are singletons, so every use is the same instance, yet the build makes each one a leaf

@@ -450,6 +450,18 @@ the 48 kHz rounding of brown's leak and white's tilt.
 The largest: Drunken Synthlor +0.83 dB RMS (its `sndPluck` at the default pick: the whole string carries noise now) and
 Gestrandet +0.64 dB. The shimmer ring and the drive read move no song (none has a shimmer or a non-finite drive).
 
+## Decisions pass B2 (2026-11-11)
+
+- **L3-05, L9-07, option 3, BUILT.** The browser decodes a sample at the ENGINE's rate: `BrowserAudioDecoder` takes the
+  rate as a plain constructor parameter and builds its `OfflineAudioContext(1, 1, sampleRate)` at it (it was a fixed
+  48 kHz); `Samples.create` (audio_fe jsMain) takes it, and the app's `Player` passes the rate it starts the player at,
+  `resolveBestSampleRate(48000)` resolved once. A device whose engine does not run at 48 kHz converts a file once, in the
+  browser, and the playhead reads it 1:1. `audio/ref/sample-management.md` says what both hosts do now; the JVM's
+  band-limiting converter stays KLANG-00438. No corpus song moves (the corpus renders on the JVM). Guard:
+  `BrowserAudioDecoderSpec`, "a file decoded for an engine at 44.1 kHz comes back at 44.1 kHz" (4800 frames at 48 kHz
+  come back as 4410 at 44.1 kHz, the level kept; at 48 kHz nothing is converted). Mutant: the context at a fixed
+  48000 again, KILLED (`expected:<44100> but was:<48000>`).
+
 ## Acceptance
 
 - Every row above is fixed with a guarding spec, or listed under "Decide" with its reason.

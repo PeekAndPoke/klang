@@ -126,69 +126,19 @@ class KlangCommLink(capacity: Int = 8192) {
                 override val playbackId: String = SYSTEM_PLAYBACK_ID
             }
 
+            /**
+             * A decoded sample, whole. The JVM hosts hand it to the backend in process; the browser posts it to the
+             * worklet as ONE message whose PCM buffer is transferred, not cloned (`JsAudioBackend`, KLANG-00431 D5): the
+             * main thread makes the copy it transfers, the audio thread allocates and copies nothing. Until 2026-11-11
+             * the browser split it into 1 MB chunks (`Chunk`, `toChunks`), each cloned and copied once more on the audio
+             * thread, which allocated the whole PCM at the first one (audit L9-09).
+             */
             @WireName("sample-complete")
             data class Complete(
                 override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
                 val sample: MonoSamplePcm,
-            ) : Sample {
-                override val playbackId: String = SYSTEM_PLAYBACK_ID
-
-                /**
-                 * Splits the PCM for upload.
-                 *
-                 * [chunkFrames] counts **DoubleArray elements** (mono frames), NOT bytes: at 8
-                 * bytes each, the default 64 * 1024 frames is a 512 KB message; the one caller
-                 * (`JsAudioBackend`) asks for 128 * 1024, a 1 MB message. The parameter used to be
-                 * called `chunkSizeBytes`, which read as 8× smaller than it is (64 KB believed,
-                 * 512 KB actual) and made the upload look far more throttled than it was.
-                 *
-                 * Chunking originally existed to keep kotlinx-serialization decode off the audio
-                 * thread in slices. That cost is gone (the KSP wire codec replaced it), and what
-                 * remains per chunk is one structured-clone plus the `copyInto` in
-                 * `SampleStore.addSample` — linear in [chunkFrames], so this still bounds the
-                 * worst-case audio-thread hiccup. It is a SIZE bound, not a rate limit; the rate
-                 * is set by how many chunks the host forwards per tick.
-                 *
-                 * NB: when the PCM length is an exact multiple of [chunkFrames] the last entry is
-                 * an empty chunk carrying `isLastChunk`. Harmless (an empty `copyInto` is a no-op)
-                 * and it still completes the sample, but it is one wasted message.
-                 */
-                fun toChunks(chunkFrames: Int = 64 * 1024): List<Chunk> {
-                    val numChunks = (sample.pcm.size / chunkFrames) + 1
-
-                    return (0 until numChunks).map { i ->
-                        val start = i * chunkFrames
-                        val end = minOf(sample.pcm.size, (i + 1) * chunkFrames)
-
-                        Chunk(
-                            req = req,
-                            note = note,
-                            pitchHz = pitchHz,
-                            sampleRate = sample.sampleRate,
-                            meta = sample.meta,
-                            totalSize = sample.pcm.size,
-                            isLastChunk = i == numChunks - 1,
-                            chunkOffset = start,
-                            data = sample.pcm.copyOfRange(start, end),
-                        )
-                    }
-                }
-            }
-
-            @Suppress("ArrayInDataClass")
-            @WireName("sample-chunk")
-            data class Chunk(
-                override val req: SampleRequest,
-                val note: String?,
-                val pitchHz: Double,
-                val sampleRate: Int,
-                val meta: SampleMetadata,
-                val totalSize: Int,
-                val isLastChunk: Boolean,
-                val chunkOffset: Int,
-                val data: DoubleArray,
             ) : Sample {
                 override val playbackId: String = SYSTEM_PLAYBACK_ID
             }
@@ -282,11 +232,12 @@ class KlangCommLink(capacity: Int = 8192) {
             /** AudioContext.outputLatency in ms (hardware/device latency, e.g. Bluetooth). 0.0 on JVM. */
             val outputDeviceLatencyMs: Double = 0.0,
             /**
-             * Total output latency in ms: `baseLatencyMs + outputDeviceLatencyMs` **plus the house
-             * limiter's lookahead**, which happens inside the worklet where the browser's own
-             * latency figures cannot see it. On the JVM: the line's buffer plus that lookahead
-             * (`PlaybackEngineDispatcher.outputLatencyMs`, audit L8-08). An authored master chain's
-             * lookahead is not in it (KLANG-00431, Decide).
+             * Total output latency in ms: the engine's own latency, which the browser's figures cannot see (the house
+             * limiter's lookahead plus the longest master chain in service: an authored lookahead, an oversampling
+             * region's delay; `PlaybackEngineDispatcher.latencyFrames`), plus what the host knows: on the JVM the
+             * line's buffer (audit L8-08), in the browser `baseLatencyMs + outputDeviceLatencyMs`, added on the main
+             * thread (`JsAudioBackend`). Reporting only (KLANG-00431 D3): the UI's clock places the sound by it;
+             * nothing compensates the audio for an authored lookahead.
              */
             val outputLatencyMs: Double = 0.0,
             /**
@@ -296,8 +247,9 @@ class KlangCommLink(capacity: Int = 8192) {
              */
             val warehouse: WarehouseStats,
             /**
-             * Voices that made no sound: their sample had not arrived (or was empty) or their sound was unknown, summed
-             * over the playbacks (KLANG-00399). Counted apart from the late voices, which the warehouse stats carry.
+             * Voices that made no sound: their sample had not arrived (or was empty) or their sound was unknown, since
+             * the backend started, a stopped playback's included (KLANG-00399; monotone since KLANG-00431 D6). Counted
+             * apart from the late voices, which the warehouse stats carry.
              */
             val soundlessVoices: Int = 0,
             /**
@@ -307,6 +259,21 @@ class KlangCommLink(capacity: Int = 8192) {
              * Motor stays raw, the failure is made visible (`HouseStage.nonFiniteSamples`).
              */
             val nonFiniteSamples: Double = 0.0,
+            /**
+             * "Crushed" (KLANG-00432, audit L8-02, option (c)): the blocks at whose end the house limiter held the mix
+             * more than 200 dB down, since the backend started. No music reaches that: it takes a mix past about
+             * +210 dBFS, a huge finite value on the mix, which has already rounded every playback's music away in the
+             * sum (1e15 leaves steps of 0.125). Counted once per block from the limiter's gain, nothing clamped
+             * (`HouseStage.crushedBlocks`, which says its reach: a huge CONSTANT is not counted, the DC blockers take it
+             * out first). Monotone; a Double (no Long on the wire).
+             */
+            val crushedBlocks: Double = 0.0,
+            /**
+             * Feedback messages the backend could not send because its feedback ring was full, since it started
+             * (KLANG-00431 D10, audit L1-11): the message was dropped. In the browser the main thread adds the
+             * refusals of the ring it forwards into (`JsAudioBackend`). Monotone; a Double.
+             */
+            val refusedFeedbackSends: Double = 0.0,
         ) : Feedback {
             data class CylinderState(
                 /** Cylinder ID (0-15 typically) */
@@ -316,10 +283,9 @@ class KlangCommLink(capacity: Int = 8192) {
             )
 
             /**
-             * One line per part of the warehouse. Counters are monotone since backend start, except
-             * [droppedVoices] and [deniedRents], which are the engines' and fall when a playback stops
-             * (audit L9-11; KLANG-00431, Decide); `idle*` are current. Bytes are Double (no Long on the
-             * wire or in audio paths).
+             * One line per part of the warehouse. Counters are monotone since backend start, [droppedVoices] included
+             * (KLANG-00431 D6), except [deniedRents], which is the engines' and falls when a playback stops (audit
+             * L9-11); `idle*` are current. Bytes are Double (no Long on the wire or in audio paths).
              */
             data class WarehouseStats(
                 /** Delay rings: idle bytes on the shelf, idle count, dirty (not yet zeroed) count. */
@@ -348,13 +314,18 @@ class KlangCommLink(capacity: Int = 8192) {
                 val scratchHighWater: Int,
                 val scratchLateAllocations: Int,
                 val scratchUnbalancedReleases: Int,
-                /** Sample PCM resident in the store, and uploads whose PCM could not be allocated. */
+                /**
+                 * Sample PCM resident in the store, and uploads whose PCM could not be allocated: since KLANG-00431 D5
+                 * the browser's main thread makes the copy it transfers, and counts here the copies it could not make
+                 * (`JsAudioBackend`); the store allocates nothing.
+                 */
                 val sampleBytes: Double,
                 val sampleCount: Int,
                 val sampleAllocationFailures: Int,
                 /**
-                 * Across the engines rendering now: voices dropped at admission (late), and refused unit
-                 * rents. A playback's own count leaves the sum when it stops.
+                 * Voices dropped at admission (late), since the backend started: a stopped playback's count is kept
+                 * (KLANG-00431 D6), so a stutter stays visible after the stop. Refused unit rents across the engines
+                 * rendering now: a playback's own count leaves that sum when it stops.
                  */
                 val droppedVoices: Int,
                 val deniedRents: Int,
@@ -400,11 +371,20 @@ class KlangCommLink(capacity: Int = 8192) {
     inner class FrontendEndpoint {
         val control: KlangMessageSender<Cmd> get() = controlBuffer
         val feedback: KlangMessageReceiver<Feedback> get() = feedbackBuffer
+
+        /** Commands refused because the control ring was full, since it was made: each was dropped (KLANG-00431 D10). */
+        val refusedControlSends: Double get() = controlBuffer.refusedSends
     }
 
     /** Endpoint for the backend. */
     inner class BackendEndpoint {
         val control: KlangMessageReceiver<Cmd> get() = controlBuffer
         val feedback: KlangMessageSender<Feedback> get() = feedbackBuffer
+
+        /**
+         * Feedback refused because the feedback ring was full, since it was made: each was dropped (KLANG-00431 D10).
+         * Carried in every [Feedback.Diagnostics] ([Feedback.Diagnostics.refusedFeedbackSends]).
+         */
+        val refusedFeedbackSends: Double get() = feedbackBuffer.refusedSends
     }
 }

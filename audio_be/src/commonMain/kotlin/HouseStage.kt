@@ -81,6 +81,13 @@ class HouseStage(
          * restored by this: the sum had already rounded it away in the mix.
          */
         const val HOUSE_DC_STATE_BOUND: Double = 1e3
+
+        /**
+         * The limiter gain under which a block counts as crushed ([crushedBlocks]): 1e-10, -200 dB (KLANG-00432, audit
+         * L8-02, option (c), maintainer 2026-11-11). The 20:1 limiter reaches it only above about +210 dBFS on the mix;
+         * a musical mix, even one a thousand times too loud, stays some 140 dB away.
+         */
+        const val HOUSE_CRUSHED_GAIN: Double = 1e-10
     }
 
     /**
@@ -88,8 +95,8 @@ class HouseStage(
      *
      * The whole output is delayed by this, uniformly, so nothing desyncs *within* the audio. But it
      * is invisible to `AudioContext.outputLatency` (it happens inside the worklet, downstream of the
-     * clock), so anything aligning visuals to audio has to add it explicitly. See
-     * KLANG-00225 (master limiter lookahead) Phase 5.
+     * clock), so the dispatcher adds it to every report's output latency (`PlaybackEngineDispatcher.latencyFrames`,
+     * KLANG-00431 D3). See KLANG-00225 (master limiter lookahead) Phase 5.
      */
     val latencyFrames: Int get() = limiter.latencyFrames
 
@@ -139,9 +146,25 @@ class HouseStage(
         private set
 
     /**
+     * "Crushed" (KLANG-00432, audit L8-02, option (c), maintainer 2026-11-11): the blocks at whose end the house limiter
+     * held the mix more than 200 dB down ([HOUSE_CRUSHED_GAIN]), since this stage was built. That takes a huge FINITE
+     * value on the mix, which "poison seen" does not count (it is finite) and under which the sum has rounded every
+     * playback's music away (`1e15 + m`: steps of 0.125, silence above 9e15). One compare per block on the gain the
+     * limiter ended the block at, nothing clamped, no allocation. Monotone, never reset ([reset] leaves it); a Double.
+     * The dispatcher carries it in every diagnostics report, beside [nonFiniteSamples].
+     *
+     * **Its reach** (measured, decisions pass B2): a huge value that MOVES counts (one block of 1e15: 1 block; 1e15
+     * flipping sign every block: every block); a huge CONSTANT does not, because the DC blockers ahead of the limiter
+     * take it out within a sample ([HOUSE_DC_STATE_BOUND], audit L8-01), so the limiter hears one sample of it. The
+     * music under such a constant is lost all the same.
+     */
+    var crushedBlocks: Double = 0.0
+        private set
+
+    /**
      * Clears stateful post-chain elements (limiter envelope + DC blocker IIR state). Used at the
      * end of the warmup handshake so post-chain state does not survive into the first real block.
-     * The [nonFiniteSamples] count is not audio state and stays.
+     * The [nonFiniteSamples] and [crushedBlocks] counts are not audio state and stay.
      */
     fun reset() {
         limiter.reset()
@@ -169,6 +192,12 @@ class HouseStage(
         if (seen != 0) {
             nonFiniteSamples += seen
             limiter.nonFiniteSamples = 0
+        }
+
+        // Crushed: one compare per block on the gain the limiter ended the block at. NaN-guard: the gain is finite (the
+        // limiter's detector reads every level through `finiteOrZero`); a NaN would fail the compare and not count.
+        if (limiter.lookaheadGain < HOUSE_CRUSHED_GAIN) {
+            crushedBlocks += 1.0
         }
 
         // Transparent clip into the floating-point output.

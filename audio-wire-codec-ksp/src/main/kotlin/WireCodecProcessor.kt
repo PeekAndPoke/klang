@@ -38,8 +38,8 @@ import com.google.devtools.ksp.validate
  * Anything else (e.g. other typed arrays, `Map` with non-String/Double, a type with no primary constructor) is an
  * ERROR: the processor reports it via `logger.error` (failing the build) with the exact field/subtype path. It never
  * silently skips a type — that would drop data from the wire protocol. To add a wire type, extend the emitter here.
- * One exception: `kotlin.Long` is in `SCALARS` and passes through unrefused, although a Kotlin/JS `Long` is an object
- * the structured clone would strip. No wire type has one, and the stone rule bans `Long` on the wire.
+ * `kotlin.Long` and `kotlin.ULong` are refused by name ([refusedScalar], KLANG-00433 Decide 1): a Kotlin/JS `Long` is
+ * an object the structured clone strips, and the stone rule bans boxed types on the wire.
  */
 class WireCodecProcessor(
     environment: SymbolProcessorEnvironment,
@@ -74,8 +74,32 @@ class WireCodecProcessor(
         private const val KLANG_MAP = "io.peekandpoke.klang.common.infra.KlangMap"
 
         private val SCALARS = setOf(
-            "kotlin.String", "kotlin.Double", "kotlin.Int", "kotlin.Boolean", "kotlin.Float", "kotlin.Long",
+            "kotlin.String", "kotlin.Double", "kotlin.Int", "kotlin.Boolean", "kotlin.Float",
         )
+
+        /**
+         * The codec's own format, folded into `WIRE_SCHEMA_HASH` ([schemaSignature]; KLANG-00431 D8, audit L1-07): what
+         * the types' signatures cannot show, how the generator writes a shape (the `#t` tag, a set as an array, an
+         * enum as its ordinal, a `KlangMap` as a plain object, the identity scope). Raise it by hand, by one, in the
+         * change that alters how the generator encodes or decodes any shape, so a worklet of the old encoding is refused.
+         */
+        const val WIRE_CODEC_FORMAT: Int = 1
+
+        /** The string `WIRE_SCHEMA_HASH` is the hash of: the codec's format, then every type's signature in codec-id order. */
+        internal fun schemaSignature(typeSignatures: List<String>): String =
+            "format=$WIRE_CODEC_FORMAT;" + typeSignatures.joinToString(";")
+
+        /**
+         * The error for a scalar the wire refuses by name, or null (KLANG-00433 Decide 1): `kotlin.Long` and `kotlin.ULong`
+         * would build and cross as an object the structured clone strips, and the stone rule bans boxed types on the wire.
+         */
+        internal fun refusedScalar(qualifiedName: String?, ctx: String): String? = when (qualifiedName) {
+            "kotlin.Long", "kotlin.ULong" ->
+                "'$qualifiedName' at $ctx is not a wire type: a Kotlin/JS Long is an object the structured clone strips, " +
+                    "and the stone rule bans boxed types on the wire (CLAUDE.md, \"No boxed types\"). Use Int or Double"
+
+            else -> null
+        }
     }
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
@@ -107,9 +131,9 @@ class WireCodecProcessor(
         sb.appendLine("package $GEN_PKG")
         sb.appendLine()
 
-        // Auto-derived structural hash of the whole wire schema. Changes iff a type/field/subtype changes, so a
-        // stale-cached worklet (different build) is detected at the envelope. Never hand-bumped. See the task doc.
-        val schemaSig = toGenerate.sortedBy { codecId(it) }.joinToString(";") { typeSignature(it) }
+        // Auto-derived structural hash of the whole wire schema. Changes when a type/field/subtype changes, or when
+        // WIRE_CODEC_FORMAT is raised, so a stale-cached worklet (different build) is detected at the envelope.
+        val schemaSig = schemaSignature(toGenerate.sortedBy { codecId(it) }.map { typeSignature(it) })
         sb.appendLine("/** Structural hash of the wire schema — frontend & worklet must agree (else a stale-build skew). */")
         sb.appendLine("const val WIRE_SCHEMA_HASH: Int = ${schemaSig.hashCode()}")
         sb.appendLine()
@@ -139,6 +163,12 @@ class WireCodecProcessor(
     private fun collectType(type: KSType, acc: MutableSet<KSClassDeclaration>, ctx: String): Boolean {
         val decl = type.declaration
         val qn = decl.qualifiedName?.asString()
+        val refused = refusedScalar(qualifiedName = qn, ctx = ctx)
+
+        if (refused != null) {
+            errors += refused
+            return false
+        }
 
         if (isPassthrough(qn)) return true
         if (qn == LIST) return collectType(type.arguments[0].type!!.resolve(), acc, "$ctx[]")

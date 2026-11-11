@@ -196,11 +196,15 @@ class VoiceScheduler(
      * Voices of the playback dropped at admission because their start had already been rendered
      * past (block-framing B2), counted since its context was created (0 without one). Zero on a healthy
      * link; a rising count is the only visible trace of a frontend stall now that late voices are
-     * dropped rather than smeared. Read by the stats feed.
+     * dropped rather than smeared. Read by the stats feed, where it stays after the stop: the dispatcher
+     * keeps the count of a context that goes (`PlaybackEngineDispatcher.retireCounts`, KLANG-00431 D6).
      */
     fun droppedVoiceCount(): Int = playback?.droppedVoices ?: 0
 
-    /** The voices of this playback that made no sound (see [PlaybackCtx.soundlessVoices]). */
+    /**
+     * The voices of this playback that made no sound (see [PlaybackCtx.soundlessVoices]); kept by the dispatcher when
+     * the context goes, as [droppedVoiceCount] is.
+     */
     fun soundlessVoiceCount(): Int = playback?.soundlessVoices ?: 0
 
     /** Register a custom oscillator for THIS playback — lands on the per-engine fork, not the shared parent. */
@@ -329,17 +333,6 @@ class VoiceScheduler(
         }
 
         return dropResentDuplicates(incoming = voices, active = sources)
-    }
-
-    fun scheduleVoice(voice: ScheduledVoice) {
-        if (!admit(voice)) {
-            return
-        }
-
-        voice.data.master?.let { masterBus.prepare(it) }
-        val cursor = context.clock.cursorFrame
-        promoteScheduled(nowFrame = cursor, blockEnd = cursor + context.blockFrames)
-        prefetchSampleSound(voice)
     }
 
     /**

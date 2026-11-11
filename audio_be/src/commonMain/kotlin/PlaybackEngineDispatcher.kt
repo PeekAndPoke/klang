@@ -73,6 +73,12 @@ class PlaybackEngineDispatcher(
     private val diagnosticsEveryFrames = (context.sampleRateDouble * DIAGNOSTICS_EVERY_SEC).toInt()
     private var avgHeadroom = 1.0
 
+    // The dropped and soundless voices of every playback context that has gone ([retireCounts]): the counts are the
+    // engines' and fall when a playback stops, so the dispatcher keeps them, and the reports read monotone since the
+    // backend started (KLANG-00431 D6, audit L9-11). The warm-up's are left out (`cleanupHard` does not retire them).
+    private var retiredDroppedVoices = 0
+    private var retiredSoundlessVoices = 0
+
     // The counts of one emission ([emitDiagnostics]), summed over the engines by [countDiagnostics].
     private var diagnosticVoices = 0
     private var diagnosticDroppedVoices = 0
@@ -80,11 +86,13 @@ class PlaybackEngineDispatcher(
     private var diagnosticDeniedRents = 0
 
     /**
-     * The milliseconds from the timeline to the speaker that only the host knows, carried in every report
-     * ([KlangCommLink.Feedback.Diagnostics.outputLatencyMs]): the JVM host sets its line's buffer plus the house
-     * limiter's lookahead (audit L8-08: it reported none, and the UI's time ran a quarter second ahead of the sound).
-     * The browser leaves it at 0 in the worklet and fills the field on the main thread, where the context's figures
-     * are (`JsAudioBackend`). Written by the host once, before it renders.
+     * The milliseconds from the engine's output to the speaker that only the host knows: the JVM host sets its line's
+     * buffer (audit L8-08: it reported none, and the UI's time ran a quarter second ahead of the sound); the worklet
+     * leaves it at 0, and the main thread adds the audio context's figures (`JsAudioBackend`). Every report carries
+     * it plus the engine's own latency, [latencyFrames] in ms (the house limiter's lookahead and the longest master
+     * chain in service: an authored lookahead, an oversampling region's delay; KLANG-00431 D3), in
+     * [KlangCommLink.Feedback.Diagnostics.outputLatencyMs]. Reporting only: nothing compensates the audio. Written by
+     * the host once, before it renders.
      */
     var outputLatencyMs: Double = 0.0
 
@@ -278,6 +286,8 @@ class PlaybackEngineDispatcher(
     private fun cleanup(playbackId: String) {
         val engine = engines[playbackId] ?: return
 
+        // The stop drops the playback's context, and its counts with it
+        retireCounts(engine)
         engine.scheduler.cleanup()
 
         // A first stop joins the disposal order at its end; a second one keeps the place of the first.
@@ -373,8 +383,20 @@ class PlaybackEngineDispatcher(
         rendering.remove(engine)
         ending.remove(engine)
         report(playbackId = engine.playbackId, reason = reason)
+        retireCounts(engine)
         engine.scheduler.cleanupHard()
         engine.dispose()
+    }
+
+    /**
+     * Keeps [engine]'s dropped and soundless voice counts before its playback context goes (a stop, a failure), so the
+     * reports stay monotone since the backend started (KLANG-00431 D6). The context is the counts' one home and goes
+     * only at the scheduler's `cleanup`; a second stop finds none and adds 0, and a resumed playback counts afresh in a
+     * new context.
+     */
+    private fun retireCounts(engine: PlaybackEngine) {
+        retiredDroppedVoices += engine.scheduler.droppedVoiceCount()
+        retiredSoundlessVoices += engine.scheduler.soundlessVoiceCount()
     }
 
     /** Tells the frontend that [playbackId] failed ([KlangCommLink.Feedback.PlaybackFailed]). */
@@ -415,8 +437,8 @@ class PlaybackEngineDispatcher(
         val cylinderStates = ArrayList<KlangCommLink.Feedback.Diagnostics.CylinderState>()
 
         diagnosticVoices = 0
-        diagnosticDroppedVoices = 0
-        diagnosticSoundlessVoices = 0
+        diagnosticDroppedVoices = retiredDroppedVoices
+        diagnosticSoundlessVoices = retiredSoundlessVoices
         diagnosticDeniedRents = 0
 
         // Every engine that renders counts, a detached one still releasing included, in render order.
@@ -432,7 +454,7 @@ class PlaybackEngineDispatcher(
                 activeVoiceCount = diagnosticVoices,
                 cylinders = cylinderStates,
                 backendNowMs = context.clock.secAt(blockEndFrame) * 1000.0,
-                outputLatencyMs = outputLatencyMs,
+                outputLatencyMs = outputLatencyMs + latencyFrames * 1000.0 / context.sampleRateDouble,
                 // The warehouse's own snapshot: rebuilt only when one of its parts changed.
                 warehouse = context.warehouse.stats(
                     droppedVoices = diagnosticDroppedVoices,
@@ -440,13 +462,15 @@ class PlaybackEngineDispatcher(
                 ),
                 soundlessVoices = diagnosticSoundlessVoices,
                 nonFiniteSamples = house.nonFiniteSamples,
+                crushedBlocks = house.crushedBlocks,
+                refusedFeedbackSends = context.commLink.refusedFeedbackSends,
             )
         )
     }
 
     /**
-     * Adds [engine]'s voices, dropped and soundless voices and denied rents to the diagnostic counts, and its cylinders'
-     * states.
+     * Adds [engine]'s voices, dropped and soundless voices (of its live context; a gone one's are retired,
+     * [retireCounts]) and denied rents to the diagnostic counts, and its cylinders' states.
      */
     private fun countDiagnostics(
         engine: PlaybackEngine,
@@ -509,7 +533,8 @@ class PlaybackEngineDispatcher(
      * Frames of latency the output adds: the house stage's (the house limiter's lookahead) plus the longest master
      * chain an engine has in service. A render that stops must run this many frames past its musical end, or the last
      * samples are still in a delay ring; read it per block, as a master event swaps a chain mid-song. The offline
-     * renderer reads it (KLANG-00399, step 4), as it read `KlangAudioRenderer.latencyFrames` before.
+     * renderer reads it (KLANG-00399, step 4), as it read `KlangAudioRenderer.latencyFrames` before, and trims as many
+     * frames at its head (KLANG-00431 D11). Every diagnostics report carries it, in ms, in its output latency (D3).
      */
     val latencyFrames: Int
         get() {

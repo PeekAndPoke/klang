@@ -21,6 +21,8 @@ import kotlin.concurrent.Volatile
  * - [stream]: the latest diagnostics from the backend, null before the first; what the gauges and the warehouse read.
  * - [metric]: a metric any owner registers (the player its Motor readings, a playback its pattern work), posts plain
  *   numbers to, and closes when it ends: metrics belong to their owner, so the registry never grows with use.
+ * - [refusedSends]: the commands the frontend could not hand to the backend, its control ring full (KLANG-00431 D10);
+ *   the backend's own refusals ride its reports ([KlangCommLink.Feedback.Diagnostics.refusedFeedbackSends]).
  * - [history]: every metric's last [capacity] readings, one per tick of [ticks], each the metric's latest value when it
  *   posted within [FRESH_MS], else a gap (null). A closed metric's line stays until it scrolls out. A line is a metric's
  *   [Metric.id]: a metric registered again under an id continues its line, after a gap (the maintainer, 2026-10-29:
@@ -39,7 +41,16 @@ class KlangDiagnostics(
     val capacity: Int,
     /** Now, in milliseconds, for when a value was posted. */
     private val nowMs: () -> Double,
+    /** Where [refusedSends] reads from: the player's control ring (`KlangPlayer`); none refused without one. */
+    private val readRefusedSends: () -> Double = { 0.0 },
 ) {
+    /**
+     * The commands the frontend could not send since the player started, because its control ring was full: each was
+     * dropped (KLANG-00431 D10, audit L1-11). Monotone; a Double, as the backend's count. The player logs the first
+     * of each burst of refusals.
+     */
+    val refusedSends: Double get() = readRefusedSends()
+
     companion object {
         /** A reading four times a second. */
         const val TICK_MS = 250

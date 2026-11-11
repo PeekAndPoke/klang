@@ -13,7 +13,7 @@ AssetLoader.download(url) → ByteArray?  (CachingAssetLoader over a UrlCache)
     ↓
 AudioDecoder.decodeMonoFloatPcm(audioBytes) → MonoSamplePcm?
     ↓
-Cmd.Sample.Complete(req, note, pitchHz, pcm) → KlangCommLink → audio_be  (the JS host sends it as chunks)
+Cmd.Sample.Complete(req, note, pitchHz, pcm) → KlangCommLink → audio_be  (the JS host transfers its PCM buffer)
 ```
 
 The frontend's `SamplePreloader` (module `klang`) runs the pipeline above for the samples a playback's voices use
@@ -64,9 +64,11 @@ interface AudioDecoder {
 
 ### BrowserAudioDecoder (jsMain, `BrowserAudioDecoder.kt`)
 
-- Delegates to `decodeAudioData(buffer)` (Web Audio API) on an `OfflineAudioContext(1, 1, 48000)`, so the browser's
-  own resampler converts every file to 48 kHz before the engine sees it (the fallback `AudioContext()` decodes at the
-  device's rate)
+- Delegates to `decodeAudioData(buffer)` (Web Audio API) on an `OfflineAudioContext(1, 1, sampleRate)` at the ENGINE's
+  rate (its constructor parameter, the player's resolved rate: the app's `Player` passes it to `Samples.create`), so
+  the browser's own resampler converts a file to that rate once, before the engine sees it (KLANG-00430, option 3;
+  until 2026-11-11 it decoded at a fixed 48 kHz, and an engine at another rate converted every file twice). The
+  fallback `AudioContext()` decodes at the device's rate, which the playhead then converts
 - Averages every channel to mono, as the JVM decoders do (since KLANG-00430; it used to keep the left channel only)
 - Supports all browser-native formats (MP3, WAV, OGG, AAC)
 
@@ -74,16 +76,17 @@ interface AudioDecoder {
 
 The channel rule is the same on both hosts (the mean of all channels). The rate conversion is not:
 
-- **Browser**: the file reaches the engine at 48 kHz, converted by the browser's resampler (its quality is the
-  browser's own, not specified by Web Audio). On a 48 kHz engine an untransposed sample then steps by exactly 1.
+- **Browser**: the file reaches the engine at the engine's own rate, converted once by the browser's resampler (its
+  quality is the browser's own, not specified by Web Audio). An untransposed sample then steps by exactly 1, at
+  every rate.
 - **JVM** (the offline render, the corpus, `RenderWavCommand`): the file keeps its rate, and the playhead converts it
   with the engine's four-point cubic Lagrange read (`SampleIgnitor`). A 44.1 kHz file's images of a 10 kHz tone read
   -26 to -31 dB under the tone there (the linear read before KLANG-00430: -20.4); a band-limiting converter would
   remove them, the four-point read only lowers them.
 
 So an offline render of a sample song is not the browser's sound in the top octaves of a file that is not at the
-engine's rate. Whether to convert at decode on the JVM, or to decode in the browser at the engine's own rate (a browser
-engine not at 48 kHz converts twice today), is open in KLANG-00430, "Decide".
+engine's rate. A band-limiting converter at decode on the JVM, so the offline render matches the browser's in kind,
+is KLANG-00438.
 
 ## UrlCache
 
@@ -130,7 +133,12 @@ interface AssetLoader {
 3. `Samples.get(request)`: `Index.resolve(request)` (null → `Cmd.Sample.NotFound`)
 4. `AssetLoader.download(url)` → bytes (cache hit or HTTP fetch + cache put)
 5. `AudioDecoder.decodeMonoFloatPcm(bytes)` → `MonoSamplePcm`
-6. Frontend sends `Cmd.Sample.Complete` on the command channel (chunked on the JS host)
+6. Frontend sends `Cmd.Sample.Complete` on the command channel. The JVM hands it over in process; the browser posts
+   it to the worklet as one message whose PCM buffer is transferred, not cloned (`WorkletContract.sendSample`,
+   KLANG-00431 D5): the main thread copies the PCM (the frontend's cache keeps its own) and transfers the copy, so
+   the audio thread allocates and copies nothing (until 2026-11-11: 1 MB chunks, each cloned and copied there). A copy
+   that cannot be allocated is sent as not found, acknowledged to the preloader and counted
+   (`sampleAllocationFailures`)
 7. The backend's `SampleStore` stores the PCM. There is no pending sample voice: a voice whose sample is not
    complete at its start is dropped whole and counted soundless
 

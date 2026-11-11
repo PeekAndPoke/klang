@@ -23,6 +23,9 @@ gone is removed when someone notices, not kept for history.
   maintainer 2026-09-27) is the author's choice and runs anywhere: the cylinder or playback it sits on runs late by it,
   and nothing compensates. Do not add compensation, and do not forbid it on a cylinder. It is fixed per chain (it
   sizes a ring), bounded by `Compressor.MAX_LOOKAHEAD_SECONDS`, and it is never a sprudel slot.
+  The UI's clock reports an authored lookahead: every diagnostics report's output latency carries the engine's own
+  (`PlaybackEngineDispatcher.latencyFrames`: the house lookahead plus the longest master chain's, an authored lookahead
+  or a region's delay; KLANG-00431 D3). That is reporting, not compensation: the audio stays uncompensated.
 - **The reverb `size` bounded to normalized 0..1 (authored 0..10) is deliberate** (maintainer,
   2026-09-16). Normalized 1.0 is comb feedback 0.98; unity sits at about 1.071, and past it the comb
   network has no steady state. The soft-cap alternative was measured (DC rail, AC-RMS 0.0) and

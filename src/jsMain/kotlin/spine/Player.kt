@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
+import io.peekandpoke.klang.audio_engine.resolveBestSampleRate
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
@@ -172,6 +173,10 @@ class Player(stores: SectionStores) : PlaybackEngine {
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null
 
+    // The rate the engine runs at, resolved once (the browser may refuse 48 kHz): the samples are decoded at it, so a
+    // file is resampled once (KLANG-00430), and the player is started at it
+    private val engineSampleRate: Int by lazy { resolveBestSampleRate(48000) }
+
     // Downloaded on first need: [preloadSamples] or [ensure]
     private val samplesLazy = lazy {
         async {
@@ -184,7 +189,7 @@ class Player(stores: SectionStores) : PlaybackEngine {
                 else -> SampleCatalogue.mirrored(override)
             }
 
-            Samples.create(catalogue = catalogue)
+            Samples.create(sampleRate = engineSampleRate, catalogue = catalogue)
         }.also { it.start() }
     }
 
@@ -232,7 +237,7 @@ class Player(stores: SectionStores) : PlaybackEngine {
                 val samples = samplesDeferred.await()
 
                 // The master volume (KLANG-00330) goes in before the audio graph exists
-                val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000, outputVolume = _outputVolume())
+                val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = engineSampleRate, outputVolume = _outputVolume())
                 val playerInstance = klangPlayer(playerOptions)
 
                 // And once more after: a turn of the knob while the engine started

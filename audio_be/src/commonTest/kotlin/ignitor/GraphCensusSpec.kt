@@ -22,7 +22,9 @@ import io.peekandpoke.klang.audio_bridge.optimize
 import io.peekandpoke.klang.audio_bridge.plus
 import io.peekandpoke.klang.audio_bridge.tremolo
 import io.peekandpoke.klang.audio_bridge.withChildNodes
+import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
 import io.peekandpoke.klang.common.infra.klangMapOf
+import kotlin.random.Random
 
 /**
  * The census on hand-counted graphs: each row states the passes and the buffer traffic a reader
@@ -546,6 +548,73 @@ class GraphCensusSpec : StringSpec({
             withClue("$clock used twice") {
                 GraphCensus.of(clock.plus(clock)) shouldBe GraphCensus(passes = 3, traffic = 5, bytes = 0)
             }
+        }
+    }
+    "every gated stage counts as the build builds it: not at all, its inner in its place (KLANG-00433 Decide 6)" {
+        // Each tree beside the tree the build builds for it. The census of both must agree, and the real build of both
+        // must render the same bits (one Random for the build and the render, as a voice has): what the census leaves
+        // out is what the build leaves out. Until 2026-11-11 only the pitch stages were modelled, and every row but
+        // the first counted its gated stage as built.
+        val blockFrames = 128
+        val blocks = 4
+
+        fun render(dsl: IgnitorDsl): List<Long> {
+            val rng = Random(11)
+            val ignitor = dsl.buildExciter(random = rng, freqHz = 220.0, sampleRate = 48000).ignitor
+            val buffer = DoubleArray(blockFrames)
+            val out = ArrayList<Long>()
+            val context = IgniteContext(
+                sampleRate = 48000,
+                voiceDurationFrames = blockFrames * blocks,
+                gateEndFrame = blockFrames * blocks,
+                scratchBuffers = ScratchBuffers(blockFrames),
+                random = rng,
+            ).apply {
+                updateOffsetAndLength(offset = 0, length = blockFrames)
+                voiceElapsedFrames = 0
+            }
+
+            repeat(blocks) {
+                ignitor.generate(buffer, 220.0, context)
+                buffer.forEach { out.add(it.toRawBits()) }
+                context.voiceElapsedFrames += blockFrames
+            }
+
+            return out
+        }
+
+        val unsetCut = IgnitorDsl.Lowpass(inner = saw, freq = IgnitorDsl.Param("cut", SLOT_UNSET))
+        val classic = saw.classic() as IgnitorDsl.Adsr
+
+        val cases = listOf(
+            // the switched-off pitch stages were modelled before: the other rows are new
+            "a pitch stage at 0" to (IgnitorDsl.Accelerate(inner = saw, semitones = c(0.0)) to saw),
+            "a lowpass at an unset cutoff" to (unsetCut to saw),
+            "a tremolo at depth 0" to (IgnitorDsl.Tremolo(inner = saw, rate = c(4.0), depth = c(0.0)) to saw),
+            "a crush at 0 bits" to (IgnitorDsl.Crush(inner = saw, bits = c(0.0)) to saw),
+            "an envelope switched off" to (IgnitorDsl.Adsr(inner = saw, on = c(0.0)) to saw),
+            "a unity mul over a signal" to (IgnitorDsl.Times(left = saw, right = c(1.0)) to saw),
+            "the optimizer's bare unity multiply" to (saw.mul(c(1.0)).optimize() to saw),
+            "a gated stage used twice is its inner shared" to (IgnitorDsl.Plus(left = unsetCut, right = unsetCut) to IgnitorDsl.Plus(left = saw, right = saw)),
+            "classic() with nothing written: its envelope over the source" to (classic to classic.copy(inner = saw)),
+        )
+
+        for ((name, trees) in cases) {
+            val (tree, built) = trees
+
+            withClue(name) {
+                GraphCensus.of(tree) shouldBe GraphCensus.of(built)
+                render(tree) shouldBe render(built)
+            }
+        }
+
+        withClue("a written cutoff, a depth, a gain off unity: built and counted, the knob read through the params") {
+            val gained = IgnitorDsl.Times(left = saw, right = IgnitorDsl.Param("g", 1.0))
+
+            GraphCensus.of(unsetCut, params = klangMapOf("cut" to 1000.0)) shouldNotBe GraphCensus.of(saw)
+            GraphCensus.of(IgnitorDsl.Tremolo(inner = saw, rate = c(4.0), depth = c(0.5))) shouldNotBe GraphCensus.of(saw)
+            GraphCensus.of(gained) shouldBe GraphCensus.of(saw)
+            GraphCensus.of(gained, params = klangMapOf("g" to 0.5)) shouldNotBe GraphCensus.of(saw)
         }
     }
 })

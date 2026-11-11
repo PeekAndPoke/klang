@@ -5,9 +5,9 @@
 
 package io.peekandpoke.klang.audio_engine
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
-import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
@@ -85,31 +85,65 @@ class KlangOfflineRendererMasterTest : StringSpec({
         return peak
     }
 
-    /** The render's run-out bound, and the frames it handed to `onBlock`. */
-    suspend fun renderFrames(master: KatalystDsl?): Pair<Int, Int> {
+    /** The frames the render handed to `onBlock`, and the index of the first frame that is not silent. */
+    suspend fun renderFrames(master: KatalystDsl?, masterAtCycles: Double): Pair<Int, Int> {
         var emitted = 0
+        var firstSound = -1
 
         val result = KlangOfflineRenderer(sampleRate = 44100, blockFrames = 128).render(
-            pattern = pattern(master = master, masterAtCycles = 2.0),
+            pattern = pattern(master = master, masterAtCycles = masterAtCycles),
             cycles = 4,
             cyclesPerSecond = 0.5,
             tailSec = 0.0,
-        ) { _, frames -> emitted += frames }
+        ) { out, frames ->
+            for (i in 0 until frames) {
+                if (firstSound < 0 && (out.left[i] != 0.0 || out.right[i] != 0.0)) {
+                    firstSound = emitted + i
+                }
+            }
 
-        return result.totalFrames to emitted
+            emitted += frames
+        }
+
+        result.totalFrames shouldBe emitted
+
+        return emitted to firstSound
+    }
+
+    // 4 cycles at 0.5 cps: 8 s of music at 44.1 kHz
+    val musicFrames = 8 * 44100
+
+    "an offline render begins at the music's first frame: the engine's latency at the head is trimmed (KLANG-00431 D11)" {
+        // The note starts at frame 0. Before the trim the render began with the house limiter's 220 frames of silence
+        // (at 44.1 kHz), more under a latent master; now its first frames are the note's attack.
+        val (plainFrames, plainFirst) = renderFrames(master = null, masterAtCycles = 0.0)
+
+        withClue("the plain render's first sound at frame $plainFirst") {
+            (plainFirst in 0 until 8) shouldBe true
+        }
+
+        // The render is as long as the music (to the block): the head no longer adds the house latency's frames
+        withClue("the plain render hands out $plainFrames frames") {
+            (plainFrames >= musicFrames && plainFrames < musicFrames + 128) shouldBe true
+        }
+
+        // A master with a 10 ms lookahead from the first frame: its 441 frames are trimmed with the house's 220
+        val (_, latentFirst) = renderFrames(master = KatalystDsl.of(KatalystStageDsl.Compressor(lookahead = 0.01)), masterAtCycles = 0.0)
+
+        withClue("the latent master's render's first sound at frame $latentFirst") {
+            (latentFirst in 0 until 8) shouldBe true
+        }
     }
 
     "an offline render runs past its end by the master chain's latency too" {
-        val (plainBound, _) = renderFrames(master = null)
         // A 10 ms lookahead delays the master bus by 441 frames at 44.1 kHz. The chain lands with the carrier event
-        // halfway through the render, so the run-out must be read again while the render runs.
-        val (delayedBound, delayedEmitted) = renderFrames(
-            master = KatalystDsl.of(KatalystStageDsl.Compressor(lookahead = 0.01)),
-        )
+        // halfway through the render, so the run-out must be read again while the render runs: what follows the
+        // chain is 441 frames late, and the render hands out that much more than the music
+        val (delayedFrames, _) = renderFrames(master = KatalystDsl.of(KatalystStageDsl.Compressor(lookahead = 0.01)), masterAtCycles = 2.0)
 
-        (delayedBound - plainBound) shouldBe 441
-        // ... and renders that far, not only to the bound it had before the chain landed
-        delayedEmitted shouldBeGreaterThanOrEqual delayedBound
+        withClue("the render with the master landing halfway hands out $delayedFrames frames") {
+            (delayedFrames >= musicFrames + 441 && delayedFrames < musicFrames + 441 + 128) shouldBe true
+        }
     }
 
     "an offline render applies the song's master chain" {

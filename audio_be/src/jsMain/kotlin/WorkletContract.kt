@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.WorkletContract.requireSchema
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.wire.WIRE_SCHEMA_HASH
 import io.peekandpoke.klang.audio_bridge.wire.decode_KlangCommLink_Cmd
@@ -35,6 +36,31 @@ object WorkletContract {
 
     fun MessagePort.sendCmd(cmd: KlangCommLink.Cmd) {
         postMessage(stamp(encode_KlangCommLink_Cmd(cmd)))
+    }
+
+    /**
+     * Sends one whole sample as ONE message whose PCM buffer is TRANSFERRED, not cloned (KLANG-00431 D5, audit L9-09):
+     * the worklet receives the buffer as it is and neither allocates nor copies on the audio thread. A transferred
+     * buffer is gone on this side (detached, length 0), and the PCM of a `Complete` is the frontend's own cache entry
+     * (`Samples` keeps the decoded PCM and hands the same array to every request), so what is transferred is a copy
+     * made here, on the main thread, by [copyPcm]. False when that copy could not be allocated: nothing was sent.
+     */
+    fun MessagePort.sendSample(
+        cmd: KlangCommLink.Cmd.Sample.Complete,
+        copyPcm: (DoubleArray) -> DoubleArray = { it.copyOf() },
+    ): Boolean {
+        val pcm = try {
+            copyPcm(cmd.sample.pcm)
+        } catch (e: Throwable) {
+            return false
+        }
+
+        val own = cmd.copy(sample = MonoSamplePcm(sampleRate = cmd.sample.sampleRate, pcm = pcm, meta = cmd.sample.meta))
+
+        // On Kotlin/JS a DoubleArray is a Float64Array: its buffer is what moves
+        postMessage(stamp(encode_KlangCommLink_Cmd(own)), arrayOf(pcm.asDynamic().buffer))
+
+        return true
     }
 
     fun decodeCmd(msg: MessageEvent): KlangCommLink.Cmd {

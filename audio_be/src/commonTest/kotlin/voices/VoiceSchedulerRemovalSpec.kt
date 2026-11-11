@@ -48,14 +48,16 @@ class VoiceSchedulerRemovalSpec : StringSpec({
             data: VoiceData = VoiceData.empty.copy(sound = "sine", freqHz = freqHz),
             durSec: Double = 30.0,
         ) {
-            engine.scheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = "song",
-                    startTime = startSec,
-                    gateEndTime = startSec + durSec,
-                    data = data,
-                    playbackStartTime = 0.0,
-                )
+            engine.scheduler.scheduleVoices(
+                listOf(
+                    ScheduledVoice(
+                        playbackId = "song",
+                        startTime = startSec,
+                        gateEndTime = startSec + durSec,
+                        data = data,
+                        playbackStartTime = 0.0,
+                    )
+                ),
             )
         }
 

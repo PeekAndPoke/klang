@@ -410,8 +410,11 @@ class WireCodecRoundTripSpec : StringSpec({
         // `cylinder`, KLANG-00418 step 2), and from -209384306 (the duck's `attack` is `release`, KLANG-00417 B1); KLANG-00425
         // from 591120935 (`Feedback.PlaybackFailed` joined it: the dispatcher's net reports a failed playback); KLANG-00431
         // from -985611466 (an enum's entries joined its signature: it crosses as its ordinal, audit L1-07); KLANG-00432
-        // from 212461444 (`Diagnostics.nonFiniteSamples` joined it: the house stage's "poison seen" count).
-        WIRE_SCHEMA_HASH shouldBe 358149839
+        // from 212461444 (`Diagnostics.nonFiniteSamples` joined it: the house stage's "poison seen" count); KLANG-00431
+        // and KLANG-00432's decisions pass B2 from 358149839, one change (the codec's format joined the signature, D8;
+        // `Cmd.Sample.Chunk` left it, a sample crosses whole as one transferred buffer, D5; `Diagnostics.crushedBlocks`
+        // and `Diagnostics.refusedFeedbackSends` joined it, L8-02 (c) and D10).
+        WIRE_SCHEMA_HASH shouldBe -1036617280
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -455,6 +458,10 @@ class WireCodecRoundTripSpec : StringSpec({
                 soundlessVoices = 2,
                 // Poison seen (KLANG-00432): a count past Int's range survives the trip as the Double it is.
                 nonFiniteSamples = 4_294_967_298.0,
+                // The crushed blocks (KLANG-00432, L8-02 (c)) and the refused feedback sends (KLANG-00431 D10): the same
+                // kind of count, each its own value so a swap of the two would show.
+                crushedBlocks = 4_294_967_299.0,
+                refusedFeedbackSends = 4_294_967_301.0,
             ),
         )
         cases.forEach { decode_KlangCommLink_Feedback(encode_KlangCommLink_Feedback(it)) shouldBe it }
@@ -526,21 +533,20 @@ class WireCodecRoundTripSpec : StringSpec({
         }
     }
 
-    "Cmd.Sample.Chunk round-trips its DoubleArray (compared by content)" {
-        val chunk = KlangCommLink.Cmd.Sample.Chunk(
-            req = SampleRequest(bank = "b", sound = "s", index = null, note = "c3"), note = "c3", pitchHz = 261.6, sampleRate = 48000,
-            meta = SampleMetadata.default, totalSize = 3, isLastChunk = true, chunkOffset = 0,
-            data = doubleArrayOf(0.1, -0.2, 0.3),
+    "Cmd.Sample.Complete round-trips its PCM, its rate and its meta (compared by content)" {
+        val complete = KlangCommLink.Cmd.Sample.Complete(
+            req = SampleRequest(bank = "b", sound = "s", index = null, note = "c3"), note = "c3", pitchHz = 261.6,
+            sample = MonoSamplePcm(sampleRate = 48000, pcm = doubleArrayOf(0.1, -0.2, 0.3)),
         )
-        val dec = decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(chunk)) as KlangCommLink.Cmd.Sample.Chunk
-        dec.req shouldBe chunk.req
-        dec.note shouldBe "c3"; dec.pitchHz shouldBe 261.6; dec.sampleRate shouldBe 48000
-        dec.totalSize shouldBe 3; dec.isLastChunk shouldBe true; dec.chunkOffset shouldBe 0
-        dec.meta shouldBe chunk.meta
-        dec.data.toList() shouldBe chunk.data.toList()
+        val dec = decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(complete)) as KlangCommLink.Cmd.Sample.Complete
+        dec.req shouldBe complete.req
+        dec.note shouldBe "c3"; dec.pitchHz shouldBe 261.6
+        dec.sample.sampleRate shouldBe 48000
+        dec.sample.meta shouldBe complete.sample.meta
+        dec.sample.pcm.toList() shouldBe complete.sample.pcm.toList()
     }
 
-    "a sample's meta envelope round-trips inside Cmd.Sample.Chunk (AdsrDef's one wire host since VoiceData.adsr left)" {
+    "a sample's meta envelope round-trips inside Cmd.Sample.Complete (AdsrDef's one wire host since VoiceData.adsr left)" {
         val meta = SampleMetadata(
             anchor = 0.01,
             loop = SampleMetadata.LoopRange(startSec = 0.1, endSec = 0.4),
@@ -549,14 +555,13 @@ class WireCodecRoundTripSpec : StringSpec({
                 attackCurve = AdsrCurve.Linear, decayCurve = AdsrCurve.Square, releaseCurve = AdsrCurve.Cube,
             ),
         )
-        val chunk = KlangCommLink.Cmd.Sample.Chunk(
-            req = SampleRequest(bank = "b", sound = "s", index = null, note = "c3"), note = "c3", pitchHz = 261.6, sampleRate = 48000,
-            meta = meta, totalSize = 1, isLastChunk = true, chunkOffset = 0,
-            data = doubleArrayOf(0.5),
+        val complete = KlangCommLink.Cmd.Sample.Complete(
+            req = SampleRequest(bank = "b", sound = "s", index = null, note = "c3"), note = "c3", pitchHz = 261.6,
+            sample = MonoSamplePcm(sampleRate = 48000, pcm = doubleArrayOf(0.5), meta = meta),
         )
-        val dec = decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(chunk)) as KlangCommLink.Cmd.Sample.Chunk
+        val dec = decode_KlangCommLink_Cmd(encode_KlangCommLink_Cmd(complete)) as KlangCommLink.Cmd.Sample.Complete
 
-        dec.meta shouldBe meta
+        dec.sample.meta shouldBe meta
     }
 })
 

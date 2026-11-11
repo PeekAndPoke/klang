@@ -16,7 +16,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
  * Guards the sample-cache logic extracted from VoiceScheduler into [SampleStore] (D2·a):
- * chunk reassembly, completion feedback, request de-duplication, and not-found handling.
+ * a whole sample kept as it came, completion feedback, request de-duplication, and not-found handling.
  */
 class SampleStoreSpec : StringSpec({
 
@@ -69,29 +69,23 @@ class SampleStoreSpec : StringSpec({
         commLink.drainFeedback().filterIsInstance<KlangCommLink.Feedback.RequestSample>() shouldHaveSize 1
     }
 
-    "chunked sample reassembles across chunks and completes on the last" {
-        val (store, commLink) = newStore()
+    "a Complete sample's PCM is kept as it came: the audio thread allocates and copies nothing (KLANG-00431 D5)" {
+        val (store, _) = newStore()
         val r = req("loop")
-        val meta = SampleMetadata.default
+        val pcm = doubleArrayOf(1.0, 2.0, 3.0, 4.0)
+        val meta = SampleMetadata(anchor = 0.01, loop = SampleMetadata.LoopRange(startSec = 0.0, endSec = 0.5), adsr = null)
 
         store.addSample(
-            KlangCommLink.Cmd.Sample.Chunk(
-                req = r, note = null, pitchHz = 440.0, sampleRate = 44100, meta = meta,
-                totalSize = 4, isLastChunk = false, chunkOffset = 0, data = doubleArrayOf(1.0, 2.0),
-            )
-        )
-        store.getComplete(r) shouldBe null   // still partial
-
-        store.addSample(
-            KlangCommLink.Cmd.Sample.Chunk(
-                req = r, note = null, pitchHz = 440.0, sampleRate = 44100, meta = meta,
-                totalSize = 4, isLastChunk = true, chunkOffset = 2, data = doubleArrayOf(3.0, 4.0),
+            KlangCommLink.Cmd.Sample.Complete(
+                req = r, note = null, pitchHz = 440.0, sample = MonoSamplePcm(sampleRate = 44100, pcm = pcm, meta = meta),
             )
         )
 
         val entry = store.getComplete(r).shouldNotBeNull()
-        entry.sample.pcm.toList() shouldBe listOf(1.0, 2.0, 3.0, 4.0)
-        commLink.drainFeedback().filterIsInstance<KlangCommLink.Feedback.SampleReceived>() shouldHaveSize 1
+        (entry.sample.pcm === pcm) shouldBe true
+        entry.sample.meta shouldBe meta
+        store.residentBytes shouldBe 32.0
+        store.residentCount shouldBe 1
     }
 
     "NotFound marks the request seen but never completes" {
@@ -102,41 +96,5 @@ class SampleStoreSpec : StringSpec({
 
         store.contains(r) shouldBe true
         store.getComplete(r) shouldBe null
-    }
-
-
-    // ── Resource warehouse 2g: the PCM array is the one MB-scale allocation the store makes ──────
-
-    "a chunked sample whose PCM cannot be allocated is silent, counted, and its later chunks are dropped — nothing throws" {
-        // Chunks arrive on the audio thread through the worklet's message port; before 2g a failed
-        // DoubleArray(totalSize) was an uncaught OutOfMemoryError there, and the worklet stopped
-        // for good. Now it is a sample that never completes, like a NotFound one.
-        val commLink = KlangCommLink(capacity = 1024)
-        var asked = 0
-        val store = SampleStore(commLink.backend, allocatePcm = { asked++; null })
-        val r = req("huge")
-        val meta = SampleMetadata.default
-
-        val first = KlangCommLink.Cmd.Sample.Chunk(
-            req = r, note = null, pitchHz = 440.0, sampleRate = 44100, meta = meta,
-            totalSize = 4, isLastChunk = false, chunkOffset = 0, data = doubleArrayOf(1.0, 2.0),
-        )
-        val last = first.copy(isLastChunk = true, chunkOffset = 2, data = doubleArrayOf(3.0, 4.0))
-
-        store.addSample(first)
-        store.addSample(last)
-
-        store.getComplete(r) shouldBe null
-        store.contains(r) shouldBe true // known, so it is not re-requested every note
-        store.allocationFailures shouldBe 1
-        asked shouldBe 1 // the second chunk did not restart the allocation
-        // The frontend's preloader awaits the same ack a success sends, with no timeout: without
-        // it a failed upload left the playback waiting forever (review round 3).
-        commLink.drainFeedback().filterIsInstance<KlangCommLink.Feedback.SampleReceived>().map { it.req } shouldBe listOf(r)
-    }
-
-    "the default PCM allocator turns a hopeless size into null rather than a throw" {
-        SampleStore.allocatePcmOrNull(Int.MAX_VALUE) shouldBe null
-        SampleStore.allocatePcmOrNull(4).shouldNotBeNull().size shouldBe 4
     }
 })

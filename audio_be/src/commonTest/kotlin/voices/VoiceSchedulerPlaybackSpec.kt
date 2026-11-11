@@ -45,14 +45,16 @@ class VoiceSchedulerPlaybackSpec : StringSpec({
 
         /** A timeline voice starting [startSec] after the playback's start (its epoch), 5 s long. */
         fun schedule(startSec: Double = 0.0) {
-            scheduler.scheduleVoice(
-                ScheduledVoice(
-                    playbackId = "song",
-                    startTime = startSec,
-                    gateEndTime = startSec + 5.0,
-                    data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0),
-                    playbackStartTime = 0.0,
-                )
+            scheduler.scheduleVoices(
+                listOf(
+                    ScheduledVoice(
+                        playbackId = "song",
+                        startTime = startSec,
+                        gateEndTime = startSec + 5.0,
+                        data = VoiceData.empty.copy(sound = "sine", freqHz = 220.0),
+                        playbackStartTime = 0.0,
+                    )
+                ),
             )
         }
 

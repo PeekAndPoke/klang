@@ -15,9 +15,18 @@ class KlangRingBuffer<T>(private val capacity: Int) : KlangMessageSender<T>, Kla
     private var tail = 0 // Read index
     private val lock = KlangLock()
 
+    /**
+     * The sends refused because the ring was full, since it was made: each such message was dropped (KLANG-00431 D10,
+     * audit L1-11). Monotone, [clear] leaves it; a Double, as the diagnostics carry it (no Long in the audio paths).
+     */
+    var refusedSends: Double = 0.0
+        private set
+
     override fun send(msg: T): Boolean = lock.withLock {
         val nextHead = (head + 1) % capacity
         if (nextHead == tail) {
+            refusedSends += 1.0
+
             return@withLock false // Buffer full
         }
         buffer[head] = msg

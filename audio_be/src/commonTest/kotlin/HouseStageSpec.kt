@@ -108,9 +108,9 @@ class HouseStageSpec : StringSpec({
     }
 
     "the stage reports the latency it actually adds" {
-        // Phase 5: the FE latency budget adds HOUSE_LIMITER_LOOKAHEAD_SECONDS (JsAudioBackend), and the
-        // offline renderer adds latencyFrames to its frame count (KlangOfflineRenderer), so the tail is not
-        // cut. If either drifts from the real delay, visuals misalign or renders lose their end silently.
+        // The diagnostics report latencyFrames in every report's output latency (the dispatcher, KLANG-00431 D3), and
+        // the offline renderer trims that many frames at its head and runs that many past its end (KlangOfflineRenderer,
+        // D11). If it drifts from the real delay, visuals misalign or renders lose their start or end silently.
         val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
         val expected = (HouseStage.HOUSE_LIMITER_LOOKAHEAD_SECONDS * sampleRate).toInt()
 
@@ -341,5 +341,51 @@ class HouseStageSpec : StringSpec({
         withClue("back within 0.003 of the clean run $recoveredSeconds s after the bad block began") {
             (recoveredSeconds < 0.4) shouldBe true
         }
+    }
+    "crushed: the stage counts the blocks its limiter ends more than 200 dB down, and nothing a loud mix reaches (KLANG-00432 L8-02 (c))" {
+        // A huge FINITE value on the mix (1e15) has already rounded the music away in the sum; "poison seen" does not
+        // count it (it is finite). The limiter's gain is read once per block: a block ending under -200 dB counts. A mix
+        // a thousand times too loud (+60 dBFS) is limited by about 58 dB, nowhere near.
+        fun run(extra: (block: Int) -> Double): HouseStage {
+            val house = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
+            val mix = StereoBuffer(blockFrames)
+            val out = StereoBuffer(blockFrames)
+
+            repeat(400) { block ->
+                for (i in 0 until blockFrames) {
+                    val x = 0.3 * sin(2.0 * PI * 220.0 * (block * blockFrames + i) / sampleRate) + extra(block)
+
+                    mix.left[i] = x
+                    mix.right[i] = x
+                }
+
+                house.process(mix = mix, out = out)
+            }
+
+            return house
+        }
+
+        run { 0.0 }.crushedBlocks shouldBe 0.0
+        run { 1e3 }.crushedBlocks shouldBe 0.0
+        run { block -> if (block == 40) Double.NaN else 0.0 }.crushedBlocks shouldBe 0.0
+
+        // One block of 1e15: its two edges reach the limiter (the DC blockers pass each step once) and hold its gain
+        // down across one block's end. Measured: 1
+        run { block -> if (block == 40) 1e15 else 0.0 }.crushedBlocks shouldBe 1.0
+
+        // A huge value that keeps moving (1e15 flipping its sign every block, from block 100 of 400): every block from
+        // the limiter's lookahead after its arrival to the end. Measured: 297
+        val moving = run { block -> if (block >= 100) (if (block % 2 == 0) 1e15 else -1e15) else 0.0 }
+
+        moving.crushedBlocks shouldBe 297.0
+
+        // The reach, pinned: a huge CONSTANT is not counted. Since L8-01's bound the DC blockers take it out within a
+        // sample, so the limiter sees one sample of it and its gain never ends a block that low, while the sum has
+        // rounded the music under it away all the same (KLANG-00432, decisions pass B2, reported)
+        run { block -> if (block >= 100) 1e15 else 0.0 }.crushedBlocks shouldBe 0.0
+
+        // Not audio state: reset() leaves it
+        moving.reset()
+        moving.crushedBlocks shouldBe 297.0
     }
 })
