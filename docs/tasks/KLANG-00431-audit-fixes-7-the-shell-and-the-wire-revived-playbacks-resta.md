@@ -183,6 +183,22 @@ which is archived and lists only the `uniqueId()` maps. Options: list these ther
 their eviction. Recommendation: a new ticket for the sample memory (D2 and this), and the `CLAUDE.md` pointer moved to
 it by the maintainer.
 
+### Decided (maintainer, 2026-11-11)
+
+- **D1:** "ok leave it" (the frontend's gate; a start number on the wire when a second frontend starts playbacks).
+- **D2:** "yes to own ticket": KLANG-00440.
+- **D3:** "ok please go for it. change to the skill approved": the UI's clock reports an authored lookahead; one line
+  in `audio-constraints.md`. Owed.
+- **D4:** "yes keep it like this".
+- **D5:** "ok if this is possible do it": one transferred buffer per sample. Owed.
+- **D6:** "yes count since engine start". Owed.
+- **D7:** "ok, parked for now" (a phone measurement first; in KLANG-00437).
+- **D8:** "as recommended": a codec format constant in the signature. Owed.
+- **D9:** "ok leave it".
+- **D10:** "as recommended": the refused sends are counted and carried with the diagnostics. Owed.
+- **D11:** "as recommended": the offline render's head is trimmed, at the corpus re-accept. Owed.
+- **D12:** "yes new ticket. Point CLAUDE.md to the new ticket": KLANG-00440; the pointer is moved.
+
 ## Notes
 
 What landed, per finding (2026-11-11, the fix worker). No change moves the sound of a song (the corpus, below).

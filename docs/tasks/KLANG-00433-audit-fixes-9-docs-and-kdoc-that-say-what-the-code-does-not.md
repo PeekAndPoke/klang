@@ -91,6 +91,9 @@ Nothing here changes the sound; each item is a code change or a removal the rule
 8. `KatalystDistortEffect` uses `houseDcBlockCoeff`: "as recommended". Owed.
 9. The compressor's two deferred items: moved to KLANG-00437.
 
+The maintainer (2026-11-11): "Ok to editing audio/CLAUDE.md": the four lines are corrected. The `flushDenormal` line in
+`audio-constraints.md` waits for a word of its own.
+
 ## Notes
 
 What landed, per item (2026-11-11, the fix worker). Every item was read against the code as it is after KLANG-00425

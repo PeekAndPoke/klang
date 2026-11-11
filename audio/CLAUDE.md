@@ -27,7 +27,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | `src/commonMain/kotlin/BodyMaterials.kt`, `VowelBands.kt` | The body and vowel catalogues and their rows (`BodyMaterials.Mode`, `VowelBands.Band`) |
 | `src/commonMain/kotlin/_resource_bounds.kt`             | The resource bounds: `coercePasses`, `coerceUnisonVoices` |
 | `src/commonMain/kotlin/ScheduledVoice.kt`              | Voice scheduling message (VoiceData + timing)  |
-| `src/commonMain/kotlin/MonoSamplePcm.kt`               | Decoded sample data (FloatArray + metadata)    |
+| `src/commonMain/kotlin/MonoSamplePcm.kt`               | Decoded sample data (DoubleArray + metadata)   |
 | `src/commonMain/kotlin/infra/KlangCommLink.kt`         | Ring-buffer IPC; Cmd + Feedback sealed classes |
 | `src/commonMain/kotlin/KlangTime.kt`                   | expect/actual monotonic clock                  |
 
@@ -40,7 +40,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | `src/commonMain/kotlin/HouseStage.kt`               | The always-on output stage after every playback is summed: DC blockers, the house limiter, the clip               |
 | `src/commonMain/kotlin/voices/Voice.kt`             | `Voice`: per block runs ignite → (teardown fade) → cut fade → the cylinder mix; the Ignitor tree is the whole instrument |
 | `src/commonMain/kotlin/voices/VoiceFactory.kt`      | Builds a `Voice` (the instrument's Ignitor tree, the sample instrument for samples) from `VoiceData`                  |
-| `src/commonMain/kotlin/voices/teardown_fade.kt`, `voice_channel.kt` | The voice's fixed stages as plain functions: `applyTeardownFade`, `mixIntoCylinder` (gain, pan, sends, peak) |
+| `src/commonMain/kotlin/voices/teardown_fade.kt`, `voice_channel.kt` | The voice's fixed stages as plain functions: `applyTeardownFade`, `mixIntoCylinder` (gain, pan, the solo ramp, peak) |
 | `src/commonMain/kotlin/voices/VoiceScheduler.kt`    | Voice lifecycle management                                                                                          |
 | `src/commonMain/kotlin/cylinders/Cylinders.kt`      | Effect bus manager                                                                                                  |
 | `src/commonMain/kotlin/cylinders/Cylinder.kt`       | Single effect bus (delay/reverb/phaser/…)                                                                           |
@@ -55,9 +55,9 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | File                                                | Role                                 |
 |-----------------------------------------------------|--------------------------------------|
 | `src/commonMain/kotlin/samples/Samples.kt`          | Registry: Index + SoundProviders     |
-| `src/commonMain/kotlin/decoders/AudioDecoder.kt`    | Abstract decoder interface           |
+| `src/commonMain/kotlin/samples/AudioDecoder.kt`     | Abstract decoder interface           |
 | `src/jvmMain/kotlin/decoders/JvmAudioDecoder.kt`    | WAV / MP3 decoder                    |
-| `src/jsMain/kotlin/decoders/BrowserAudioDecoder.kt` | Web Audio decodeAudioData            |
+| `src/jsMain/kotlin/BrowserAudioDecoder.kt`          | Web Audio decodeAudioData            |
 | `src/commonMain/kotlin/cache/UrlCache.kt`           | Cache abstraction (In-memory / Disk) |
 
 ### audio_jsworklet

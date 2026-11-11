@@ -1,6 +1,6 @@
 # KLANG-00429: Audit fixes 5: the Ignitor build (the fused filter's gate, instrument names, per-note buffers, the off stages' build cost)
 
-> **Status (2026-11-11): IN PROGRESS.** Decisions pass: building what the maintainer decided on 2026-11-11.
+> **Status (2026-11-11): PAUSED.** The decisions pass of 2026-11-11 landed; what is left is named in the ticket.
 >
 > **Part of:** KLANG-00353 (The Motor: correct at the edges)
 
@@ -218,3 +218,4 @@ contract for trees no corpus song has: more than the small local change the main
 - 2026-11-10: IN PROGRESS. Started.
 - 2026-11-10: PAUSED. Findings landed. Waiting for the maintainer: five decisions (see Decide).
 - 2026-11-11: IN PROGRESS. Decisions pass: building what the maintainer decided on 2026-11-11.
+- 2026-11-11: PAUSED. The decisions pass of 2026-11-11 landed; what is left is named in the ticket.

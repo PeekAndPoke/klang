@@ -121,6 +121,22 @@ keep; (b) round to nearest (half the peak error, no error term that follows the 
 generator (a fading tail turns into noise, not a cut). Neither moves the corpus (it hashes the doubles); both change
 every WAV render's lowest bit and `Pcm16EdgeSpec`. Recommendation: (b), (c) as an export option.
 
+### Decided (maintainer, 2026-11-11)
+
+- **L4-02:** "No need to pay respect to the songs, they need retuning anyway. I am interested in the correct yet
+  performant solution." Not accepted as it is: a design with measurements first (accuracy against the exact curve,
+  cost on JVM and JS), then the build. Owed.
+- **L4-08:** "as recommended": a stage that stores a sample stores a non-finite one as 0, everything else stays raw,
+  the house stage counts. It is the rule; the table goes into `audio/ref/numerical-safety.md`. Owed (the text).
+- **L4-01:** "accepted". The maintainer asked whether warehousing the state's memory would win anything: no, the
+  state is two numbers inside the filter node, there is no buffer to hold.
+- **L4-05:** "no need to pay attention to the builtin songs. Let us use the new implementation and drop the old one":
+  the doors take the fused law, the old door law goes. Owed.
+- **L4-10:** "as recommended": the cutoff clamp at 0.49 of the sample rate. Owed.
+- **L8-01, L8-02:** "as recommended" and "ok": the house DC blockers flush their state above 1e3, and the blocks where
+  the limiter's gain reduction sits past -200 dB are counted beside "poison seen". Owed.
+- **L8-06:** "as recommended": round to nearest; dither as an export option later. Owed.
+
 ## Notes
 
 What landed (fix worker, 2026-11-11), each with its guarding spec, mutation-checked (10 mutants, all KILLED for the
