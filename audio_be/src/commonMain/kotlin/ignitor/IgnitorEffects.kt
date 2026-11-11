@@ -19,8 +19,8 @@ import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_be.utils.HALF_PI
 import io.peekandpoke.klang.audio_be.utils.TWO_PI
 import io.peekandpoke.klang.audio_be.utils.fastSin
+import io.peekandpoke.klang.audio_be.utils.finiteOrZero
 import io.peekandpoke.klang.audio_be.utils.flushState
-import io.peekandpoke.klang.audio_be.utils.nanGuard
 import io.peekandpoke.klang.audio_bridge.constants.PHASER_FLOOR
 import io.peekandpoke.klang.common.math.semitones
 import kotlin.math.exp
@@ -369,9 +369,10 @@ private class CoarseIgnitor(
 
             for (i in ctx.offset until end) {
                 if (counter >= 1.0) {
-                    // nanGuard mirrors the retired strip's coarse: a NaN input must not latch into the
-                    // held value for `factor` frames.
-                    lastValue = work[i].nanGuard()
+                    // A non-finite input must not latch into the held value for `factor` frames: NaN and
+                    // both infinities are held as 0 (`finiteOrZero`, audit L4-07; `nanGuard` let an infinity
+                    // through and held it). Per take, not per output sample.
+                    lastValue = work[i].finiteOrZero()
                     counter -= 1.0
                 }
                 buffer[i] = lastValue
@@ -687,7 +688,10 @@ private class ShimmerIgnitor(
                 val dry = input[i]
 
                 var write = dry + feedbackTap * fbVal
-                if (write > 2.0) write = 2.0 else if (write < -2.0) write = -2.0
+                // NaN-guard (NaN fails every compare): the second test reads `!(write >= -2.0)`, true below -2 AND for a
+                // NaN, so a NaN is stored as 0 instead of being played again by every grain that reads its cell (audit
+                // L4-06). Still two compares per sample on the common path; the third runs only past the lower rail.
+                if (write > 2.0) write = 2.0 else if (!(write >= -2.0)) write = if (write < -2.0) -2.0 else 0.0
                 ring[writePos] = write
                 writePos++
                 if (writePos >= ringSize) writePos = 0

@@ -333,4 +333,28 @@ class SvfNodeLawSpec : StringSpec({
             withClue("diodePairResistanceApprox($x)") { diodePairResistanceApprox(x) shouldBe expected }
         }
     }
+
+    "analog SVF near fs/3 at q 200: it settles once its input stops, it never oscillates on its own (audit N1)" {
+        // The diode polynomial dips under 1 for a state between about -3.1 and 0; at q times analog over about 590 that
+        // made the damping NEGATIVE, and the loop rang at full scale for good near fs/3 (measured 0.795 RMS at 16 kHz,
+        // q 200, analog 5, ten seconds after the input). Floored at 0, it settles as the linear filter does (its time
+        // constant at q 200 and 16 kHz is about 4 ms). 0.5 s of a 0.1 sine at the cutoff, then 1 s of silence.
+        val rate = 48_000
+        val input = DoubleArray(rate / 2 + rate) { if (it < rate / 2) 0.1 * sin(2.0 * PI * 16_000.0 * it / rate) else 0.0 }
+        val lastQuarter = input.size - rate / 4
+
+        for ((fc, analog) in listOf(16_000.0 to 5.0, 15_990.0 to 5.0, 16_000.0 to 15.0)) {
+            for (mode in listOf("lowpass", "highpass")) {
+                val out = renderThroughNode(input, rate) {
+                    if (mode == "lowpass") {
+                        it.lowpass(cutoffHz = fc, q = 200.0, analog = analog)
+                    } else {
+                        it.highpass(cutoffHz = fc, q = 200.0, analog = analog)
+                    }
+                }
+
+                withClue("$mode fc $fc analog $analog: RMS of the last 0.25 s") { rms(out, lastQuarter) shouldBeLessThan 1e-9 }
+            }
+        }
+    }
 })

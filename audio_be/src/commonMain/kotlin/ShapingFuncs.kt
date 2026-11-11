@@ -10,6 +10,14 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
+ * The argument past which `e^-x` is under half an ulp of 1.0 (`e^-37.43 = 2^-54`), so `1.0 - e^-x` rounds to exactly
+ * 1.0 in a double: the early return of [ShapingFuncs.expClip] and [ShapingFuncs.stompBox] (audit L4-04), with some
+ * margin. Published for their inline bodies only.
+ */
+@PublishedApi
+internal const val EXP_SATURATED_ARG: Double = 38.0
+
+/**
  * Collection of optimised shaping functions for distortion and saturation.
  *
  * Each function applies a different transfer curve (waveshaper) to an input sample `x`.
@@ -160,10 +168,13 @@ object ShapingFuncs {
      * **Math:** sign(x) * (1 - exp(-|x|))
      */
     inline fun expClip(x: Double): Double {
+        // Past |x| = EXP_SATURATED_ARG `1 - e^-|x|` IS 1.0 in a double, so the early return is bit-identical and keeps
+        // a hard drive off `fastExp`'s `pow` fallback (audit L4-04: 3.4 times the cost at amount 3). NaN fails both
+        // compares and takes the formula, as before.
         return if (x >= 0.0) {
-            1.0 - fastExp(-x)
+            if (x > EXP_SATURATED_ARG) 1.0 else 1.0 - fastExp(-x)
         } else {
-            -(1.0 - fastExp(x))
+            if (x < -EXP_SATURATED_ARG) -1.0 else -(1.0 - fastExp(x))
         }
     }
 
@@ -304,10 +315,15 @@ object ShapingFuncs {
      * **Note:** Generates DC offset — always use with a DC blocking filter.
      */
     inline fun stompBox(x: Double): Double {
+        // The early returns of [expClip], on the scaled argument: bit-identical, no `pow` at a hard drive (audit L4-04).
         return if (x >= 0.0) {
-            1.0 - fastExp(-x * 1.5)
+            val a = -x * 1.5
+
+            if (a < -EXP_SATURATED_ARG) 1.0 else 1.0 - fastExp(a)
         } else {
-            -(1.0 - fastExp(x * 3.0))
+            val a = x * 3.0
+
+            if (a < -EXP_SATURATED_ARG) -1.0 else -(1.0 - fastExp(a))
         }
     }
 

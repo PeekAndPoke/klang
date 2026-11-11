@@ -98,7 +98,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   authorable; `MasterLimiterDefaults.kt`, `HouseStage.HOUSE_LIMITER_*`), then the clip into the engine's output:
   a floating-point `StereoBuffer`, no quantisation (in `[-1, 1]` a sample passes, above 1 is 1.0, else -1.0). The
   worklet copies it straight into Web Audio; only the JVM line and the WAV writer go to 16 bits, at their edge
-  (`writePcm16` in `_pcm16_edge.kt`, the one home). The lookahead delays the whole output uniformly.
+  (`writePcm16` in `_pcm16_edge.kt`, the one home). The lookahead delays the whole output uniformly. The DC pole is
+  `1 - 48 / fs` (`houseDcBlockCoeff`): 0.999 at 48 kHz, a 7.64 Hz corner at every rate. "Poison seen": the limiter's
+  ring stores a non-finite sample as 0 and counts it (`HouseStage.nonFiniteSamples`, monotone, a Double), and every
+  diagnostics report carries the count (`Diagnostics.nonFiniteSamples`); nothing is clamped for it.
 - **The wire** (`VoiceData`, `KlangCommLink`): pitch, gain, pan, routing, lifetime, and two slot maps; only seconds
   cross it, never cycles. `VoiceData.soundIndex` is the one variant channel (a sample bank's variant and
   `IgnitorDsl.Variants`, which picks `children[soundIndex.mod(size)]`; an empty one is silence everywhere, so as a
@@ -215,7 +218,9 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   one was. Open items: KLANG-00204 (ignitor optimizer open items).
 - **Numerical contract**: `SAFE_MIN` 1e-15 / `SAFE_MAX` 1e15; "safe" means finite, not small, so a consumer must be
   O(1) at any magnitude. A divisor of exactly zero yields zero (`Recip` excepted). A non-finite value a pattern
-  writes reads as unset, at each reader once. All in `audio/ref/numerical-safety.md`.
+  writes reads as unset, at each reader once. Four extreme raw knob values end in NaN and stay raw (documented, not
+  clamped; maintainer 2026-11-11). A stage that stores a sample for later (the coarse hold, the shimmer ring) stores
+  a non-finite one as 0. All in `audio/ref/numerical-safety.md`.
 - **Catalogues are index spaces, append only**: `DistortionShapes`, `LfoShapes`, `AdsrCurves`, `BodyMaterials`,
   `VowelBands` (audio_bridge). The index is the wire encoding; out of range or non-finite is index 0 for the
   shapes. Guards: `ShapeCatalogueSpec`, `CatalogueIndexSpec`, `AdsrCurvesSpec`.
@@ -372,7 +377,9 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
   when and in the order it always did. Still allocated at render: a count signal's rise past that size, the shared drift lane's `Random` below
   spread 1 (D7), the phase pool's vocabulary while it grows. Guards: `FirstBlockAllocationSpec`, `SeededVoiceRngSpec`.
 - **The SVF**: bandpass, notch and the resonators are linear. Lowpass and highpass at `analog > 0` take a
-  state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`).
+  state-dependent DAMPING path (a diode-pair term grows `k` with the state; `IgnitorFilters.kt`, `Ignitor.svf`),
+  floored at 0: the polynomial dips under 1 for a small negative state, and negative damping rang for good near fs/3
+  at q times analog over about 590 (audit N1).
   Never saturate by capping the feedback signal with tanh: two such attempts went unstable and were reverted
   (2026-05-28, history).
 - **The tube shape's constants are Pade-consistent** with `fastTanh` (`ShapingFuncs.kt`), so `tube(0)` is exactly
@@ -466,6 +473,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-11 The per-note stages and the house stage: no negative damping in the analog SVF, the coarse hold and the shimmer ring store no non-finite sample, `expClip`/`stompBox` skip `pow` when saturated, the house DC pole per rate, "poison seen" in the diagnostics: KLANG-00432
 - 2026-11-11 The shell and the wire: nothing after a stop's `Cleanup`, a restart's gain and inline DSLs, no sample requests for synth voices, an edit's samples at once, the JVM's output latency, enum entries in the schema hash: KLANG-00431
 - 2026-11-10 The sources: the saw and square through a one-sample box, the impulse's backward phase silent, the cubic read for samples and the pluck, a sample's last frame and loop seam, stereo files averaged in the browser: KLANG-00430
 - 2026-11-10 The bus, second pass: `reverb.lowpass` a real cutoff, the compressor smooths the reduction, ducks read every source before any duck writes: KLANG-00428

@@ -241,7 +241,12 @@ private class SvfIgnitor(
                         for (i in ctx.offset until end) {
                             val v0 = input[i]
                             val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
-                            val kEff = k + 2.0 * driveScale * tCfb
+                            val kRaw = k + 2.0 * driveScale * tCfb
+                            // Never NEGATIVE damping (audit N1): the polynomial dips under 1 for a state between about
+                            // -3.1 and 0, which at q times analog over about 590 made the loop oscillate for good near
+                            // fs/3. Floored at 0, bit-identical wherever the damping is positive (all ordinary settings).
+                            // NaN-guard: a NaN reads as 0 here, the state's flush catches it below.
+                            val kEff = if (kRaw > 0.0) kRaw else 0.0
                             val kPlusG = kEff + g
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                             val vBp = g * vHp + ic1eq
@@ -270,7 +275,12 @@ private class SvfIgnitor(
                         for (i in ctx.offset until end) {
                             val v0 = input[i]
                             val tCfb = diodePairResistanceApprox(ic1eq * SAT_STATE_SCALE) - 1.0
-                            val kEff = k + 2.0 * driveScale * tCfb
+                            val kRaw = k + 2.0 * driveScale * tCfb
+                            // Never NEGATIVE damping (audit N1): the polynomial dips under 1 for a state between about
+                            // -3.1 and 0, which at q times analog over about 590 made the loop oscillate for good near
+                            // fs/3. Floored at 0, bit-identical wherever the damping is positive (all ordinary settings).
+                            // NaN-guard: a NaN reads as 0 here, the state's flush catches it below.
+                            val kEff = if (kRaw > 0.0) kRaw else 0.0
                             val kPlusG = kEff + g
                             val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
                             val vBp = g * vHp + ic1eq

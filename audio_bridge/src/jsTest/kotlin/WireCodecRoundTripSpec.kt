@@ -409,8 +409,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // left it: the frontend folds it into the gate time, D6), and from 580783604 (the duck's knob `cylinder` is
         // `cylinder`, KLANG-00418 step 2), and from -209384306 (the duck's `attack` is `release`, KLANG-00417 B1); KLANG-00425
         // from 591120935 (`Feedback.PlaybackFailed` joined it: the dispatcher's net reports a failed playback); KLANG-00431
-        // from -985611466 (an enum's entries joined its signature: it crosses as its ordinal, audit L1-07).
-        WIRE_SCHEMA_HASH shouldBe 212461444
+        // from -985611466 (an enum's entries joined its signature: it crosses as its ordinal, audit L1-07); KLANG-00432
+        // from 212461444 (`Diagnostics.nonFiniteSamples` joined it: the house stage's "poison seen" count).
+        WIRE_SCHEMA_HASH shouldBe 358149839
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {
@@ -452,6 +453,8 @@ class WireCodecRoundTripSpec : StringSpec({
                     droppedVoices = 3, deniedRents = 1,
                 ),
                 soundlessVoices = 2,
+                // Poison seen (KLANG-00432): a count past Int's range survives the trip as the Double it is.
+                nonFiniteSamples = 4_294_967_298.0,
             ),
         )
         cases.forEach { decode_KlangCommLink_Feedback(encode_KlangCommLink_Feedback(it)) shouldBe it }

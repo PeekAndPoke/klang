@@ -40,7 +40,141 @@ run with `KLANG_PROBE=audit`), fix it, and turn the reproduction's row into an o
 
 ## Decide
 
-(filled while the work runs)
+What landed is in "Notes" below. These need the maintainer; each with its options, its cost and a recommendation.
+The reproductions of every finding listed here stay in `audio_be/src/jvmTest/kotlin/audit/`.
+
+**L4-02, the filter envelope read at a block's two ends** (NOT landed). Options, measured by the disproof
+(`disproof-sound.md`, L4-02 (b) and (c)) and read against the code:
+
+- (a) Accept and record it: E3 closed as accepted, the pin `BlockFramingInvarianceSpec` "E3 KNOWN DEFECT" flipped to
+  an "accepted" row, the stale ledger line of KLANG-00156 ("latent: no production door passes an env here") updated
+  (another ticket, not edited here). Cost 0. The songs' own envelope shapes vary by -40 to -63 dB re the peak from
+  note to note (-56 to -77 dB RMS); the deviation from the exact curve is part of what was tuned by ear.
+- (b) Split the chord at the envelope's breakpoints inside a block (attack end, decay end, gate, release end): a short
+  attack is no longer erased and no breakpoint is straightened. Up to 4 extra coefficient sets per note, nothing per
+  sample; the six loops of `SvfIgnitor.generate` run per segment. Still framing-dependent between breakpoints.
+- (c) A grid anchored to the note (knots every 128 frames plus the breakpoints, the running coefficients kept across
+  blocks): bit-identical at every onset, but only at `analog` 0 with a block-constant cutoff and q (the drift steps
+  per block by design), and NOT more accurate than today (-18.4 dB re the peak against exact, today -15.9). 20 percent
+  fewer coefficient sets, a loop split at almost every block, a re-aim whenever the cutoff, q, drift or a realtime
+  gate moves. Moves each note of seven songs by about -44 dB RMS. Most of those voices run `analog > 0`
+  (`IrishLamentTechno`, the `StrangerThings` melody, `Tetris`, `TetrisRemix`), where (c) buys no invariance.
+- (d) A finer grid (N 64 or 32) for accuracy: 1.6 to 3.1 times today's coefficient work, plus (c)'s machinery.
+- (e) The exact per-sample cutoff: about +15 to +40 ns per sample against 3.9 ns for the whole filter.
+
+Why not landed: (b) to (d) are a rewrite of the SVF node's six loops into segment loops with state across blocks,
+in the one `generate` body whose V8 inlining budget its KDoc guards (engine follow-ups 29 and 31); the complexity rule
+says stop and ask. Recommendation: (a), and (b) only if the bite of a sub-3 ms filter attack is wanted by ear (the
+listening task of `layer-4-note-stages.md`). Whoever builds (b) to (d): the cost table has no filter-envelope row yet
+(`_stage_cost_cases.kt`: `lpf=1000 + adsr` is the amp envelope); add one (`lpf.env` with a sub-block attack) and run
+it on HEAD and the tree before landing.
+
+**L4-08, one rule for a non-finite SAMPLE at a stage that is not arithmetic.** Today one infinity leaves `Times` and
+the tremolo as 1e15, `CrushCore` as 1.0, the clipping distort shapes as 1, the folding ones as 0, the shimmer ring as
+2, the one-pole as 0, the SVF and the DC blocker as itself for one or two samples, `Drive` and `Adsr` raw (an
+infinity at a gain of exactly 0 becomes NaN). Options:
+
+- (a) What landed (free): a stage that STORES a sample for later stores a non-finite one as 0 (the coarse hold, the
+  shimmer ring); every other stage stays as it is, documented in `audio/ref/numerical-safety.md`, and the house stage
+  counts what reaches it ("poison seen"). Cost 0 per sample.
+- (b) Filters write their output AFTER the state's flush (the one-pole's order) for the SVF and the DC blocker: one
+  bad sample leaves as 0, not as itself. Cost about 0, but `flushState` also zeroes values under 1e-15, so every
+  filter tail's last bits change (sub -300 dB) and the corpus moves on every song.
+- (c) `finiteOrZero` at every stage's output: an abs and a compare per sample per stage (about 0.3 to 1 ns each);
+  against the decision of 2026-11-11 (no per-sample finite guard in the inner math).
+- (d) One guard at the voice's exit: decided against with L6-01 (a).
+
+Recommendation: (a), the table above into the ref page once the maintainer agrees it is the rule.
+
+**L4-01, the saturating SVF holds a huge state.** Options: (a) accept (documented in the polynomial's KDoc now): no
+ordinary signal reaches it, it takes a transient 60 to 80 dB over full scale; (b) evaluate the polynomial on a bounded
+argument (two compares per sample in the saturated loops, about 17 ns per sample today, a sound change only above
+the bound): the node's own curve, not a parameter clamp, but a new number to choose. Recommendation: (a).
+
+**L4-05, the doors' soft cap knee (0.95, flat from 1.10).** A sound decision (D2): (a) keep; (b) a wider knee (0.5),
+which moves the three songs that render through the doors' `Shape`; (c) the cap only where the DC blocker's
+overshoot can occur; (d) ask whether those three songs still need the old door law at all, and if not give the doors
+the fused law (2.6 times cheaper, 45 to 100 dB less alias on smooth shapes). Recommendation: (d), by ear.
+
+**L4-10, the cutoff clamp at `fs/2 - 1`.** An existing clamp's value: (a) keep; (b) `0.49 * fs`: the Nyquist ring
+of 0.225 s (Butterworth) to 64 s (q 200) becomes 22 samples to 0.13 s, under 0.001 dB at 20 kHz. A sound change at
+the bit level for every sweep that reaches the clamp (not measured on the corpus here). Recommendation: (b).
+
+**L4-11, `drive` from 257.** Decided with N2 (2026-11-11): documented, not clamped (`numerical-safety.md`, "Four
+extreme raw values"). The reproduction row stays.
+
+**L8-01 and L8-02, a huge FINITE value on the mix.** Not counted by "poison seen" (it is finite). Options:
+
+- (a) Accept (raw values only reach it).
+- (b) The house DC blockers flush their STATE above a bound (the same compare `flushState` makes, another constant;
+  free per sample): at `SAFE_MAX` it bounds the rail after one bad block to about 0.6 s (today up to 14.7 s at
+  1.8e308); at a low bound such as 1e3 (+60 dBFS) one bad block costs one block plus the limiter's 100 ms release.
+  Changes nothing a musical mix reaches. L8-02's crushed music is NOT fixable at the house stage: the sum
+  `1e15 + m` has already rounded the music to steps of 0.125 in the mix.
+- (c) Make it visible for free: once per block the house stage reads the limiter's gain reduction and counts a block
+  where it sits past -200 dB (a level no music reaches), beside "poison seen".
+
+Recommendation: (b) at 1e3 for L8-01 and (c) for both.
+
+**L8-06, the 16-bit edge truncates and has no dither.** Kept bit for bit on purpose (`_pcm16_edge.kt`). Options: (a)
+keep; (b) round to nearest (half the peak error, no error term that follows the sign); (c) TPDF dither from a seeded
+generator (a fading tail turns into noise, not a cut). Neither moves the corpus (it hashes the doubles); both change
+every WAV render's lowest bit and `Pcm16EdgeSpec`. Recommendation: (b), (c) as an export option.
+
+## Notes
+
+What landed (fix worker, 2026-11-11), each with its guarding spec, mutation-checked (10 mutants, all KILLED for the
+expected reason):
+
+- **N1, FIXED, no ordinary sound change.** The saturated lowpass and highpass floor their effective damping at 0
+  (`IgnitorFilters.kt`; the polynomial's KDoc corrected). Bit-identical wherever the damping is positive, which is
+  every setting with q times analog under about 590. The fs/3 ring (0.795 RMS at 16 kHz, q 200, analog 5, ten seconds
+  on) is gone: under 1e-9 one second after the input. Guard: `SvfNodeLawSpec`, "analog SVF near fs/3".
+- **L4-06, FIXED.** The shimmer stores a NaN in its grain ring as 0 (the second compare reads `!(write >= -2.0)`, no
+  third compare on the common path): one NaN in, one NaN out (was two, 0.183 s apart). Guard: `ShimmerSchedulerSpec`.
+- **L4-07, FIXED.** The coarse hold takes `finiteOrZero`: an infinity is held as 0, not for `factor` frames. Guard:
+  `CoarseLawSpec`. `audio/ref/off-values.md`'s coarse row follows.
+- **L4-04, FIXED, bit-identical.** `expClip` and `stompBox` return the rail past an argument of 38 (`EXP_SATURATED_ARG`),
+  where `1 - e^-x` is exactly 1.0. Cost at amount 3 (median of two interleaved HEAD and tree runs, normalised by the
+  median row): Ignitor `exp` 38.97 to 7.03 ns, `stompbox` 38.83 to 7.29; Katalyst `exp` 77.85 to 13.66, `stompbox`
+  77.24 to 14.43. Amount 0.5: 1.02 of HEAD (noise). Guard: `ShapingFuncsBoundsSpec`, bit for bit against the formula.
+- **L8-07, FIXED.** The house DC pole is `1 - 48 / fs` (`houseDcBlockCoeff`): exactly 0.999 at 48 kHz, a 7.64 Hz
+  corner at every rate (was 7.0 Hz at 44.1 kHz, 15.3 Hz at 96 kHz); the comment beside it said otherwise. A sound
+  change below 20 Hz at rates other than 48 kHz only (the corpus renders at 48 kHz). Guard: `HouseStageSpec`.
+- **L4-08, the free part.** A stage that stores a sample for later stores a non-finite one as 0 (L4-06, L4-07); the
+  rule for the rest is under Decide.
+- **L4-11 (with N2), DOCUMENTED.** `audio/ref/numerical-safety.md`, "Four extreme raw values that end in NaN".
+- **"Poison seen" (KLANG-00425 L8-04 (c)), BUILT.** The house limiter's ring write tests each sample as before
+  (written out from `finiteOrZero`); on its rare branch it counts the non-finite ones (`Compressor.nonFiniteSamples`,
+  an Int), `HouseStage` moves that into its monotone Double total once per block, and every diagnostics report
+  carries it (`Diagnostics.nonFiniteSamples`, Double). One bad sample on the mix reads as 2 per channel (the DC
+  blocker passes it twice). Cost: the lookahead limiter row 1.01 of HEAD (noise). No allocation. The wire schema
+  hash moved (pin in `WireCodecRoundTripSpec`). Guards: `HouseStageSpec` (exact counts), and
+  `PlaybackEngineDispatcherDiagnosticsTest` (a sample with one NaN through the dispatcher). Showing it is KLANG-00407.
+
+Probes, HEAD (a throwaway worktree) against the tree:
+
+- Stage probe: exactly four of 1411 lines moved, the intended ones. `coarse factor=4 +inf`: 4 non-finite out, now 0;
+  `coarse factor=4800 +inf`: 4800, now 0; `shimmer default nan` and `shimmer wet=1 feedback=0.95 nan`: 2 non-finite
+  out and finite again 0.1833 s after the poison, now 1 and 0.0. No filter row moved.
+- Cost probe: two interleaved pairs, normalised by the median row (machine load moved every row by up to 8 percent
+  between runs). The analog lowpass and highpass rows 0.99 of HEAD, the lookahead limiter 1.01, shimmer 0.97 to 0.99,
+  coarse under 2 ns (noise), `exp` and `stompbox` as above.
+- Audit repro (tree): the L8-01, L8-02, L4-01, L4-08 and L4-11 rows read exactly the disproof's numbers (the house
+  stage is unchanged at 48 kHz).
+
+Suites (test-digest, each exit 0): `:audio_be:jvmTest` 3146 tests, `:audio_be:jsBrowserTest` 2968,
+`:audio_bridge:jvmTest` 160, `:audio_bridge:jsBrowserTest` 299, `:klang:jvmTest` 90, root `:jvmTest` 173; 0 failed.
+Corpus: run before the first edit and after the last, all 18 rows byte-identical (sound hash and peak); no fix
+changes the sound of a corpus song (none has q times analog near 590, none carries a non-finite sample, the corpus
+renders at 48 kHz). The check's RED rows are the same before and after (its reference predates other sessions' song
+edits). No engagement control was run for the corpus; the ten mutants are the engagement of the specs.
+
+The wire schema hash moved from 212461444 to 358149839 (`Diagnostics.nonFiniteSamples`), pinned in
+`WireCodecRoundTripSpec`.
+
+The audit reproductions of L4-06, L4-07 and N1 left `AuditSafetyRepro` (ordinary specs guard them now); L4-01,
+L4-02, L4-08, L4-11, L8-01 and L8-02 stay.
 
 ## Acceptance
 

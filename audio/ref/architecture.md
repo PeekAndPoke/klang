@@ -125,7 +125,7 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 | `Feedback.SampleReceived`   | `SampleRequest` | confirm a sample was accepted                                           |
 | `Feedback.PlaybackAnchored` | `epochSec`      | where the backend started a playback; its time counts from there        |
 | `Feedback.PlaybackFailed`   | `reason`        | the playback's engine threw; it is out of the render, the others play on |
-| `Feedback.Diagnostics`      | engine stats    | voice count, headroom, the timeline the frontend's clock runs on, and the output latency the host knows |
+| `Feedback.Diagnostics`      | engine stats    | voice count, headroom, the timeline the frontend's clock runs on, the output latency the host knows, and "poison seen": the non-finite samples the house limiter stored as 0 (`nonFiniteSamples`, monotone) |
 
 **The net** (audit L8-03, L9-01; the `PlaybackEngineDispatcher` KDoc): a throw from one playback's engine, in a block
 or in a command, is caught by the dispatcher. That engine leaves the render and is disposed, `Feedback.PlaybackFailed`
@@ -181,4 +181,5 @@ instrument, not an unset sound.
 | Limiter attack       | 5 ms: gain-SMOOTHING length, not a one-pole | `HouseStage`        |
 | Limiter lookahead    | 5 ms: delays the whole output uniformly     | `HouseStage`        |
 | Limiter release      | 100 ms                                       | `MasterLimiterDefaults.kt`, used by `HouseStage` |
+| House DC pole        | `1 - 48 / fs`: 0.999 at 48 kHz, 7.64 Hz at every rate | `houseDcBlockCoeff`, used by `HouseStage` |
 | Block size           | 128, pinned everywhere (a tone parameter)    | `AudioBackendContext.RENDER_QUANTUM_FRAMES` |

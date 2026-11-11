@@ -281,4 +281,19 @@ class ShimmerSchedulerSpec : StringSpec({
     "a NaN pitch reads as rate 1.0, the unshifted grain, and never poisons the voice" {
         maxDiffOver90Blocks(a = shimmerOf(listOf(Double.NaN)), b = shimmerOf(listOf(0.0))) shouldBe 0.0
     }
+
+    "one NaN sample in leaves as one NaN sample out: the grain ring stores it as 0, no grain plays it again (audit L4-06)" {
+        // The dry path passes the poison frame itself (raw Motor); the ring must not keep it. Before the fix a grain
+        // read the stored NaN 0.18 s later and the node emitted it a second time. 3 s of input, the NaN at frame 4800.
+        val frames = 3 * sampleRate
+        val input = DoubleArray(frames) { if (it == 4800) Double.NaN else 0.5 * sin(2.0 * PI * 220.0 * it / sampleRate) }
+        val ig = ArrayIgnitor(input).shimmer(
+            wet = ParamIgnitor("wet", 1.0),
+            feedback = ParamIgnitor("feedback", 0.5),
+            tone = ParamIgnitor("tone", 4000.0),
+        )
+        val out = renderNodeWindows(ig, List(frames / blockFrames) { blockFrames } + listOf(frames % blockFrames), sampleRate)
+
+        out.indices.filter { !out[it].isFinite() } shouldBe listOf(4800)
+    }
 })

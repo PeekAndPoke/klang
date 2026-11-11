@@ -91,4 +91,25 @@ class CoarseLawSpec : StringSpec({
             holds.size shouldBeInRange 200..201
         }
     }
+
+    "a non-finite input is held as 0 for its whole hold, never as itself (audit L4-07)" {
+        // One +Inf (and in the second run one NaN, and one -Inf) on a take: the held value is 0 for the factor's frames,
+        // then the next take holds the ramp again. With `nanGuard` the infinity was held for `factor` frames.
+        val factor = 4.0
+        val n = 64
+
+        for (bad in listOf(Double.POSITIVE_INFINITY, Double.NaN, Double.NEGATIVE_INFINITY)) {
+            val input = ramp(n).also { it[8] = bad }
+            val expected = oracle(input.copyOf().also { it[8] = 0.0 }, factor)
+            val out = renderNodeWindows(ArrayIgnitor(input).coarse(ParamIgnitor("factor", factor)), listOf(5, 59), sampleRate)
+
+            withClue("input $bad at frame 8 (a take): first mismatching frame") {
+                input.indices.firstOrNull { out[it].toRawBits() != expected[it].toRawBits() } shouldBe null
+            }
+
+            withClue("input $bad: the hold of frames 8 to 11 is exactly 0") {
+                (8 until 12).map { out[it] } shouldBe List(4) { 0.0 }
+            }
+        }
+    }
 })

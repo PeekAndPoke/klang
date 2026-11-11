@@ -436,6 +436,7 @@ class PlaybackEngineDispatcher(
                     deniedRents = diagnosticDeniedRents,
                 ),
                 soundlessVoices = diagnosticSoundlessVoices,
+                nonFiniteSamples = house.nonFiniteSamples,
             )
         )
     }

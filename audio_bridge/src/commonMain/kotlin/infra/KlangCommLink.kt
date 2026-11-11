@@ -299,6 +299,13 @@ class KlangCommLink(capacity: Int = 8192) {
              * over the playbacks (KLANG-00399). Counted apart from the late voices, which the warehouse stats carry.
              */
             val soundlessVoices: Int = 0,
+            /**
+             * "Poison seen" (KLANG-00425, L8-04 (c)): the non-finite samples the house limiter has stored as 0 since
+             * the backend started, each channel's counted apart; one bad sample on the mix reads as about 2 per channel
+             * it reached. Monotone. A Double, exact to 2^53 (no Long on the wire). Nothing is clamped for it: the
+             * Motor stays raw, the failure is made visible (`HouseStage.nonFiniteSamples`).
+             */
+            val nonFiniteSamples: Double = 0.0,
         ) : Feedback {
             data class CylinderState(
                 /** Cylinder ID (0-15 typically) */

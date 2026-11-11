@@ -147,6 +147,36 @@ delay line with `decay` read raw, so an authored `decay > 1` diverges. The secon
 for new code: a NEW node on the audio spine that can emit a non-finite sample from finite input owes a
 substitution at its own read.
 
+### Four extreme raw values that end in NaN: documented, not clamped
+
+Decided (maintainer, 2026-11-11, KLANG-00425 N2): "We make the failures visible but keep the motor raw." Four finite
+knob values, all far outside any musical range and all reachable only as raw values (`ignp`, `katp`, an authored
+instrument or chain), turn into a NaN in the voice or the cylinder, and through the shared mix a NaN silences every
+playback until it ends. They are NOT clamped and get no per-sample guard:
+
+- the Karplus family's `feedback` (`ks`, `pluck`, `string`, `superpluck`) at plus or minus 1e308: NaN in the mix
+  within the first 6 blocks;
+- the perlin sources' `rate` (`perlin`, `perlinnoise`) at plus or minus 1e308: NaN within 2 blocks;
+- the reverb's `wet` (the `reverb.wet` slot and an authored `reverb(wet = ...)`) at plus or minus 1e308: a
+  non-finite cylinder in most blocks (110 of 131 in the audit's run), an authored one silenced 13,307 frames;
+- the bare `drive` node (an authored `drive` without a shaper behind it) from amount 257 on: its gain
+  `10^(1.2 * amount)` is infinite, so a nonzero sample leaves as an infinity and an exact zero (silence) as a NaN;
+  256 is finite. Behind a `shape` the core's guard catches both, as the fused `distort` does (audit L4-11).
+
+What makes them visible: the house stage counts the non-finite samples its limiter stores as 0 ("poison seen",
+`HouseStage.nonFiniteSamples`), and every diagnostics report carries the count (`Diagnostics.nonFiniteSamples`). The
+count costs nothing on a finite block: it is taken on the branch the limiter's ring write already takes for a
+non-finite sample. Measured in `AuditSafetyRepro` (the "NaN source" and "non-finite" rows, and L4-11's).
+
+### A stored sample
+
+A stage that STORES a sample to play it later stores a non-finite one as 0, so one bad sample is not played again:
+the `coarse` hold (`finiteOrZero` on each take: an infinity was held for `factor` frames, audit L4-07) and the
+shimmer's grain ring (a NaN was stored and replayed by a later grain, audit L4-06; an infinity is clamped to the
+ring's rail of 2 as before). Guards: `CoarseLawSpec`, `ShimmerSchedulerSpec`. One rule for a non-finite sample at
+every stage that is not arithmetic (today the same infinity leaves different stages as 0, 1, 2, 1e15 or itself) is
+open: KLANG-00432, "Decide" (audit L4-08).
+
 ## Closed gaps
 
 All known gaps as of 2026-04-27 have been addressed. Kept here for

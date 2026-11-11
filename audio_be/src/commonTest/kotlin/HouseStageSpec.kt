@@ -8,7 +8,9 @@ package io.peekandpoke.klang.audio_be
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.filters.houseDcBlockCoeff
 
 /**
  * Guards the final master/output stage extracted from KlangAudioRenderer (D2·1): [HouseStage.process] runs on the
@@ -197,5 +199,85 @@ class HouseStageSpec : StringSpec({
 
         railHits shouldBe 0
         heard shouldBe true
+    }
+
+    "poison seen: the stage counts the non-finite samples its limiter stores as 0, and nothing else (KLANG-00425 L8-04 (c))" {
+        // One bad sample on one channel reads as 2: the DC blocker ahead of the limiter passes it out twice (as itself,
+        // then as `x - xPrev` with the bad sample as `xPrev`) before its state is flushed. A huge FINITE block is not
+        // counted. The count stays across reset() (it is not audio state) and only ever grows.
+        fun run(poison: (block: Int, mix: StereoBuffer) -> Unit): HouseStage {
+            val master = HouseStage(sampleRate = sampleRate, blockFrames = blockFrames)
+            val out = StereoBuffer(blockFrames)
+
+            repeat(40) { block ->
+                val mix = StereoBuffer(blockFrames)
+
+                for (i in 0 until blockFrames) {
+                    val v = 0.3 * kotlin.math.sin(2.0 * kotlin.math.PI * 220.0 * (block * blockFrames + i) / sampleRate)
+
+                    mix.left[i] = v
+                    mix.right[i] = v
+                }
+
+                poison(block, mix)
+                master.process(mix = mix, out = out)
+            }
+
+            return master
+        }
+
+        run { _, _ -> }.nonFiniteSamples shouldBe 0.0
+        run { block, mix -> if (block == 5) mix.left.fill(1e15) }.nonFiniteSamples shouldBe 0.0
+        run { block, mix -> if (block == 5) mix.left[17] = Double.NaN }.nonFiniteSamples shouldBe 2.0
+        run { block, mix -> if (block == 5) mix.right[63] = Double.POSITIVE_INFINITY }.nonFiniteSamples shouldBe 2.0
+
+        val both = run { block, mix ->
+            if (block == 5 || block == 30) {
+                mix.left[3] = Double.NaN
+                mix.right[3] = Double.NEGATIVE_INFINITY
+            }
+        }
+
+        both.nonFiniteSamples shouldBe 8.0
+
+        both.reset()
+        both.nonFiniteSamples shouldBe 8.0
+    }
+
+    "the house DC pole has one corner at every sample rate: 0.999 at 48 kHz, the same 10 Hz gain at 44.1 and 96 kHz (audit L8-07)" {
+        // A fixed 0.999 put the corner at 7.0 Hz at 44.1 kHz and 15.3 Hz at 96 kHz: a 10 Hz tone came out at 0.82 and
+        // 0.55 of its level. `1 - 48 / fs` keeps 7.64 Hz everywhere (about 0.79 at 10 Hz) and 48 kHz bit for bit.
+        houseDcBlockCoeff(sampleRate = 48_000).toRawBits() shouldBe 0.999.toRawBits()
+
+        fun gainAt10Hz(rate: Int): Double {
+            val master = HouseStage(sampleRate = rate, blockFrames = blockFrames)
+            val out = StereoBuffer(blockFrames)
+            val blocks = 2 * rate / blockFrames
+            var peak = 0.0
+
+            for (block in 0 until blocks) {
+                val mix = StereoBuffer(blockFrames)
+
+                for (i in 0 until blockFrames) {
+                    mix.left[i] = 0.1 * kotlin.math.sin(2.0 * kotlin.math.PI * 10.0 * (block * blockFrames + i) / rate)
+                }
+
+                master.process(mix = mix, out = out)
+
+                if (block >= blocks / 2) {
+                    for (i in 0 until blockFrames) {
+                        peak = maxOf(peak, kotlin.math.abs(out.left[i]))
+                    }
+                }
+            }
+
+            return peak / 0.1
+        }
+
+        val at48 = gainAt10Hz(48_000)
+
+        at48 shouldBe (0.795 plusOrMinus 0.01)
+        gainAt10Hz(44_100) shouldBe (at48 plusOrMinus 0.002)
+        gainAt10Hz(96_000) shouldBe (at48 plusOrMinus 0.002)
     }
 })

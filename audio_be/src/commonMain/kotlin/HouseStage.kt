@@ -6,8 +6,8 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.filters.HOUSE_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.audio_be.filters.houseDcBlockCoeff
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
@@ -90,7 +90,8 @@ class HouseStage(
         lookaheadSeconds = HOUSE_LIMITER_LOOKAHEAD_SECONDS,
     )
 
-    // Master-out DC blockers. ~7 Hz cutoff (coefficient = 0.999 at 44.1k / ~7.6 Hz at 48k).
+    // Master-out DC blockers, a corner of 7.64 Hz at every sample rate ([houseDcBlockCoeff]: 0.999 at 48 kHz, audit
+    // L8-07; the fixed 0.999 put it at 7.0 Hz at 44.1 kHz and 15.3 Hz at 96 kHz).
     //
     // Run BEFORE the limiter, so the LIMITER is what feeds the clip below. Two reasons, and the
     // second is why this is required rather than tidy:
@@ -100,12 +101,26 @@ class HouseStage(
     //      on onsets: measured, a limited (-1 dBFS) 55 Hz sine switched on cold comes out at
     //      -0.47 dBFS, a +0.53 dB gain decaying over ~21 ms. Downstream of the limiter that
     //      overshoot lands straight on the clip and eats most of the margin the limiter leaves.
-    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = HOUSE_DC_BLOCK_COEFF)
-    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(coefficient = HOUSE_DC_BLOCK_COEFF)
+    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = houseDcBlockCoeff(sampleRate = sampleRate))
+    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(coefficient = houseDcBlockCoeff(sampleRate = sampleRate))
+
+    /**
+     * "Poison seen" (KLANG-00425, L8-04 (c), maintainer 2026-11-11: "We make the failures visible but keep the motor
+     * raw"): the non-finite samples the house limiter has stored as 0 in its delay ring since this stage was built,
+     * each channel's counted apart. Nothing is clamped or scrubbed for it: the count rides on the test the ring write
+     * already makes. One bad sample on the mix reads as 2 per channel it reached, because the DC blocker ahead of the
+     * limiter passes it out twice before its state is flushed (`x - xPrev` with the bad sample as `xPrev`). A huge
+     * FINITE sample is not counted (audit L8-01, L8-02). Monotone, never reset ([reset] leaves it); a Double, exact to
+     * 2^53, so a backend that sees NaN on every sample for years still counts right (no Long, the engine rule). The
+     * dispatcher carries it in every diagnostics report.
+     */
+    var nonFiniteSamples: Double = 0.0
+        private set
 
     /**
      * Clears stateful post-chain elements (limiter envelope + DC blocker IIR state). Used at the
      * end of the warmup handshake so post-chain state does not survive into the first real block.
+     * The [nonFiniteSamples] count is not audio state and stays.
      */
     fun reset() {
         limiter.reset()
@@ -126,6 +141,14 @@ class HouseStage(
         // Apply dynamic limiter: handles the bulk of loudness management musically. With lookahead
         // it also delays the mix by HOUSE_LIMITER_LOOKAHEAD_SECONDS; uniform, so nothing desyncs.
         limiter.process(left = mix.left, right = mix.right, blockSize = blockFrames)
+
+        // Poison seen: the limiter's ring counted what it sterilised in this block. Once per block, one compare.
+        val seen = limiter.nonFiniteSamples
+
+        if (seen != 0) {
+            nonFiniteSamples += seen
+            limiter.nonFiniteSamples = 0
+        }
 
         // Transparent clip into the floating-point output.
         clipOutput(mix = mix, frames = blockFrames, out = out)

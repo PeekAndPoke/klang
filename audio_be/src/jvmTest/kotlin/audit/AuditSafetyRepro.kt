@@ -27,9 +27,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
-import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
-import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.classic
@@ -38,11 +36,9 @@ import io.peekandpoke.klang.common.infra.toKlangMap
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.sin
-import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -289,131 +285,6 @@ class AuditSafetyRepro : StringSpec({
         flush()
     }
 
-    // ── N1 (new): the analog SVF near fs/3 ───────────────────────────────────────────────────────────────────────
-
-    "N1 (new) L4-01: the analog SVF near fs/3 keeps oscillating after its input".config(enabled = requested) {
-        line("== N1: one SVF node, 0.5 s of input then 10 s of silence; RMS of the last 0.5 s (0 = it settled)")
-
-        for (mode in listOf("lowpass", "highpass")) {
-            for (analog in listOf(0.0, 1.0, 3.0, 5.0, 15.0)) {
-                val cells = ArrayList<String>()
-
-                for (fc in listOf(8000.0, 12000.0, 15900.0, 15990.0, 16000.0, 16010.0, 16100.0, 20000.0)) {
-                    val out = renderTree(tree = svf(mode = mode, fc = fc, q = 200.0, analog = analog), frames = SR / 2 + 10 * SR) { n ->
-                        if (n < SR / 2) 0.1 * sin(2.0 * PI * fc * n / SR) else 0.0
-                    }
-
-                    cells.add("${fc.toInt()}:${fmtE(tailRms(out = out, seconds = 0.5, sampleRate = SR))}")
-                }
-
-                line("N1 [$mode q=200 analog=$analog, input a 0.1 sine at fc, 48 kHz] tail RMS by fc: ${cells.joinToString(" ")}")
-            }
-        }
-
-        for (q in listOf(50.0, 100.0, 150.0, 200.0)) {
-            val cells = ArrayList<String>()
-
-            for (analog in listOf(3.0, 5.0, 10.0, 15.0)) {
-                val out = renderTree(tree = svf(mode = "lowpass", fc = 16000.0, q = q, analog = analog), frames = SR / 2 + 10 * SR) { n ->
-                    if (n < SR / 2) 0.1 * sin(2.0 * PI * 16000.0 * n / SR) else 0.0
-                }
-
-                cells.add("a$analog:${fmtE(tailRms(out = out, seconds = 0.5, sampleRate = SR))}")
-            }
-
-            line("N1 [lowpass fc=16000 q=$q] tail RMS by analog: ${cells.joinToString(" ")}")
-        }
-
-        val rate441 = 44_100
-        val at441 = renderTree(tree = svf(mode = "lowpass", fc = 14700.0, q = 200.0, analog = 5.0), frames = rate441 / 2 + 10 * rate441, sampleRate = rate441) { n ->
-            if (n < rate441 / 2) 0.1 * sin(2.0 * PI * 14700.0 * n / rate441) else 0.0
-        }
-
-        line("N1 [lowpass fc=14700 (fs/3) q=200 analog=5 at 44.1 kHz] tail RMS ${fmtE(tailRms(out = at441, seconds = 0.5, sampleRate = rate441))}")
-
-        val noise = Random(11)
-        val programs = listOf(
-            "sine 110 Hz 0.5" to { n: Int -> 0.5 * sin(2.0 * PI * 110.0 * n / SR) },
-            "naive saw 110 Hz 0.5" to { n: Int ->
-                val x = 110.0 * n / SR
-
-                0.5 * (2.0 * (x - floor(x)) - 1.0)
-            },
-            "white noise 0.3" to { _: Int -> 0.3 * (2.0 * noise.nextDouble() - 1.0) },
-            "one impulse of 0.05" to { n: Int -> if (n == 0) 0.05 else 0.0 },
-        )
-
-        for ((label, program) in programs) {
-            val out = renderTree(tree = svf(mode = "lowpass", fc = 16000.0, q = 200.0, analog = 5.0), frames = SR / 2 + 10 * SR) { n ->
-                if (n < SR / 2) program(n) else 0.0
-            }
-
-            line("N1 [lowpass fc=16000 q=200 analog=5, input: $label for 0.5 s] tail RMS ${fmtE(tailRms(out = out, seconds = 0.5, sampleRate = SR))}")
-        }
-
-        // Inside a built-in voice: classic()'s lowpass at 16 kHz, q 200, analog 5, against analog 0; the 16 kHz tone in the
-        // cylinder mix over 1.0 to 1.9 s of a 2 s note (a single-bin DFT), and the RMS of the whole voice there
-        val registry = IgnitorRegistry().apply { registerDefaults() }
-
-        for (sound in listOf("saw", "sine", "supersaw", "square", "white")) {
-            val cells = ArrayList<String>()
-
-            for (analog in listOf(0.0, 5.0)) {
-                val mix = renderVoiceMix(
-                    registry = registry,
-                    sound = sound,
-                    freqHz = 110.0,
-                    seconds = 2.2,
-                    gateSeconds = 2.0,
-                    ignitorParams = mapOf("lpf.freq" to 16000.0, "lpf.q" to 200.0, "analog" to analog),
-                )
-                val from = SR
-                val to = (1.9 * SR).toInt()
-
-                cells.add("analog $analog: 16 kHz amplitude ${fmtE(toneAmplitude(mix = mix, hz = 16000.0, from = from, to = to))}, RMS ${fmt(rmsOf(mix = mix, from = from, to = to))}")
-            }
-
-            line("N1 [built-in $sound at 110 Hz, lpf 16000 q 200, a 2 s note] ${cells.joinToString("; ")}")
-        }
-
-        flush()
-    }
-
-    "N1 (new): the fs/3 oscillation inside a voice whose input falls silent before the note ends".config(enabled = requested) {
-        line("== N1 reach: through the dispatcher, lpf.freq 16000, lpf.q 200, analog 0 against 5")
-
-        val noise = Random(5)
-        val burst = DoubleArray(SR / 10) { 0.3 * (2.0 * noise.nextDouble() - 1.0) }
-
-        for (analog in listOf(0.0, 5.0)) {
-            val slots = mapOf("lpf.freq" to 16000.0, "lpf.q" to 200.0, "analog" to analog)
-            val cases = listOf(
-                Triple("a 0.1 s noise sample in a 1 s note", scheduled(pid = "song", sound = "burst", freqHz = 261.63, startSec = 0.0, gateEndSec = 1.0, ignitorParams = slots), 0.3 to 0.9),
-                Triple("a pluck at 220 Hz, 2 s note", scheduled(pid = "song", sound = "pluck", freqHz = 220.0, startSec = 0.0, gateEndSec = 2.0, ignitorParams = slots), 1.0 to 1.9),
-            )
-
-            for ((label, voice, window) in cases) {
-                val rig = DispatcherRig()
-
-                rig.send(sampleComplete(sound = "burst", pitchHz = 261.63, pcm = burst))
-                rig.send(KlangCommLink.Cmd.ScheduleVoices(playbackId = "song", voices = listOf(voice)))
-
-                val trace = OutputTrace(seconds = 2.5)
-
-                for (b in 0 until trace.blocks) {
-                    trace.take(block = b, out = rig.block())
-                }
-
-                val (from, to) = window
-                val amplitude = toneAmplitude(mix = trace.left, hz = 16000.0, from = (from * SR).toInt(), to = (to * SR).toInt())
-
-                line("N1 reach [analog $analog, $label] output over ${fmt(from)}..${fmt(to)} s: 16 kHz amplitude ${fmtE(amplitude)}, RMS ${fmt(trace.rms(from, to))}")
-            }
-        }
-
-        flush()
-    }
-
     // ── L8-01 L8-02: the house stage under huge values ────────────────────────────────────────────────────────────
 
     "L8-01: the house stage after one block of a huge value on a 0.3 sine".config(enabled = requested) {
@@ -473,10 +344,9 @@ class AuditSafetyRepro : StringSpec({
         flush()
     }
 
+    // ── L4-11 L4-08: one bad sample through single stages (L4-06, L4-07, N1 are guarded by ordinary specs, KLANG-00432) ──
 
-    // ── L4-11 L4-06 L4-07 L4-08: one bad sample through single stages ─────────────────────────────────────────────
-
-    "L4-11 L4-06 L4-07 L4-08: drive, shimmer, coarse, the adsr and the dc blocker under one bad sample".config(enabled = requested) {
+    "L4-11 L4-08: drive, the adsr and the dc blocker under one bad sample".config(enabled = requested) {
         line("== L4-11: the bare drive node over a 0.5 sine for 0.1 s, then 0.1 s of exact silence")
 
         for (amount in listOf(100.0, 256.0, 257.0, 300.0)) {
@@ -486,26 +356,6 @@ class AuditSafetyRepro : StringSpec({
             val inf = out.count { it.isInfinite() }
 
             line("L4-11 [drive amount $amount] NaN samples $nan, infinite samples $inf of ${out.size}; first NaN at frame ${out.indexOfFirst { it.isNaN() }}")
-        }
-
-        line("== L4-06: shimmer(wet 1) over a 0.5 sine for 0.5 s with one NaN at frame 4800, then 3 s of silence")
-
-        for (wet in listOf(1.0, 0.5)) {
-            val tree = IgnitorDsl.Shimmer(inner = IgnitorDsl.Sample, wet = c(wet))
-            val out = renderTree(tree = tree, frames = (3.5 * SR).toInt()) { n -> poisonedSine(n = n, bad = Double.NaN, until = SR / 2) }
-            val bad = out.indices.filter { !out[it].isFinite() }
-
-            line("L4-06 [shimmer wet $wet] non-finite output samples ${bad.size}; at frames ${bad.take(12)}${if (bad.size > 12) " ..." else ""}")
-        }
-
-        line("== L4-07: classic() coarse over a 0.5 sine with one +Inf at frame 4800")
-
-        for (factor in listOf(4.0, 4800.0)) {
-            val out = renderTree(tree = IgnitorDsl.Sample.classic(), params = mapOf("adsr.on" to 0.0, "coarse.factor" to factor), frames = SR) { n ->
-                poisonedSine(n = n, bad = Double.POSITIVE_INFINITY, until = SR / 2)
-            }
-
-            line("L4-07 [coarse factor $factor] infinite output samples ${out.count { it.isInfinite() }}, NaN ${out.count { it.isNaN() }}")
         }
 
         line("== L4-08: one bad sample at frame 0 (where an envelope's gain is exactly 0) and at frame 4800")
@@ -620,98 +470,6 @@ private fun scheduled(
     ),
 )
 
-/** The engine's output (left), kept whole, with the facts the NaN rows read off it. */
-private class OutputTrace(seconds: Double) {
-    val blocks: Int = (seconds * SR).toInt() / BF
-    val left = DoubleArray(blocks * BF)
-    private val zero = BooleanArray(blocks * BF)
-    var nonFinite = 0
-    var rail = 0
-    var peak = 0.0
-
-    fun take(block: Int, out: StereoBuffer) {
-        for (i in 0 until BF) {
-            val l = out.left[i]
-            val r = out.right[i]
-            val at = block * BF + i
-
-            left[at] = l
-            zero[at] = l == 0.0 && r == 0.0
-
-            if (!l.isFinite() || !r.isFinite()) {
-                nonFinite++
-            }
-
-            if (abs(l) >= 1.0 || abs(r) >= 1.0) {
-                rail++
-            }
-
-            if (l.isFinite()) {
-                peak = maxOf(peak, abs(l))
-            }
-        }
-    }
-
-    /** Exact-zero frames from 0.1 s on (the house limiter's 5 ms lookahead makes the first frames zero). */
-    val zeroFrames: Int get() = (SR / 10 until zero.size).count { zero[it] }
-
-    fun zeroBetween(fromSec: Double, toSec: Double): Int = ((fromSec * SR).toInt() until minOf(zero.size, (toSec * SR).toInt())).count { zero[it] }
-
-    private fun longestRun(): IntRange? {
-        var best: IntRange? = null
-        var start = -1
-
-        for (i in SR / 10..zero.size) {
-            val z = i < zero.size && zero[i]
-
-            if (z && start < 0) {
-                start = i
-            }
-
-            if (!z && start >= 0) {
-                if (best == null || i - start > best.last - best.first + 1) {
-                    best = start until i
-                }
-
-                start = -1
-            }
-        }
-
-        return best
-    }
-
-    fun longestRunText(): String {
-        val run = longestRun() ?: return "none"
-        val endText = if (run.last == zero.size - 1) "the end of the render" else "${fmt((run.last + 1) / SR.toDouble())} s"
-
-        return "${fmt(run.first / SR.toDouble())} s .. $endText (${fmt((run.last - run.first + 1) / SR.toDouble())} s)"
-    }
-
-    fun stepAfterRun(): Double {
-        val run = longestRun() ?: return 0.0
-        var step = 0.0
-        val from = run.last + 1
-
-        for (i in from until minOf(left.size, from + 2 * BF)) {
-            step = maxOf(step, abs(left[i] - left[i - 1]))
-        }
-
-        return step
-    }
-
-    fun rms(fromSec: Double, toSec: Double): Double {
-        val from = (fromSec * SR).toInt()
-        val to = minOf(left.size, (toSec * SR).toInt())
-        var sum = 0.0
-
-        for (i in from until to) {
-            sum += left[i] * left[i]
-        }
-
-        return sqrt(sum / maxOf(1, to - from))
-    }
-}
-
 /**
  * A test source that plays [sampleAt] from its own frame counter, one window per call: the role of `ArrayIgnitor`
  * (commonTest), computed instead of stored, so a 120 s hold measurement does not allocate a 120 s array per case.
@@ -726,11 +484,6 @@ private class FunctionSource(private val sampleAt: (Int) -> Double) : Ignitor {
         }
     }
 }
-
-private fun request(sound: String) = SampleRequest(bank = null, sound = sound, index = null, note = null)
-
-private fun sampleComplete(sound: String, pitchHz: Double, pcm: DoubleArray) =
-    KlangCommLink.Cmd.Sample.Complete(req = request(sound), note = null, pitchHz = pitchHz, sample = MonoSamplePcm(sampleRate = SR, pcm = pcm))
 
 /** The first frame of the stack inside Klang, for a throw's site. */
 private fun describe(t: Throwable): String {
@@ -1040,82 +793,11 @@ private fun renderTree(tree: IgnitorDsl, frames: Int, params: Map<String, Double
     return out
 }
 
-private fun poisonedSine(n: Int, bad: Double, until: Int): Double = when {
-    n == 4800 -> bad
-    n < until -> 0.5 * sin(2.0 * PI * 220.0 * n / SR)
-    else -> 0.0
-}
-
 private fun describeBad(out: DoubleArray): String {
     val nan = out.indices.filter { out[it].isNaN() }
     val inf = out.indices.filter { out[it].isInfinite() }
 
     return "NaN ${nan.size}${if (nan.isNotEmpty()) " at ${nan.take(4)}" else ""}, Inf ${inf.size}${if (inf.isNotEmpty()) " at ${inf.take(4)}" else ""}"
-}
-
-private fun svf(mode: String, fc: Double, q: Double, analog: Double): IgnitorDsl = if (mode == "lowpass") {
-    IgnitorDsl.Lowpass(inner = IgnitorDsl.Sample, freq = c(fc), q = c(q), analog = c(analog))
-} else {
-    IgnitorDsl.Highpass(inner = IgnitorDsl.Sample, freq = c(fc), q = c(q), analog = c(analog))
-}
-
-/** RMS of the last [seconds] of [out]. */
-private fun tailRms(out: DoubleArray, seconds: Double, sampleRate: Int): Double {
-    val n = (seconds * sampleRate).toInt()
-
-    return rmsOf(mix = out, from = out.size - n, to = out.size)
-}
-
-private fun rmsOf(mix: DoubleArray, from: Int, to: Int): Double {
-    var sum = 0.0
-
-    for (i in from until to) {
-        sum += mix[i] * mix[i]
-    }
-
-    return sqrt(sum / maxOf(1, to - from))
-}
-
-/** The amplitude of the [hz] component of [mix] over `[from, to)`, a single-bin DFT. */
-private fun toneAmplitude(mix: DoubleArray, hz: Double, from: Int, to: Int): Double {
-    var re = 0.0
-    var im = 0.0
-
-    for (i in from until to) {
-        val w = 2.0 * PI * hz * i / SR
-
-        re += mix[i] * cos(w)
-        im -= mix[i] * sin(w)
-    }
-
-    return 2.0 * sqrt(re * re + im * im) / (to - from)
-}
-
-/** One voice of [sound] through the factory, rendered block by block from frame 0; the left channel of its cylinder's mix. */
-private fun renderVoiceMix(registry: IgnitorRegistry, sound: String, freqHz: Double, seconds: Double, gateSeconds: Double, ignitorParams: Map<String, Double>?): DoubleArray {
-    val rig = HuntRig(registry)
-    val scheduled = ScheduledVoice(
-        playbackId = "hunt",
-        startTime = 0.25 / SR,
-        gateEndTime = gateSeconds + 0.25 / SR,
-        playbackStartTime = 0.0,
-        data = VoiceData.empty.copy(sound = sound, freqHz = freqHz, ignitorParams = ignitorParams?.toKlangMap()),
-    )
-    val blocks = (seconds * SR).toInt() / BF
-    val out = DoubleArray(blocks * BF)
-    val voice = rig.factory.makeVoice(scheduled = scheduled, backendStartTimeSec = 0.0, playbackCtx = rig.playback, getSample = { null }) ?: return out
-
-    for (b in 0 until blocks) {
-        rig.ctx.blockStart = (b * BF).toDouble()
-        voice.render(rig.ctx)
-
-        val cylinder = rig.ctx.cylinders.cylinders.firstOrNull()
-
-        cylinder?.mixBuffer?.left?.copyInto(destination = out, destinationOffset = b * BF, startIndex = 0, endIndex = BF)
-        rig.ctx.cylinders.clearAll()
-    }
-
-    return out
 }
 
 // ── The house stage ────────────────────────────────────────────────────────────────────────────────────────────────

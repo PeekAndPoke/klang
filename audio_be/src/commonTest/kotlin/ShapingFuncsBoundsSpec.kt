@@ -12,6 +12,7 @@ import io.kotest.matchers.doubles.beLessThanOrEqualTo
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.utils.fastExp
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.random.Random
@@ -247,6 +248,27 @@ class ShapingFuncsBoundsSpec : StringSpec({
                 withClue("cap $cap @ x=$x") { ShapingFuncs.softCapTo(x = x, cap = cap) shouldBe 0.0 }
             }
         }
+    }
+
+    "expClip and stompBox: the early return past the saturated argument is bit-identical to the formula (audit L4-04)" {
+        // The oracle is the formula before the early return, through the same `fastExp`: `1 - e^-|x|` and the
+        // stompbox's two scaled arms. Dense around the threshold of either arm, out to huge drives and the infinities.
+        fun expOracle(x: Double): Double = if (x >= 0.0) 1.0 - fastExp(-x) else -(1.0 - fastExp(x))
+        fun stompOracle(x: Double): Double = if (x >= 0.0) 1.0 - fastExp(-x * 1.5) else -(1.0 - fastExp(x * 3.0))
+
+        val near = (0..4000).map { 20.0 + it * 0.005 }
+        val stompNear = (0..4000).map { 10.0 + it * 0.005 }
+        val far = listOf(38.0, 38.000001, 50.0, 100.0, 1e3, 4e3, 1e15, 1e300, Double.MAX_VALUE, Double.POSITIVE_INFINITY)
+        val xs = (near + stompNear + far).flatMap { listOf(it, -it) }
+
+        for (x in xs) {
+            withClue("expClip($x)") { ShapingFuncs.expClip(x).toRawBits() shouldBe expOracle(x).toRawBits() }
+            withClue("stompBox($x)") { ShapingFuncs.stompBox(x).toRawBits() shouldBe stompOracle(x).toRawBits() }
+        }
+
+        // The early return is reached (not only equal): past the threshold the value is the rail itself.
+        ShapingFuncs.expClip(39.0) shouldBe 1.0
+        ShapingFuncs.stompBox(-13.0) shouldBe -1.0
     }
 })
 

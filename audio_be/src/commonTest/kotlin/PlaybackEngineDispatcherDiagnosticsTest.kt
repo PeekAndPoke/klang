@@ -9,10 +9,13 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -111,6 +114,43 @@ class PlaybackEngineDispatcherDiagnosticsTest : StringSpec({
         d.outputLatencyMs = 255.0
         d.render(out)
         commLink.readAllDiagnostics().single().outputLatencyMs shouldBe 255.0
+    }
+
+    "a report carries the house stage's poison count: 0 on a clean mix, more once a voice put a NaN on it (KLANG-00425 L8-04 (c))" {
+        val (d, commLink) = createDispatcher { 0.0 }
+        val out = StereoBuffer(blockFrames)
+        val req = SampleRequest(bank = null, sound = "poison", index = null, note = null)
+        // A sample with one NaN in it: nothing between a voice and the house limiter scrubs it (L6-01 (a)), the
+        // limiter's ring stores it as 0 and counts it.
+        val pcm = DoubleArray(4410) { if (it == 300) Double.NaN else 0.1 * kotlin.math.sin(0.05 * it) }
+
+        d.handle(KlangCommLink.Cmd.Sample.Complete(req = req, note = null, pitchHz = 440.0, sample = MonoSamplePcm(sampleRate = sampleRate, pcm = pcm)))
+
+        d.render(out)
+        commLink.readAllDiagnostics().single().nonFiniteSamples shouldBe 0.0
+
+        d.handle(
+            KlangCommLink.Cmd.ScheduleVoices(
+                playbackId = "song",
+                voices = listOf(
+                    ScheduledVoice(
+                        playbackId = "song",
+                        startTime = 0.03,
+                        gateEndTime = 0.1,
+                        data = VoiceData.empty.copy(sound = "poison", freqHz = 440.0),
+                        playbackStartTime = 0.0,
+                    ),
+                ),
+            ),
+        )
+
+        d.render(out, blocks = 4 * blocksPerReport)
+
+        val reports = commLink.readAllDiagnostics()
+
+        reports.last().nonFiniteSamples shouldBeGreaterThan 0.0
+        // Monotone: every report carries the total so far.
+        reports.zipWithNext().all { (a, b) -> b.nonFiniteSamples >= a.nonFiniteSamples } shouldBe true
     }
 
     "diagnostics carry the SYSTEM playbackId" {

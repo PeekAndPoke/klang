@@ -184,13 +184,18 @@ internal inline fun onePoleLpfCoeff(cutoffHz: Double, sampleRate: Double): Doubl
  * Polynomial approximation of a diode-pair's I-V resistance characteristic — a curve
  * fit (Horner form) used as a cheap stand-in for the transcendental diode equation.
  *
- * Output is ≥ ~1.0 for all real `x` and grows monotonically with `|x|`. Used by the
+ * Output is at least 1.0 outside about `[-0.27, 0]` and grows with `|x|` beyond it; inside it dips to 0.9966 (at
+ * `x = -0.135`, the odd terms), so the damping it adds is slightly NEGATIVE there. The saturated branches floor the
+ * effective damping at 0 for that reason (audit N1: at q times analog over about 590 the dip made the loop oscillate
+ * for good near fs/3). Used by the
  * nonlinear (saturated) SVF branches to make the resonance damping coefficient a
  * **function of the BP integrator state** — as state grows, damping grows,
  * compressing the resonance peak. The signal stays linear, only the *damping gain*
  * becomes state-dependent. Stability is preserved because increasing signal →
  * more damping → bounded resonance (the inverse of what hard-capping `tanh` in
- * the feedback signal would do).
+ * the feedback signal would do). For a very large state (some hundred times full scale) the damping grows so far
+ * that the trapezoidal integrator's pole nears -1 and the state decays SLOWLY (audit L4-01, under Decide in
+ * KLANG-00432).
  *
  * Per-sample cost: 4 muls + 4 adds (Horner form).
  *
@@ -221,10 +226,25 @@ internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 /**
  * The house pole for [LowPassHighPassFilters.DcBlocker] on a whole MIX: `≈ 7 Hz @ 44.1k, 7.6 Hz @ 48k`, about
- * 0.15 dB at 40 Hz where [DEFAULT_DC_BLOCK_COEFF] takes about 2.5 dB. `HouseStage`'s DC blockers and the Katalyst
- * `distort` stage's cores (`KatalystDistortEffect`), which run on a bus and so on the low end of every voice on it.
+ * 0.15 dB at 40 Hz where [DEFAULT_DC_BLOCK_COEFF] takes about 2.5 dB. The Katalyst `distort` stage's cores
+ * (`KatalystDistortEffect`), which run on a bus and so on the low end of every voice on it. `HouseStage` takes the
+ * same value at 48 kHz and the same corner at every rate ([houseDcBlockCoeff], audit L8-07).
  */
 internal const val HOUSE_DC_BLOCK_COEFF: Double = 0.999
+
+/**
+ * How far the house pole sits from 1 per second of audio: `1 - a = 48 / fs`, so [houseDcBlockCoeff] is exactly
+ * [HOUSE_DC_BLOCK_COEFF] (0.999) at 48 kHz and the corner `(1 - a) * fs / (2 pi)` is 7.64 Hz at every rate.
+ */
+internal const val HOUSE_DC_BLOCK_POLE_PER_SECOND: Double = 48.0
+
+/**
+ * The house stage's DC pole at [sampleRate]: `1 - 48 / fs`, the corner 7.64 Hz at every rate, and bit for bit 0.999
+ * at 48 kHz (audit L8-07: the fixed 0.999 moved the corner with the rate, 7.0 Hz at 44.1 kHz, 15.3 Hz at 96 kHz,
+ * where a 40 Hz note lost 0.6 dB). Only `HouseStage` reads it; the Katalyst `distort` stage keeps the fixed
+ * [HOUSE_DC_BLOCK_COEFF].
+ */
+internal fun houseDcBlockCoeff(sampleRate: Int): Double = 1.0 - HOUSE_DC_BLOCK_POLE_PER_SECOND / sampleRate
 
 // NOTE: `BODY_FLOOR` and `VOWEL_FLOOR` moved to `audio_bridge/constants/BusEffectDefaults.kt`
 // (Katalyst DSL step 1, 2026-09-17): the Katalyst `body`/`vowel` stage knobs need the same

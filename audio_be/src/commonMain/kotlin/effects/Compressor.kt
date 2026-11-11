@@ -283,6 +283,15 @@ class Compressor(
 
     private var delayPos = 0
 
+    /**
+     * Non-finite samples [processLookahead] has stored as 0 in its delay ring, each channel's counted apart, since the
+     * last time the owner took them: "poison seen" (KLANG-00425, L8-04 (c)). The house stage moves it into its own
+     * total once per block and zeroes it (`HouseStage.nonFiniteSamples`); an authored
+     * stage's count is read by no one. Counted on the branch the ring write already takes for a non-finite sample, so
+     * a finite block pays the same two tests it paid before. An Int, no Long (the engine rule).
+     */
+    internal var nonFiniteSamples: Int = 0
+
     // Monotonic-increasing deque for the running MINIMUM of the required gain over a window of
     // `delayFrames + 1`. Primitive-backed: ArrayDeque<Double> boxes on Kotlin/JS.
     // Sized delayFrames + 3, and the +3 is load-bearing. The window holds up to `delayFrames + 1`
@@ -618,8 +627,16 @@ class Compressor(
             // delayFrames samples later, far from whatever produced it. Non-finite generally: an
             // Infinity survives `l != l`, is stored, and later emerges as `Inf * 0.0` = NaN, which
             // HouseStage maps to -1.0, the exact full-scale click this guard prevents.
-            delayL[delayPos] = l.finiteOrZero()
-            delayR[delayPos] = r.finiteOrZero()
+            // The tests of `finiteOrZero`, written out so the rare branch can count what it sterilises.
+            if (abs(l) <= Double.MAX_VALUE && abs(r) <= Double.MAX_VALUE) {
+                delayL[delayPos] = l
+                delayR[delayPos] = r
+            } else {
+                delayL[delayPos] = l.finiteOrZero()
+                delayR[delayPos] = r.finiteOrZero()
+                nonFiniteSamples += (if (l.isFiniteInline()) 0 else 1) + (if (r.isFiniteInline()) 0 else 1)
+            }
+
             delayPos = if (delayPos + 1 == delayFrames) 0 else delayPos + 1
             delayedLeft[i] = outL
             delayedRight[i] = outR
