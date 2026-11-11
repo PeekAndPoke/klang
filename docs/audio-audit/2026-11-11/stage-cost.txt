@@ -1,0 +1,244 @@
+Stage cost table (KLANG-00420, probe 7), 2026-11-11T16:00:28.318347495Z
+JVM OpenJDK 64-Bit Server VM 17.0.17+10-LTS, 16 processors, max heap 512 MB
+sample rate 48000 Hz (one sample = 20833.3 ns), block 128 frames, every case rendered 375 blocks and 1 block per visit, ns per sample = (long - short) / the frames between
+40 warm-up rounds, then 41 timed rounds; every round visits every case once, in its own shuffled order (seed 1056); a fresh stage instance per render
+input: full-scale white noise, seeded, held (an Ignitor gate never closes inside the render); sources and voices play a held middle C (261.6255653005986 Hz); the catalogue's Ignitor stages play the stage probe's 220 Hz
+allocation: HotSpot's per-thread allocated bytes around each render, (long - short) / the blocks between
+
+Columns:
+  net_ns    ns per sample, median over the rounds, minus the median of the row's baseline control (the harness)
+  rt_%      net_ns as a share of one sample period at the probe's rate (100 = one whole core for this alone)
+  x_sine    net_ns over the plain sine's net_ns
+  raw_ns    ns per sample, median, harness included; min and max over the rounds beside it
+  width_%   (max - min) / median of raw_ns: how far the rounds spread
+  x_ctrl    raw_ns over the baseline control's raw_ns
+  build_us  the short render: the stage's build plus its first block, median, microseconds
+  alloc_B   bytes the thread allocated per block in steady state, median; the controls show the harness's own output arrays
+  net_B     alloc_B minus the baseline control's (non-zero = the stage itself allocates per block: a lead)
+  baseline  the control row subtracted for net_ns and net_B
+
+#    family    stage                 knobs                                               net_ns  rt_%   x_sine  raw_ns  min     max     width_%  x_ctrl  build_us  alloc_B  net_B   baseline
+---  --------  --------------------  --------------------------------------------------  ------  -----  ------  ------  ------  ------  -------  ------  --------  -------  ------  --------------------
+1    katalyst  oversampleBy          16x distort hard 3                                  278.65  1.338  122.87  279.83  272.10  322.81  18.1     237.44  82.5      2048.0   0.0     katalyst empty chain
+2    source    superpluck            voices=16                                           83.32   0.400  36.74   83.85   81.67   125.82  52.7     159.74  58.9      1024.0   0.0     ignitor silence
+3    ignitor   highpass              freq=1000 passes=16 (max)                           65.66   0.315  28.95   66.45   65.25   100.42  52.9     83.88   25.4      1024.0   0.0     ignitor sample leaf
+4    ignitor   lowpass               freq=1000 passes=16 (max)                           65.14   0.313  28.72   65.94   64.14   96.37   48.9     83.24   24.3      1024.0   0.0     ignitor sample leaf
+5    katalyst  body                  steel wet=1 floor=0                                 63.89   0.307  28.17   65.06   62.63   94.11   48.4     55.21   15.4      2048.0   0.0     katalyst empty chain
+6    katalyst  body                  wood wet=.5 floor=.4                                63.81   0.306  28.14   64.99   63.63   93.41   45.8     55.14   16.2      2048.0   0.0     katalyst empty chain
+7    katalyst  body                  bell wet=1 floor=0                                  63.42   0.304  27.96   64.60   62.85   77.30   22.4     54.81   15.3      2048.0   0.0     katalyst empty chain
+8    source    superpluck            voices=8 (default)                                  41.13   0.197  18.14   41.66   40.76   71.39   73.5     79.36   32.5      1024.0   0.0     ignitor silence
+9    katalyst  vowel                 a wet=.5 floor=.2                                   40.28   0.193  17.76   41.46   40.15   72.33   77.6     35.18   10.7      2048.0   0.0     katalyst empty chain
+10   katalyst  vowel                 soprano:i wet=1 floor=0                             40.22   0.193  17.73   41.40   39.98   52.65   30.6     35.13   11.5      2048.0   0.0     katalyst empty chain
+11   katalyst  blend (parallel)      wet=.5 over reverb wet=1                            39.84   0.191  17.56   41.01   38.41   52.71   34.9     34.80   55.5      2048.0   0.0     katalyst empty chain
+12   katalyst  compressor            lookahead=0.05 (max)                                38.56   0.185  17.00   39.74   38.50   44.80   15.9     33.72   21.0      2048.0   0.0     katalyst empty chain
+13   katalyst  reverb                default (wet .25 size 5)                            37.34   0.179  16.47   38.52   36.53   65.97   76.4     32.69   36.0      2048.0   0.0     katalyst empty chain
+14   katalyst  reverb                wet=1 size=10 lowpass=20000                         37.34   0.179  16.47   38.52   37.19   56.71   50.7     32.68   34.6      2048.0   0.0     katalyst empty chain
+15   source    supersine             voices=16                                           37.31   0.179  16.45   37.83   36.39   49.29   34.1     72.07   12.1      1024.0   0.0     ignitor silence
+16   katalyst  reverb                wet=1 size=10 (max)                                 36.74   0.176  16.20   37.92   36.58   70.69   90.0     32.18   34.3      2048.0   0.0     katalyst empty chain
+17   katalyst  delay                 wet=1 fb=1.5 cap=1                                  35.12   0.169  15.49   36.30   28.94   65.02   99.4     30.80   25.1      2048.0   0.0     katalyst empty chain
+18   katalyst  limiter               lookahead=0.005                                     32.93   0.158  14.52   34.11   32.54   55.72   68.0     28.94   14.2      2048.0   0.0     katalyst empty chain
+19   katalyst  bands (parallel)      cut 500, both bands empty                           32.15   0.154  14.18   33.33   31.72   42.42   32.1     28.28   29.8      2048.0   0.0     katalyst empty chain
+20   source    supersquare           voices=16                                           31.62   0.152  13.94   32.14   31.27   61.39   93.7     61.23   12.6      1024.0   0.0     ignitor silence
+21   katalyst  oversampleBy          2x distort soft .5                                  30.95   0.149  13.65   32.13   31.11   64.27   103.2    27.26   17.1      2048.0   0.0     katalyst empty chain
+22   source    superramp             voices=16                                           30.10   0.144  13.27   30.62   29.58   59.88   98.9     58.34   12.5      1024.0   0.0     ignitor silence
+23   source    supersaw              voices=16                                           30.00   0.144  13.23   30.53   29.66   37.51   25.7     58.16   11.9      1024.0   0.0     ignitor silence
+24   katalyst  pow                   -1                                                  28.70   0.138  12.66   29.88   28.89   44.67   52.8     25.35   7.1       2048.0   0.0     katalyst empty chain
+25   katalyst  pow                   3                                                   28.45   0.137  12.55   29.63   28.59   36.46   26.6     25.14   7.0       2048.0   0.0     katalyst empty chain
+26   katalyst  delay                 time=0.01 fb=0.99                                   27.98   0.134  12.34   29.16   26.99   30.74   12.9     24.74   21.7      2048.0   0.0     katalyst empty chain
+27   katalyst  delay                 fb=1 (endless)                                      25.79   0.124  11.37   26.97   25.85   42.20   60.6     22.88   21.2      2048.0   0.0     katalyst empty chain
+28   katalyst  delay                 default (wet .25 time .25 fb .3)                    25.65   0.123  11.31   26.83   15.49   58.33   159.7    22.76   21.2      2048.0   0.0     katalyst empty chain
+29   voice     supersaw voice        lpf=1000 + adsr, voices=8                           23.81   0.114  10.50   24.34   23.62   53.73   123.7    46.37   20.4      1024.0   0.0     ignitor silence
+30   source    supertri              voices=16                                           22.90   0.110  10.10   23.42   22.65   54.96   137.9    44.62   10.0      1024.0   0.0     ignitor silence
+31   katalyst  distort:exp           amount=0.5                                          21.79   0.105  9.61    22.97   22.27   34.46   53.1     19.49   6.6       2048.0   0.0     katalyst empty chain
+32   katalyst  compressor            thr=-60 ratio=100 knee=0 att=0 rel=0                21.45   0.103  9.46    22.63   22.02   30.30   36.6     19.20   8.2       2048.0   0.0     katalyst empty chain
+33   katalyst  limiter               default (-1 dB 20:1)                                20.82   0.100  9.18    22.00   21.38   50.86   134.0    18.66   8.0       2048.0   0.0     katalyst empty chain
+34   katalyst  distort:stompbox      amount=0.5                                          20.32   0.098  8.96    21.49   20.99   27.62   30.9     18.24   6.0       2048.0   0.0     katalyst empty chain
+35   source    supersine             voices=8 (default)                                  18.74   0.090  8.26    19.26   18.61   32.17   70.4     36.70   8.7       1024.0   0.0     ignitor silence
+36   katalyst  distort:hard          amount=0.5                                          18.61   0.089  8.21    19.79   19.01   49.49   154.0    16.79   5.7       2048.0   0.0     katalyst empty chain
+37   katalyst  distort:asym          amount=0.5                                          18.06   0.087  7.96    19.23   18.76   51.26   169.0    16.32   6.4       2048.0   0.0     katalyst empty chain
+38   katalyst  compressor            default (-20 dB 4:1 knee 6)                         17.18   0.082  7.58    18.36   17.73   43.96   142.8    15.58   7.4       2048.0   0.0     katalyst empty chain
+39   katalyst  distort:diode         amount=0.5                                          17.12   0.082  7.55    18.30   17.79   49.51   173.3    15.53   5.5       2048.0   0.0     katalyst empty chain
+40   ignitor   lowpass env           freq=1000 env=48 a=0.001 d=1 s=0 analog=1 (moving)  16.99   0.082  7.49    17.78   17.34   29.03   65.7     22.45   13.3      1024.0   0.0     ignitor sample leaf
+41   katalyst  distort:sineshaper    amount=3                                            16.80   0.081  7.41    17.98   17.37   21.54   23.2     15.25   5.7       2048.0   0.0     katalyst empty chain
+42   ignitor   highpass              freq=23999 q=200 analog=1                           16.79   0.081  7.40    17.58   16.99   31.34   81.6     22.19   9.7       1024.0   0.0     ignitor sample leaf
+43   ignitor   lowpass               freq=23999 q=200 analog=1                           16.76   0.080  7.39    17.55   17.23   46.54   167.0    22.15   10.2      1024.0   0.0     ignitor sample leaf
+44   ignitor   highpass              freq=1000 analog=1                                  16.73   0.080  7.38    17.53   16.96   26.94   56.9     22.13   9.8       1024.0   0.0     ignitor sample leaf
+45   ignitor   lowpass               freq=1000 analog=1                                  16.71   0.080  7.37    17.50   16.91   18.55   9.4      22.09   10.3      1024.0   0.0     ignitor sample leaf
+46   katalyst  distort:sineshaper    amount=0.5                                          16.68   0.080  7.35    17.86   17.08   27.95   60.9     15.15   5.4       2048.0   0.0     katalyst empty chain
+47   katalyst  distort:cubic         amount=0.5                                          16.17   0.078  7.13    17.35   16.85   28.99   70.0     14.72   5.3       2048.0   0.0     katalyst empty chain
+48   katalyst  distort:chebyshev     amount=0.5                                          15.92   0.076  7.02    17.09   16.64   31.08   84.5     14.50   5.5       2048.0   0.0     katalyst empty chain
+49   source    supersquare           voices=8 (default)                                  15.91   0.076  7.02    16.44   15.98   47.85   193.9    31.31   7.6       1024.0   0.0     ignitor silence
+50   katalyst  distort:fold          amount=0.5                                          15.66   0.075  6.91    16.84   16.16   42.66   157.3    14.29   5.3       2048.0   0.0     katalyst empty chain
+51   katalyst  distort:fold          amount=3                                            15.65   0.075  6.90    16.83   16.07   27.25   66.4     14.28   5.5       2048.0   0.0     katalyst empty chain
+52   katalyst  distort:zerosquare    amount=0.5                                          15.61   0.075  6.88    16.79   16.29   36.30   119.2    14.25   5.7       2048.0   0.0     katalyst empty chain
+53   katalyst  distort:hard          amount=3                                            15.51   0.074  6.84    16.69   16.01   21.64   33.8     14.16   5.4       2048.0   0.0     katalyst empty chain
+54   source    supersaw              voices=8 (default)                                  15.11   0.073  6.66    15.64   9.52    33.51   153.4    29.79   7.5       1024.0   0.0     ignitor silence
+55   source    superramp             voices=8 (default)                                  15.04   0.072  6.63    15.56   14.99   18.05   19.6     29.65   7.8       1024.0   0.0     ignitor silence
+56   katalyst  pow                   0.5                                                 14.13   0.068  6.23    15.31   14.59   46.51   208.5    12.99   4.6       2048.0   0.0     katalyst empty chain
+57   katalyst  distort:zerosquare    amount=3                                            13.93   0.067  6.14    15.11   14.63   26.18   76.5     12.82   4.8       2048.0   0.0     katalyst empty chain
+58   katalyst  distort:asym          amount=3                                            13.74   0.066  6.06    14.92   14.42   30.62   108.6    12.66   5.1       2048.0   0.0     katalyst empty chain
+59   katalyst  distort:tube          amount=3                                            13.46   0.065  5.94    14.64   14.08   20.33   42.7     12.42   5.2       2048.0   0.0     katalyst empty chain
+60   katalyst  distort:stompbox      amount=3                                            13.34   0.064  5.88    14.52   14.08   27.58   93.0     12.32   4.9       2048.0   0.0     katalyst empty chain
+61   katalyst  phaser                wet=1 rate=20 center=20000 sweep=20000 floor=0      13.25   0.064  5.84    14.43   13.95   23.63   67.1     12.24   5.7       2048.0   0.0     katalyst empty chain
+62   source    sine                  partial bank, harmonics=4                           13.00   0.062  5.73    13.53   13.14   19.09   44.0     25.77   9.3       1024.0   0.0     ignitor silence
+63   katalyst  distort:diode         amount=3                                            12.99   0.062  5.73    14.17   13.71   22.52   62.2     12.03   5.0       2048.0   0.0     katalyst empty chain
+64   katalyst  distort:exp           amount=3                                            12.85   0.062  5.66    14.02   13.60   20.54   49.5     11.90   5.2       2048.0   0.0     katalyst empty chain
+65   katalyst  phaser                wet=.5 rate=.5                                      12.80   0.061  5.65    13.98   13.49   26.84   95.5     11.86   6.4       2048.0   0.0     katalyst empty chain
+66   katalyst  distort:chebyshev     amount=3                                            12.14   0.058  5.35    13.32   12.84   14.39   11.6     11.30   4.9       2048.0   0.0     katalyst empty chain
+67   ignitor   shimmer               wet=1 feedback=0.95 (max)                           12.10   0.058  5.34    12.89   11.76   24.71   100.4    16.28   13.9      1024.0   0.0     ignitor sample leaf
+68   katalyst  distort:cubic         amount=3                                            12.07   0.058  5.32    13.25   12.80   24.63   89.3     11.24   4.7       2048.0   0.0     katalyst empty chain
+69   ignitor   shimmer               default                                             12.05   0.058  5.32    12.85   12.25   25.63   104.2    16.22   13.1      1024.0   0.0     ignitor sample leaf
+70   katalyst  distort:soft          amount=3                                            12.02   0.058  5.30    13.20   12.81   23.42   80.5     11.20   4.8       2048.0   0.0     katalyst empty chain
+71   source    supertri              voices=8 (default)                                  11.45   0.055  5.05    11.97   11.63   12.98   11.3     22.81   7.0       1024.0   0.0     ignitor silence
+72   ignitor   distort:exp           amount=0.5                                          11.13   0.053  4.91    11.92   11.39   26.78   129.1    15.05   7.2       1024.0   0.0     ignitor sample leaf
+73   katalyst  distort:tube          amount=0.5                                          10.82   0.052  4.77    12.00   11.62   17.42   48.3     10.18   5.0       2048.0   0.0     katalyst empty chain
+74   ignitor   distort:stompbox      amount=0.5                                          10.37   0.050  4.57    11.16   10.75   14.63   34.7     14.09   7.0       1024.0   0.0     ignitor sample leaf
+75   voice     saw voice             vibrato 0.5 st (adsr.on=0)                          10.28   0.049  4.53    10.81   10.11   20.55   96.6     20.59   14.2      1024.0   0.0     ignitor silence
+76   voice     saw voice             lpf=1000 + adsr                                     10.20   0.049  4.50    10.73   10.24   17.17   64.6     20.44   13.6      1024.0   0.0     ignitor silence
+77   katalyst  distort:soft          amount=0.5                                          10.04   0.048  4.43    11.22   10.92   35.11   215.6    9.52    4.5       2048.0   0.0     katalyst empty chain
+78   ignitor   phaser                wet=1 rate=20 center=20000 sweep=20000 floor=0      9.71    0.047  4.28    10.50   10.19   13.16   28.3     13.25   6.4       1024.0   0.0     ignitor sample leaf
+79   ignitor   phaser                default (rate .5 wet .5)                            9.59    0.046  4.23    10.38   10.03   39.06   279.7    13.10   6.6       1024.0   0.0     ignitor sample leaf
+80   ignitor   distort:hard          amount=0.5                                          9.47    0.045  4.17    10.26   9.88    20.51   103.6    12.95   7.1       1024.0   0.0     ignitor sample leaf
+81   katalyst  distort:rectify       amount=0.5                                          9.46    0.045  4.17    10.64   10.21   17.32   66.8     9.03    4.3       2048.0   0.0     katalyst empty chain
+82   ignitor   distort:asym          amount=0.5                                          9.28    0.045  4.09    10.08   9.65    12.68   30.0     12.72   6.2       1024.0   0.0     ignitor sample leaf
+83   katalyst  eq                    tap 1000 q=200 gain=1                               9.13    0.044  4.03    10.31   9.69    20.84   108.1    8.75    6.6       2048.0   0.0     katalyst empty chain
+84   ignitor   distort:diode         amount=0.5                                          8.71    0.042  3.84    9.50    9.12    19.54   109.7    11.99   6.6       1024.0   0.0     ignitor sample leaf
+85   katalyst  distort:softsat       amount=0.5                                          8.68    0.042  3.83    9.86    9.44    21.82   125.5    8.37    4.2       2048.0   0.0     katalyst empty chain
+86   katalyst  distort:softsat       amount=3                                            8.64    0.041  3.81    9.82    9.61    18.49   90.4     8.33    4.2       2048.0   0.0     katalyst empty chain
+87   ignitor   distort:sineshaper    amount=3                                            8.62    0.041  3.80    9.41    9.06    20.03   116.5    11.88   6.3       1024.0   0.0     ignitor sample leaf
+88   ignitor   distort:sineshaper    amount=0.5                                          8.58    0.041  3.78    9.37    8.91    21.14   130.4    11.83   7.0       1024.0   0.0     ignitor sample leaf
+89   ignitor   distort:cubic         amount=0.5                                          8.26    0.040  3.64    9.05    8.82    17.83   99.5     11.43   6.5       1024.0   0.0     ignitor sample leaf
+90   ignitor   distort:chebyshev     amount=0.5                                          8.12    0.039  3.58    8.91    8.73    21.98   148.7    11.25   6.7       1024.0   0.0     ignitor sample leaf
+91   ignitor   distort:zerosquare    amount=0.5                                          8.11    0.039  3.58    8.91    8.41    19.39   123.2    11.24   6.7       1024.0   0.0     ignitor sample leaf
+92   ignitor   distort:hard          amount=3                                            8.03    0.039  3.54    8.83    8.45    11.34   32.7     11.14   6.3       1024.0   0.0     ignitor sample leaf
+93   ignitor   distort:fold          amount=3                                            8.03    0.039  3.54    8.82    8.47    25.72   195.4    11.14   6.9       1024.0   0.0     ignitor sample leaf
+94   ignitor   distort:fold          amount=0.5                                          7.99    0.038  3.52    8.78    8.40    23.21   168.6    11.09   6.9       1024.0   0.0     ignitor sample leaf
+95   katalyst  eq                    band 1000 q=.707 +12 dB                             7.81    0.038  3.44    8.99    8.35    38.29   332.9    7.63    6.1       2048.0   0.0     katalyst empty chain
+96   katalyst  eq                    band 5 q=200 +24 dB                                 7.71    0.037  3.40    8.89    8.52    17.77   104.1    7.54    6.3       2048.0   0.0     katalyst empty chain
+97   katalyst  eq                    band 23999 q=200 +24 dB                             7.66    0.037  3.38    8.84    8.46    32.14   267.9    7.50    6.2       2048.0   0.0     katalyst empty chain
+98   katalyst  abs                   -                                                   7.62    0.037  3.36    8.80    8.34    18.33   113.5    7.46    3.5       2048.0   0.0     katalyst empty chain
+99   voice     sample instrument     adsr (default), rate=2^(1/12)                       7.55    0.036  3.33    8.08    7.77    20.44   156.9    15.39   13.2      1024.0   0.0     ignitor silence
+100  ignitor   drive+shape           amount=3 asym                                       7.25    0.035  3.20    8.04    7.85    8.44    7.4      10.15   7.4       1024.0   0.0     ignitor sample leaf
+101  ignitor   distort:zerosquare    amount=3                                            7.24    0.035  3.19    8.03    7.75    19.93   151.7    10.14   6.1       1024.0   0.0     ignitor sample leaf
+102  ignitor   distort:asym          amount=3                                            7.07    0.034  3.12    7.86    7.61    18.06   132.9    9.92    6.4       1024.0   0.0     ignitor sample leaf
+103  ignitor   distort:tube          amount=3                                            7.01    0.034  3.09    7.80    7.48    10.68   41.0     9.85    6.2       1024.0   0.0     ignitor sample leaf
+104  ignitor   distort:stompbox      amount=3                                            6.92    0.033  3.05    7.71    7.43    18.61   145.0    9.74    6.5       1024.0   0.0     ignitor sample leaf
+105  ignitor   distort:diode         amount=3                                            6.70    0.032  2.95    7.49    7.28    9.89    34.9     9.46    6.2       1024.0   0.0     ignitor sample leaf
+106  ignitor   distort:exp           amount=3                                            6.69    0.032  2.95    7.49    7.15    10.52   45.0     9.45    6.3       1024.0   0.0     ignitor sample leaf
+107  voice     saw voice             fm depth=100 (adsr.on=0)                            6.67    0.032  2.94    7.20    6.71    10.97   59.2     13.72   14.0      1024.0   0.0     ignitor silence
+108  ignitor   distort:soft          amount=3                                            6.31    0.030  2.78    7.10    6.84    9.76    41.2     8.96    6.2       1024.0   0.0     ignitor sample leaf
+109  ignitor   distort:chebyshev     amount=3                                            6.30    0.030  2.78    7.09    6.72    66.89   848.7    8.95    6.5       1024.0   0.0     ignitor sample leaf
+110  ignitor   distort:cubic         amount=3                                            6.29    0.030  2.77    7.08    6.83    18.83   169.4    8.94    6.2       1024.0   0.0     ignitor sample leaf
+111  voice     saw voice             penv 12 st (adsr.on=0)                              6.17    0.030  2.72    6.69    6.18    19.31   196.2    12.75   13.1      1024.0   0.0     ignitor silence
+112  voice     saw voice             adsr (default)                                      6.11    0.029  2.69    6.64    6.24    34.86   431.2    12.64   9.3       1024.0   0.0     ignitor silence
+113  ignitor   distort:tube          amount=0.5                                          5.61    0.027  2.47    6.40    6.21    15.10   138.9    8.08    6.3       1024.0   0.0     ignitor sample leaf
+114  katalyst  duck                  cyl=1 depth=1 release=0                             5.51    0.026  2.43    6.69    6.25    7.65    20.8     5.68    6.2       2048.0   0.0     katalyst empty chain
+115  katalyst  duck                  cyl=1 depth=.8 (self-trigger)                       5.47    0.026  2.41    6.65    6.06    12.31   94.0     5.64    6.7       2048.0   0.0     katalyst empty chain
+116  ignitor   drive+shape           amount=0.5 soft                                     5.46    0.026  2.41    6.25    5.72    9.24    56.3     7.89    6.9       1024.0   0.0     ignitor sample leaf
+117  katalyst  min door (Max stage)  0.5                                                 5.32    0.026  2.34    6.50    6.23    15.82   147.5    5.51    3.7       2048.0   0.0     katalyst empty chain
+118  katalyst  max door (Min stage)  -0.5                                                5.28    0.025  2.33    6.45    6.16    13.34   111.2    5.48    3.6       2048.0   0.0     katalyst empty chain
+119  ignitor   distort:soft          amount=0.5                                          5.26    0.025  2.32    6.05    5.78    8.80    50.0     7.64    6.0       1024.0   0.0     ignitor sample leaf
+120  source    pluck                 bare                                                5.12    0.025  2.26    5.64    5.44    13.80   148.1    10.75   7.9       1024.0   0.0     ignitor silence
+121  source    superpluck            voices=1                                            5.09    0.024  2.24    5.61    5.09    11.63   116.5    10.69   7.4       1024.0   0.0     ignitor silence
+122  katalyst  distort:gentle        amount=3                                            4.99    0.024  2.20    6.17    5.93    17.07   180.4    5.24    3.7       2048.0   0.0     katalyst empty chain
+123  ignitor   distort:rectify       amount=0.5                                          4.97    0.024  2.19    5.76    5.45    15.94   182.2    7.27    5.9       1024.0   0.0     ignitor sample leaf
+124  katalyst  distort:gentle        amount=0.5                                          4.96    0.024  2.19    6.14    5.90    24.87   308.8    5.21    3.4       2048.0   0.0     katalyst empty chain
+125  katalyst  distort:linearfold    amount=3                                            4.85    0.023  2.14    6.03    5.79    23.98   301.7    5.11    3.4       2048.0   0.0     katalyst empty chain
+126  katalyst  distort:linearfold    amount=0.5                                          4.84    0.023  2.13    6.02    5.65    25.23   325.6    5.10    3.4       2048.0   0.0     katalyst empty chain
+127  ignitor   adsr                  release=5                                           4.72    0.023  2.08    5.51    5.15    17.89   231.2    6.96    8.7       1024.0   0.0     ignitor sample leaf
+128  ignitor   eq                    tap 1000 q=200 gain=1                               4.71    0.023  2.08    5.51    5.26    16.45   203.3    6.95    7.8       1024.0   0.0     ignitor sample leaf
+129  ignitor   distort:softsat       amount=0.5                                          4.59    0.022  2.03    5.39    5.17    8.47    61.2     6.80    5.9       1024.0   0.0     ignitor sample leaf
+130  ignitor   adsr                  default                                             4.58    0.022  2.02    5.37    4.93    15.84   203.2    6.78    8.0       1024.0   0.0     ignitor sample leaf
+131  ignitor   distort:softsat       amount=3                                            4.56    0.022  2.01    5.35    5.07    18.58   252.3    6.76    5.5       1024.0   0.0     ignitor sample leaf
+132  ignitor   lowpass env           freq=1000 env=48 a=0.001 d=1 s=0 (moving)           4.53    0.022  2.00    5.33    5.06    8.46    64.0     6.72    10.3      1024.0   0.0     ignitor sample leaf
+133  source    berlinnoise           bare                                                4.43    0.021  1.96    4.96    4.79    7.65    57.6     9.45    3.8       1024.0   0.0     ignitor silence
+134  ignitor   lowpass env           freq=1000 env=24, default times (held)              4.23    0.020  1.86    5.02    4.74    22.98   363.3    6.34    7.5       1024.0   0.0     ignitor sample leaf
+135  ignitor   notch                 freq=23999 q=200 analog=1                           4.22    0.020  1.86    5.01    4.73    8.29    71.0     6.32    6.5       1024.0   0.0     ignitor sample leaf
+136  ignitor   adsr                  a=0 d=0 s=1 r=0                                     4.17    0.020  1.84    4.97    4.69    14.67   201.1    6.27    7.4       1024.0   0.0     ignitor sample leaf
+137  ignitor   bandpass              freq=1000 analog=1                                  4.08    0.020  1.80    4.88    4.64    7.69    62.7     6.15    6.3       1024.0   0.0     ignitor sample leaf
+138  ignitor   notch                 freq=1000 analog=1                                  4.07    0.020  1.80    4.87    4.68    9.76    104.3    6.14    6.5       1024.0   0.0     ignitor sample leaf
+139  ignitor   bandpass              freq=23999 q=200 analog=1                           4.07    0.020  1.79    4.86    4.63    7.64    62.0     6.13    6.5       1024.0   0.0     ignitor sample leaf
+140  ignitor   highpass              freq=23999 q=200                                    4.05    0.019  1.79    4.85    4.62    26.42   449.8    6.12    6.6       1024.0   0.0     ignitor sample leaf
+141  ignitor   highpass              freq=23999 (over the 0.49 fs clamp)                 4.03    0.019  1.78    4.82    4.57    32.28   574.7    6.09    6.3       1024.0   0.0     ignitor sample leaf
+142  ignitor   highpass              freq=1 (floor 5)                                    4.00    0.019  1.76    4.79    4.53    16.21   243.6    6.05    6.6       1024.0   0.0     ignitor sample leaf
+143  ignitor   highpass              freq=20 q=200                                       3.98    0.019  1.75    4.77    4.57    7.94    70.6     6.02    6.1       1024.0   0.0     ignitor sample leaf
+144  ignitor   highpass              freq=1000 q=200 (max)                               3.97    0.019  1.75    4.77    4.48    18.07   285.2    6.02    6.5       1024.0   0.0     ignitor sample leaf
+145  ignitor   highpass              freq=1000                                           3.97    0.019  1.75    4.76    4.51    5.16    13.6     6.01    6.2       1024.0   0.0     ignitor sample leaf
+146  ignitor   lowpass               freq=20 q=200                                       3.97    0.019  1.75    4.76    4.46    12.34   165.5    6.01    6.3       1024.0   0.0     ignitor sample leaf
+147  ignitor   notch                 freq=1000 q=200 (max)                               3.97    0.019  1.75    4.76    4.42    8.83    92.7     6.01    6.2       1024.0   0.0     ignitor sample leaf
+148  ignitor   notch                 freq=20 q=200                                       3.95    0.019  1.74    4.74    4.48    15.52   233.0    5.98    6.2       1024.0   0.0     ignitor sample leaf
+149  ignitor   notch                 freq=23999 q=200                                    3.93    0.019  1.73    4.72    4.47    14.55   213.4    5.96    6.1       1024.0   0.0     ignitor sample leaf
+150  ignitor   eq                    band 23999 q=200 +24 dB                             3.93    0.019  1.73    4.72    4.40    8.41    84.8     5.96    6.7       1024.0   0.0     ignitor sample leaf
+151  ignitor   lowpass               freq=1000 q=200 (max)                               3.93    0.019  1.73    4.72    4.47    13.03   181.2    5.96    6.4       1024.0   0.0     ignitor sample leaf
+152  ignitor   notch                 freq=1000                                           3.92    0.019  1.73    4.72    4.45    18.43   296.5    5.95    6.3       1024.0   0.0     ignitor sample leaf
+153  ignitor   lowpass               freq=1 (floor 5)                                    3.92    0.019  1.73    4.72    4.47    18.39   295.2    5.95    6.0       1024.0   0.0     ignitor sample leaf
+154  ignitor   lowpass               freq=1000                                           3.91    0.019  1.72    4.70    4.43    15.37   232.8    5.93    6.2       1024.0   0.0     ignitor sample leaf
+155  ignitor   lowpass               freq=23999 (over the 0.49 fs clamp)                 3.91    0.019  1.72    4.70    4.50    18.18   291.2    5.93    6.1       1024.0   0.0     ignitor sample leaf
+156  ignitor   eq                    band 1000 q=.707 +12 dB                             3.90    0.019  1.72    4.70    4.35    15.27   232.5    5.93    6.6       1024.0   0.0     ignitor sample leaf
+157  ignitor   lowpass               freq=23999 q=200                                    3.90    0.019  1.72    4.70    4.43    8.25    81.2     5.93    6.0       1024.0   0.0     ignitor sample leaf
+158  katalyst  distort:rectify       amount=3                                            3.90    0.019  1.72    5.08    4.78    16.27   226.0    4.31    3.3       2048.0   0.0     katalyst empty chain
+159  ignitor   notch                 freq=23999 (over the 0.49 fs clamp)                 3.90    0.019  1.72    4.69    4.41    7.68    69.7     5.92    6.1       1024.0   0.0     ignitor sample leaf
+160  ignitor   notch                 freq=1 (floor 5)                                    3.87    0.019  1.71    4.66    4.32    14.70   222.4    5.89    6.0       1024.0   0.0     ignitor sample leaf
+161  ignitor   bandpass              freq=23999 q=200                                    3.85    0.018  1.70    4.64    4.43    7.57    67.7     5.86    6.1       1024.0   0.0     ignitor sample leaf
+162  ignitor   bandpass              freq=1000                                           3.84    0.018  1.69    4.63    4.46    7.41    63.7     5.85    6.0       1024.0   0.0     ignitor sample leaf
+163  ignitor   bandpass              freq=20 q=200                                       3.83    0.018  1.69    4.62    4.42    21.18   362.8    5.83    6.1       1024.0   0.0     ignitor sample leaf
+164  ignitor   bandpass              freq=23999 (over the 0.49 fs clamp)                 3.81    0.018  1.68    4.61    4.28    7.29    65.3     5.81    5.9       1024.0   0.0     ignitor sample leaf
+165  ignitor   bandpass              freq=1 (floor 5)                                    3.81    0.018  1.68    4.60    4.44    8.98    98.5     5.81    5.7       1024.0   0.0     ignitor sample leaf
+166  ignitor   bandpass              freq=1000 q=200 (max)                               3.77    0.018  1.66    4.56    4.33    7.94    79.4     5.75    6.1       1024.0   0.0     ignitor sample leaf
+167  voice     saw voice             accelerate 12 st (adsr.on=0)                        3.75    0.018  1.65    4.27    3.87    14.44   247.5    8.14    7.6       1024.0   0.0     ignitor silence
+168  source    brownnoise            bare                                                3.71    0.018  1.64    4.24    4.05    15.77   276.6    8.07    3.3       1024.0   0.0     ignitor silence
+169  source    pinknoise             bare                                                3.48    0.017  1.53    4.00    3.78    15.47   292.0    7.62    3.0       1024.0   0.0     ignitor silence
+170  ignitor   tremolo               depth=0.5 rate=5                                    3.40    0.016  1.50    4.19    3.43    8.13    111.9    5.29    8.9       1024.0   0.0     ignitor sample leaf
+171  source    perlinnoise           bare                                                3.24    0.016  1.43    3.76    3.53    14.06   279.9    7.17    3.7       1024.0   0.0     ignitor silence
+172  source    sample playhead       rate=1                                              2.91    0.014  1.29    3.44    3.16    15.83   368.5    6.55    3.8       1024.0   0.0     ignitor silence
+173  source    sample playhead       rate=2^(1/12)                                       2.91    0.014  1.28    3.44    2.98    9.02    175.9    6.55    3.6       1024.0   0.0     ignitor silence
+174  ignitor   distort:gentle        amount=0.5                                          2.74    0.013  1.21    3.53    3.36    13.74   294.1    4.46    5.3       1024.0   0.0     ignitor sample leaf
+175  ignitor   distort:gentle        amount=3                                            2.68    0.013  1.18    3.48    3.35    6.19    81.6     4.39    4.9       1024.0   0.0     ignitor sample leaf
+176  ignitor   distort:linearfold    amount=3                                            2.63    0.013  1.16    3.43    3.18    6.07    84.3     4.32    5.3       1024.0   0.0     ignitor sample leaf
+177  ignitor   distort:linearfold    amount=0.5                                          2.62    0.013  1.16    3.41    3.20    6.31    91.1     4.31    5.4       1024.0   0.0     ignitor sample leaf
+178  ignitor   tremolo               depth=1 rate=40 shape=square                        2.41    0.012  1.06    3.20    2.89    17.40   453.1    4.04    8.8       1024.0   0.0     ignitor sample leaf
+179  source    sine                  bare                                                2.27    0.011  1.00    2.79    2.54    22.37   710.1    5.32    3.3       1024.0   0.0     ignitor silence
+180  source    dust                  bare                                                2.26    0.011  1.00    2.79    2.57    11.43   317.8    5.31    3.6       1024.0   0.0     ignitor silence
+181  katalyst  div                   1e-20                                               2.18    0.010  0.96    3.36    3.01    5.01    59.5     2.85    3.1       2048.0   0.0     katalyst empty chain
+182  source    crackle               bare                                                2.14    0.010  0.94    2.67    2.34    5.49    118.3    5.08    3.0       1024.0   0.0     ignitor silence
+183  ignitor   onepole               freq=23999 (over the 0.49 fs clamp)                 2.12    0.010  0.93    2.91    2.77    14.08   389.1    3.67    4.6       1024.0   0.0     ignitor sample leaf
+184  source    supersine             voices=1                                            2.11    0.010  0.93    2.64    2.31    5.77    131.3    5.03    4.2       1024.0   0.0     ignitor silence
+185  katalyst  div                   0.001                                               2.11    0.010  0.93    3.28    3.09    11.28   249.5    2.79    2.9       2048.0   0.0     katalyst empty chain
+186  source    whitenoise            bare                                                2.10    0.010  0.93    2.62    2.47    15.60   500.4    5.00    2.8       1024.0   0.0     ignitor silence
+187  ignitor   onepole               freq=1000                                           2.05    0.010  0.90    2.84    2.73    6.32    126.2    3.59    4.6       1024.0   0.0     ignitor sample leaf
+188  source    superramp             voices=1                                            2.03    0.010  0.90    2.56    2.23    5.22    116.6    4.87    4.0       1024.0   0.0     ignitor silence
+189  source    supersaw              voices=1                                            2.03    0.010  0.89    2.55    2.22    13.47   440.5    4.86    4.1       1024.0   0.0     ignitor silence
+190  ignitor   onepole               freq=1                                              2.03    0.010  0.89    2.82    2.56    11.26   308.8    3.56    4.6       1024.0   0.0     ignitor sample leaf
+191  source    supersquare           voices=1                                            2.01    0.010  0.89    2.54    2.32    23.27   824.7    4.84    4.0       1024.0   0.0     ignitor silence
+192  ignitor   distort:rectify       amount=3                                            1.87    0.009  0.83    2.67    2.45    15.70   496.7    3.36    5.2       1024.0   0.0     ignitor sample leaf
+193  source    impulse               bare                                                1.79    0.009  0.79    2.31    2.03    12.06   433.6    4.40    3.6       1024.0   0.0     ignitor silence
+194  source    square                bare (pulze, duty .5)                               1.75    0.008  0.77    2.27    1.54    5.58    177.6    4.33    3.3       1024.0   0.0     ignitor silence
+195  source    square node           bare (not the built-in square)                      1.74    0.008  0.77    2.27    2.11    10.40   365.7    4.32    3.4       1024.0   0.0     ignitor silence
+196  control   plain block copy      no engine, copy in and out                          1.61    0.008  0.71    1.61    0.99    7.02    375.4    NaN     1.3       2048.0   2048.0  -
+197  voice     saw voice             everything off (adsr.on=0)                          1.53    0.007  0.68    2.06    1.81    5.13    161.1    3.92    4.4       1024.0   0.0     ignitor silence
+198  katalyst  times                 2                                                   1.52    0.007  0.67    2.69    2.40    8.18    214.8    2.29    2.7       2048.0   0.0     katalyst empty chain
+199  source    ramp                  bare                                                1.48    0.007  0.65    2.00    1.84    4.84    150.2    3.81    3.4       1024.0   0.0     ignitor silence
+200  source    supertri              voices=1                                            1.44    0.007  0.63    1.96    1.68    10.55   451.8    3.74    3.9       1024.0   0.0     ignitor silence
+201  source    saw                   bare                                                1.42    0.007  0.63    1.94    1.81    13.22   587.1    3.70    2.8       1024.0   0.0     ignitor silence
+202  ignitor   crush                 bits=8                                              1.26    0.006  0.55    2.05    1.88    5.77    189.5    2.59    4.5       1024.0   0.0     ignitor sample leaf
+203  ignitor   crush                 bits=24                                             1.24    0.006  0.54    2.03    1.89    7.79    290.6    2.56    4.3       1024.0   0.0     ignitor sample leaf
+204  ignitor   coarse                factor=1.5                                          1.23    0.006  0.54    2.02    1.85    17.19   758.2    2.56    4.8       1024.0   0.0     ignitor sample leaf
+205  ignitor   crush                 bits=1 (lowest on)                                  1.22    0.006  0.54    2.01    1.88    16.48   726.8    2.54    4.5       1024.0   0.0     ignitor sample leaf
+206  control   katalyst empty chain  no stage                                            1.18    0.006  0.52    1.18    0.94    8.94    679.0    NaN     1.4       2048.0   2048.0  -
+207  source    tri                   bare                                                1.18    0.006  0.52    1.70    1.45    4.56    182.9    3.24    3.0       1024.0   0.0     ignitor silence
+208  source    pulze                 bare (raw pulse)                                    1.17    0.006  0.52    1.69    1.37    13.99   744.7    3.23    3.2       1024.0   0.0     ignitor silence
+209  source    zamp                  bare                                                1.16    0.006  0.51    1.68    1.54    11.54   594.9    3.20    3.0       1024.0   0.0     ignitor silence
+210  source    zawtooth              bare                                                1.12    0.005  0.49    1.65    1.45    10.87   572.0    3.14    3.0       1024.0   0.0     ignitor silence
+211  ignitor   coarse                factor=4                                            0.98    0.005  0.43    1.77    1.59    9.50    446.8    2.24    4.5       1024.0   0.0     ignitor sample leaf
+212  control   ignitor sample leaf   bare sample leaf                                    0.79    0.004  0.35    0.79    0.67    5.06    553.9    NaN     2.2       1024.0   1024.0  -
+213  ignitor   coarse                factor=4800                                         0.76    0.004  0.33    1.55    1.36    4.63    211.4    1.95    4.6       1024.0   0.0     ignitor sample leaf
+214  control   ignitor silence       silence node                                        0.52    0.003  0.23    0.52    0.44    11.89   2179.7   NaN     1.9       1024.0   1024.0  -
+215  katalyst  gain                  gain=100                                            0.43    0.002  0.19    1.61    1.20    11.91   664.4    1.37    2.4       2048.0   0.0     katalyst empty chain
+216  katalyst  minus                 0.5                                                 0.38    0.002  0.17    1.56    1.16    7.95    434.9    1.33    2.5       2048.0   0.0     katalyst empty chain
+217  katalyst  plus                  0.5                                                 0.30    0.001  0.13    1.48    1.21    14.49   896.5    1.26    2.3       2048.0   0.0     katalyst empty chain
+218  katalyst  phaser                bare (wet 0)                                        0.26    0.001  0.12    1.44    1.03    10.79   677.5    1.22    2.7       2048.0   0.0     katalyst empty chain
+219  katalyst  reverb                wet=1 size=0                                        0.25    0.001  0.11    1.43    1.08    14.50   940.6    1.21    3.3       2048.0   0.0     katalyst empty chain
+220  katalyst  gain                  default (1)                                         0.20    0.001  0.09    1.37    1.03    10.78   709.3    1.17    2.3       2048.0   0.0     katalyst empty chain
+221  ignitor   classic() all off     adsr.on=0                                           0.03    0.000  0.01    0.82    0.66    9.74    1106.8   1.04    2.7       1024.0   0.0     ignitor sample leaf
+
+221 rows, 13.0 s

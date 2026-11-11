@@ -1,0 +1,5 @@
+== the render: KlangOfflineRenderer at 48 kHz, cps 0.5 (2 s per cycle)
+RENDER [N1: a pluck through lpf(16000, 200) with analog(0)] 3.000 s rendered, exact-zero frames from 0.1 s: 26068, longest exact-zero run 2.457 s .. 3.000 s (0.543 s), non-finite out 0
+RENDER [N1: a pluck through lpf(16000, 200) with analog(0)] RMS per 0.5 s: 0.080 0.013 0.006 0.003 0.000 0.000
+RENDER [N1: a pluck through lpf(16000, 200) with analog(5)] 3.000 s rendered, exact-zero frames from 0.1 s: 24370, longest exact-zero run 2.493 s .. 3.000 s (0.508 s), non-finite out 0
+RENDER [N1: a pluck through lpf(16000, 200) with analog(5)] RMS per 0.5 s: 0.070 0.019 0.009 0.005 0.000 0.000

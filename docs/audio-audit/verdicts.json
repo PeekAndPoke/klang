@@ -15,124 +15,154 @@
   "ticket": "KLANG-00425"
  },
  "stage-probe/ignitor/highpass/freq=1000 analog=1": {
-  "status": "confirmed",
-  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+  "status": "accepted",
+  "note": "L4-01, accepted by the maintainer (2026-11-11): the saturating filter holds a huge state only after a transient 60 to 80 dB over full scale; in the run of 2026-11-11 the 1e30 row still ends at a DC of 5.86e10.",
+  "ticket": "KLANG-00432"
  },
  "stage-probe/ignitor/bandpass/freq=23999 q=200 analog=1": {
-  "status": "confirmed",
-  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+  "status": "accepted",
+  "note": "L4-01, accepted by the maintainer (2026-11-11): the saturating filter holds a huge state only after a transient 60 to 80 dB over full scale; in the run of 2026-11-11 since the cutoff clamp moved to 0.49 fs (L4-10) this row decays after the 1e30 sample (under 1e-5 after 9.2 s).",
+  "ticket": "KLANG-00432"
  },
  "stage-probe/ignitor/notch/freq=23999 q=200 analog=1": {
-  "status": "confirmed",
-  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+  "status": "accepted",
+  "note": "L4-01, accepted by the maintainer (2026-11-11): the saturating filter holds a huge state only after a transient 60 to 80 dB over full scale; in the run of 2026-11-11 since the cutoff clamp moved to 0.49 fs (L4-10) this row decays after the 1e30 sample (under 1e-5 after 9.2 s).",
+  "ticket": "KLANG-00432"
  },
  "stage-probe/ignitor/lowpass/freq=1000 analog=1": {
-  "status": "confirmed",
-  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+  "status": "accepted",
+  "note": "L4-01, accepted by the maintainer (2026-11-11): the saturating filter holds a huge state only after a transient 60 to 80 dB over full scale; in the run of 2026-11-11 the 1e30 row still holds 7.83e27 for the whole 10 s.",
+  "ticket": "KLANG-00432"
  },
  "stage-probe/ignitor/lowpass/freq=23999 q=200 analog=1": {
-  "status": "confirmed",
-  "note": "L4-01, minor after measuring: the saturating filter holds a huge state, but only a transient 60 to 80 dB over full scale reaches that region."
+  "status": "accepted",
+  "note": "L4-01, accepted by the maintainer (2026-11-11): the saturating filter holds a huge state only after a transient 60 to 80 dB over full scale; in the run of 2026-11-11 the 1e30 row still holds 2e30 for the whole 10 s.",
+  "ticket": "KLANG-00432"
  },
  "framing/stage/lpf/freq=500 env=24 (default env times)/onset": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage/lpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/onset": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage/hpf/freq=500 env=24 (default env times)/onset": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage/hpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/onset": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage/bpf/freq=1000 env=24/onset": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage/notch/freq=1000 env=24/onset": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage gate/lpf/freq=500 env=24 (default env times)/gate": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage gate/lpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/gate": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage gate/hpf/freq=500 env=24 (default env times)/gate": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage gate/hpf/freq=500 env=24 a=0.001 d=0.0013 s=0.3 r=0.0017 (sub-block)/gate": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage gate/bpf/freq=1000 env=24/gate": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "framing/stage gate/notch/freq=1000 env=24/gate": {
-  "status": "confirmed",
-  "note": "L4-02, minor after measuring: the cutoff envelope is read at a block's two ends; in the seven built-in songs that use it a note varies by -40 to -63 dB re its peak."
+  "status": "fixed",
+  "note": "L4-02, fixed in decisions pass C of KLANG-00432: the cutoff is exact at knots of the note, and the run of 2026-11-11 reads this case identical at all 128 offsets (was audible, -10.5 to -22.6 dB re the peak).",
+  "ticket": "KLANG-00432"
  },
  "clicks/katalyst/delay/switch ON/{} -> {wet=0.25 time=0.25 feedback=0.3 cap=1.0}": {
-  "status": "confirmed",
-  "note": "L7a-01, major: the feed snaps to full wet when the stage leaves Off, so the first return is a step."
+  "status": "fixed",
+  "note": "L7a-01, fixed in KLANG-00428: the wet glides up from 0 when the stage leaves Off over a sounding bus; kink 114.8 to 1.50, burst -27.5 to -95.6 dB (run of 2026-11-11).",
+  "ticket": "KLANG-00428"
  },
  "clicks/katalyst/reverb/switch ON/{} -> {wet=0.25 size=5.0}": {
-  "status": "confirmed",
-  "note": "L7a-01, major: the feed snaps to full wet when the stage leaves Off, so the first return is a step."
+  "status": "fixed",
+  "note": "L7a-01, fixed in KLANG-00428: the wet glides up from 0 when the stage leaves Off over a sounding bus; kink 32.8 to 1.04, burst -54.5 to -119.9 dB (run of 2026-11-11).",
+  "ticket": "KLANG-00428"
  },
  "clicks/katalyst/compressor/compressor.attack/0.1 -> 0.003": {
-  "status": "confirmed",
-  "note": "L7a-04, minor: with a lookahead (and for the attack) the knob applies at once, no glide."
+  "status": "fixed",
+  "note": "The click is gone since KLANG-00428 changed the classic follower to smooth the gain reduction (L7b-04, second pass): kink 17.8 to 1.21, burst -64.9 to -100.5 dB (run of 2026-11-11); the lookahead exception of L7a-04 is accepted and documented.",
+  "ticket": "KLANG-00428"
  },
  "clicks/katalyst/limiter (lookahead 5 ms)/limiter.threshold/unset -> -12.0": {
-  "status": "confirmed",
-  "note": "L7a-04, minor: with a lookahead (and for the attack) the knob applies at once, no glide."
+  "status": "accepted",
+  "note": "L7a-04, accepted and documented in KLANG-00428 (audio/ref/katalyst.md, knob-glide.md): with an authored lookahead the gain computer knobs do not glide; kink 5.12, burst -69.8 dB, unchanged.",
+  "ticket": "KLANG-00428"
  },
  "clicks/swap/cylinder chain swap/into a room/classic -> room (reverb wet .5 size 3)": {
-  "status": "confirmed",
-  "note": "L7a-02, major: the arriving chain is fed at full level from its first block."
+  "status": "fixed",
+  "note": "L7a-02, fixed in KLANG-00428: the arriving chain joins a sounding bus with its wet gliding up; kink 63.1 to 1.05, burst -49.1 to -114.4 dB (run of 2026-11-11).",
+  "ticket": "KLANG-00428"
  },
  "clicks/voice/sine/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "clicks/voice/tri/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "clicks/voice/supersine/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "clicks/voice/supertri/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "clicks/voice/superpluck/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "clicks/voice/pluck/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "clicks/voice/perlinnoise/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "clicks/voice/berlinnoise/note start/classic(), adsr.on=0": {
-  "status": "confirmed",
-  "note": "L2-05, minor, a decision: with the envelope off the engine fades a voice's end and not its start."
+  "status": "accepted",
+  "note": "L2-05, decided by the maintainer (2026-11-11, option (a)): the start of a voice without its own envelope is the author's, written in teardown_fade.kt and audio/ref/voice-synthesis.md.",
+  "ticket": "KLANG-00427"
  },
  "dead-knobs/ignitor/offset": {
   "status": "accepted",

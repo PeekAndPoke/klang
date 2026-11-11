@@ -1,0 +1,67 @@
+== L6-03, L7b-06: deactivation, switch-off and drain-end blocks, live dispatcher, 48 kHz, block 128 (deadline 2666.7 us)
+   byte-counter reading overhead subtracted: 0 B
+-- delay 0.25 s (class 0 ring, 24064 frames)
+   ordinary block, cylinder idle: n=14000, median 1.4 us (0.1 % of the block), max 12.7 us, median bytes 0
+   activation, unit rented fresh (with the note's build): n=1, median 452.0 us (16.9 % of the block), max 452.0 us, median bytes 426928
+   ordinary block, cylinder active: n=4775, median 3.3 us (0.1 % of the block), max 34.9 us, median bytes 0
+   DEACTIVATION, chain.reset(): n=25, median 27.2 us (1.0 % of the block), max 55.9 us, median bytes 0
+   re-activation, unit kept (with the note's build): n=24, median 91.3 us (3.4 % of the block), max 174.8 us, median bytes 2752
+-- delay 10 s (class 5 ring, 770048 frames, 12.3 MB)
+   ordinary block, cylinder idle: n=12003, median 1.4 us (0.1 % of the block), max 8.9 us, median bytes 0
+   activation, unit rented fresh (with the note's build): n=1, median 2315.3 us (86.8 % of the block), max 2315.3 us, median bytes 12362672
+   ordinary block, cylinder active: n=60056, median 2.4 us (0.1 % of the block), max 70.7 us, median bytes 0
+   DEACTIVATION, chain.reset(): n=8, median 72.4 us (2.7 % of the block), max 81.6 us, median bytes 208
+   re-activation, unit kept (with the note's build): n=7, median 214.0 us (8.0 % of the block), max 318.9 us, median bytes 2752
+-- reverb size 5 (one network)
+   ordinary block, cylinder idle: n=28185, median 1.4 us (0.1 % of the block), max 35.8 us, median bytes 0
+   activation, unit rented fresh (with the note's build): n=1, median 408.7 us (15.3 % of the block), max 408.7 us, median bytes 265176
+   ordinary block, cylinder active: n=9370, median 6.3 us (0.2 % of the block), max 37.2 us, median bytes 0
+   DEACTIVATION, chain.reset(): n=10, median 56.0 us (2.1 % of the block), max 66.0 us, median bytes 0
+   re-activation, unit kept (with the note's build): n=9, median 182.2 us (6.8 % of the block), max 206.9 us, median bytes 2752
+-- delay 10 s switched off by the next note (delay.time 0)
+   ordinary block, cylinder idle: n=12338, median 1.5 us (0.1 % of the block), max 50.7 us, median bytes 0
+   activation, unit rented fresh (with the note's build): n=1, median 2063.5 us (77.4 % of the block), max 2063.5 us, median bytes 12362672
+   ordinary block, cylinder active: n=46212, median 2.3 us (0.1 % of the block), max 42.4 us, median bytes 0
+   onset block (a voice build): n=6, median 109.2 us (4.1 % of the block), max 138.4 us, median bytes 2752
+   SWITCH-OFF, Active.leave with the tap-window scan: n=6, median 11.4 us (0.4 % of the block), max 20.5 us, median bytes 0
+   DRAIN END and DEACTIVATION in one block (two ring clears): n=6, median 71.5 us (2.7 % of the block), max 95.4 us, median bytes 0
+   re-activation, unit kept (with the note's build): n=5, median 208.2 us (7.8 % of the block), max 249.6 us, median bytes 2752
+== L6-03, L7b-06: the clears alone, median of 41 rounds after 15 warm-up rounds (sink 0)
+   control (two clock readings): 20 ns
+   DelayLine.reset, class 0 ring (24064 frames, 385 KB), hot: 1.4 us (0.1 % of the block)
+   DelayLine.reset, class 5 ring (770048 frames, 12.3 MB), hot: 0.1 us (0.0 % of the block), max 5.3 us
+   DelayLine.reset, class 5 ring, after a 64 MB eviction: 1.8 us (0.1 % of the block), max 3.4 us
+   Reverb.reset (one network, 27688 samples), hot: 4.9 us; after an eviction: 25.8 us
+   a fresh StereoBuffer(770048) (what a first activation of a 10 s delay allocates): 197.5 us (7.4 % of the block), max 3456.5 us
+== L2-06, L4-09, L5-03, L5-04, L5-09: one voice build through VoiceFactory.makeVoice (the production build, optimized registered tree), 48 kHz
+   median of 31 rounds of 40 builds each (after 25 warm-up rounds, cases interleaved); then one fresh voice's first and second block
+   (sink: 30476)
+   bare saw, no classic() (registered tree): build 0.83 us (0.0 % of the block), 1384 B; first block 0.70 us, 0 B; second block 0.39 us, 0 B
+   saw, everything off (adsr.on 0): build 1.88 us (0.1 % of the block), 1632 B; first block 0.72 us, 0 B; second block 0.38 us, 0 B
+   saw, default voice (classic adsr only): build 3.50 us (0.1 % of the block), 2456 B; first block 1.65 us, 0 B; second block 1.20 us, 0 B
+   saw, every classic stage on: build 21.59 us (0.8 % of the block), 16616 B; first block 18.59 us, 0 B; second block 8.88 us, 0 B
+   pluck (default): build 5.75 us (0.2 % of the block), 22760 B; first block 5.05 us, 0 B; second block 1.65 us, 0 B
+   superpluck (8 strings, default): build 12.93 us (0.5 % of the block), 163584 B; first block 21.15 us, 0 B; second block 9.13 us, 0 B
+   shimmer at wet 0 over a saw, classic(): build 2.65 us (0.1 % of the block), 2272 B; first block 1.66 us, 0 B; second block 1.18 us, 0 B
+   saw in a 4x region (lowpass in the body), classic(): build 7.67 us (0.3 % of the block), 5008 B; first block 10.63 us, 80 B; second block 5.55 us, 0 B
+== L2-06: 16 voices starting in one block, fresh dispatcher per repetition, median of 14 repetitions after 4 warm-up
+   saw, everything off (adsr.on 0): onset block 183.1 us (6.9 % of the block), max 250.9 us, 65.5 KB; the next blocks with the 16 sounding 7.7 us (0.3 % of the block); onset excess 175.4 us
+   saw, default voice (classic adsr only): onset block 221.2 us (8.3 % of the block), max 286.4 us, 78.4 KB; the next blocks with the 16 sounding 23.7 us (0.9 % of the block); onset excess 197.4 us
+   saw, every classic stage on: onset block 662.9 us (24.9 % of the block), max 848.1 us, 298.9 KB; the next blocks with the 16 sounding 174.1 us (6.5 % of the block); onset excess 488.8 us
+   pluck (default): onset block 284.3 us (10.7 % of the block), max 350.7 us, 395.6 KB; the next blocks with the 16 sounding 30.0 us (1.1 % of the block); onset excess 254.3 us
+   superpluck (8 strings, default): onset block 567.8 us (21.3 % of the block), max 1301.4 us, 2596.0 KB; the next blocks with the 16 sounding 106.8 us (4.0 % of the block); onset excess 461.0 us
+   shimmer at wet 0 over a saw, classic(): onset block 207.0 us (7.8 % of the block), max 383.9 us, 75.5 KB; the next blocks with the 16 sounding 23.9 us (0.9 % of the block); onset excess 183.2 us
+   saw in a 4x region (lowpass in the body), classic(): onset block 367.6 us (13.8 % of the block), max 466.8 us, 119.5 KB; the next blocks with the 16 sounding 88.7 us (3.3 % of the block); onset excess 278.9 us
+== L2-06: the onset block of one default saw voice (build + first block + bookkeeping), live dispatcher
+   dense, a note every 2 blocks: onset block 31.1 us (1.2 % of the block), other blocks 26.2 us
+   isolated, a note a second: onset block 10.6 us (0.4 % of the block), other blocks 1.7 us
+== L1-06, L8-05, L9-08: the diagnostics emission, live dispatcher on the JVM, 48 kHz, 8000 blocks after 2000 warm-up
+   idle dispatcher (no engine): 1000 reports in 21.33 s (46.9 per second); a report block 1.43 us and 128 B, a block without 1.41 us and 0 B; per report 128 B and 0.02 us; bytes per second from the reports 5.9 KB/s
+   one playback, 8 held sine voices on 8 cylinders: 1000 reports in 21.33 s (46.9 per second); a report block 11.91 us and 376 B, a block without 11.57 us and 0 B; per report 376 B and 0.34 us; bytes per second from the reports 17.2 KB/s
+== L9-02: Cleanup(p), then a straggler ScheduleVoices(p) for startTime 40 s with the old playbackStartTime 0
+   A (engine still Stopped, cleanup at 1.0 s): phase after Cleanup Stopped, after the straggler Playing
+     watch: [started first at 0.000 s, started straggler at 41.000 s]
+     at 50 s: phase Playing, engines rendered 1, ids [audit]; at 90 s: phase Playing, engines rendered 1, ids [audit]
+   B (engine disposed at 1.003 s, then the straggler): watch [started first at 0.000 s, started straggler at 41.003 s]; at 55 s: phase Playing, engines rendered 1, ids [audit]
+== L9-04 (1): play, Cleanup, SetGain(p, 0.3) at once (a restart's first command), the old engine goes idle, then the restart's ScheduleVoices
+   gain target on the stopped engine 0.3; it was disposed at 0.504 s; gain target of the engine the restart's voices land on: 1.0 (asked for 0.3)

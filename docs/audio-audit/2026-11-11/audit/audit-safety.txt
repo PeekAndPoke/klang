@@ -1,0 +1,102 @@
+== L8-03 L9-01: every slot of every built-in at NaN, +-Inf, +-1e308, -1, 0, 1e9, 1e-300 (makeVoice + 6 blocks)
+L9-01 slot renders 35829; throws 0
+L6-01 NaN in the cylinder mix from a FINITE slot value: 12 cases
+L6-01 NaN source: ks feedback=1.0E308 (2 NaN blocks)
+L6-01 NaN source: ks feedback=-1.0E308 (2 NaN blocks)
+L6-01 NaN source: perlin rate=1.0E308 (2 NaN blocks)
+L6-01 NaN source: perlin rate=-1.0E308 (2 NaN blocks)
+L6-01 NaN source: perlinnoise rate=1.0E308 (2 NaN blocks)
+L6-01 NaN source: perlinnoise rate=-1.0E308 (2 NaN blocks)
+L6-01 NaN source: pluck feedback=1.0E308 (2 NaN blocks)
+L6-01 NaN source: pluck feedback=-1.0E308 (2 NaN blocks)
+L6-01 NaN source: string feedback=1.0E308 (2 NaN blocks)
+L6-01 NaN source: string feedback=-1.0E308 (2 NaN blocks)
+L6-01 NaN source: superpluck feedback=1.0E308 (2 NaN blocks)
+L6-01 NaN source: superpluck feedback=-1.0E308 (2 NaN blocks)
+== L8-03 L9-01: authored chains (cylinder and master) and the 27 cylinder slots at odd values, dispatcher at 48000 Hz
+L9-01 chain and slot runs 884; throws 0
+L6-01 chains or finite slot values that put a non-finite sample in a cylinder mix: 3
+L6-01 non-finite: cylinder reverb wet=1.0E308 (110 blocks with a non-finite cylinder sample, output zero frames 13305)
+L6-01 non-finite: slot reverb.wet=1.0E308 (110 blocks)
+L6-01 non-finite: slot reverb.wet=-1.0E308 (110 blocks)
+== L4-01 hold: one input sample of V at frame 0, then silence; frames until |out| stays under 1e-3; lowpass q 0.707 (cap 120 s)
+L4-01 hold lowpass fc=1000.0 analog=0.0: V=1.00: 55 frames (0.0011 s, peak 0.0595); V=100: 96 frames (0.0020 s, peak 5.95); V=1.00e+03: 127 frames (0.0026 s, peak 59.5); V=1.00e+04: 155 frames (0.0032 s, peak 595); V=2.00e+04: 160 frames (0.0033 s, peak 1.19e+03); V=3.00e+04: 162 frames (0.0034 s, peak 1.79e+03); V=1.00e+05: 166 frames (0.0035 s, peak 5.95e+03)
+L4-01 hold lowpass fc=1000.0 analog=1.0: V=1.00: 55 frames (0.0011 s, peak 0.0595); V=100: 96 frames (0.0020 s, peak 5.79); V=1.00e+03: 95 frames (0.0020 s, peak 9.09); V=1.00e+04: 5243 frames (0.1092 s, peak 78.6); V=2.00e+04: 81730 frames (1.7027 s, peak 157); V=3.00e+04: 413000 frames (8.6042 s, peak 235); V=1.00e+05: NOT settled by the cap (peak 783)
+L4-01 hold lowpass fc=8000.0 analog=0.0: V=1.00: 9 frames (0.0002 s, peak 0.406); V=100: 16 frames (0.0003 s, peak 40.6); V=1.00e+03: 19 frames (0.0004 s, peak 406); V=1.00e+04: 23 frames (0.0005 s, peak 4.06e+03); V=2.00e+04: 23 frames (0.0005 s, peak 8.12e+03); V=3.00e+04: 24 frames (0.0005 s, peak 1.22e+04); V=1.00e+05: 24 frames (0.0005 s, peak 4.06e+04)
+L4-01 hold lowpass fc=8000.0 analog=1.0: V=1.00: 9 frames (0.0002 s, peak 0.406); V=100: 15 frames (0.0003 s, peak 35.0); V=1.00e+03: 1865 frames (0.0389 s, peak 310); V=1.00e+04: NOT settled by the cap (peak 3.10e+03); V=2.00e+04: NOT settled by the cap (peak 6.20e+03); V=3.00e+04: NOT settled by the cap (peak 9.30e+03); V=1.00e+05: NOT settled by the cap (peak 3.10e+04)
+== L4-01 the auditor's case: a 10 ms DC step of V, then silence; lowpass 1000 Hz q 0.707; frames until |out| stays under 1e-3
+L4-01 step analog=0.0: V=1.00: 78 frames (0.0016 s, peak 1.04); V=100: 121 frames (0.0025 s, peak 104); V=1.00e+03: 151 frames (0.0031 s, peak 1.04e+03); V=1.00e+04: 178 frames (0.0037 s, peak 1.04e+04)
+L4-01 step analog=1.0: V=1.00: 78 frames (0.0016 s, peak 1.04); V=100: 129 frames (0.0027 s, peak 101); V=1.00e+03: 262 frames (0.0055 s, peak 1.00e+03); V=1.00e+04: 4765 frames (0.0993 s, peak 79.4)
+== L4-01 reach: 1 s of a periodic input at level L, then silence; frames until |out| stays under 1e-5 (cap 30 s), analog against 0
+L4-01 reach lowpass fc=1000.0 q=0.707 sine at fc: L=1.0 [a0.0 0.0025s, a1.0 0.0025s, a5.0 0.0025s, a15.0 0.0025s]; L=4.0 [a0.0 0.0029s, a1.0 0.0029s, a5.0 0.0026s, a15.0 0.0026s]; L=16.0 [a0.0 0.0032s, a1.0 0.0032s, a5.0 0.0032s, a15.0 0.0031s]
+L4-01 reach lowpass fc=1000.0 q=0.707 naive saw at fc/3: L=1.0 [a0.0 0.0024s, a1.0 0.0024s, a5.0 0.0024s, a15.0 0.0024s]; L=4.0 [a0.0 0.0025s, a1.0 0.0025s, a5.0 0.0025s, a15.0 0.0025s]; L=16.0 [a0.0 0.0031s, a1.0 0.0031s, a5.0 0.0031s, a15.0 0.0031s]
+L4-01 reach lowpass fc=1000.0 q=5.0 sine at fc: L=1.0 [a0.0 0.0207s, a1.0 0.0207s, a5.0 0.0202s, a15.0 0.0197s]; L=4.0 [a0.0 0.0232s, a1.0 0.0222s, a5.0 0.0212s, a15.0 0.0203s]; L=16.0 [a0.0 0.0252s, a1.0 0.0227s, a5.0 0.0213s, a15.0 0.0208s]
+L4-01 reach lowpass fc=1000.0 q=5.0 naive saw at fc/3: L=1.0 [a0.0 0.0182s, a1.0 0.0182s, a5.0 0.0182s, a15.0 0.0177s]; L=4.0 [a0.0 0.0202s, a1.0 0.0202s, a5.0 0.0193s, a15.0 0.0188s]; L=16.0 [a0.0 0.0227s, a1.0 0.0208s, a5.0 0.0205s, a15.0 0.0201s]
+L4-01 reach lowpass fc=1000.0 q=20.0 sine at fc: L=1.0 [a0.0 0.0926s, a1.0 0.0856s, a5.0 0.0816s, a15.0 0.0781s]; L=4.0 [a0.0 0.1011s, a1.0 0.0866s, a5.0 0.0821s, a15.0 0.0786s]; L=16.0 [a0.0 0.1101s, a1.0 0.0871s, a5.0 0.0822s, a15.0 0.0787s]
+L4-01 reach lowpass fc=1000.0 q=20.0 naive saw at fc/3: L=1.0 [a0.0 0.0826s, a1.0 0.0811s, a5.0 0.0786s, a15.0 0.0761s]; L=4.0 [a0.0 0.0911s, a1.0 0.0851s, a5.0 0.0801s, a15.0 0.0762s]; L=16.0 [a0.0 0.1001s, a1.0 0.0851s, a5.0 0.0809s, a15.0 0.0785s]
+L4-01 reach lowpass fc=1000.0 q=200.0 sine at fc: L=1.0 [a0.0 1.0730s, a1.0 0.8040s, a5.0 0.7495s, a15.0 0.6960s]; L=4.0 [a0.0 1.1615s, a1.0 0.8050s, a5.0 0.7500s, a15.0 0.6966s]; L=16.0 [a0.0 1.2500s, a1.0 0.8056s, a5.0 0.7501s, a15.0 0.6966s]
+L4-01 reach lowpass fc=1000.0 q=200.0 naive saw at fc/3: L=1.0 [a0.0 0.9740s, a1.0 0.8000s, a5.0 0.7470s, a15.0 0.6940s]; L=4.0 [a0.0 1.0625s, a1.0 0.8030s, a5.0 0.7480s, a15.0 0.6936s]; L=16.0 [a0.0 1.1510s, a1.0 0.8026s, a5.0 0.7488s, a15.0 0.6964s]
+L4-01 reach lowpass fc=8000.0 q=0.707 sine at fc: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach lowpass fc=8000.0 q=0.707 naive saw at fc/3: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach lowpass fc=8000.0 q=5.0 sine at fc: L=1.0 [a0.0 0.0031s, a1.0 0.0031s, a5.0 0.0030s, a15.0 0.0030s]; L=4.0 [a0.0 0.0035s, a1.0 0.0033s, a5.0 0.0031s, a15.0 0.0030s]; L=16.0 [a0.0 0.0038s, a1.0 0.0033s, a5.0 0.0031s, a15.0 0.0030s]
+L4-01 reach lowpass fc=8000.0 q=5.0 naive saw at fc/3: L=1.0 [a0.0 0.0028s, a1.0 0.0028s, a5.0 0.0027s, a15.0 0.0027s]; L=4.0 [a0.0 0.0031s, a1.0 0.0030s, a5.0 0.0030s, a15.0 0.0029s]; L=16.0 [a0.0 0.0034s, a1.0 0.0032s, a5.0 0.0031s, a15.0 0.0030s]
+L4-01 reach lowpass fc=8000.0 q=20.0 sine at fc: L=1.0 [a0.0 0.0140s, a1.0 0.0128s, a5.0 0.0121s, a15.0 0.0116s]; L=4.0 [a0.0 0.0153s, a1.0 0.0130s, a5.0 0.0122s, a15.0 0.0117s]; L=16.0 [a0.0 0.0166s, a1.0 0.0130s, a5.0 0.0121s, a15.0 0.0098s]
+L4-01 reach lowpass fc=8000.0 q=20.0 naive saw at fc/3: L=1.0 [a0.0 0.0124s, a1.0 0.0121s, a5.0 0.0118s, a15.0 0.0114s]; L=4.0 [a0.0 0.0138s, a1.0 0.0127s, a5.0 0.0121s, a15.0 0.0115s]; L=16.0 [a0.0 0.0151s, a1.0 0.0128s, a5.0 0.0121s, a15.0 0.0117s]
+L4-01 reach lowpass fc=8000.0 q=200.0 sine at fc: L=1.0 [a0.0 0.1618s, a1.0 0.1203s, a5.0 0.1123s, a15.0 0.1044s]; L=4.0 [a0.0 0.1751s, a1.0 0.1207s, a5.0 0.1124s, a15.0 0.1043s]; L=16.0 [a0.0 0.1885s, a1.0 0.1207s, a5.0 0.1115s, a15.0 0.1044s]
+L4-01 reach lowpass fc=8000.0 q=200.0 naive saw at fc/3: L=1.0 [a0.0 0.1460s, a1.0 0.1201s, a5.0 0.1121s, a15.0 0.1041s]; L=4.0 [a0.0 0.1593s, a1.0 0.1204s, a5.0 0.1122s, a15.0 0.1043s]; L=16.0 [a0.0 0.1726s, a1.0 0.1206s, a5.0 0.1109s, a15.0 0.1040s]
+L4-01 reach lowpass fc=16000.0 q=0.707 sine at fc: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach lowpass fc=16000.0 q=0.707 naive saw at fc/3: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach lowpass fc=16000.0 q=5.0 sine at fc: L=1.0 [a0.0 0.0031s, a1.0 0.0031s, a5.0 0.0030s, a15.0 0.0030s]; L=4.0 [a0.0 0.0035s, a1.0 0.0033s, a5.0 0.0032s, a15.0 0.0030s]; L=16.0 [a0.0 0.0038s, a1.0 0.0033s, a5.0 0.0031s, a15.0 0.0031s]
+L4-01 reach lowpass fc=16000.0 q=5.0 naive saw at fc/3: L=1.0 [a0.0 0.0028s, a1.0 0.0028s, a5.0 0.0027s, a15.0 0.0027s]; L=4.0 [a0.0 0.0031s, a1.0 0.0030s, a5.0 0.0029s, a15.0 0.0029s]; L=16.0 [a0.0 0.0034s, a1.0 0.0032s, a5.0 0.0031s, a15.0 0.0030s]
+L4-01 reach lowpass fc=16000.0 q=20.0 sine at fc: L=1.0 [a0.0 0.0140s, a1.0 0.0129s, a5.0 0.0125s, a15.0 0.0127s]; L=4.0 [a0.0 0.0153s, a1.0 0.0129s, a5.0 0.0124s, a15.0 0.0125s]; L=16.0 [a0.0 0.0166s, a1.0 0.0126s, a5.0 0.0121s, a15.0 0.0127s]
+L4-01 reach lowpass fc=16000.0 q=20.0 naive saw at fc/3: L=1.0 [a0.0 0.0126s, a1.0 0.0120s, a5.0 0.0122s, a15.0 0.0126s]; L=4.0 [a0.0 0.0140s, a1.0 0.0128s, a5.0 0.0124s, a15.0 0.0125s]; L=16.0 [a0.0 0.0153s, a1.0 0.0127s, a5.0 0.0125s, a15.0 0.0128s]
+L4-01 reach lowpass fc=16000.0 q=200.0 sine at fc: L=1.0 [a0.0 0.1618s, a1.0 0.1255s, a5.0 0.1522s, a15.0 0.1728s]; L=4.0 [a0.0 0.1751s, a1.0 0.1242s, a5.0 0.1513s, a15.0 0.1707s]; L=16.0 [a0.0 0.1885s, a1.0 0.1132s, a5.0 0.1531s, a15.0 0.1723s]
+L4-01 reach lowpass fc=16000.0 q=200.0 naive saw at fc/3: L=1.0 [a0.0 0.1487s, a1.0 0.1261s, a5.0 0.1525s, a15.0 0.1729s]; L=4.0 [a0.0 0.1620s, a1.0 0.1256s, a5.0 0.1522s, a15.0 0.1721s]; L=16.0 [a0.0 0.1754s, a1.0 0.1202s, a5.0 0.1529s, a15.0 0.1733s]
+L4-01 reach highpass fc=1000.0 q=0.707 sine at fc: L=1.0 [a0.0 0.0026s, a1.0 0.0026s, a5.0 0.0026s, a15.0 0.0026s]; L=4.0 [a0.0 0.0028s, a1.0 0.0028s, a5.0 0.0028s, a15.0 0.0028s]; L=16.0 [a0.0 0.0029s, a1.0 0.0030s, a5.0 0.0030s, a15.0 0.0030s]
+L4-01 reach highpass fc=1000.0 q=0.707 naive saw at fc/3: L=1.0 [a0.0 0.0022s, a1.0 0.0022s, a5.0 0.0022s, a15.0 0.0022s]; L=4.0 [a0.0 0.0028s, a1.0 0.0028s, a5.0 0.0028s, a15.0 0.0028s]; L=16.0 [a0.0 0.0029s, a1.0 0.0029s, a5.0 0.0029s, a15.0 0.0029s]
+L4-01 reach highpass fc=1000.0 q=5.0 sine at fc: L=1.0 [a0.0 0.0207s, a1.0 0.0207s, a5.0 0.0202s, a15.0 0.0197s]; L=4.0 [a0.0 0.0231s, a1.0 0.0221s, a5.0 0.0212s, a15.0 0.0202s]; L=16.0 [a0.0 0.0252s, a1.0 0.0227s, a5.0 0.0213s, a15.0 0.0207s]
+L4-01 reach highpass fc=1000.0 q=5.0 naive saw at fc/3: L=1.0 [a0.0 0.0182s, a1.0 0.0181s, a5.0 0.0181s, a15.0 0.0177s]; L=4.0 [a0.0 0.0202s, a1.0 0.0202s, a5.0 0.0196s, a15.0 0.0187s]; L=16.0 [a0.0 0.0226s, a1.0 0.0208s, a5.0 0.0205s, a15.0 0.0201s]
+L4-01 reach highpass fc=1000.0 q=20.0 sine at fc: L=1.0 [a0.0 0.0926s, a1.0 0.0856s, a5.0 0.0816s, a15.0 0.0781s]; L=4.0 [a0.0 0.1011s, a1.0 0.0870s, a5.0 0.0821s, a15.0 0.0786s]; L=16.0 [a0.0 0.1101s, a1.0 0.0871s, a5.0 0.0822s, a15.0 0.0787s]
+L4-01 reach highpass fc=1000.0 q=20.0 naive saw at fc/3: L=1.0 [a0.0 0.0826s, a1.0 0.0811s, a5.0 0.0786s, a15.0 0.0761s]; L=4.0 [a0.0 0.0915s, a1.0 0.0851s, a5.0 0.0801s, a15.0 0.0762s]; L=16.0 [a0.0 0.1001s, a1.0 0.0851s, a5.0 0.0809s, a15.0 0.0785s]
+L4-01 reach highpass fc=1000.0 q=200.0 sine at fc: L=1.0 [a0.0 1.0730s, a1.0 0.8040s, a5.0 0.7495s, a15.0 0.6960s]; L=4.0 [a0.0 1.1615s, a1.0 0.8050s, a5.0 0.7500s, a15.0 0.6966s]; L=16.0 [a0.0 1.2500s, a1.0 0.8056s, a5.0 0.7501s, a15.0 0.6966s]
+L4-01 reach highpass fc=1000.0 q=200.0 naive saw at fc/3: L=1.0 [a0.0 0.9740s, a1.0 0.8000s, a5.0 0.7470s, a15.0 0.6940s]; L=4.0 [a0.0 1.0625s, a1.0 0.8030s, a5.0 0.7480s, a15.0 0.6936s]; L=16.0 [a0.0 1.1510s, a1.0 0.8026s, a5.0 0.7488s, a15.0 0.6959s]
+L4-01 reach highpass fc=8000.0 q=0.707 sine at fc: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach highpass fc=8000.0 q=0.707 naive saw at fc/3: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach highpass fc=8000.0 q=5.0 sine at fc: L=1.0 [a0.0 0.0031s, a1.0 0.0031s, a5.0 0.0031s, a15.0 0.0030s]; L=4.0 [a0.0 0.0035s, a1.0 0.0033s, a5.0 0.0031s, a15.0 0.0030s]; L=16.0 [a0.0 0.0038s, a1.0 0.0033s, a5.0 0.0031s, a15.0 0.0030s]
+L4-01 reach highpass fc=8000.0 q=5.0 naive saw at fc/3: L=1.0 [a0.0 0.0028s, a1.0 0.0027s, a5.0 0.0027s, a15.0 0.0027s]; L=4.0 [a0.0 0.0031s, a1.0 0.0030s, a5.0 0.0030s, a15.0 0.0029s]; L=16.0 [a0.0 0.0034s, a1.0 0.0032s, a5.0 0.0031s, a15.0 0.0030s]
+L4-01 reach highpass fc=8000.0 q=20.0 sine at fc: L=1.0 [a0.0 0.0140s, a1.0 0.0128s, a5.0 0.0121s, a15.0 0.0116s]; L=4.0 [a0.0 0.0153s, a1.0 0.0130s, a5.0 0.0122s, a15.0 0.0117s]; L=16.0 [a0.0 0.0166s, a1.0 0.0130s, a5.0 0.0121s, a15.0 0.0098s]
+L4-01 reach highpass fc=8000.0 q=20.0 naive saw at fc/3: L=1.0 [a0.0 0.0124s, a1.0 0.0121s, a5.0 0.0118s, a15.0 0.0114s]; L=4.0 [a0.0 0.0137s, a1.0 0.0127s, a5.0 0.0121s, a15.0 0.0116s]; L=16.0 [a0.0 0.0151s, a1.0 0.0128s, a5.0 0.0121s, a15.0 0.0117s]
+L4-01 reach highpass fc=8000.0 q=200.0 sine at fc: L=1.0 [a0.0 0.1618s, a1.0 0.1203s, a5.0 0.1123s, a15.0 0.1044s]; L=4.0 [a0.0 0.1751s, a1.0 0.1207s, a5.0 0.1124s, a15.0 0.1043s]; L=16.0 [a0.0 0.1885s, a1.0 0.1207s, a5.0 0.1114s, a15.0 0.1044s]
+L4-01 reach highpass fc=8000.0 q=200.0 naive saw at fc/3: L=1.0 [a0.0 0.1460s, a1.0 0.1201s, a5.0 0.1121s, a15.0 0.1041s]; L=4.0 [a0.0 0.1593s, a1.0 0.1204s, a5.0 0.1122s, a15.0 0.1043s]; L=16.0 [a0.0 0.1726s, a1.0 0.1206s, a5.0 0.1109s, a15.0 0.1040s]
+L4-01 reach highpass fc=16000.0 q=0.707 sine at fc: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach highpass fc=16000.0 q=0.707 naive saw at fc/3: L=1.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=4.0 [a0.0 0.0003s, a1.0 0.0003s, a5.0 0.0003s, a15.0 0.0003s]; L=16.0 [a0.0 0.0004s, a1.0 0.0004s, a5.0 0.0004s, a15.0 0.0004s]
+L4-01 reach highpass fc=16000.0 q=5.0 sine at fc: L=1.0 [a0.0 0.0031s, a1.0 0.0030s, a5.0 0.0030s, a15.0 0.0030s]; L=4.0 [a0.0 0.0035s, a1.0 0.0033s, a5.0 0.0032s, a15.0 0.0030s]; L=16.0 [a0.0 0.0038s, a1.0 0.0033s, a5.0 0.0031s, a15.0 0.0031s]
+L4-01 reach highpass fc=16000.0 q=5.0 naive saw at fc/3: L=1.0 [a0.0 0.0028s, a1.0 0.0028s, a5.0 0.0027s, a15.0 0.0027s]; L=4.0 [a0.0 0.0031s, a1.0 0.0030s, a5.0 0.0030s, a15.0 0.0029s]; L=16.0 [a0.0 0.0034s, a1.0 0.0031s, a5.0 0.0031s, a15.0 0.0030s]
+L4-01 reach highpass fc=16000.0 q=20.0 sine at fc: L=1.0 [a0.0 0.0140s, a1.0 0.0129s, a5.0 0.0125s, a15.0 0.0127s]; L=4.0 [a0.0 0.0153s, a1.0 0.0129s, a5.0 0.0124s, a15.0 0.0125s]; L=16.0 [a0.0 0.0166s, a1.0 0.0126s, a5.0 0.0121s, a15.0 0.0127s]
+L4-01 reach highpass fc=16000.0 q=20.0 naive saw at fc/3: L=1.0 [a0.0 0.0126s, a1.0 0.0121s, a5.0 0.0123s, a15.0 0.0126s]; L=4.0 [a0.0 0.0139s, a1.0 0.0128s, a5.0 0.0124s, a15.0 0.0125s]; L=16.0 [a0.0 0.0153s, a1.0 0.0126s, a5.0 0.0125s, a15.0 0.0128s]
+L4-01 reach highpass fc=16000.0 q=200.0 sine at fc: L=1.0 [a0.0 0.1618s, a1.0 0.1255s, a5.0 0.1522s, a15.0 0.1728s]; L=4.0 [a0.0 0.1751s, a1.0 0.1242s, a5.0 0.1514s, a15.0 0.1707s]; L=16.0 [a0.0 0.1885s, a1.0 0.1132s, a5.0 0.1531s, a15.0 0.1723s]
+L4-01 reach highpass fc=16000.0 q=200.0 naive saw at fc/3: L=1.0 [a0.0 0.1487s, a1.0 0.1261s, a5.0 0.1525s, a15.0 0.1729s]; L=4.0 [a0.0 0.1620s, a1.0 0.1256s, a5.0 0.1522s, a15.0 0.1721s]; L=16.0 [a0.0 0.1754s, a1.0 0.1202s, a5.0 0.1529s, a15.0 0.1733s]
+L4-01 reach, longest tails re the linear filter: x1.1628 lowpass fc=16000.0 q=200.0 naive saw at fc/3 L=1.0 analog=15.0: 8298 frames (0.1729 s, peak 3.67) (linear 7136 frames)
+L4-01 reach, longest tails re the linear filter: x1.1628 highpass fc=16000.0 q=200.0 naive saw at fc/3 L=1.0 analog=15.0: 8298 frames (0.1729 s, peak 3.15) (linear 7136 frames)
+L4-01 reach, longest tails re the linear filter: x1.0681 lowpass fc=16000.0 q=200.0 sine at fc L=1.0 analog=15.0: 8294 frames (0.1728 s, peak 4.14) (linear 7765 frames)
+L4-01 reach, longest tails re the linear filter: x1.0681 highpass fc=16000.0 q=200.0 sine at fc L=1.0 analog=15.0: 8294 frames (0.1728 s, peak 4.29) (linear 7765 frames)
+L4-01 reach, longest tails re the linear filter: x1.0626 lowpass fc=16000.0 q=200.0 naive saw at fc/3 L=4.0 analog=15.0: 8262 frames (0.1721 s, peak 9.04) (linear 7775 frames)
+L4-01 reach, longest tails re the linear filter: x1.0626 highpass fc=16000.0 q=200.0 naive saw at fc/3 L=4.0 analog=15.0: 8262 frames (0.1721 s, peak 5.49) (linear 7775 frames)
+L4-01 reach, longest tails re the linear filter: x1.0588 highpass fc=16000.0 q=0.707 naive saw at fc/3 L=16.0 analog=15.0: 18 frames (0.0004 s, peak 8.40) (linear 17 frames)
+L4-01 reach, longest tails re the linear filter: x1.0556 lowpass fc=16000.0 q=0.707 naive saw at fc/3 L=16.0 analog=5.0: 19 frames (0.0004 s, peak 16.6) (linear 18 frames)
+== L8-02: HouseStage alone, 0.3 sine at 220 Hz plus a constant C from 0.5 s to the end (4 s); read over 3..4 s
+L8-02 [C=1.00e+06] over 3..4 s: error re the music -196.0353 dB, peak 0.3000, exact zeros 0/48000, distinct output values 6697; from the onset: rail samples (|out| = 1) 1, exact zeros 0, first deviation at frame 24031, back within 0.003 of the clean run for good: 7905 frames after the first deviation (0.1647 s)
+L8-02 [C=1.00e+15] over 3..4 s: error re the music -15.4068 dB, peak 0.2577, exact zeros 0/48000, distinct output values 6697; from the onset: rail samples (|out| = 1) 1, exact zeros 7, first deviation at frame 24031, back within 0.003 of the clean run for good: not within the run
+L8-02 [C=1.00e+17] over 3..4 s: error re the music 0.0000 dB, peak 0.0000, exact zeros 48000/48000, distinct output values 1; from the onset: rail samples (|out| = 1) 1, exact zeros 167759, first deviation at frame 24031, back within 0.003 of the clean run for good: not within the run
+== L4-11: the bare drive node over a 0.5 sine for 0.1 s, then 0.1 s of exact silence
+L4-11 [drive amount 100.0] NaN samples 0, infinite samples 0 of 9600; first NaN at frame -1
+L4-11 [drive amount 256.0] NaN samples 0, infinite samples 0 of 9600; first NaN at frame -1
+L4-11 [drive amount 257.0] NaN samples 4801, infinite samples 4799 of 9600; first NaN at frame 0
+L4-11 [drive amount 300.0] NaN samples 4801, infinite samples 4799 of 9600; first NaN at frame 0
+== L4-08: one bad sample at frame 0 (where an envelope's gain is exactly 0) and at frame 4800
+L4-08 [NaN at frame 0] bare Adsr: NaN 1 at [0], Inf 0; bare Drive(0.5): NaN 1 at [0], Inf 0
+L4-08 [NaN at frame 4800] bare Adsr: NaN 1 at [4800], Inf 0; bare Drive(0.5): NaN 1 at [4800], Inf 0
+L4-08 [NaN] DcBlocker(0.999): non-finite out in the poisoned block 2 (frames [10, 11]), in the next block 0
+L4-08 [Infinity at frame 0] bare Adsr: NaN 1 at [0], Inf 0; bare Drive(0.5): NaN 0, Inf 1 at [0]
+L4-08 [Infinity at frame 4800] bare Adsr: NaN 0, Inf 1 at [4800]; bare Drive(0.5): NaN 0, Inf 1 at [4800]
+L4-08 [Infinity] DcBlocker(0.999): non-finite out in the poisoned block 2 (frames [10, 11]), in the next block 0

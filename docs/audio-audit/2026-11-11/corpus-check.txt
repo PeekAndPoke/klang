@@ -1,0 +1,25 @@
+Corpus check (KLANG-00420 closing measurement run), 2026-11-11, tree 25786c971 (clean), no song edited by this run
+Command: JAVA_TOOL_OPTIONS=-Djdk.net.hosts.file=<localhost only> console/with-build-lock.sh ./gradlew --offline runSongBenchmark --args=corpus
+Reference: docs/benchmarks/corpus-reference.md, accepted 2026-11-06 (tree 88e2eb91d-dirty), before every audit fix. NOT accepted by this run.
+Samples: all from ./cache (the network was blocked; no 'could not load' line).
+
+=== Corpus check: 18 songs, 256 cycles, 48000 Hz ===
+INFO      Kokon edited | code 8ee0cf44bc09c461 -> a88adbe8133d7f33 | 2c20c429e8ea53e2 -> fe15f22b89d038f3 | peak 0.7447 -> 0.7458
+INFO      Die Kirschblüte edited | code db76c546476008ce -> ed701e4365d387e0 | c1064f4c803f4f81 -> eeaa45cface1e379 | peak 0.7459 -> 0.7651
+INFO      Der Schmetterling edited | code f419fd946dd51ef4 -> 0317ad2559028a27 | d12bce52adbacbd3 -> 4cc8f298c766249e | peak 0.7451 -> 0.7533
+INFO      Gestrandet edited | code a5424878277ca92c -> 423f8ace04602267 | 7acc692002af30e3 -> 05e887b286a8fdea | peak 0.0695 -> 0.0750
+INFO      Seltsamere Dinge edited | code 8ac4ee429e216874 -> cb1ed1e79b2ac4f7 | dd00564c2c987379 -> 197aad68e34693e1 | peak 0.7510 -> 0.7456
+INFO      Stein um Stein edited | code 788bf52d51dead9c -> a3f0c513a1b09d10 | fe591e17597da62f -> 3fef9e4879dfa999 | peak 0.7605 -> 0.7608
+INFO      Remix: Echo um Echo edited | code 3dd63fdaef403ad3 -> 042bc3cb5dbf8d8a | 236e7939d6ab097d -> 14bef83326a31217 | peak 0.4881 -> 0.4934
+INFO      Greensleeves Chant edited | code 16579cad1833540e -> d2e476d62ce27027 | 31eecb0993e7af12 -> cce77a99feee2fb9 | peak 0.4578 -> 0.4758
+INFO      A Synth Worth Lying For edited | code 852c94175774f739 -> 5a79d38edfd76b78 | 4184ab87d3fe2752 -> c379d080ea520c9d | peak 0.7555 -> 0.7555
+INFO      The Synthsale Piper's Last Rave edited | code 152941900caceb8f -> b690a443cd5b5175 | 105de81e127eeb33 -> 63c9352711c64ef7 | peak 0.8952 -> 0.8953
+INFO      Synthsturm edited | code e951b133312d65cc -> 1981d31bc1fc8b5e | 58bc6fd7755762a7 -> a1cf375c34d8cf8e | peak 0.8540 -> 0.8277
+INFO      The Synthsale Piper's Farewell edited | code 4b9caa4a49e4bf59 -> b98858db3c3cb245 | fa2534f7e00c3c95 -> 477bb421e751aaad | peak 0.3457 -> 0.3545
+INFO      Smalltown Synth edited | code dc6e828e4b09ee88 -> ab78a3a5ae167bd8 | 28609e132bc7447e -> 72062239c9789ab1 | peak 0.9108 -> 0.9109
+CHANGED   Final Synthasy VII Prelude (song text unchanged, the engine or its inputs moved it) | 8476798fd53deab6 -> ab7a8993d24eb522 | peak 0.3875 -> 0.3875
+CHANGED   Drunken Synthlor (song text unchanged, the engine or its inputs moved it) | d954297da688a42c -> be2e08bd5ad83869 | peak 0.8508 -> 0.8806
+CHANGED   frozen derSchmetterling_2026_11_03 | 44186af93e2fdce1 -> 02d59112a75f0c92 | peak 0.7446 -> 0.7451
+CHANGED   frozen strangerThings_2026_11_03 | dd00564c2c987379 -> 197aad68e34693e1 | peak 0.7510 -> 0.7456
+CHANGED   frozen piece derSchmetterling_2026_09_16 | d2c9f30da07ee1e9 -> 70ea7aab555be549 | peak 0.9143 -> 0.8993
+CORPUS RED: 0 of 3 frozen identical, 3 frozen differences; live songs: 0 identical, 2 moved by the engine, 13 edited, 0 new, 0 gone (information) (204 s)

@@ -1,0 +1,3945 @@
+{
+ "tool": "dead-knobs",
+ "files": 878,
+ "keys": [
+  {
+   "map": "ignitor",
+   "key": "accelerate",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 88,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 320,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 429,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsr.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 121,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 125,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/_sample_envelope_defaults.kt",
+     "line": 37,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 167,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 519,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsr.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 122,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 125,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/_sample_envelope_defaults.kt",
+     "line": 38,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 168,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 520,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsr.on",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 128,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 171,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 527,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 557,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsr.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 124,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 125,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/_sample_envelope_defaults.kt",
+     "line": 40,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 170,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 522,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsr.sustain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 123,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 125,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/_sample_envelope_defaults.kt",
+     "line": 39,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 169,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 521,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsrCurves.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 125,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/_sample_envelope_defaults.kt",
+     "line": 41,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 188,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 523,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsrCurves.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 126,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/_sample_envelope_defaults.kt",
+     "line": 42,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 189,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 524,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "adsrCurves.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 127,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/_sample_envelope_defaults.kt",
+     "line": 43,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 190,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 525,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "analog",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_ignitorparam.kt",
+     "line": 168,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 58,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 62,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 67,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 72,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 75,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 80,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 83,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 87,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 91,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 104,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 112,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 120,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 130,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 138,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 175,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 189,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 240,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 123,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt",
+     "line": 122,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 249,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 416,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 490,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 515,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 532,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 577,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 594,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 611,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 629,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 656,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 760,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 790,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 849,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 910,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 969,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1029,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1115,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1134,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 452,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 468,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 483,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 498,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "begin",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 132,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt",
+     "line": 199,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 303,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bipolar",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 161,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 250,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 734,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpf.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 97,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 470,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpf.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 98,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 471,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpf.env",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 96,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 469,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpf.freq",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 94,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 466,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpf.q",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 95,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 467,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpf.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 100,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 473,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpf.sustain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 99,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 472,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpfCurves.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 205,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 474,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpfCurves.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 206,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 475,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "bpfCurves.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 110,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 207,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 476,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "brightness",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 60,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 174,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 172,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 186,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 138,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 251,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1111,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1131,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "chaos",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt",
+     "line": 505,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 165,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 165,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 252,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 748,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "coarse.factor",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 104,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 117,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 442,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "color",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt",
+     "line": 275,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 135,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 253,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 562,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "crush.bits",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 103,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 108,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 441,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "declick",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 254,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 2067,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "density",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_unison.kt",
+     "line": 163,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt",
+     "line": 450,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 164,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 128,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 159,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 255,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 730,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "distort.amount",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 105,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 127,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 445,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "distort.shape",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 106,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 128,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 446,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "divisor",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 203,
+     "kind": "inline"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "duty",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_ignitorparam.kt",
+     "line": 286,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt",
+     "line": 112,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt",
+     "line": 397,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 67,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 72,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 127,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 256,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 628,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 655,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "end",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 133,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt",
+     "line": 200,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 304,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "eqdb",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 245,
+     "kind": "inline"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "eqhz",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 243,
+     "kind": "inline"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "eqlp",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 248,
+     "kind": "inline"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "eqq",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 244,
+     "kind": "inline"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "feedback",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 59,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 173,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 171,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 185,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 137,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 257,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1110,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1130,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "fm.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 96,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 289,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 412,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "fm.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 97,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 290,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 413,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "fm.depth",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 94,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 288,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 411,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "fm.ratio",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 95,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 287,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 410,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "fm.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 99,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 292,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 415,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "fm.sustain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 98,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 291,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 414,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 82,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 455,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 83,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 456,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.env",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 81,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 454,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.freq",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 78,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 450,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.passes",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 80,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 453,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.q",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 79,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 451,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 85,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 458,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpf.sustain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 84,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 457,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpfCurves.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 205,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 459,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpfCurves.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 206,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 460,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "hpfCurves.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 109,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 207,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 461,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "leak",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt",
+     "line": 316,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 138,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 258,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 680,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "loop",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 135,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt",
+     "line": 202,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 306,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 82,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 501,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 83,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 502,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.env",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 81,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 500,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.freq",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 126,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 78,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 496,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.passes",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 80,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 499,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.q",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 126,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 79,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 497,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 85,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 504,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpf.sustain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 84,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 503,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpfCurves.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 205,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 505,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpfCurves.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 206,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 506,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "lpfCurves.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 207,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 507,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notch.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 97,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 485,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notch.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 98,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 486,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notch.env",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 96,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 484,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notch.freq",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 94,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 481,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notch.q",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 95,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 482,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notch.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 100,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 488,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notch.sustain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 99,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 487,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notchCurves.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 205,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 489,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notchCurves.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 206,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 490,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "notchCurves.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 111,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 207,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 491,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "octaves",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 130,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 146,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 153,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 260,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 703,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 718,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "offset",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupVocabulary.kt",
+     "line": 179,
+     "kind": "inline"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "onepole",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_ignitorparam.kt",
+     "line": 372,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 340,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 440,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penv.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 69,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 258,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 420,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penv.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 70,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 259,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 421,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penv.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 72,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 261,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 423,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penv.semitones",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 68,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 257,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 419,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penv.sustain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 71,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 260,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 422,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penvCurves.attack",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 73,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 205,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 424,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penvCurves.decay",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 74,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 206,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 425,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "penvCurves.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 75,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 207,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 426,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "persistence",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 131,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 147,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 154,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 261,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 705,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 720,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "pickPosition",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 61,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 175,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 173,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 187,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 139,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 267,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1113,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1132,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "pregain",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_level.kt",
+     "line": 134,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 294,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 2614,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "rate",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 156,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 160,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 129,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 145,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 152,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 295,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 701,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 716,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "speed",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 134,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/voices/VoiceFactory.kt",
+     "line": 201,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 305,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "spread",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_unison.kt",
+     "line": 33,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 172,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 272,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 331,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 390,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 449,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 508,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 103,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 111,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 119,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 129,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 137,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 184,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 126,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 296,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 789,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 848,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 909,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 968,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1028,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1128,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "stiffness",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 62,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 176,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 174,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 188,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 140,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 297,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1114,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1133,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "tail",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_basic.kt",
+     "line": 451,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/Ign.kt",
+     "line": 160,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 298,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 732,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "tremolo.depth",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 115,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 146,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 513,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "tremolo.rate",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 116,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 147,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 512,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "tremolo.shape",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 117,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 148,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 514,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "vibrato.phase",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 87,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 238,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 438,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "vibrato.rangeFrom",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 85,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 236,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 436,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "vibrato.rangeTo",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 86,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 237,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 437,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "vibrato.rate",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 83,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 234,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 434,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "vibrato.semitones",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/_classic_slot_params.kt",
+     "line": 84,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 235,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDslClassic.kt",
+     "line": 435,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "voices",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_unison.kt",
+     "line": 23,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 171,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 271,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 330,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 389,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 448,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_synthesis_snd_super.kt",
+     "line": 507,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 102,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 110,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 118,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 128,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 136,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/IgnitorDefaults.kt",
+     "line": 183,
+     "kind": "use"
+    },
+    {
+     "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+     "line": 125,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 299,
+     "kind": "decl"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 787,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 846,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 907,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 966,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1026,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/IgnitorDsl.kt",
+     "line": 1127,
+     "kind": "use"
+    }
+   ]
+  },
+  {
+   "map": "ignitor",
+   "key": "warm",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupVocabulary.kt",
+     "line": 175,
+     "kind": "inline"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "body.floor",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_body.kt",
+     "line": 42,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_body.kt",
+     "line": 105,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 194,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 42,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "body.material",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 249,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_body.kt",
+     "line": 71,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 190,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 40,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "body.wet",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 250,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_body.kt",
+     "line": 41,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_body.kt",
+     "line": 92,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 193,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 41,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "compressor.attack",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 244,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 53,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 112,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 227,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 84,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "compressor.knee",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 243,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 52,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 95,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 226,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 83,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "compressor.ratio",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 242,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 51,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 78,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 225,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 82,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "compressor.release",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 245,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 54,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 129,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 228,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 85,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "compressor.threshold",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 241,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 50,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_compressor.kt",
+     "line": 61,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 224,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 81,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "delay.cap",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 47,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 251,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 206,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 57,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "delay.feedback",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 232,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 46,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 232,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 205,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 56,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "delay.time",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 231,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 45,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 213,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 204,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 55,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "delay.wet",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 230,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 44,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_delay.kt",
+     "line": 56,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 203,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 54,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "duck.cylinder",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_cylinder.kt",
+     "line": 278,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 240,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 95,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "duck.depth",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_cylinder.kt",
+     "line": 266,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_cylinder.kt",
+     "line": 296,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 241,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 96,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "duck.release",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_cylinder.kt",
+     "line": 267,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_dynamics_cylinder.kt",
+     "line": 308,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 242,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 97,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "gain.gain",
+   "writers": [],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 237,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 90,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "phaser.center",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 67,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 294,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 216,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 71,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "phaser.floor",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 69,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 278,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 218,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 73,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "phaser.rate",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 238,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 65,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 262,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 214,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 69,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "phaser.sweep",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 68,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 310,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 217,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 72,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "phaser.wet",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 238,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 66,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_modulation.kt",
+     "line": 96,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 215,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 70,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "reverb.lowpass",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_reverb.kt",
+     "line": 251,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 211,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 64,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "reverb.size",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 234,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_reverb.kt",
+     "line": 45,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_reverb.kt",
+     "line": 232,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 210,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 63,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "reverb.wet",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 233,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_reverb.kt",
+     "line": 44,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_reverb.kt",
+     "line": 50,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 209,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 62,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "vowel.floor",
+   "writers": [
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_vowel.kt",
+     "line": 43,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_vowel.kt",
+     "line": 101,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 200,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 49,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "vowel.vowel",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 254,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_vowel.kt",
+     "line": 70,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 197,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 47,
+     "kind": "decl"
+    }
+   ]
+  },
+  {
+   "map": "katalyst",
+   "key": "vowel.wet",
+   "writers": [
+    {
+     "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+     "line": 255,
+     "kind": "engine"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_vowel.kt",
+     "line": 42,
+     "kind": "door"
+    },
+    {
+     "file": "sprudel/src/commonMain/kotlin/lang/lang_effects_vowel.kt",
+     "line": 88,
+     "kind": "door"
+    }
+   ],
+   "readers": [
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDsl.kt",
+     "line": 199,
+     "kind": "use"
+    },
+    {
+     "file": "audio_bridge/src/commonMain/kotlin/KatalystDslSlots.kt",
+     "line": 48,
+     "kind": "decl"
+    }
+   ]
+  }
+ ],
+ "findings": {
+  "a": [],
+  "b": [
+   [
+    "ignitor",
+    "bipolar"
+   ],
+   [
+    "ignitor",
+    "declick"
+   ],
+   [
+    "ignitor",
+    "divisor"
+   ],
+   [
+    "ignitor",
+    "eqdb"
+   ],
+   [
+    "ignitor",
+    "eqhz"
+   ],
+   [
+    "ignitor",
+    "eqlp"
+   ],
+   [
+    "ignitor",
+    "eqq"
+   ],
+   [
+    "ignitor",
+    "octaves"
+   ],
+   [
+    "ignitor",
+    "offset"
+   ],
+   [
+    "ignitor",
+    "persistence"
+   ],
+   [
+    "ignitor",
+    "rate"
+   ],
+   [
+    "ignitor",
+    "warm"
+   ],
+   [
+    "katalyst",
+    "gain.gain"
+   ]
+  ],
+  "c": [],
+  "d": [],
+  "e": []
+ },
+ "unresolved": [],
+ "waivers": []
+}

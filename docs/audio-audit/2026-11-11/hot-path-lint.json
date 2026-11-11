@@ -1,0 +1,491 @@
+{
+ "tool": "hot-path-lint",
+ "files": 137,
+ "hot_functions": 673,
+ "guarded": true,
+ "findings": [
+  {
+   "file": "audio_be/src/commonMain/kotlin/PlaybackEngineDispatcher.kt",
+   "line": 437,
+   "rule": "alloc-object",
+   "message": "`ArrayList(...)` constructs an object per call [in PlaybackEngineDispatcher.emitDiagnostics]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/PlaybackEngineDispatcher.kt",
+   "line": 450,
+   "rule": "alloc-object",
+   "message": "`Diagnostics(...)` constructs an object per call [in PlaybackEngineDispatcher.emitDiagnostics]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/PlaybackEngineDispatcher.kt",
+   "line": 490,
+   "rule": "alloc-object",
+   "message": "`CylinderState(...)` constructs an object in a loop [in PlaybackEngineDispatcher.countDiagnostics]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/WarmupRunner.kt",
+   "line": 320,
+   "rule": "alloc-object",
+   "message": "`BackendReady(...)` constructs an object per call [in WarmupRunner.awaitClean]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/_pcm16_edge.kt",
+   "line": 56,
+   "rule": "boxed-type",
+   "message": "`ByteArray`: a banned type (code-style 5)",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/_pcm16_edge.kt",
+   "line": 66,
+   "rule": "boxed-type",
+   "message": "`.toByte()` makes a banned type",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/_pcm16_edge.kt",
+   "line": 67,
+   "rule": "boxed-type",
+   "message": "`.toByte()` makes a banned type",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/_pcm16_edge.kt",
+   "line": 68,
+   "rule": "boxed-type",
+   "message": "`.toByte()` makes a banned type",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/_pcm16_edge.kt",
+   "line": 69,
+   "rule": "boxed-type",
+   "message": "`.toByte()` makes a banned type",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/filters/EqCore.kt",
+   "line": 271,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in EqCore.captureInput]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/filters/ResonatorBank.kt",
+   "line": 229,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in ResonatorBank.process]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/DriftLanes.kt",
+   "line": 188,
+   "rule": "alloc-guarded",
+   "message": "`AnalogDrift(...)` constructs an object (stored behind a guard; alloc-object) [in DriftLanes.ensureLanes]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/DriftLanes.kt",
+   "line": 188,
+   "rule": "alloc-guarded",
+   "message": "`Array` allocates (stored behind a guard; alloc-array) [in DriftLanes.ensureLanes]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/DriftLanes.kt",
+   "line": 234,
+   "rule": "alloc-guarded",
+   "message": "`AnalogDrift(...)` constructs an object (cache on miss; alloc-object) [in DriftLanes.prepareBlock]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/DriftLanes.kt",
+   "line": 238,
+   "rule": "alloc-object",
+   "message": "`Random(...)` constructs an object per call [in DriftLanes.prepareBlock]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 405,
+   "rule": "alloc-guarded",
+   "message": "`copyOf` allocates (stored behind a guard; alloc-array) [in Bank.resize]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 406,
+   "rule": "alloc-guarded",
+   "message": "`copyOf` allocates (stored behind a guard; alloc-array) [in Bank.resize]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 407,
+   "rule": "alloc-guarded",
+   "message": "`copyOf` allocates (stored behind a guard; alloc-array) [in Bank.resize]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 408,
+   "rule": "alloc-guarded",
+   "message": "`copyOf` allocates (stored behind a guard; alloc-array) [in Bank.resize]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 931,
+   "rule": "alloc-guarded",
+   "message": "`AnalogDrift(...)` constructs an object (cache on miss; alloc-object) [in WaveIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 1962,
+   "rule": "alloc-guarded",
+   "message": "`Array` allocates (stored behind a guard; alloc-array) [in UnisonStackIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 1962,
+   "rule": "alloc-guarded",
+   "message": "`WaveVoiceState(...)` constructs an object (stored behind a guard; alloc-object) [in UnisonStackIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 1963,
+   "rule": "alloc-guarded",
+   "message": "`DoubleArray` allocates (stored behind a guard; alloc-array) [in UnisonStackIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 2428,
+   "rule": "alloc-guarded",
+   "message": "`DoubleArray` allocates (stored behind a guard; alloc-array) [in UnisonStackIgnitor.selectBandedPhases]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 2894,
+   "rule": "alloc-guarded",
+   "message": "`Array` allocates (stored behind a guard; alloc-array) [in SuperKarplusStrongIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 2894,
+   "rule": "alloc-guarded",
+   "message": "`KarplusString(...)` constructs an object (stored behind a guard; alloc-object) [in SuperKarplusStrongIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 2895,
+   "rule": "alloc-guarded",
+   "message": "`DoubleArray` allocates (stored behind a guard; alloc-array) [in SuperKarplusStrongIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 2896,
+   "rule": "alloc-guarded",
+   "message": "`DoubleArray` allocates (stored behind a guard; alloc-array) [in SuperKarplusStrongIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/Ignitors.kt",
+   "line": 3143,
+   "rule": "alloc-guarded",
+   "message": "`DriftLanes(...)` constructs an object (cache on miss; alloc-object) [in Ignitors.startDriftLanes]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/MemoizingIgnitor.kt",
+   "line": 142,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in MemoizingIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/OversampleRegion.kt",
+   "line": 159,
+   "rule": "alloc-guarded",
+   "message": "`IgniteContext(...)` constructs an object (cache on miss; alloc-object) [in OversampleRegionIgnitor.generate]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 65,
+   "rule": "boxed-type",
+   "message": "a Char literal (a boxed Char on Kotlin/JS; use the Int code)",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 207,
+   "rule": "map-op",
+   "message": "a destructuring `for ((a, b) in ...)`: an iterator and an entry per step (a map or a list of pairs) [in PhasePools.pool]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 217,
+   "rule": "alloc-object",
+   "message": "`PhasePool(...)` constructs an object per call [in PhasePools.pool]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 227,
+   "rule": "alloc-object",
+   "message": "`.copy(` allocates a data class copy per call [in PhasePools.pool]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 227,
+   "rule": "alloc-object",
+   "message": "`Slot(...)` constructs an object per call [in PhasePools.pool]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 331,
+   "rule": "alloc-array",
+   "message": "`DoubleArray` allocates per call [in PhasePool.topUpOne]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 372,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in PhasePool.next]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 378,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in PhasePool.next]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 384,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in PhasePool.next]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 394,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in PhasePool.next]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 411,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in PhasePool.next]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 477,
+   "rule": "alloc-array",
+   "message": "`copyInto` allocates (a typed-array view per call on JS: use copyRangeInto) in a loop [in PhasePool.drawBandedInto]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/PhasePool.kt",
+   "line": 481,
+   "rule": "alloc-array",
+   "message": "`copyInto` allocates (a typed-array view per call on JS: use copyRangeInto) per call [in PhasePool.drawBandedInto]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/ScratchBuffers.kt",
+   "line": 83,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in ScratchBuffers.acquire]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/ScratchBuffers.kt",
+   "line": 125,
+   "rule": "alloc-guarded",
+   "message": "`DoubleArray` allocates (stored behind a guard; alloc-array) [in ScratchBuffers.acquireDouble]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/ScratchBuffers.kt",
+   "line": 197,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in ScratchBuffers.oversample]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/ScratchBuffers.kt",
+   "line": 209,
+   "rule": "alloc-guarded",
+   "message": "`copyOf` allocates (stored behind a guard; alloc-array) [in ScratchBuffers.addOversample]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/ScratchBuffers.kt",
+   "line": 210,
+   "rule": "alloc-guarded",
+   "message": "`copyOf` allocates (stored behind a guard; alloc-array) [in ScratchBuffers.addOversample]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/ignitor/ScratchBuffers.kt",
+   "line": 213,
+   "rule": "alloc-object",
+   "message": "`ScratchBuffers(...)` constructs an object per call [in ScratchBuffers.addOversample]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystCompressorEffect.kt",
+   "line": 570,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in KatalystCompressorEffect.ensureDry]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystCompressorEffect.kt",
+   "line": 571,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in KatalystCompressorEffect.ensureDry]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystContext.kt",
+   "line": 53,
+   "rule": "alloc-guarded",
+   "message": "`StereoBuffer(...)` constructs an object (cache on miss; alloc-object) [in KatalystContext.busAt]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystDelayEffect.kt",
+   "line": 236,
+   "rule": "alloc-object",
+   "message": "`DelayLine(...)` constructs an object per call [in KatalystDelayEffect.ensureRing]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystDistortEffect.kt",
+   "line": 341,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in KatalystDistortEffect.ensureDry]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystDistortEffect.kt",
+   "line": 342,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in KatalystDistortEffect.ensureDry]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystFilterSwap.kt",
+   "line": 312,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in Crossfading.process]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystFilterSwap.kt",
+   "line": 313,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in Crossfading.process]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystFilterSwap.kt",
+   "line": 314,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in Crossfading.process]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystFilterSwap.kt",
+   "line": 315,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (stored behind a guard; alloc-array) [in Crossfading.process]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystKnobProgram.kt",
+   "line": 375,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in KatalystKnobProgram.samplePerlin]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystKnobProgram.kt",
+   "line": 384,
+   "rule": "not-null-assert",
+   "message": "`!!` is a hidden throw (a NullPointerException on null) in render code [in KatalystKnobProgram.sampleBerlin]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/katalyst/KatalystReverbEffect.kt",
+   "line": 535,
+   "rule": "nullable-num",
+   "message": "`lowpass: Double?` in the signature of hot `configure`",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/master/MasterBus.kt",
+   "line": 385,
+   "rule": "alloc-guarded",
+   "message": "`KatalystContext(...)` constructs an object (stored behind a guard; alloc-object) [in MasterBus.contextOver]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/voices/Voice.kt",
+   "line": 684,
+   "rule": "alloc-guarded",
+   "message": "`AudioBuffer(` (an array) allocates (cache on miss; alloc-array) [in RenderContext.voiceBufferAt]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/warehouse/ResourceWarehouse.kt",
+   "line": 84,
+   "rule": "alloc-array",
+   "message": "`arrayOfNulls` allocates per call [in ResourceWarehouse.stockDelayRings]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/warehouse/ResourceWarehouse.kt",
+   "line": 123,
+   "rule": "alloc-object",
+   "message": "`WarehouseStats(...)` constructs an object per call [in ResourceWarehouse.stats]",
+   "waived": false
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/PlaybackEngineDispatcher.kt",
+   "line": 368,
+   "rule": "exception",
+   "message": "a `catch` in render code: something here is expected to throw (code-style 7) [in PlaybackEngineDispatcher.renderEngine]",
+   "waived": true
+  },
+  {
+   "file": "audio_be/src/commonMain/kotlin/PlaybackEngineDispatcher.kt",
+   "line": 370,
+   "rule": "alloc-string",
+   "message": "a string template builds a string per call [in PlaybackEngineDispatcher.renderEngine]",
+   "waived": true
+  }
+ ]
+}

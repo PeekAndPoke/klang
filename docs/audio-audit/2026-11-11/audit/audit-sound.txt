@@ -1,0 +1,22 @@
+Disproof pass, cluster sound, sources (KLANG-00420)
+
+== L3-03 the impulse: non-harmonic energy re ALL harmonics (the meter's nonh_reH), dB ==
+pitch   110.0  engine -5.4  test replica of the engine rule -5.4  test triangle kernel -12.7  (triangle kernel below 20 kHz 4.8 re f0)
+pitch  1244.5  engine -5.3  test replica of the engine rule -5.3  test triangle kernel -12.9  (triangle kernel below 20 kHz -6.0 re f0)
+pitch  4186.0  engine -4.4  test replica of the engine rule -4.4  test triangle kernel -11.3  (triangle kernel below 20 kHz -10.3 re f0)
+pitch  7044.4  engine -4.8  test replica of the engine rule -4.8  test triangle kernel -12.6  (triangle kernel below 20 kHz -9.9 re f0)
+
+== L3-05 sample playback: non-harmonic energy re the tone, dB (findPitch off for the rate-conversion rows) and the tone's level ==
+44100 Hz file, 5000 Hz tone, pitch ratio 1: engine         total  -54.8  <20k  -54.8  <5k  -60.6   tone -6.05 dBFS (source -6.02)
+44100 Hz file, 5000 Hz tone, pitch ratio 1: test Hermite   total  -46.5  <20k  -46.5  <5k  -56.0   tone -6.05 dBFS (source -6.02)
+44100 Hz file, 10000 Hz tone, pitch ratio 1: engine        total  -30.6  <20k  -30.6  <5k  -50.5   tone -6.48 dBFS (source -6.02)
+44100 Hz file, 10000 Hz tone, pitch ratio 1: test Hermite  total  -26.4  <20k  -26.4  <5k  -59.1   tone -6.40 dBFS (source -6.02)
+44100 Hz file, 15000 Hz tone, pitch ratio 1: engine        total  -15.9  <20k  -16.0  <5k  -45.4   tone -7.99 dBFS (source -6.02)
+44100 Hz file, 15000 Hz tone, pitch ratio 1: test Hermite  total  -13.8  <20k  -13.8  <5k  -64.8   tone -7.67 dBFS (source -6.02)
+22050 Hz file, 2000 Hz tone, pitch ratio 1: engine         total  -62.5  <20k  -75.3  <5k  -80.0   tone -6.03 dBFS (source -6.02)
+22050 Hz file, 2000 Hz tone, pitch ratio 1: test Hermite   total  -52.7  <20k  -71.6  <5k  -77.0   tone -6.03 dBFS (source -6.02)
+22050 Hz file, 5000 Hz tone, pitch ratio 1: engine         total  -30.6  <20k  -31.1  <5k  -51.0   tone -6.48 dBFS (source -6.02)
+22050 Hz file, 5000 Hz tone, pitch ratio 1: test Hermite   total  -26.4  <20k  -26.5  <5k  -59.5   tone -6.40 dBFS (source -6.02)
+22050 Hz file, 9000 Hz tone, pitch ratio 1: engine         total   -8.8  <20k   -8.8  <5k  -45.3   tone -9.70 dBFS (source -6.02)
+22050 Hz file, 9000 Hz tone, pitch ratio 1: test Hermite   total   -7.6  <20k   -7.6  <5k  -73.4   tone -9.13 dBFS (source -6.02)
+44100 Hz file, 10000 Hz tone, through VoiceFactory (sample voice) total  -30.6  <20k  -30.6  <5k  -50.5   tone -9.49 dBFS (source -6.02)

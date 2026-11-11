@@ -1,0 +1,58 @@
+Disproof pass, cluster sound, stages (KLANG-00420)
+
+== L4-02 (b) the filter envelope: the same note at onsets k and k + 1 inside the block (k = 0..126), aligned by the onset ==
+max = largest |difference| re the note's peak; rms = RMS of the difference re the note's RMS; 'attack' = the first 20 ms only
+saw 110 Hz, lpf 300 Hz, env 24 st, default times (a 0.01 d 0.1 s 1 r 0.1), default adsr, gate 0.3 s
+  adjacent onsets, max re peak:       worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, rms re note rms:   worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, first 20 ms rms:   worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, max re peak (the framing probe's measure): worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, rms re note rms:                         worst -Infinity  median -Infinity  best -Infinity
+  control, the same voice without an envelope, onset 0 against onset 37: max |difference| 0.0
+IrishLamentTechno bass shape on a saw at 55 Hz: lpf 700, env 15.9, q 1.5, a .005 d .08 s .7 r .05; adsr .01 .2 .4 .05; gate .138 s
+  adjacent onsets, max re peak:       worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, rms re note rms:   worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, first 20 ms rms:   worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, max re peak (the framing probe's measure): worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, rms re note rms:                         worst -Infinity  median -Infinity  best -Infinity
+  control, the same voice without an envelope, onset 0 against onset 37: max |difference| 0.0
+Tetris sub shape on a tri at 82.4 Hz: lpf 200, env 56.4, q 1, a .01 d .1 s 0 r .09; adsr .01 .2 .4 .09; gate .3 s (the song adds analog 2.5)
+  adjacent onsets, max re peak:       worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, rms re note rms:   worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, first 20 ms rms:   worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, max re peak (the framing probe's measure): worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, rms re note rms:                         worst -Infinity  median -Infinity  best -Infinity
+  control, the same voice without an envelope, onset 0 against onset 37: max |difference| 0.0
+TetrisRemix sub shape on a tri at 82.4 Hz: lpf 300, env 48, a .005 d 1 s 0 r .2; default adsr; gate .3 s
+  adjacent onsets, max re peak:       worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, rms re note rms:   worst -Infinity  median -Infinity  best -Infinity
+  adjacent onsets, first 20 ms rms:   worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, max re peak (the framing probe's measure): worst -Infinity  median -Infinity  best -Infinity
+  onset k against onset 0, rms re note rms:                         worst -Infinity  median -Infinity  best -Infinity
+  control, the same voice without an envelope, onset 0 against onset 37: max |difference| 0.0
+
+== L4-02 (c) the proposed fix shape: knots on a grid anchored to the note (every N frames plus the breakpoints), coefficients stepped between them ==
+saw 110 Hz into lowpass 300 Hz, env 24 st, a 0.01 d 0.1 s 1 r 0.1 (exponential), q 0.707, gate 0.3 s; compared over 0.400 s (the note, the release and 50 ms after); source identical at offsets 0 and 37: max diff 0.0
+test emulation of today's law against the ENGINE at all 128 onsets: largest |difference| 0.16164355236335534 (0 = the emulation is the engine, bit for bit)
+today against the exact per-sample cutoff: max re peak worst -69.6 dB, median -69.6, best -69.6; rms re rms worst -87.1
+grid N=128 (+4 breakpoints, 153 coefficient sets per note): against exact max -18.4 rms -44.5 dB; the CHANGE against today, over the 128 onsets: max re peak median -18.5 worst -18.5, rms re rms median -44.5 worst -44.5
+grid N=64 (+4 breakpoints, 302 coefficient sets per note): against exact max -36.7 rms -61.9 dB; the CHANGE against today, over the 128 onsets: max re peak median -36.8 worst -36.8, rms re rms median -61.9 worst -61.9
+grid N=32 (+4 breakpoints, 600 coefficient sets per note): against exact max -42.8 rms -67.2 dB; the CHANGE against today, over the 128 onsets: max re peak median -42.9 worst -42.9, rms re rms median -67.3 worst -67.3
+today's own spread, onset 0 against onset k, rms re rms: median -Infinity worst -Infinity
+coefficient sets (each a tan and a divide) over this note: today 192; grid N=128 153; N=32 600
+
+== L7b-02 the vowel stage (Katalyst classic chain, vowel slots), wet 1, floor 0 unless said ==
+bass:a: freq, dB, q in the table; measured peak, its gain (dB), its -3 dB width; freq / q
+    600 Hz    0 dB q   60:  peak at 600.0 Hz, gain 9.5 dB, -3 dB width 10.0 Hz;  freq / q 10.0 Hz
+   1040 Hz   -7 dB q   70:  peak at 1040.0 Hz, gain 3.9 dB, -3 dB width 14.8 Hz;  freq / q 14.9 Hz
+   2250 Hz   -9 dB q  110:  peak at 2249.6 Hz, gain 5.8 dB, -3 dB width 20.1 Hz;  freq / q 20.5 Hz
+   2450 Hz   -9 dB q  120:  peak at 2450.5 Hz, gain 6.6 dB, -3 dB width 20.1 Hz;  freq / q 20.4 Hz
+   2750 Hz  -20 dB q  130:  peak at 2752.1 Hz, gain -3.3 dB, -3 dB width 22.3 Hz;  freq / q 21.2 Hz
+soprano:a: freq, dB, q in the table; measured peak, its gain (dB), its -3 dB width; freq / q
+    800 Hz    0 dB q   80:  peak at 800.0 Hz, gain 12.0 dB, -3 dB width 10.0 Hz;  freq / q 10.0 Hz
+   1150 Hz   -6 dB q   90:  peak at 1150.3 Hz, gain 7.1 dB, -3 dB width 12.7 Hz;  freq / q 12.8 Hz
+   2900 Hz  -32 dB q  120:  peak at 2901.3 Hz, gain -16.3 dB, -3 dB width 24.2 Hz;  freq / q 24.2 Hz
+   3900 Hz  -20 dB q  130:  peak at 3900.5 Hz, gain -3.7 dB, -3 dB width 28.8 Hz;  freq / q 30.0 Hz
+   4950 Hz  -50 dB q  140:  peak at 4960.3 Hz, gain -28.4 dB, -3 dB width 111.2 Hz;  freq / q 35.4 Hz
+bass:a, wet 1 floor 0, a saw's level out re in by note (A2 to A3): 110.0:-22.1  116.5:-14.7  123.5:-16.7  130.8:-16.9  138.6:-20.8  146.8:-12.3  150.0:-4.3  155.6:-17.1  164.8:-20.8  174.6:-14.2  185.0:-18.8  196.0:-10.1  207.7:-10.6  220.0:-20.1   swing 17.8 dB (110 vs 150: 17.8 dB)
+bass:a, default wet .5 floor .2, a saw's level out re in by note (A2 to A3): 110.0:-6.0  116.5:-5.8  123.5:-5.9  130.8:-5.8  138.6:-6.0  146.8:-5.6  150.0:-3.9  155.6:-5.9  164.8:-6.0  174.6:-5.7  185.0:-5.9  196.0:-5.4  207.7:-5.3  220.0:-5.9   swing 2.1 dB (110 vs 150: 2.1 dB)

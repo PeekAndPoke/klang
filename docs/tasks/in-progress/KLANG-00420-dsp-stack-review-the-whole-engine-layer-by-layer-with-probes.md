@@ -387,6 +387,83 @@ frequency the aliasing is healthy (-60 dB)") became.
 - **Not built:** tests for `engine_health.py` (it has none; the rule is plain and the page was checked by a rebuild and
   a parse of its script).
 
+## Closing measurement run (2026-11-11)
+
+Every probe rerun on the tree after the decisions passes A, B1, B2 and C (HEAD 25786c971, clean), against the run of
+2026-11-10. The files: `docs/audio-audit/2026-11-11/` (`stage-probe`, `stage-cost`, `stage-cost-js` with
+`stage-cost-compare`, `clicks`, `framing`, `hot-path-lint`, `dead-knobs`, `corpus-check.txt`, `song-benchmark-jvm.md`;
+the reproductions' output in `audit/`). The aliasing files of pass C stay: a rerun after later edits to the meter and
+the shapers gave byte-identical JSON. The verdicts are updated and the health page is rebuilt (no red item left).
+
+**What changed state** (before is 2026-11-10):
+
+- Stage probe (165 knob sets): red 2 to 0, yellow 47 to 39. Fixed: the duck's NaN latch (L7b-01, finite again after
+  one sample), the coarse hold of an infinity (L4-07), the shimmer's second NaN (L4-06), the delay at its defaults now
+  ends on an exact zero (was 1.44e-21). The q 200 filters at 23999 Hz sit on the 0.49 fs clamp now (L4-10): their
+  impulse, step and noise tails end, only the 1e30 row keeps one. Unchanged and accepted (L4-01): the analog lowpass at
+  1 kHz holds 7.83e27 after 1e30, the highpass 5.86e10, the lowpass at 23999 q 200 2e30.
+- Clicks (218 rows, one new): yellow 29 to 24. Fixed: delay ON kink 114.8 to 1.50 (burst -27.5 to -95.6 dB), reverb ON
+  32.8 to 1.04 (-54.5 to -119.9), the swap into a room 63.1 to 1.05 (-49.1 to -114.4), the new swap into a delay 1.99
+  (-89.5), `compressor.attack` 0.1 to 0.003 17.8 to 1.21, the supersine and perlinnoise note ends at the default adsr
+  9.42 and 7.32 to under 1 (L2-01). **New lead:** `reverb.lowpass` 1000 to unset, kink 1.31 to 6.84 and burst -95.0 to
+  -68.6 dB, 49.75 ms after the change (the glide's end; the knob became a real cutoff in KLANG-00428). Moved: the sine's
+  teardown row 10.0 to 25.2 (S-01 moved its gate off a zero crossing), the pluck and superpluck starts (retuned, L3-01),
+  the perlinnoise cut 5.75 to 11.4. The `min` and `max` door rows are relabelled, their numbers identical.
+- Framing (218 cases, one new): identical 182 to 195, audible 31 to 19. All twelve filter-envelope cases (L4-02) are
+  identical at every offset (were -10.5 to -22.6 dB re the peak). The analog-drift rows (by design) moved 1 to 5 dB.
+  Still the one yellow: the white-noise cut draws a different count of random values at 127 offsets (as on 2026-11-10).
+- Cost, JVM (sine 2.24 to 2.27 ns; median row unchanged): cheaper `exp` and `stompbox` at amount 3, 5.4 to 5.7 times
+  (L4-04), the doors' `drive+shape` 0.41 and 0.55 (L4-05), the default compressor 0.71 (L7b-04); dearer the
+  super stacks 1.47 to 1.61 times and the supersaw voice 1.31 (L3-02's box, kept by decision), the sample playhead 1.8 to
+  1.9 (L3-05's cubic read), `distort:hard` at amount 3 1.27 to 1.29 (not explained by a ticket). No row allocates per
+  block. Kotlin/JS (sine 4.07 to 3.74 ns, median row 1.03): the same moves, the bare saw, ramp and square 1.8 to 2.1
+  times; JS only, tri, zawtooth and zamp 1.4 times (rows under one sine). V8's per-block bytes are unchanged (the
+  partial bank 48, the Ignitor phaser 32, the fm voice and shimmer 16, and the duck 192 B, which the 2026-11-10 list
+  missed).
+- Hot-path lint: 66 to 67 findings plus 2 waived (the host's catch, KLANG-00425). New: `ResourceWarehouse.stockDelayRings`
+  (`arrayOfNulls`; warm-up only, its KDoc says not for render code, so the lint's scope is wrong there) and a guarded
+  array in `SuperKarplusStrongIgnitor.generate`; gone: `Ducking(...)` in `KatalystDuckEffect.configure`. Dead knobs:
+  unchanged.
+
+**The audit reproductions** (`KLANG_PROBE=audit`, all 19 tests ran):
+
+| Row | Now | State |
+|---|---|---|
+| L6-03, L7b-06 the deactivation of a 10 s delay | 571 to 72 us; drain end with deactivation 953 to 72 us; `DelayLine.reset` 0.1 us | fixed (KLANG-00428); the reverb's reset 56 us, accepted |
+| N-R1 the first activation of a 10 s delay | 2315 us (87 % of the block), 12.4 MB; was 1573 to 1781 us | open: the 60 s bound and warm rings of 1 s and 2 s are built (KLANG-00428), a 10 s ring is not warmed |
+| L4-09 shimmer at wet 0, one build | 774,520 B and 71 us to 2,272 B and 2.65 us | fixed (KLANG-00429) |
+| L5-04 the default saw's build | 12.2 us and 5,784 B to 3.50 us and 2,456 B | fixed (KLANG-00429) |
+| L5-03 per-note rings | pluck 26,040 to 22,760 B, superpluck 166,816 to 163,584 B per build | open: the shimmer ring is sized (KLANG-00429); the Karplus rental is planned with the maintainer |
+| L5-09 a region voice's first block | 80 B | unchanged by decision (accepted, KLANG-00429) |
+| L2-06 16 notes in one block | default saw 513 to 221 us (19 to 8 %), every stage 1056 to 663, superpluck max 2639 to 1301, shimmer max 4850 to 384; one isolated note 60 to 11 us | unchanged by decision (option (c), KLANG-00427): the build stays in the render call, its cost is lower |
+| L1-06, L8-05, L9-08 the diagnostics | 128 to 376 B and 0.02 to 0.34 us per report (was 104 to 352 B) | unchanged by decision (D4, KLANG-00431); the 24 B are B2's three counts |
+| L9-02, L9-04 the backend halves | a straggler revives a stopped engine; a restart's voices land at gain 1.0 | unchanged by decision (D1, KLANG-00431); the frontend halves are fixed |
+| L8-03, L9-01 the hunt | 0 throws in 35,829 slot renders and 884 chain runs | fixed (KLANG-00425); its L6-01 lines (12 Karplus and perlin knobs at 1e308, `reverb.wet` 1e308) unchanged by decision (L6-01 (a), N2) |
+| L4-01 the saturating SVF | the same numbers (1e4 holds 0.11 s, 2e4 1.70 s, 8 kHz from 1e4 not settled) | unchanged by decision (accepted, KLANG-00432) |
+| N1 near fs/3 (both repros) | the 16 kHz q 200 analog 5 and 15 tails settle in 0.15 to 0.17 s; the sprudel pluck ends on exact zeros | fixed (KLANG-00432) |
+| L8-02 a huge constant on the mix | the same: 1e15 crushes the music (-15.4 dB), 1e17 silences it | still open for the constant; the count of option (c) is built |
+| L4-11, L4-08 | the same (drive 257 gives NaN; one bad sample's answers) | unchanged by decision (N2, the rule of L4-08; KLANG-00432) |
+| L3-03 the impulse | -5.4 to -4.4 dB | unchanged by decision (accepted, KLANG-00430) |
+| L3-05, L9-07 a file off the engine's rate (JVM) | 44.1 kHz file: 5, 10, 15 kHz -33.9, -20.4, -11.1 to -54.8, -30.6, -15.9 dB | still open: the JVM converter is KLANG-00438 (the browser half is built) |
+| L4-02 (b) onsets one frame apart | -inf everywhere (was -40 to -63 dB in the songs' shapes) | fixed (KLANG-00432, pass C) |
+| L4-02 (c) the grid emulation | its emulation of the old law no longer equals the engine (0.16 apart) | stale since pass C: the row measures a law the engine no longer has |
+| L7b-02 the vowel widths | 10 to 22 Hz, swing 17.8 and 2.1 dB | still open (KLANG-00428, the vowel table) |
+
+**What the longer voices cost** (L2-01's 36 ms settle, B1's note-off at stop): neither tool shows it directly. The stop
+changes nothing an offline render plays (the renderer never stops a playback early) and the cost probe has no stop row;
+its effect is fewer voices after a stop, not more. The settle has no switch to compare against, and the 2026-11-10 song
+run ran under JFR, so its RTF is not comparable. The song benchmark today: Der Schmetterling 3521 onsets, 11.0 voices
+(was 11.0), medRTF 0.117; Seltsamere Dinge 595 onsets, 16.0 voices (was 15.0), medRTF 0.046. An estimate from those
+counts: 36 ms more per note is at most 14 percent more voice time for Der Schmetterling (3521 notes in 83.5 s at 11
+voices) and 1.5 percent for Seltsamere Dinge; a settling voice renders its whole tree, so that is also its bound on
+voice cost.
+
+**The corpus** (`runSongBenchmark --args=corpus`, samples from the cache, not accepted): RED against the reference of
+2026-11-06, which predates every audit fix. All 18 rows differ: the three frozen texts, two unedited live songs (Final
+Synthasy VII Prelude, Drunken Synthlor) and the 13 live songs edited since (information). The tickets name the
+deliberate sound changes (KLANG-00426, 00427, 00430, 00432, among them L3-01, L2-01, L2-03, L3-02, L3-05, L4-02,
+L4-05); this run does not attribute rows to fixes.
+
 ## History
 
 - 2026-11-10: created.
@@ -394,3 +471,4 @@ frequency the aliasing is healthy (-60 dB)") became.
 - 2026-11-10: all seven probes built (the cost table on the JVM only), the first run in `docs/audio-audit/2026-11-10/`, the engine health page. Next: the Kotlin/JS half of the cost table and the profiles, then the nine-layer audit on Fable 5.2 (held for the start of a budget week) and the adversarial pass.
 - 2026-11-10: the audit ran (ten layers, 120 findings) and the disproof pass (69 challenged, 0 disproved); the index is `docs/audio-audit/2026-11-10/audit/SUMMARY.md`. Waiting for the maintainer to pick the tickets.
 - 2026-11-11: decisions pass C: the aliasing meter's healthy limit, judged on the health page.
+- 2026-11-11: closing measurement run: every probe and reproduction rerun into `docs/audio-audit/2026-11-11/`, verdicts updated, page rebuilt; the corpus is red against the pre-audit reference, not accepted.
