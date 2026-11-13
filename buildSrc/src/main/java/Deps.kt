@@ -48,7 +48,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.117.0"
+        private const val ultra_version = "0.118.0"
 
         object Ultra {
             const val cache = "io.peekandpoke.ultra:cache:$ultra_version"
@@ -95,7 +95,6 @@ object Deps {
             const val logging = "io.peekandpoke.funktor:logging:$ultra_version"
             const val insights = "io.peekandpoke.funktor:insights:$ultra_version"
             const val rest = "io.peekandpoke.funktor:rest:$ultra_version"
-            const val staticweb = "io.peekandpoke.funktor:staticweb:$ultra_version"
             const val messaging = "io.peekandpoke.funktor:messaging:$ultra_version"
             const val testing = "io.peekandpoke.funktor:testing:$ultra_version"
         }
