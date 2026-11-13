@@ -22,7 +22,8 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 ### The loop
 
 1. **Collect the change set** with `review-pack` (`/console-tools`): `full.diff`, from round 2 on also `delta.diff`.
-2. **Review round** — spawn **FRESH** reviewer agents (general-purpose), in parallel.
+2. **Review round**: spawn **FRESH** reviewer agents, one per charter, from the rung the loop's level and the
+   code's tier name (the effort ladder below), in parallel.
    **Round 1 is BLIND**: the task description, the change set, and the constraints list — nothing
    else.
    **Every consecutive round runs in TWO PHASES with the same fresh agent** (maintainer,
@@ -139,8 +140,8 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   render on the same tree.
 - **The effort ladder: the level follows the findings, not the round number** (maintainer, 2026-10-25,
   Mission Control's MC-00033, merged from the blueprint `ea3a129`; before it, the ladder went by round
-  number, 2026-09-18). The Agent tool has no per-call effort dial, so each rung is an agent definition in
-  `.claude/agents/` with model and effort pinned. The four rungs and their names are the blueprint's, the same
+  number, 2026-09-18). Each rung is an agent definition in `.claude/agents/` with model and effort pinned; spawn it
+  without `model` and `effort`, a per-call value would override the pin. The four rungs and their names are the blueprint's, the same
   in every repo (maintainer, 2026-11-13, Mission Control `9310bcc`); a name says model and effort, not the level:
 
   | rung | reviewers | how to spawn |

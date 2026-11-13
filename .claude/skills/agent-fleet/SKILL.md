@@ -33,15 +33,13 @@ gets the cheapest model/effort tier that can do its task well.
 | Trivial mechanical work                              | `haiku`                | extract/list/count, grep sweeps, format conversion, high-volume simple scans                                         |
 | Frontier reasoning                                   | inherit (omit `model`) | architecture judgment, by-ear/sound design tradeoffs, cross-cutting analysis the coordinator can't decompose further |
 
-**Klang note — review rounds 3 and later run on the strongest tier.** Maintainer instruction
-2026-09-05: when a `/review-loop` needs a third round, run the reviewers on the strongest tier. Since 2026-11-13
-the `/review-loop` ladder decides it: four rungs (`reviewer-opus-high`, `reviewer-fable-medium`,
-`reviewer-fable-high`, `reviewer-fable-xhigh`), the level following the findings; the top rung is the newest Fable at
-xhigh.
+**Klang note: review rounds follow the `/review-loop` ladder.** The level follows the findings, not the round
+number (since 2026-10-25). Its rungs since 2026-11-13: `reviewer-opus-high`, `reviewer-fable-medium`,
+`reviewer-fable-high`, `reviewer-fable-xhigh`; the top rung is the newest Fable at xhigh.
 
 **Klang note — DSP review is correctness-critical.** The audio-engineer reviewer in `/review-loop`
-judges numerical stability, per-sample cost and click risk; run it at `opus` or inherit, never
-`sonnet`. Same for anything touching `audio_be` hot paths.
+judges numerical stability, per-sample cost and click risk; run it on the ladder's rung (`/review-loop`), never
+`sonnet`. Other work touching `audio_be` hot paths runs at `opus` or inherit, never `sonnet`.
 
 ## Effort tiers
 
@@ -50,28 +48,29 @@ judges numerical stability, per-sample cost and click risk; run it at `opus` or 
 | Mechanical / bulk stages      | `low`                         |
 | Standard work                 | omit (inherit session effort) |
 | Hardest verify / judge stages | `high` or `xhigh`             |
-| Review rounds 2, 3+           | `high`, then `max` on the top rung, via the `reviewer-*` agent definitions (`/review-loop`, the effort ladder); `max` nowhere else (maintainer, 2026-09-28 and 2026-10-24) |
+| Review rounds (every level)   | pinned per rung by the four `reviewer-*` agent definitions (`/review-loop`, the effort ladder): opus high, fable medium, fable high, fable xhigh; `max` nowhere (the four rungs, maintainer, 2026-11-13) |
 
 ## Where the dials live
 
-- **Agent tool**: set the `model` parameter per call. There is no per-call effort override — effort comes from the agent
-  definition. `fork`-type agents always inherit the parent model; don't set
+- **Agent tool**: set the `model` parameter per call, except for a `reviewer-*` agent: omit `model` and `effort`
+  there, the definition pins both and a per-call value would override it. Elsewhere effort comes from the agent
+  definition (the tool's own `effort` parameter is only for an explicit request). `fork`-type agents always inherit the parent model; don't set
   `model` on them. Klang pins effort through the four reviewer definitions in `.claude/agents/`
   (`reviewer-opus-high`, `reviewer-fable-medium`, `reviewer-fable-high`, `reviewer-fable-xhigh`; the blueprint's names
   since 2026-11-13, before that `reviewer-high` and `reviewer-max`). A new or renamed definition is picked up only by a
   new session.
 - **Workflow `agent()`**: set both `model` and `effort` in the opts, per stage.
 - **Custom agents** (`.claude/agents/*.md`): can pin model/effort in frontmatter; prefer that for agents whose task type
-  never varies. Klang currently has one: `music-platform-strategist`
-  (explicit-invocation only, never for coding).
+  never varies. Klang has several (the four reviewers, `reader`, `writer`, `visualizer`, and
+  `music-platform-strategist`, which is explicit-invocation only, never for coding).
 - **Agent type**: prefer `Explore` for read-only search fan-out (it reads excerpts, not whole files — cheaper and it
   won't edit anything). Use `general-purpose` when the worker must run commands or write files.
 
 ## Decision procedure
 
 1. Before launching, classify each sub-task into a tier using the tables above.
-2. Set `model` (and `effort`, where available) explicitly on every call — don't let a whole fleet silently inherit the
-   session model.
+2. Set `model` (and `effort`, where available) explicitly on every call, so a whole fleet does not silently inherit the
+   session model. The exception is a `reviewer-*` agent: its definition pins both, pass neither.
 3. When launching a fleet, state the mapping in one line (e.g. "3 Sonnet finders + 1 Opus verifier") so the user can
    correct it — that feedback is how this provisional policy improves.
 4. Decide **who owns the build** before launching (see below). Say it in the same line.
@@ -247,6 +246,8 @@ The safeguards, for every write action:
 
 ## Changelog
 
+- **2026-11-13**: the review ladder's four rungs and agent names are the blueprint's (maintainer); Fable is back on
+  rungs 2 to 4, `reviewer-high` is `reviewer-opus-high`, `reviewer-max` is gone.
 - **2026-10-30**: IntelliJ Refactor Rename, Move and Safe Delete allowed with the meeting's safeguards; the gate
   lists `Move` and `SafeDelete` (maintainer, in the coordinator's session). Reformat Code stays off.
 - **2026-10-30**: weekly meeting (MC-00017): stage nothing ahead of a commit (`git add -N` in the commit's `&&` chain),
@@ -254,8 +255,6 @@ The safeguards, for every write action:
 
 - **2026-10-24**: the IDE action gate allows `OptimizeImports` and `SaveAll`; the two Optimize Imports traps noted.
 
-- **2026-11-13**: the review ladder's four rungs and agent names are the blueprint's (maintainer); Fable is back on
-  rungs 2 to 4, `reviewer-high` is `reviewer-opus-high`, `reviewer-max` is gone.
 - **2026-10-24**: review rounds 3 and later run on Opus 5.5 at max effort, no Fable (maintainer); `reviewer-xhigh` is now
   `reviewer-max`. The Opus plus Fable experiment (KLANG-00328) is suspended.
 
