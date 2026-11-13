@@ -15,7 +15,8 @@ internal val kokonSong = Song(
     title = "Kokon",
     rpm = 19.0,
     icon = "egg",
-    code = """import * from "stdlib"
+    code = """
+import * from "stdlib"
 import * from "sprudel"
 
 // Kokon: before there is a butterfly, there is a cocoon.
@@ -458,7 +459,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.98).ignp("harmonics", 1.00)
   .adsr(0.003, 0.75, 0.5, 0.040).hpf(30)
-  .clip(0.95).gain(0.95).cylinder(15)
+  .clip(0.95).gain(0.80).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -586,16 +587,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    [8, spinning],
-    [4, answering],
-    [4, quickening],
-    [4, stretching],
-    [4, holdingBreath],
+    // [8, spinning],
+    // [4, answering],
+    // [4, quickening],
+    // [4, stretching],
+    // [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    [12, flyingOff],
-    [4, lastChord],
-    [2, silence]
+    // [12, flyingOff],
+    // [4, lastChord],
+    // [2, silence]
   )
     .scale("d3:minor")
     .analog(feel)
@@ -605,17 +606,17 @@ export song = stack(
     .bpf(perlin(1400, 1600).slow(4), 0.7)
     .apply(drumRoom)
  
-  , master(Katalyst(k => k
+  , master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 9.5, 6500)                       // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.05)                                    // the house level, -14 LUFS
+    .gain(1.20)                                    // the house level, -14 LUFS
     .bands(b => b
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.00)).cut(150)
-      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.10, "soft")).mul(0.90)).cut(5000)
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.10))
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(0.9)
+    .mul(0.92)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
-  ))
+  )))
 )
 
 

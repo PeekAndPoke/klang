@@ -558,17 +558,17 @@ export song = stack(
   , // Song body
   song_body.apply(song_arrange)
   , // Master
-  master(Katalyst(k => k
+  master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 6500)
     .gain(4.8)
     .bands(b => b
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.00)).cut(150)
-      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.10, "soft")).mul(0.90)).cut(5000)
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.10))
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
     .mul(0.90)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
-  ))
+  )))
 )
 
 
