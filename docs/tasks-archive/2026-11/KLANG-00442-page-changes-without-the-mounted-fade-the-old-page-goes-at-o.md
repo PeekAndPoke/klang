@@ -1,6 +1,6 @@
 # KLANG-00442: Page changes without the mounted fade: the old page goes at once, the browser's view transition tried on top
 
-> **Status (2026-11-13): IN PROGRESS.** Step 1 is built; the maintainer judges the fade by eye.
+> **Status (2026-11-13): DONE.** The maintainer: "transition is nice now!" The browser's view transition stays.
 
 ## Why this exists
 
@@ -51,9 +51,8 @@ animation. That could not be smooth:
      spec case for them (scaffolding for the removed copy; a page that mounts fills, also under the open Motor
      menu). `TutorialPage` reports only its own lesson as opened. `EditorKeysCorner` keeps its check: the page is
      inert under the Motor's menu.
-2. **The maintainer looks at it** on the heaviest page changes (a song page, a tutorial, the start page).
-3. **Then one of two:** it stays, or the fade is removed fully and the component is renamed (it no longer
-   transitions), with the CSS and the two specs' wording.
+2. **Done (2026-11-13): the maintainer looked at it:** "transition is nice now!"
+3. **It stays.** The other outcome (the fade removed fully, the component renamed) is not needed.
 
 ## Known limits
 
@@ -83,3 +82,4 @@ animation. That could not be smooth:
   drawn above everything, unclipped), 3 MINOR, 1 NIT; fixed. Round 2 (reviewer-opus-high): CLEAN, 3 MINOR (the wait
   for the redraw not observable and removed; a skipped page change drew before the next one's picture) and 2 NIT
   applied. 14 mutants killed over three campaigns. Waiting for the maintainer's eye.
+- 2026-11-13: DONE. The maintainer: "transition is nice now!" The browser's view transition stays.
