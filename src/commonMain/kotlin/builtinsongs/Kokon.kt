@@ -43,7 +43,7 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4200, 2.4)                              // the peak, up high and narrow
+  .lowpass(4600, 2.4)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
@@ -65,7 +65,7 @@ let pedalStock = Ign.fn(x => x)
 let pedalScreamer = Ign.fn(x => x
   .parallel(
     clean => clean,
-    dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.20, "soft")).mul(0.5)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+    dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.25, "soft")).mul(0.5)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
   .lowpass(4200)                                   // the tone knob, half way
   .mul(0.55))                                       // level
@@ -78,7 +78,7 @@ let pedalFuzz = Ign.fn(x => x
 
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
 let pedalBoost = Ign.fn(x => x
-  .highpass(360)
+  .highpass(320)
   .mul(1.2))                                       // level
 
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
@@ -98,20 +98,20 @@ let preampClean = Ign.fn(x => x
 let preampCrunch = Ign.fn(x => x
   .highpass(120)
   .oversampleAtLeast(4, y => y
-    .distort(0.40, "asym").highpass(110)
-    .distort(0.40, "tube").highpass(100))
-  .lowpass(5800)
-  .mul(0.45))                                       // volume
+    .distort(0.40, "tube").highpass(110)
+    .distort(0.20, "asym").highpass(100))
+  .lowpass(5600)
+  .mul(0.57))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .oversampleAtLeast(4, y => y                      // the three stages at 8x: one trip up, one down
     .distort(0.20, "tube").highpass(110)
-    .distort(0.35, "soft").highpass(100)
-    .distort(0.55, "hard"))
-  .lowpass(4200)                                   // the fizz
-  .mul(0.45))                                      // volume
+    .distort(0.15, "asym").highpass(100)
+    .distort(0.45, "soft"))
+  .lowpass(5200)                                   // the fizz
+  .mul(0.57))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
 let powerStock = Ign.fn(x => x.drive(0.3))
@@ -124,8 +124,8 @@ let powerPushPull = Ign.fn(x => x
 
 // Class A: a lopsided clip, even harmonics, the chime.
 let powerClassA = Ign.fn(x => x
-  .oversampleAtLeast(2, y => y.distort(0.15, "asym"))
-  .mul(1.5))                                       // master
+  .oversampleAtLeast(2, y => y.distort(0.25, "asym"))
+  .mul(1.3))                                       // master
 
 // Cabinets: the linear half of the amp. All of these are static and linear, so they move to the cylinder unchanged once
 // the Katalyst DSL lands.
@@ -136,9 +136,9 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.90)        // thump: closed-back box resonance
-    .band(freq =  400, q = 0.5, db =  4.60)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  1.80)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  1.80)        // thump: closed-back box resonance
+    .band(freq =  400, q = 0.5, db =  4.50)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  1.30)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(80, 0.707, x => x.passes(2)))
@@ -195,8 +195,7 @@ let makeGuitar = (rig) => {
     .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.whitenoise().adsr(pAttack, 0.03, 0.0, 0.03).highpass(Ign.perlin(1).mul(200).add(2000)).mul(0.03))
-    .plus(Ign.whitenoise().adsr(pAttack, 0.5, pSustain, pRelease).highpass(Ign.perlin(1).mul(200).add(2000)).mul(0.01))
+    .plus(Ign.whitenoise().adsr(pAttack, 0.3, pSustain, pRelease).highpass(Ign.perlin(1).mul(200).add(2000)).mul(0.02))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "exp"))
@@ -206,8 +205,7 @@ let makeGuitar = (rig) => {
   // synthetic (2026-09-14)
   return rig(signal)
     // Missing piece in the chain: Mircophone
-    .mul(0.22)
-    // .oversampleAtLeast(4, y => y.shape("soft")).mul(1.2)
+    .mul(0.17).oversampleAtLeast(4, y => y.shape("soft")).mul(1.1)
     // sprudel classic
     .classic()
 }

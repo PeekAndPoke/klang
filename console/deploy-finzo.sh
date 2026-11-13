@@ -36,8 +36,6 @@ DIST="./build/dist/js/productionExecutable"
 cd "$(dirname "$0")/.."
 echo "Working in $(pwd)"
 
-shopt -s dotglob
-
 # The release is named after what was built: the distribution's version.json carries the version and the git
 # revision it was built at, and `-dirty` when the tree had uncommitted changes (maintainer, 2026-10-07: deploying
 # a build with uncommitted changes is allowed; its name says so).
@@ -68,8 +66,12 @@ RELEASE="$BASE/versions/$NAME"
 echo "Release $NAME -> $HOST:$RELEASE"
 ssh "$HOST" "mkdir -p '$RELEASE' && touch '$RELEASE'"
 
+# rsync sends only what differs, so a repeated deploy of the same release is quick, and --delete makes the release
+# directory exactly the distribution. --chmod sets the modes the web server needs, whatever the local ones are: the
+# build tree here has no permissions for "other" (files 660, directories 770), and scp carried those over, so the
+# server could not read .htaccess and answered 403 (2026-11-13).
 echo "Uploading the distribution"
-scp -r "$DIST"/* "$HOST:$RELEASE/"
+rsync -rltz --delete --chmod=D755,F644 "$DIST"/ "$HOST:$RELEASE/"
 
 # Swap the link in one step (a new link renamed over the old one), and refuse if `current` is a real directory.
 echo "Switching current to versions/$NAME"
