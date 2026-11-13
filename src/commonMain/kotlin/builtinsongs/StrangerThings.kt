@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val strangerThingsSong = Song(
     id = "${BuiltInSongs.PREFIX}-stranger-synths",
     title = "Seltsamere Dinge",
-    rpm = 33.0,
+    rpm = 32.0,
     icon = "film",
     code = """import * from "stdlib"
 import * from "sprudel"
@@ -32,7 +32,7 @@ stack(
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").cylinder(1)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(freq = 2000, q = 7.0).hpf(1000).analog(2)
-    .sound("pulse").onepole(3743).crush(5).gain(0.35).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.2) // .solo()
+    .sound("pulse").onepole(3743).crush(5).gain(0.40).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.2) // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body(material = "membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
@@ -68,7 +68,7 @@ stack(
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
       .cylinder(6).gain(0.6).pan(0.50).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(70).lpf(12800)
       .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
-  ).reverb(wet = 0.20, size = 3.0, lowpass = 8000).compressor(-19, 2, 6, 0.01, 0.2)
+  ).reverb(wet = 0.30, size = 4.0, lowpass = 10000)
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").legato(2)
     .cylinder(7).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
@@ -81,7 +81,7 @@ stack(
       .band(mid => mid.distort(0.15, "soft").mul(0.85)).cut(5000)
       .band(low => low.distort(0.01, "soft").mul(1.00))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(3.5)
+    .mul(3.2)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   )))
 )

@@ -15,8 +15,7 @@ internal val tetrisSong = Song(
     title = "Stein um Stein",
     rpm = 39.5,
     icon = "gamepad",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // ── Patterns: the raw musical content ───────────────────────────────────
@@ -65,7 +64,7 @@ export leadShape = (p) => p
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
   .sound("supersaw").cylinder(1)
-  .gain(0.19).adsr(0.007, 0.5, 0.7, 0.10).lpf(attack = 0.007, decay = 2.0, sustain = 0.0, release = 0.10).pan(0.2)
+  .gain(0.20).adsr(0.007, 0.5, 0.6, 0.10).lpf(attack = 0.007, decay = 2.0, sustain = 0.0, release = 0.10).pan(0.2)
   .apply(
     x => x.pan(0.1),
     x => x.pan(0.9),
@@ -74,7 +73,7 @@ export bassShape = (p) => p
   .phaser(rate = 1/19, wet = 0.35, center = 1600, sweep = 1200)
   .unison(voices = sine.range(4, 12).slow(80), spread = sine.range(0.1, 0.4).early(1.5).slow(24))
   .hpf(freq = 120, passes = 2)
-  .lpf(freq = 3000, env = 10.0, q = berlin.range(1.5, 2.2).slow(32))
+  .lpf(freq = 3500, env = 10.0, q = berlin.range(1.5, 2.2).slow(32))
 
 // Sub voice: tremoloed triangle, soft distortion.
 export subShape = (p) => p
@@ -109,7 +108,7 @@ export song = stack(
   sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
   drums,
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
-    .reverb(0.10, 8, 5500)
+    .reverb(0.10, 8, 6500)
     .bands(b => b
       .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft").mul(0.90)).cut(5000)
