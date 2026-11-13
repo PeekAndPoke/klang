@@ -26,13 +26,13 @@ let notchFreq = sine.range(320, 520).slow(20)
 
 stack(
   // Claps --------------------------------------------------------------------------------------------------------------------
-  sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).cylinder(0).gain(0.285).legato(2.0)
+  sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).cylinder(0).gain(0.225).legato(2.0)
     .bpf(sine.range(2000, 2200).fast(3.14)).hpf(800)
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").cylinder(1)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bpf(freq = 2000, q = 7.0).hpf(1000).analog(2)
-    .sound("pulse").onepole(3743).crush(5).gain(0.2).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.2) // .solo()
+    .sound("pulse").onepole(3743).crush(5).gain(0.35).clip(0.35).pan(berlin.slow(2)).adsr(0.03, 0.08, 0.2, 0.2) // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep)).body(material = "membrane")
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
@@ -44,7 +44,7 @@ stack(
       x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.08).pan(0.3).superimpose(pan(0.7)),
       x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(24).gain(0.6 * 0.04).pan(0.1).superimpose(pan(0.9))
     ).filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
-  , // Bass -----------------------------------------------------------------------------------------------------------------------------
+  , // Guitar -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4").clip(0.7).struct("x!4").slow(16)
     .cylinder(3).s("supersaw").unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
     .gain(1.0 * 0.50).adsr(0.01, 1.0, 0.66, 2.75).coarse(factor = 2) // solo()
@@ -54,7 +54,7 @@ stack(
     ).lpf(freq = 4.5 * 440, q = 2.5).hpf(60).notch(freq = notchFreq, q = 0.5).body(material = "glass").vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
     .superimpose(
       x => x.gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(1.2)).vibrato(rate = "0.51".add(perlin.div(20)), semitones = 0.06)
-        .crush(bits = "2.0".add(berlin.range(-1, 1).mul(0.75).slow(4))).lpf(7.75 * 440).hpf(300)
+        .crush(bits = "2.0".add(berlin.range(-1, 1).mul(0.75).slow(4))).lpf(7.75 * 440).hpf(120)
         .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))                
     ).velocity(cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2)))
     .analog(10).filterWhen(x => x < (wait * 4 + keep))
@@ -62,11 +62,11 @@ stack(
   stack(
     // Perc 1 ------------------------------------------------------------------------------------------------------------------
     sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
-      .cylinder(5).gain(0.5).pan(0.45).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).lpf(7000).late(0.001)
+      .cylinder(5).gain(0.5).pan(0.40).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).lpf(13500).late(0.001)
       .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
     , // Perc 2 -----------------------------------------------------------------------------------------------------------------------
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-      .cylinder(6).gain(0.6).pan(0.55).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(80).lpf(7800)
+      .cylinder(6).gain(0.6).pan(0.50).adsr(0.017, 0.3, 0.5, 1).degrade(0.01).hpf(70).lpf(12800)
       .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
   ).reverb(wet = 0.20, size = 3.0, lowpass = 8000).compressor(-19, 2, 6, 0.01, 0.2)
   , // Shore ---------------------------------------------------------------------------------------------------------
@@ -74,16 +74,16 @@ stack(
     .cylinder(7).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
     .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
   , // Master ------------------------------------------------------------------------------------------------------
-  master(Katalyst(k => k
-    .reverb(0.05, 9)
-    .gain(2.5)
+  master(Katalyst(k => k.oversampleAtLeast(4, r => r
+    .reverb(0.10, 9, 6500)
     .bands(b => b
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft"))).cut(150)
-      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.15, "soft")).mul(0.85)).cut(5000)
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")))
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.15, "soft").mul(0.85)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.00))
     ) // the glue on the mids only: the kick and the hats stay clean
+    .mul(3.5)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
-  ))
+  )))
 )
 
 

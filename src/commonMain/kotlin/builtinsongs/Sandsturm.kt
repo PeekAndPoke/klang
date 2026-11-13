@@ -15,8 +15,7 @@ internal val sandsturmSong = Song(
     title = "Synthsturm",
     rpm = 34.0,
     icon = "wind",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // ── Wüstensturm — a Sandstorm homage ────────────────────────────────
@@ -58,18 +57,18 @@ let clap = Ign.whitenoise().bandpass(1600, 2).adsr(0.001, 0.09, 0.0, 0.04).class
 let riser = Ign.pinknoise().highpass(300).classic()
 
 // ── Patterns ────────────────────────────────────────────────────────
-let kickPat = note("a1*4").sound(kick).gain(0.95).cylinder(0)
+let kickPat = note("a1*4").sound(kick).gain(0.60).cylinder(0)
 let hatPat  = note("c5*16").sound(hat).gain(0.28).cylinder(1)
 let ohatPat = note("~ c5 ~ c5 ~ c5 ~ c5").sound(ohat).adsr(release = 0.1).gain(0.3).cylinder(1) // classic() releases over this, not the open hat's own 0.1 s tail; keep them equal
-let clapPat = note("~ c4 ~ c4").sound(clap).gain(0.5).cylinder(1).reverb(wet = 0.2, size = 3)
+let clapPat = note("~ c4 ~ c4").sound(clap).gain(0.6).cylinder(1).reverb(wet = 0.2, size = 3)
 
 let bassPat = note("<[~ b1 ~ b1 ~ b1 ~ b1] [~ g1 ~ g1 ~ g1 ~ g1] [~ d2 ~ d2 ~ d2 ~ d2] [~ a1 ~ a1 ~ a1 ~ a1]>")
-    .sound(bass).legato(0.5).gain(saw.fast(4).range(0.65, 0.42)).cylinder(2)
+    .sound(bass).legato(1.0).gain(0.7).velocity(saw(1.0, 0.8).fast(4)).cylinder(2)
 
 // Syncopated chord stabs — 3-3-2 tresillo gate (hits on 16ths 1,4,7), the
 // classic dance-floor pad rhythm. Swap the struct string to taste.
 let padPat = chord("<Bm G D A>").voicing().sound(pad).adsr(release = 0.2).struct("x ~ ~ x ~ ~ x ~") // classic() releases over this, not the pad's own 0.2 s tail; keep them equal
-    .legato(0.6).gain(0.20).cylinder(3).reverb(wet = 0.35, size = 6)
+    .legato(0.6).gain(0.30).cylinder(3).reverb(wet = 0.35, size = 6)
 
 // The gated 16th-note hook (B minor). Each cycle = one bar; <...> rotates the 4 bars.
 let leadPat = note(`<[b4 b4 b4 b4 b4 b4 a4 b4 b4 b4 b4 b4 b4 b4 d5 b4]
@@ -77,7 +76,7 @@ let leadPat = note(`<[b4 b4 b4 b4 b4 b4 a4 b4 b4 b4 b4 b4 b4 b4 d5 b4]
                      [d5 d5 d5 d5 d5 d5 b4 d5 d5 d5 d5 d5 d5 d5 f#5 d5]
                      [a4 a4 a4 a4 a4 a4 f#4 a4 a4 a4 a4 a4 a4 a4 c#5 a4]>`)
     .transpose(-36)
-    .sound(lead).legato(0.55).gain(0.4 * 0.5).cylinder(4)
+    .sound(lead).legato(0.55).gain(0.10).vel("[1.0 0.8 0.9 0.8]").struct("<[x x x x x ~ ~ ~]!4 [x x x x x ~ ~ ~  ~!8]!4>").cylinder(4)
     .delay(wet = 0.14, time = pure(3/16).div(cps), feedback = 0.25).reverb(wet = 0.12, size = 5)
 
 let riserPat = note("c5").fast(2).sound(riser)
@@ -89,15 +88,27 @@ let groove = stack(kickPat, hatPat, ohatPat, clapPat, bassPat)
 let build  = stack(groove, padPat, riserPat)
 let drop   = stack(groove, padPat, leadPat)
 
-arrange(
-  [8, intro],
-  [8, groove],
-  [8, build],
-  [16, drop],
-  [8, groove],
-  [8, build],
-  [16, drop]
-).compressor(-10, 2, 6, 0.01, 0.1).reverb(wet = 0.12, size = 6)
+stack(
+  arrange(
+    [8, intro],
+    [8, groove],
+    [8, build],
+    [16, drop],
+    [8, groove],
+    [8, build],
+    [16, drop]
+  ),
+  master(Katalyst(k => k.oversampleAtLeast(4, r => r
+    .reverb(0.10, 8, 5500)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.15, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.10))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .gain(1.5)
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  ))),
+)
 
 // Inspired by: Darude — Sandstorm
 // Composed by: Claude, Motor, peekandpoke
@@ -107,8 +118,5 @@ arrange(
 //   https://www.syntorial.com/preset-recipe/darude-sandstorm-lead/
 
 
-
-
-    
     """,
 )

@@ -64,23 +64,26 @@ export leadShape = (p) => p
 
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
-    .sound("supersaw").unison(sine.range(4, 12).slow(80)).onepole(23197)
-    .cylinder(1).gain(0.20).adsr(0.007, 0.5, 0.7, 0.10).lpf(attack = 0.007, decay = 2.0, sustain = 0.0, release = 0.10).pan(0.2)
-    .superimpose(
-      x => x.pan(0.8),
-      x => x.transpose("<0 12 0 -12>/8").pan(0.5).superimpose(pan(0.8))
-    ).phaser(rate = 1/19, wet = 0.35, center = 1600, sweep = 1200)
-    .unison(spread = sine.range(0.1, 0.4).early(1.5).slow(24)).hpf(200).lpf(freq = 2900, env = 14.4)
-    .lpf(q = berlin.range(1.5, 2.2).seg(32).slow(32))
+  .sound("supersaw").cylinder(1)
+  .gain(0.19).adsr(0.007, 0.5, 0.7, 0.10).lpf(attack = 0.007, decay = 2.0, sustain = 0.0, release = 0.10).pan(0.2)
+  .apply(
+    x => x.pan(0.1),
+    x => x.pan(0.9),
+    x => x.transpose("<0 12 0 -12>/8").pan(0.33).superimpose(pan(0.66))
+  )
+  .phaser(rate = 1/19, wet = 0.35, center = 1600, sweep = 1200)
+  .unison(voices = sine.range(4, 12).slow(80), spread = sine.range(0.1, 0.4).early(1.5).slow(24))
+  .hpf(freq = 120, passes = 2)
+  .lpf(freq = 3000, env = 10.0, q = berlin.range(1.5, 2.2).slow(32))
 
 // Sub voice: tremoloed triangle, soft distortion.
 export subShape = (p) => p
-    .slow(2).cylinder(2).clip(0.5).sound("tri").gain(0.7 * 0.82).distort(0.2, "tube").analog(2.5)
+    .slow(2).cylinder(2).clip(0.5).sound("tri").gain(0.3).distort(0.3, "softsat").analog(2.5)
     .adsr(0.01, 0.2, 0.4, 0.09).lpf(attack = 0.01, decay = 0.1, sustain = 0.0, release = 0.09).hpf(55).lpf(freq = 200, env = 56.4, q = 1.0) // . solo()
 
 // Drums: tight, panned right, fast.
 export drumsShape = (p) => p
-    .cylinder(3).gain(0.5).pan(0.6).adsr(0.007, 0.2, 0.5, 1.0).hpf(90).lpf(11500)
+    .cylinder(3).gain(0.45).pan(0.6).adsr(0.007, 0.2, 0.5, 1.0).hpf(90).lpf(11500)
     .fast(2)
 
 // ── Assembled parts: shape × pattern, fully voiced and arrangement-free ─
@@ -101,30 +104,21 @@ export drums = sound(drumsPattern).apply(drumsShape)
 // and sub follow on a long every-other-half-cycle pattern past cycle 31.4.
 
 export song = stack(
-    lead.filterWhen(x => x >= 16),
-    bass.filterWhen(x => x > 31.4 && x % 64 > 15.4),
-    sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
-    drums,
-    master(Katalyst(k => k
+  lead.filterWhen(x => x >= 16),
+  bass.filterWhen(x => x > 31.4 && x % 64 > 15.4),
+  sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
+  drums,
+  master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 8, 5500)
-    .gain(1.8)
     .bands(b => b
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft"))).cut(150)
-      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.15, "soft")).mul(0.90)).cut(5000)
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")))
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.15, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
+    .gain(2.0)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
-  )),
+  ))),
 ).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
-
-
-
-
-
-
-
-
-
 
 
 
