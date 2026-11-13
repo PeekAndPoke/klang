@@ -514,19 +514,19 @@ body {
 .cm-minimap-overlay-container .cm-minimap-overlay {
     background: transparent !important;
     opacity: 1 !important;
-    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #000000) 72%, transparent);
+    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #010102) 72%, transparent);
     /* The package's theme sets `transition: top 0s` with a stronger selector: both here, so the box still jumps */
     transition: box-shadow 1s cubic-bezier(0.16, 1, 0.3, 1), top 0s !important;
 }
 
 /* While dragging the box beyond the minimap: the hover's light below holds only while the mouse is on it */
 .cm-minimap-overlay-container.cm-minimap-overlay-active .cm-minimap-overlay {
-    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #000000) 60%, transparent);
+    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #010102) 60%, transparent);
 }
 
 /* With the mouse anywhere on the minimap, the rest comes up further, to be read before a jump */
 .cm-minimap-gutter:hover .cm-minimap-overlay-container .cm-minimap-overlay {
-    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #000000) 55%, transparent);
+    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #010102) 55%, transparent);
     transition: box-shadow 2s cubic-bezier(0.16, 1, 0.3, 1), top 0s !important;
 }
 

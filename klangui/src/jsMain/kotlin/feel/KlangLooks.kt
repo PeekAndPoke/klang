@@ -14,9 +14,7 @@ package io.peekandpoke.klang.ui.feel
 object KlangLooks {
 
     /** The theme's own values, no role set apart (the maintainer, 2026-11-02: "Call the 'Default' them 'Classic'"). */
-    val Classic = KlangLookPreset(id = "classic", name = "Classic", values = mapOf(
-        KlangRole.GroundEditor to "#010102",
-    ))
+    val Classic = KlangLookPreset(id = "classic", name = "Classic", values = emptyMap())
 
     /** The ids an older version stored that a look has changed since: "default" is Classic's. */
     private val RENAMED = mapOf("default" to Classic.id)
@@ -34,6 +32,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#27231f",
             KlangRole.GroundRaised to "#35302b",
             KlangRole.GroundSunken to "#110c0a",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#020201",
             KlangRole.CapLight to "#5b4a40",
             KlangRole.CapDark to "#241b17",
             // Its inks warm as well: the default's blue-grey text "sticks out as not being part of the palette" (the
@@ -85,6 +85,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#2e2925",
             KlangRole.GroundRaised to "#3c3631",
             KlangRole.GroundSunken to "#17120f",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#030202",
             KlangRole.CapLight to "#6e5d50",
             KlangRole.CapDark to "#2b221c",
             KlangRole.InkText to "#f2e6d6",
@@ -133,6 +135,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#2b2a28",
             KlangRole.GroundRaised to "#383733",
             KlangRole.GroundSunken to "#15130f",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#030202",
             // The keys' caps warm too, not the default's blue-grey
             KlangRole.CapLight to "#5a5344",
             KlangRole.CapDark to "#25221b",
@@ -172,6 +176,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#222a25",
             KlangRole.GroundRaised to "#2f3732",
             KlangRole.GroundSunken to "#0c120e",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#020202",
             KlangRole.CapLight to "#465a4b",
             KlangRole.CapDark to "#1a241d",
             KlangRole.InkText to "#dfe8dc",
@@ -215,6 +221,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#2c241b",
             KlangRole.GroundRaised to "#3a3227",
             KlangRole.GroundSunken to "#140e08",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#030201",
             KlangRole.CapLight to "#6b5232",
             KlangRole.CapDark to "#2a1f12",
             KlangRole.InkText to "#fbe9c8",
@@ -268,6 +276,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#26282a",
             KlangRole.GroundRaised to "#333537",
             KlangRole.GroundSunken to "#0f1011",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#020202",
             KlangRole.CapLight to "#55595d",
             KlangRole.CapDark to "#1f2123",
             KlangRole.InkText to "#dcdedf",
@@ -321,6 +331,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#1c122e",
             KlangRole.GroundRaised to "#281c3f",
             KlangRole.GroundSunken to "#05030a",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#010002",
             KlangRole.CapLight to "#3b2c58",
             KlangRole.CapDark to "#130b20",
             KlangRole.InkText to "#e6dcff",
@@ -377,6 +389,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#2c1a25",
             KlangRole.GroundRaised to "#3b2733",
             KlangRole.GroundSunken to "#12070e",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#030102",
             KlangRole.CapLight to "#6a3a55",
             KlangRole.CapDark to "#26101d",
             KlangRole.InkText to "#fbe1ee",
@@ -429,6 +443,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#2d2220",
             KlangRole.GroundRaised to "#3b2f2c",
             KlangRole.GroundSunken to "#150d0b",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#030202",
             KlangRole.CapLight to "#6a4a48",
             KlangRole.CapDark to "#28191a",
             KlangRole.InkText to "#f7e4e4",
@@ -477,6 +493,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#252030",
             KlangRole.GroundRaised to "#332d3f",
             KlangRole.GroundSunken to "#0f0b15",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#020203",
             KlangRole.CapLight to "#544870",
             KlangRole.CapDark to "#1f1829",
             KlangRole.InkText to "#ece4fb",
@@ -526,7 +544,7 @@ object KlangLooks {
             KlangRole.GroundPanel to "#141214",
             KlangRole.GroundRaised to "#221d21",
             KlangRole.GroundSunken to "#000000",
-            // The editor on a very faint pink, not on black (the maintainer, 2026-11-13)
+            // The editor on a very faint pink, stronger than the other looks' tint (the maintainer, 2026-11-13)
             KlangRole.GroundEditor to "#10080d",
             KlangRole.CapLight to "#3a2a35",
             KlangRole.CapDark to "#0e0a0d",
@@ -579,6 +597,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#132029",
             KlangRole.GroundRaised to "#1f2d37",
             KlangRole.GroundSunken to "#030a0f",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#010202",
             KlangRole.CapLight to "#2f4a58",
             KlangRole.CapDark to "#0c1820",
             KlangRole.InkText to "#d6ecef",
@@ -627,6 +647,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#1d150b",
             KlangRole.GroundRaised to "#2a1f12",
             KlangRole.GroundSunken to "#0a0602",
+            // The editor: almost black, towards the menu's ground (KLANG-00443)
+            KlangRole.GroundEditor to "#020100",
             KlangRole.CapLight to "#4a3518",
             KlangRole.CapDark to "#1a1208",
             KlangRole.InkText to "#ffcf80",

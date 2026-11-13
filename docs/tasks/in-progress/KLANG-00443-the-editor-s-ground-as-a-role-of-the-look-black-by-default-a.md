@@ -10,10 +10,14 @@ so no look could tint it.
 
 ## The work
 
-- **A role of the look: `KlangRole.GroundEditor`** (`--kl-ground-editor`), black by default, so every look that does
-  not set it is unchanged. The look editor lists it in "Screen, an old tube" as "Ground" (the maintainer: "Would fit
+- **A role of the look: `KlangRole.GroundEditor`** (`--kl-ground-editor`); first black by default, then `#010102`
+  (below). The look editor lists it in "Screen, an old tube" as "Ground" (the maintainer: "Would fit
   here"), and that box's preview screen stands on it, so an own look can tint the editor and see it.
 - **Pink Noir sets it to `#10080d`**, a very faint pink. The value is the maintainer's to tune by eye.
+- **Every look says its own, almost black towards its menu's ground** (the maintainer, 2026-11-13: "every theme
+  has to define it. Almost black but in the direction of the menu background color. Default #010102"). The role's
+  default is `#010102` (Classic, which sets nothing, about 7 % of the menu ground `#12131c`); the other built-in
+  looks carry 7 % of their own `GroundDeep`. An own look made before has no value and gets the default.
 - **Its users:** the CodeMirror theme (the editor's surface and its gutters), the song page's screen around the
   editor (review round 1, MAJOR: it was left black, a black band beside the gutter), the screen around a
   tutorial's example (`PlayableCodeExample`) and the look editor's preview, all through the CSS variable, so a
@@ -52,3 +56,5 @@ so no look could tint it.
   NOT CLEAN, 1 MAJOR (the song page's screen left black), 1 MINOR, 2 NIT; fixed. Round 2 (reviewer-opus-high): CLEAN,
   2 NIT applied. The corners' darkening eased and made rectangular afterwards, on the maintainer's word. The spec pins constants; no mutation
   campaign. The values are the maintainer's to tune by eye.
+- 2026-11-13: the default is `#010102` and every built-in look but Classic sets its own editor ground, 7 % of its
+  menu ground (the maintainer's word).

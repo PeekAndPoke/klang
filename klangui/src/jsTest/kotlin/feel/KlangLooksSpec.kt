@@ -69,11 +69,12 @@ class KlangLooksSpec : StringSpec({
         KlangTheme.chosen shouldBe KlangLooks.Classic
     }
 
-    "the editor's ground is black unless a look tints it: Pink Noir does, a very faint pink" {
-        KlangRole.GroundEditor.default shouldBe "#000000"
+    "the editor's ground is almost black by default, and every look but Classic, which sets nothing, says its own" {
+        KlangRole.GroundEditor.default shouldBe "#010102"
         KlangRole.GroundEditor.cssVar shouldBe "--kl-ground-editor"
 
-        KlangLooks.all.filter { KlangRole.GroundEditor in it.values }.map { it.id } shouldContainExactly listOf("pink-noir")
+        KlangLooks.Classic.values shouldBe emptyMap()
+        KlangLooks.all.filter { KlangRole.GroundEditor !in it.values }.map { it.id } shouldContainExactly listOf("classic")
         KlangLooks.PinkNoir.values[KlangRole.GroundEditor] shouldNotBe KlangRole.GroundEditor.default
     }
 

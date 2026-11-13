@@ -47,10 +47,12 @@ enum class KlangRole(
     GroundSunken(cssVar = "--kl-ground-sunken", kind = Kind.Color, default = "#0e1014"),
 
     /**
-     * The code editor's ground (KLANG-00443): black, for the most contrast under the code, unless a look tints it
-     * (the maintainer, 2026-11-13: "In the pink theme can we give the editor a very faint pink background?").
+     * The code editor's ground (KLANG-00443): almost black, for the most contrast under the code, with a breath of the
+     * menu's ground ([GroundDeep]) in it (the maintainer, 2026-11-13: "Almost black but in the direction of the menu
+     * background color. Default #010102", and "every theme has to define it"). Each look sets its own, about 7 % of
+     * its menu ground; Pink Noir a stronger, faint pink.
      */
-    GroundEditor(cssVar = "--kl-ground-editor", kind = Kind.Color, default = "#000000"),
+    GroundEditor(cssVar = "--kl-ground-editor", kind = Kind.Color, default = "#010102"),
 
     // ── Ink: text and print on the panel ──────────────────────────────────────
 
