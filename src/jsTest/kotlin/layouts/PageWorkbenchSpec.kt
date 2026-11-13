@@ -40,11 +40,10 @@ private class GivingPage(ctx: NoProps) : PureComponent(ctx) {
 @Suppress("FunctionName")
 private fun Tag.GivingPage() = comp { GivingPage(it) }
 
-/** Shows the page or not, inside an inert layer or not: the router's copy fading out after a change of page is. */
+/** Shows the page or not. */
 private class PageHost(ctx: NoProps) : PureComponent(ctx) {
     companion object {
         var current: PageHost? = null
-        var startInert = false
     }
 
     var shown: Boolean by value(true)
@@ -56,10 +55,6 @@ private class PageHost(ctx: NoProps) : PureComponent(ctx) {
     override fun VDom.render() {
         div {
             key = "host"
-
-            if (startInert) {
-                attributes["inert"] = "true"
-            }
 
             if (shown) {
                 GivingPage()
@@ -87,7 +82,6 @@ class PageWorkbenchSpec : StringSpec({
     fun reset() {
         WorkbenchSlots.clear()
         nextParts = null
-        PageHost.startInert = false
     }
 
     "mounted, a page fills the slots with its parts; unmounted, it empties them" {
@@ -165,36 +159,6 @@ class PageWorkbenchSpec : StringSpec({
                 eventually { WorkbenchSlots.bottomTabs() shouldBe emptyList() }
 
                 withClue("a slot it never filled stays as it is") { WorkbenchSlots.column() shouldBe otherColumn }
-            }
-        } finally {
-            reset()
-        }
-    }
-
-    "the copy of a page fading out is inert: it neither fills nor empties" {
-        reset()
-        nextParts = allParts
-        PageHost.startInert = true
-
-        try {
-            TestBed.preact(view = { PageHost() }) {
-                eventually { PageHost.current!!.dom?.textContent shouldBe "PAGE" }
-                delay(50)
-
-                withClue("inert: nothing filled") {
-                    WorkbenchSlots.column() shouldBe null
-                    WorkbenchSlots.tools() shouldBe emptyList()
-                    WorkbenchSlots.bottomTabs() shouldBe emptyList()
-                }
-
-                // The live page's parts, then the inert copy goes
-                val liveTabs = listOf(help)
-
-                WorkbenchSlots.bottomTabs(liveTabs)
-                PageHost.current!!.shown = false
-                delay(50)
-
-                withClue("inert: nothing emptied") { WorkbenchSlots.bottomTabs() shouldBe liveTabs }
             }
         } finally {
             reset()

@@ -150,9 +150,9 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.manualsLexikonEntry) { LexikonEntryPage(it["slug"]) }
         mount(Nav.manualsLibrary) { KlangScriptLibraryDocsPage(it["library"]) }
 
-        mount(Nav.tutorials) { TutorialsListPage() }
-        mount(Nav.tutorialTrack) { TutorialTrackPage() }
-        mount(Nav.tutorial) { TutorialPage() }
+        mount(Nav.tutorials) { TutorialsListPage(it) }
+        mount(Nav.tutorialTrack) { TutorialTrackPage(it) }
+        mount(Nav.tutorial) { TutorialPage(it) }
 
         mount(Nav.midiPlayground) { MidiPlaygroundPage() }
 

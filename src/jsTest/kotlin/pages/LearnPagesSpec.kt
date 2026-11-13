@@ -63,15 +63,15 @@ private fun RootRouterBuilder.learnRoutes() {
 
     mount(Nav.tutorials) {
         div(classes = "column") { LearnTracksColumn() }
-        div(classes = "page") { TutorialsListPage() }
+        div(classes = "page") { TutorialsListPage(it) }
     }
     mount(Nav.tutorialTrack) {
         div(classes = "column") { LearnTracksColumn() }
-        div(classes = "page") { TutorialTrackPage() }
+        div(classes = "page") { TutorialTrackPage(it) }
     }
     mount(Nav.tutorial) {
         div(classes = "column") { TutorialColumn() }
-        div(classes = "page") { TutorialPage() }
+        div(classes = "page") { TutorialPage(it) }
     }
 }
 
@@ -386,7 +386,7 @@ class LearnPagesSpec : StringSpec({
         }
     }
 
-    "from one tutorial to the next, the column stays the tutorial's: the page fading out takes nothing away" {
+    "from one tutorial to the next, the column stays the tutorial's: the page left takes nothing away" {
         withLearn { root ->
             go("/${path[0].slug}")
 
@@ -396,7 +396,7 @@ class LearnPagesSpec : StringSpec({
 
             eventually { root.page()?.querySelector("h1")?.textContent shouldBe path[1].title }
 
-            // Past the fade (200 ms): the copy of the page before is gone, and so would be the column it emptied
+            // Past the page change: the page before is gone, and so would be the column it emptied
             delay(600)
 
             WorkbenchSlots.column() shouldNotBe null
@@ -513,7 +513,7 @@ class LearnPagesSpec : StringSpec({
             go()
 
             eventually { root.page()?.querySelector("[data-continue]") shouldNotBe null }
-            // Past the fade
+            // Past the page change
             delay(600)
 
             WorkbenchSlots.column() shouldBe null

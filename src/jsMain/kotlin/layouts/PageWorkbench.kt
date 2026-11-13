@@ -22,8 +22,7 @@ import kotlinx.html.DIV
  * ```
  *
  * The [parts] are built when the [page] mounts and put into [WorkbenchSlots]; when it unmounts, each slot that still
- * holds them is emptied, so a page that came since keeps its own. The copy of a page the router draws fading out
- * after a change of page is inert: it neither fills nor empties. The panel itself, with the app's tabs, is the
+ * holds them is emptied, so a page that came since keeps its own. The panel itself, with the app's tabs, is the
  * layout's ([BottomTools]); a page that gives nothing gets the area's list in the column and the app's tabs.
  */
 class PageWorkbench(private val page: Component<*>, private val parts: Parts.() -> Unit) {
@@ -61,10 +60,6 @@ class PageWorkbench(private val page: Component<*>, private val parts: Parts.() 
     }
 
     private fun fill() {
-        if (page.dom?.closest("[inert]") != null) {
-            return
-        }
-
         val given = Parts().apply(parts)
 
         given.column?.let { column ->

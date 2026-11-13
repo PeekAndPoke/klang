@@ -8,9 +8,10 @@ package io.peekandpoke.klang.pages.docs.tutorials
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.appLink
 import io.peekandpoke.klang.spine.spine
-import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -21,7 +22,7 @@ import kotlinx.html.h1
 import kotlinx.html.span
 
 @Suppress("FunctionName")
-fun Tag.TutorialTrackPage() = comp {
+fun Tag.TutorialTrackPage(route: Route.Match) = comp(TutorialTrackPage.Props(route = route)) {
     TutorialTrackPage(it)
 }
 
@@ -29,13 +30,14 @@ fun Tag.TutorialTrackPage() = comp {
  * One track on its own (KLANG-00370): its title, how far, what it builds on, and its lessons as tiles in its order.
  * A lesson opened from here carries the track, so the tutorial page walks this track.
  */
-class TutorialTrackPage(ctx: NoProps) : PureComponent(ctx) {
+class TutorialTrackPage(ctx: Ctx<Props>) : Component<TutorialTrackPage.Props>(ctx) {
 
-    private val currentRoute by subscribingTo(router.current)
+    /** The [route] the page is mounted with: it changes with the page, which `router.current` does a frame earlier. */
+    data class Props(val route: Route.Match)
 
     private val done by subscribingTo(spine.tutorials.done)
 
-    private fun currentTrack(): TutorialTrackDef? = allTracks.find { it.slug == currentRoute.matchedRoute["slug"] }
+    private fun currentTrack(): TutorialTrackDef? = allTracks.find { it.slug == props.route["slug"] }
 
     override fun VDom.render() {
         val track = currentTrack()

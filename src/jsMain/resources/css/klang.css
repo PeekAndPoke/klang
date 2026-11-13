@@ -442,18 +442,17 @@ body {
    see CodeMirrorHighlightBuffer. The former DOM `<mark>` overlay rules and `@keyframes pulse`
    lived here and were removed. */
 
-.fade-out {
-    animation: fadeOut 300ms linear forwards;
+/* A page change, faded by the browser (KLANG-00442, RouterWithTransitions): the picture of the window as it was
+   fades into the window as it is. */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+    animation-duration: 200ms;
 }
 
 @keyframes fadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to   { opacity: 0; }
 }
 
 .noise-bg {

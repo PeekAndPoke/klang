@@ -17,9 +17,10 @@ import io.peekandpoke.klang.ui.comp.KlangAdsrSignal
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangLamp
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
-import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -46,7 +47,7 @@ import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 
 @Suppress("FunctionName")
-fun Tag.TutorialPage() = comp {
+fun Tag.TutorialPage(route: Route.Match) = comp(TutorialPage.Props(route = route)) {
     TutorialPage(it)
 }
 
@@ -57,7 +58,10 @@ fun Tag.TutorialPage() = comp {
  * help and the Lexikon for the examples' code, as on the song page. A Lexikon term in the prose links itself, and a
  * plain click on it opens the Lexikon tab.
  */
-class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
+class TutorialPage(ctx: Ctx<Props>) : Component<TutorialPage.Props>(ctx) {
+
+    /** The [route] the page is mounted with: it changes with the page, which `router.current` does a frame earlier. */
+    data class Props(val route: Route.Match)
 
     companion object {
         const val PARAM_TRACK = "track"
@@ -72,17 +76,15 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val currentRoute by subscribingTo(router.current)
-
-    // The lesson opened, with the track it was opened in, for the Motor's menu (KLANG-00403). The copy of the page
-    // fading out (inert) reports nothing: the page just opened does
+    // The lesson opened, with the track it was opened in, for the Motor's menu (KLANG-00403). Only this page's own
+    // lesson: the router says the next route a frame before this page goes (see RouterWithTransitions)
     @Suppress("unused")
     private val recent by subscribingTo(
         router.current.map { it.matchedRoute["slug"] to it.matchedRoute.queryParams[PARAM_TRACK] }.distinct()
     ) { (slug, track) ->
         val tutorial = allTutorials.find { it.slug == slug }
 
-        if (tutorial != null && dom?.closest("[inert]") == null) {
+        if (tutorial != null && slug == props.route["slug"]) {
             spine.recents.openedTutorial(slug = tutorial.slug, title = tutorial.title, track = tutorialTrack(track, tutorial)?.slug)
         }
     }
@@ -97,7 +99,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val helpPanel = QuickHelpPanel(pageKey = "tutorial-${++pagesDrawn}")
 
-    private fun currentTutorial(): Tutorial? = allTutorials.find { it.slug == currentRoute.matchedRoute["slug"] }
+    private fun currentTutorial(): Tutorial? = allTutorials.find { it.slug == props.route["slug"] }
 
     /** The lessons in the workbench's column, the help in the bottom panel (KLANG-00349, KLANG-00409). */
     @Suppress("unused")
@@ -314,7 +316,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
      * lamp lit, "Not done after all", and the next lesson, or on a track's last lesson "Back to Learn".
      */
     private fun FlowContent.renderEnd(tutorial: Tutorial) {
-        val track = tutorialTrack(currentRoute.matchedRoute.queryParams[PARAM_TRACK], tutorial)
+        val track = tutorialTrack(props.route.queryParams[PARAM_TRACK], tutorial)
         val next = track?.lessons?.let { lessons -> lessons.getOrNull(lessons.indexOf(tutorial) + 1) }
         val nextLabel = next?.let { "${track.lessons.indexOf(it) + 1}. ${it.title}" }
         val isDone = tutorial.slug in done

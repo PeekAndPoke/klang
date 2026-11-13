@@ -211,13 +211,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
-    // The song opened, for the Motor's menu (KLANG-00403); again with a new title or tempo, so the menu shows them. The
-    // copy of the page fading out (inert) reports nothing: the page just opened does
+    // The song opened, for the Motor's menu (KLANG-00403); again with a new title or tempo, so the menu shows them
     @Suppress("unused")
     private val recent by subscribingTo(ctrl.state.map { it.title to it.rpm }.distinct()) { (title, rpm) ->
-        if (dom?.closest("[inert]") == null) {
-            spine.recents.openedSong(id = songId, title = title?.ifBlank { null } ?: builtIn?.title ?: "New Song", rpm = rpm)
-        }
+        spine.recents.openedSong(id = songId, title = title?.ifBlank { null } ?: builtIn?.title ?: "New Song", rpm = rpm)
     }
 
     init {

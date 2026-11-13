@@ -12,9 +12,10 @@ import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.klang.ui.comp.KlangLamp
-import io.peekandpoke.kraft.components.NoProps
-import io.peekandpoke.kraft.components.PureComponent
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Route
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
@@ -28,7 +29,7 @@ import kotlinx.html.section
 import kotlinx.html.span
 
 @Suppress("FunctionName")
-fun Tag.TutorialsListPage() = comp {
+fun Tag.TutorialsListPage(route: Route.Match) = comp(TutorialsListPage.Props(route = route)) {
     TutorialsListPage(it)
 }
 
@@ -39,7 +40,10 @@ fun Tag.TutorialsListPage() = comp {
  * filters, the lessons found as tiles under their tracks. The search and the level and depth filters are in the
  * Learn column (LearnTracksColumn), the area's own, from the sidebar; the filters live in this page's address.
  */
-class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
+class TutorialsListPage(ctx: Ctx<Props>) : Component<TutorialsListPage.Props>(ctx) {
+
+    /** The [route] the page is mounted with: it changes with the page, which `router.current` does a frame earlier. */
+    data class Props(val route: Route.Match)
 
     companion object {
         const val PARAM_DIFFICULTY = "difficulty"
@@ -70,11 +74,9 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
      * The address, for the levels and depths chosen in the Learn column (several of each, lists in it: a link keeps
      * them). Read, never written here: the column writes it, a step in the history for each choice.
      */
-    private val currentRoute by subscribingTo(router.current)
+    private val difficultyParam: String get() = props.route.queryParam(PARAM_DIFFICULTY)
 
-    private val difficultyParam: String get() = currentRoute.matchedRoute.queryParam(PARAM_DIFFICULTY)
-
-    private val depthParam: String get() = currentRoute.matchedRoute.queryParam(PARAM_DEPTH)
+    private val depthParam: String get() = props.route.queryParam(PARAM_DEPTH)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -171,14 +171,14 @@ class SongDeckSpec : StringSpec({
         }
     }
 
-    "two pages showing one controller (one fading out): it is released when the last goes, a hide counting once" {
+    "two pages showing one controller: it is released when the last goes, a hide counting once" {
         withDeck { deck, engine ->
             val page = engine.page("p")
-            val fadingOut = deck.show(page)
+            val earlier = deck.show(page)
             val opened = deck.show(page)
 
-            fadingOut()
-            fadingOut()
+            earlier()
+            earlier()
 
             withClue("kept for the page still showing it") { engine.follows(page) shouldBe true }
 

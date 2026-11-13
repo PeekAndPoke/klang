@@ -109,7 +109,7 @@ class EditorKeysCorner(ctx: Ctx<Props>) : Component<EditorKeysCorner.Props>(ctx)
                 KeyBindingsOverlay(bindings = KlangEditorKeyBindings, title = "Editor", renderer = KlangKeyHint.overview)
             }
 
-            // Under a modal, and in a page fading out after a navigation (inert), the bookmarks wait. Below the keys,
+            // Under a modal, and where the page is inert (the Motor's menu open), the bookmarks wait. Below the keys,
             // never wider than the corner: the code on a line ends in "…" first
             if (hintsShown && topLayer === layer && dom?.closest("[inert]") == null) {
                 div {
