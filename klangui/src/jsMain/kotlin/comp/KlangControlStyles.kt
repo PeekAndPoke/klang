@@ -1305,11 +1305,28 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     }
 
     /**
+     * One dark rim of the tube's glass, from the edge it starts at [towards] the middle: easing out, about the square
+     * of the way, so it has no edge of its own (the maintainer, 2026-11-13: "a little smoother"). At the edge it is
+     * 0.55 of the look's `--kl-vignette`: two rims over each other, in a corner, then darken by about the full amount.
+     */
+    private fun tubeRim(towards: String): String {
+        fun dark(share: Double) = "rgba(0, 0, 0, calc(var(--kl-vignette) * ${0.55 * share}))"
+
+        fun at(share: Double) = "calc(var(--kl-tube-rim) * $share)"
+
+        return "linear-gradient(to $towards, ${dark(1.0)} 0, ${dark(0.56)} ${at(0.25)}, ${dark(0.25)} ${at(0.5)}," +
+            " ${dark(0.06)} ${at(0.75)}, transparent var(--kl-tube-rim))"
+    }
+
+    /**
      * The tube's glass, over the content and never in the way: a faint reflection across the top, the corners and
-     * edges darker, scan lines (a dark line every third pixel, at the look's `--kl-scanlines`), and the glass's own
-     * grey-green, which lifts the black a little: on pure black, dark lines and a dark rim would not show.
+     * edges darker (four rims, [tubeRim], at the look's `--kl-vignette`), scan
+     * lines (a dark line every third pixel, at the look's `--kl-scanlines`), and the glass's own grey-green, which
+     * lifts the black a little: on pure black, dark lines and a dark rim would not show.
      */
     val screenTubeGlass by rule {
+        // How far a rim reaches in from its edge: a quarter of the screen, on a large one no more than 160px
+        put("--kl-tube-rim", "min(160px, 25%)")
         put("position", "absolute")
         put("inset", "0")
         put("pointer-events", "none")
@@ -1320,7 +1337,13 @@ object KlangControlStyles : StyleSheet("kl-controls") {
                 // The reflection and the rim kept to the corners and the edges: across the middle they looked like a
                 // dirty monitor (the maintainer, 2026-10-28)
                 "linear-gradient(160deg, rgba(255, 255, 255, 0.03) 0%, transparent 14%)",
-                "radial-gradient(ellipse at center, transparent 70%, rgba(0, 0, 0, 0.3) 100%)",
+                // A dark rim along each of the four edges, so the darkening follows the screen's rectangle and not an
+                // ellipse; two rims lie over each other in a corner, which comes out at the look's amount (the
+                // maintainer, 2026-11-13: "closer to the rectangular shape of the screen")
+                tubeRim(towards = "right"),
+                tubeRim(towards = "left"),
+                tubeRim(towards = "bottom"),
+                tubeRim(towards = "top"),
                 "repeating-linear-gradient(to bottom, rgba(0, 0, 0, var(--kl-scanlines)) 0 1px, transparent 1px 3px)",
                 "rgba(150, 175, 165, 0.03)",
             ).joinToString(", "),

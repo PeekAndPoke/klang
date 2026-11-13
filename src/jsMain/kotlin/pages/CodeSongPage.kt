@@ -33,6 +33,7 @@ import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
 import io.peekandpoke.klang.ui.comp.KlangYesNoModal
+import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.version
 import io.peekandpoke.klang.workshop.keys.OnKey
 import io.peekandpoke.kraft.components.Component
@@ -364,7 +365,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         put("margin", "0 10px 10px")
                     }
 
-                    KlangScreen(size = KlangScreen.Size.Large, surface = "#000000", tube = true) {
+                    KlangScreen(size = KlangScreen.Size.Large, surface = "var(${KlangRole.GroundEditor.cssVar})", tube = true) {
                         // Inner CLIP: clips the editor content to the screen. The editor
                         // fills it and scrolls itself, which the minimap needs
                         // (`klang-editor-fill` in klang.css passes the height down).

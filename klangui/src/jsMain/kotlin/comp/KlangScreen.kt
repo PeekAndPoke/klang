@@ -51,7 +51,7 @@ class KlangScreen(ctx: Ctx<Props>) : Component<KlangScreen.Props>(ctx) {
 
     data class Props(
         val size: Size,
-        /** The screen's own colour, under the content: the editor's black, or a well's sunken ground. */
+        /** The screen's own colour, under the content: the editor's ground, or a well's sunken ground. */
         val surface: String,
         /** The ground round the screen, which its cut corners show. */
         val bezel: String,

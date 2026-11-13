@@ -17,6 +17,7 @@ import io.peekandpoke.klang.ui.comp.KlangFinish
 import io.peekandpoke.klang.ui.comp.KlangScreen
 import io.peekandpoke.klang.ui.comp.KlangSpinner
 import io.peekandpoke.klang.ui.comp.KlangValueKnob
+import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.kraft.components.Ctx
@@ -131,7 +132,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 key = "screen"
                 css { put("padding", "0 8px 8px") }
 
-                KlangScreen(size = KlangScreen.Size.Small, surface = "#000000") {
+                KlangScreen(size = KlangScreen.Size.Small, surface = "var(${KlangRole.GroundEditor.cssVar})") {
                     renderEditor()
                 }
             }

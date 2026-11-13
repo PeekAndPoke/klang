@@ -492,7 +492,8 @@ body {
    brightest. The shadow ends at the minimap's edge (its container clips). Over the box, and while dragging it, the rest
    comes up a little, so the box can be found. The whole minimap is calmer than the code, its colours muted ("the
    minimap is currently a bit distracting... pulling too much focus"), the part in view too a little darker than the
-   code itself. */
+   code itself. The shadow is of the editor's ground, not of black (KLANG-00443): it dims the minimap's code towards the
+   ground, so a tinted ground still shows through. */
 .cm-minimap-gutter {
     filter: saturate(0.55) brightness(0.7);
     /* Slow and easing out, as the start page's light over "Make Music Now": 2 s in (the hover's rule), 1 s out (this
@@ -513,19 +514,19 @@ body {
 .cm-minimap-overlay-container .cm-minimap-overlay {
     background: transparent !important;
     opacity: 1 !important;
-    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.72);
+    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #000000) 72%, transparent);
     /* The package's theme sets `transition: top 0s` with a stronger selector: both here, so the box still jumps */
     transition: box-shadow 1s cubic-bezier(0.16, 1, 0.3, 1), top 0s !important;
 }
 
 /* While dragging the box beyond the minimap: the hover's light below holds only while the mouse is on it */
 .cm-minimap-overlay-container.cm-minimap-overlay-active .cm-minimap-overlay {
-    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #000000) 60%, transparent);
 }
 
 /* With the mouse anywhere on the minimap, the rest comes up further, to be read before a jump */
 .cm-minimap-gutter:hover .cm-minimap-overlay-container .cm-minimap-overlay {
-    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--kl-ground-editor, #000000) 55%, transparent);
     transition: box-shadow 2s cubic-bezier(0.16, 1, 0.3, 1), top 0s !important;
 }
 

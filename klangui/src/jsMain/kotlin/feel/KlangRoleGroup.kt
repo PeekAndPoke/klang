@@ -114,7 +114,12 @@ enum class KlangRoleGroup(val title: String, val elements: List<Element>) {
             Element(
                 id = "screen",
                 title = "Screen, an old tube",
-                roles = listOf(KlangRole.Scanlines to "Scan lines", KlangRole.Glow to "Glow"),
+                roles = listOf(
+                    KlangRole.GroundEditor to "Ground",
+                    KlangRole.Scanlines to "Scan lines",
+                    KlangRole.Glow to "Glow",
+                    KlangRole.Vignette to "Dark corners",
+                ),
             ),
             Element(
                 id = "spectrum",

@@ -524,6 +524,8 @@ object KlangLooks {
             KlangRole.GroundPanel to "#141214",
             KlangRole.GroundRaised to "#221d21",
             KlangRole.GroundSunken to "#000000",
+            // The editor on a very faint pink, not on black (the maintainer, 2026-11-13)
+            KlangRole.GroundEditor to "#10080d",
             KlangRole.CapLight to "#3a2a35",
             KlangRole.CapDark to "#0e0a0d",
             KlangRole.InkText to "#ffe0f0",

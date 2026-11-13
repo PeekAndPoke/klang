@@ -11,6 +11,7 @@ import io.peekandpoke.klang.codemirror.ext.HighlightStyle
 import io.peekandpoke.klang.codemirror.ext.TagStyle
 import io.peekandpoke.klang.codemirror.ext.syntaxHighlighting
 import io.peekandpoke.klang.codemirror.ext.tags
+import io.peekandpoke.klang.ui.feel.KlangRole
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.utils.jsObject
 
@@ -31,8 +32,8 @@ class CodeMirrorTheme {
     val darkBackground get() = KlangTheme.Hex.panelBackground
     val highlightBackground get() = KlangTheme.Hex.cardBackground
 
-    /** Editor surface — pure black for maximum contrast against the code (app bg is #191C22). */
-    val background = "#000000"
+    /** The editor's surface: the look's editor ground, black unless the look tints it (KLANG-00443). */
+    val background = "var(${KlangRole.GroundEditor.cssVar}, ${KlangRole.GroundEditor.default})"
 
     /**
      * Selection background — brighter than [KlangTheme.Hex.accent] because the global

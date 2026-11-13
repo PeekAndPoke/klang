@@ -1331,7 +1331,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                     put("align-self", "stretch")
                 }
 
-                KlangScreen(size = KlangScreen.Size.Small, surface = "#000000", tube = true) {
+                KlangScreen(size = KlangScreen.Size.Small, surface = "var(${KlangRole.GroundEditor.cssVar})", tube = true) {
                     // The editor's own class, so the glow reaches it as it reaches the code
                     div(classes = "cm-content") {
                         css {

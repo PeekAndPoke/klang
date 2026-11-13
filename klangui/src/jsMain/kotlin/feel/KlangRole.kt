@@ -43,8 +43,14 @@ enum class KlangRole(
      */
     GroundRaised(cssVar = "--kl-ground-raised", kind = Kind.Color, default = "#2e3238"),
 
-    /** Wells cut into a surface: fields, the editor, the scope, an LCD. */
+    /** Wells cut into a surface: fields, the scope, an LCD. */
     GroundSunken(cssVar = "--kl-ground-sunken", kind = Kind.Color, default = "#0e1014"),
+
+    /**
+     * The code editor's ground (KLANG-00443): black, for the most contrast under the code, unless a look tints it
+     * (the maintainer, 2026-11-13: "In the pink theme can we give the editor a very faint pink background?").
+     */
+    GroundEditor(cssVar = "--kl-ground-editor", kind = Kind.Color, default = "#000000"),
 
     // ── Ink: text and print on the panel ──────────────────────────────────────
 
@@ -228,6 +234,12 @@ enum class KlangRole(
 
     /** How much the tube's text glows in its own colour, lit phosphor rather than print, from 0 (none) to 1. */
     Glow(cssVar = "--kl-glow", kind = Kind.Amount, default = "0.2"),
+
+    /**
+     * How much the tube's glass darkens towards its corners, from 0 (not at all) to 1 (black): it shows on an editor
+     * ground that is not black (KLANG-00443).
+     */
+    Vignette(cssVar = "--kl-vignette", kind = Kind.Amount, default = "0.3"),
     ;
 
     /** What a role's value is, and so which values a theme may give it. */

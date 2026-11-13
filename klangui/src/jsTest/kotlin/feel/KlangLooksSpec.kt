@@ -9,6 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.ui.feel.KlangLookLayers.Layer
 
 /** The built-in looks (KLANG-00339): valid presets, found by id, chosen onto the user's layer. */
@@ -66,6 +67,19 @@ class KlangLooksSpec : StringSpec({
 
         KlangTheme.layers[Layer.User] shouldBe emptyMap()
         KlangTheme.chosen shouldBe KlangLooks.Classic
+    }
+
+    "the editor's ground is black unless a look tints it: Pink Noir does, a very faint pink" {
+        KlangRole.GroundEditor.default shouldBe "#000000"
+        KlangRole.GroundEditor.cssVar shouldBe "--kl-ground-editor"
+
+        KlangLooks.all.filter { KlangRole.GroundEditor in it.values }.map { it.id } shouldContainExactly listOf("pink-noir")
+        KlangLooks.PinkNoir.values[KlangRole.GroundEditor] shouldNotBe KlangRole.GroundEditor.default
+    }
+
+    "the tube's corners darken by 0.3 where a look says nothing" {
+        KlangRole.Vignette.default shouldBe "0.3"
+        KlangRole.Vignette.cssVar shouldBe "--kl-vignette"
     }
 
     "a user's layer that matches no preset has none chosen" {
