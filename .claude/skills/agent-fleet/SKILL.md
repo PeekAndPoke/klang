@@ -57,8 +57,8 @@ judges numerical stability, per-sample cost and click risk; run it on the ladder
   definition (the tool's own `effort` parameter is only for an explicit request). `fork`-type agents always inherit the parent model; don't set
   `model` on them. Klang pins effort through the four reviewer definitions in `.claude/agents/`
   (`reviewer-opus-high`, `reviewer-fable-medium`, `reviewer-fable-high`, `reviewer-fable-xhigh`; the blueprint's names
-  since 2026-11-13, before that `reviewer-high` and `reviewer-max`). A new or renamed definition is picked up only by a
-  new session.
+  since 2026-11-13, before that `reviewer-high` and `reviewer-max`). A new or renamed definition may not be picked up at
+  once: if a spawn fails, try again later, and ask for a restart only if it still fails.
 - **Workflow `agent()`**: set both `model` and `effort` in the opts, per stage.
 - **Custom agents** (`.claude/agents/*.md`): can pin model/effort in frontmatter; prefer that for agents whose task type
   never varies. Klang has several (the four reviewers, `reader`, `writer`, `visualizer`, and

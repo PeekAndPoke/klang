@@ -153,12 +153,15 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 
   `fable` follows the newest Fable; it replaces Opus on rungs 2 to 4 and does not run beside it (the "no Fable"
   rule of 2026-10-24 ended 2026-11-13). Rung 1 is Opus pinned to high, never the session's effort. A definition
-  added, renamed or removed takes effect only in a NEW session: the running one keeps its old list.
+  added, renamed or removed may not be picked up at once: if a spawn fails, try again later, and ask for a restart
+  only if it still fails.
 
   A loop has a level, 1 to 3, and the code's tier maps the level to a rung: **standard** code runs rungs 1, 2, 4;
   **strict** code runs rungs 2, 3, 4. Strict in Klang is the mandatory mutation scope below (`audio_be`,
   `audio_bridge`, the wire codecs, sprudel's pattern and timing core, the KSP processors); everything else is
-  standard. Level 1 is the floor.
+  standard. A change that touches any strict code is strict as a whole. The mutation items that apply "regardless
+  of module" (a regression guard, a threshold) do not make a change strict: they decide the mutation check, not
+  the rungs. Level 1 is the floor.
 
   - **A round with any CRITICAL or MAJOR, fixed or rejected, raises the next round one level**, to 3 at
     most. A reconcile-only round after rejections goes UP too: rejecting must never be cheaper than fixing.
