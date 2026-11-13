@@ -201,7 +201,7 @@ let makeGuitar = (rig) => {
 }
 
 // The Mircophone for the guitar
-let guitarShape = Ign.fn(x => x.mul(0.16).shape("soft").mul(1.10))
+let guitarShape = Ign.fn(x => x.mul(0.15).shape("soft").mul(1.15))
 
 // The rigs: the signal path after the string, stage by stage. A/B one stage at a time:
 //   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck
@@ -304,7 +304,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.cylinder(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.170)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.175)  // .mute()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
 
@@ -341,7 +341,7 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .sound(guitar).adsrOff().unison(voices = 5, spread = 0.08)
   .ignp("attack", perlin(0.004, 0.006).seed(3))
   .ignp("decay", guitarDecay(3))
-  .clip(guitarClip(3).fast(2)).pan(0.15).superimpose(pan(0.85))
+  .clip(guitarClip(3).fast(2)).pan(0.25).superimpose(pan(0.75))
   .body(material = "mahogany", wet = 0.15)
 
 export guitar3_arrange = x => x.cylinder(3) //  . solo()
@@ -404,12 +404,12 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
   .hpf(600).lpf("2500".add(perlin(-100, 100).fast(4))).clip(0.33)
   .apply(
-    x => x.pan(0.00).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
-    x => x.pan(1.00).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.33).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.66).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
   )
 
 export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
-  .scale("e4:minor").gain(0.25)
+  .scale("e4:minor").gain(0.30)
   .mute("<1!96 0!32>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
@@ -560,13 +560,13 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 6500)
-    .gain(4.8)
+    // .gain(4.8)
     .bands(b => b
       .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(0.90)
+    .mul(4.20)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   )))
 )

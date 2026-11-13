@@ -15,8 +15,7 @@ internal val kokonSong = Song(
     title = "Kokon",
     rpm = 19.0,
     icon = "egg",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // Kokon: before there is a butterfly, there is a cocoon.
@@ -213,7 +212,7 @@ let makeGuitar = (rig) => {
 }
 
 // The Mircophone for the guitar
-let guitarShape = Ign.fn(x => x.mul(0.16).shape("soft").mul(1.10))
+let guitarShape = Ign.fn(x => x.mul(0.15).shape("soft").mul(1.15))
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
@@ -587,16 +586,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    // [8, spinning],
-    // [4, answering],
-    // [4, quickening],
-    // [4, stretching],
-    // [4, holdingBreath],
+    [8, spinning],
+    [4, answering],
+    [4, quickening],
+    [4, stretching],
+    [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    // [12, flyingOff],
-    // [4, lastChord],
-    // [2, silence]
+    [12, flyingOff],
+    [4, lastChord],
+    [2, silence]
   )
     .scale("d3:minor")
     .analog(feel)
@@ -608,13 +607,13 @@ export song = stack(
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 9.5, 6500)                       // the hall: one room for the whole band, about 2 s, warm
-    .gain(1.20)                                    // the house level, -14 LUFS
+    // .gain(1.20)                                    // the house level, -14 LUFS
     .bands(b => b
       .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(0.92)
+    .mul(1.15)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   )))
 )
@@ -626,8 +625,6 @@ export song = stack(
 // Inspired by: Philip Glass and Steve Reich, the additive process of minimal music. The spinning arpeggio grows thread
 // by thread through its mask, and the listener hears the same notes transform instead of new ones arriving.
 // Inspired by: Editors - Papillon, through the Schmetterling's lead that flies off at the end.
-
-
 
 
 
