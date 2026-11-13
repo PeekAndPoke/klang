@@ -139,14 +139,25 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   render on the same tree.
 - **The effort ladder: the level follows the findings, not the round number** (maintainer, 2026-10-25,
   Mission Control's MC-00033, merged from the blueprint `ea3a129`; before it, the ladder went by round
-  number, 2026-09-18, top rung Opus at max since 2026-10-24). The Agent tool has no per-call effort dial,
-  so the levels are agent definitions in `.claude/agents/` with model and effort pinned:
+  number, 2026-09-18). The Agent tool has no per-call effort dial, so each rung is an agent definition in
+  `.claude/agents/` with model and effort pinned. The four rungs and their names are the blueprint's, the same
+  in every repo (maintainer, 2026-11-13, Mission Control `9310bcc`); a name says model and effort, not the level:
 
-  | level | reviewers | how to spawn |
+  | rung | reviewers | how to spawn |
   |---|---|---|
-  | 1 (the floor) | `opus`, session effort | `subagent_type: general-purpose` (or `claude`), `model: opus` |
-  | 2 | `opus`, high | `subagent_type: reviewer-high` |
-  | 3 (the top) | `opus`, max | `subagent_type: reviewer-max` |
+  | 1 | `opus`, high | `subagent_type: reviewer-opus-high` |
+  | 2 | `fable`, medium | `subagent_type: reviewer-fable-medium` |
+  | 3 | `fable`, high | `subagent_type: reviewer-fable-high` |
+  | 4 (the top) | `fable`, xhigh | `subagent_type: reviewer-fable-xhigh` |
+
+  `fable` follows the newest Fable; it replaces Opus on rungs 2 to 4 and does not run beside it (the "no Fable"
+  rule of 2026-10-24 ended 2026-11-13). Rung 1 is Opus pinned to high, never the session's effort. A definition
+  added, renamed or removed takes effect only in a NEW session: the running one keeps its old list.
+
+  A loop has a level, 1 to 3, and the code's tier maps the level to a rung: **standard** code runs rungs 1, 2, 4;
+  **strict** code runs rungs 2, 3, 4. Strict in Klang is the mandatory mutation scope below (`audio_be`,
+  `audio_bridge`, the wire codecs, sprudel's pattern and timing core, the KSP processors); everything else is
+  standard. Level 1 is the floor.
 
   - **A round with any CRITICAL or MAJOR, fixed or rejected, raises the next round one level**, to 3 at
     most. A reconcile-only round after rejections goes UP too: rejecting must never be cheaper than fixing.
@@ -167,7 +178,7 @@ Apply this standard whenever reviewing changes or writing tests — including wh
   introduced something, and both call for more scrutiny of a SMALLER target (the delta). A clean round
   means the target is calm, and paying the top level for it is waste. The implementer of a fix round
   stays at the session effort unless the round found a CRITICAL, then it is briefed on `opus` with the
-  reviewer-high definition's discipline restated in the prompt.
+  reviewer definitions' discipline restated in the prompt.
 - **Final report** lists: rounds run; per round the findings and their outcomes; the parked user decisions on top.
 
 ### Reviewer prompt templates
@@ -357,6 +368,10 @@ reader.
 
 ## Changelog
 
+- **2026-11-13**: the blueprint's four rungs, with its agent names (maintainer: "Go ahead, take over the blueprint's
+  four rungs"; Mission Control `9310bcc`): rung 1 `reviewer-opus-high`, rung 2 `reviewer-fable-medium`, rung 3
+  `reviewer-fable-high`, rung 4 `reviewer-fable-xhigh`; standard code runs rungs 1, 2, 4, strict code 2, 3, 4.
+  `reviewer-high` is renamed `reviewer-opus-high`, `reviewer-max` is gone. The "no Fable" rule of 2026-10-24 ends.
 - **2026-10-30**: the light lane for look tuning, provisional (weekly meeting, MC-00017). The fixer level, the top
   rung's two charters and "stop and simplify" wait for Mission Control's MC-00036.
 - **2026-10-24**: the top rung is Opus 5.5 at max effort, one reviewer, no Fable (maintainer: "No more Fable

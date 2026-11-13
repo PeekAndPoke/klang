@@ -34,8 +34,10 @@ gets the cheapest model/effort tier that can do its task well.
 | Frontier reasoning                                   | inherit (omit `model`) | architecture judgment, by-ear/sound design tradeoffs, cross-cutting analysis the coordinator can't decompose further |
 
 **Klang note — review rounds 3 and later run on the strongest tier.** Maintainer instruction
-2026-09-05: when a `/review-loop` needs a third round, run the reviewers on the strongest tier. Since 2026-10-24
-that is Opus 5.5 at max effort, no Fable (`reviewer-max`, the `/review-loop` ladder). Rounds 1 and 2 follow the table.
+2026-09-05: when a `/review-loop` needs a third round, run the reviewers on the strongest tier. Since 2026-11-13
+the `/review-loop` ladder decides it: four rungs (`reviewer-opus-high`, `reviewer-fable-medium`,
+`reviewer-fable-high`, `reviewer-fable-xhigh`), the level following the findings; the top rung is the newest Fable at
+xhigh.
 
 **Klang note — DSP review is correctness-critical.** The audio-engineer reviewer in `/review-loop`
 judges numerical stability, per-sample cost and click risk; run it at `opus` or inherit, never
@@ -54,9 +56,10 @@ judges numerical stability, per-sample cost and click risk; run it at `opus` or 
 
 - **Agent tool**: set the `model` parameter per call. There is no per-call effort override — effort comes from the agent
   definition. `fork`-type agents always inherit the parent model; don't set
-  `model` on them. Klang pins effort through `.claude/agents/reviewer-high.md` and `reviewer-max.md`
-  (added 2026-09-18 for the review ladder; `reviewer-max.md` deleted 2026-09-28, then `reviewer-xhigh.md` (fable)
-  renamed back to `reviewer-max.md` on 2026-10-24, Opus at max).
+  `model` on them. Klang pins effort through the four reviewer definitions in `.claude/agents/`
+  (`reviewer-opus-high`, `reviewer-fable-medium`, `reviewer-fable-high`, `reviewer-fable-xhigh`; the blueprint's names
+  since 2026-11-13, before that `reviewer-high` and `reviewer-max`). A new or renamed definition is picked up only by a
+  new session.
 - **Workflow `agent()`**: set both `model` and `effort` in the opts, per stage.
 - **Custom agents** (`.claude/agents/*.md`): can pin model/effort in frontmatter; prefer that for agents whose task type
   never varies. Klang currently has one: `music-platform-strategist`
@@ -251,6 +254,8 @@ The safeguards, for every write action:
 
 - **2026-10-24**: the IDE action gate allows `OptimizeImports` and `SaveAll`; the two Optimize Imports traps noted.
 
+- **2026-11-13**: the review ladder's four rungs and agent names are the blueprint's (maintainer); Fable is back on
+  rungs 2 to 4, `reviewer-high` is `reviewer-opus-high`, `reviewer-max` is gone.
 - **2026-10-24**: review rounds 3 and later run on Opus 5.5 at max effort, no Fable (maintainer); `reviewer-xhigh` is now
   `reviewer-max`. The Opus plus Fable experiment (KLANG-00328) is suspended.
 

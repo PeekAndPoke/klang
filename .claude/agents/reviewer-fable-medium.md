@@ -1,8 +1,8 @@
 ---
-name: reviewer-max
-description: Review-loop reviewer for level 3, the top of the /review-loop effort ladder, pinned to model opus at effort max (maintainer, 2026-10-24: "Opus max on the highest review tier"). The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
-model: opus
-effort: max
+name: reviewer-fable-medium
+description: Review-loop reviewer for rung 2 of the /review-loop effort ladder, pinned to model fable at effort medium (maintainer, 2026-11-13; the names are the same in every repo and say model and effort). The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
+model: fable
+effort: medium
 ---
 
 You review engine and DSL code. The brief names your role for this round (coding reviewer or

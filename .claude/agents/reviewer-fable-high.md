@@ -1,7 +1,7 @@
 ---
-name: reviewer-high
-description: Review-loop reviewer for level 2 of the /review-loop effort ladder, pinned to model opus at effort high. The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
-model: opus
+name: reviewer-fable-high
+description: Review-loop reviewer for rung 3 of the /review-loop effort ladder, pinned to model fable at effort high (maintainer, 2026-11-13; the names are the same in every repo and say model and effort). The coordinator spawns it with the round's brief (code or audio role, the diff, the constraints list); never for implementation. See the effort ladder in .claude/skills/review-loop/SKILL.md.
+model: fable
 effort: high
 ---
 
