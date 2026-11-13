@@ -15,8 +15,7 @@ internal val aTruthWorthLyingForSong = Song(
     title = "A Synth Worth Lying For",
     rpm = 31.0,
     icon = "guitar",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 let drive = 4 // <--- Do not put 11
@@ -40,18 +39,18 @@ let guitar = (() => {
     // Zawtooth overtones for more grit
     .plus(Ign.superramp(Ign.freq().mul(2), x => x.voices(pVoices).spread(pSpread).analog(pAnalog)).mul(0.06))
    
-  return signal
+  return signal.oversampleAtLeast(4, r => r
     .lowpass(Ign.sine(0.50).plus(1).times(1000).plus(pBrightness), 1.50)            // Pre-distortion: sweeping lowpass adds dynamic character
     .plus(Ign.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.3))  // Noise burst
     .bandpass(700, 0.30)                                                            // Gentle mid-focus before distortion
-    .oversampleAtLeast(8, y => y.distort(pDrive, "tube"))                           // Overdrive, at 8x
-    .lowpass(pBrightness, 1.8, x => x.analog(pAnalog))                                             // Post-distortion: control fizz + warmth roll-off
-    .highpass(Ign.freq(), 0.7, x => x.analog(pAnalog))                                             // Cut away muddy low frequencies
+    .distort(pDrive, "tube")                                                        // Overdrive
+    .lowpass(pBrightness, 1.8, x => x.analog(pAnalog))                              // Post-distortion: control fizz + warmth roll-off
+    .highpass(Ign.freq(), 0.7, x => x.analog(pAnalog))                              // Cut away muddy low frequencies
     .coarse(2)
     .adsr(pAttack, 8.0, pSustain, 0.07, e => e.curves("exp", "exp", "exp"))         // Tight rhythm envelope
     // cabinett
     .lowpass(5000).lowpass(5000)
-    .classic()
+  ).classic()
 })()
 
 stack( // Gitarre! ------------------------------------------------------------------------------------------------------------------------------------------
@@ -85,8 +84,9 @@ stack( // Gitarre! -------------------------------------------------------------
           [0]                                     [[[8]@12     [8]@4]          [10]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8] [7]]                    [[[8]!4 [8]!3 [10]]          [10]*8]>`).repeat(2),
-  ).cylinder(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(1.5 * 0.17).distort(0.8, "tube").analog(1)
-    .adsr(0.005, 0.5, 0.2, 0.025).lpf(attack = 0.005, decay = 0.1, sustain = 0.0, release = 0.075).hpf(70).lpf(freq = 180).velocity("<[1.0 0.95 0.975 0.95]>")
+  ).cylinder(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(0.5).distort(0.2, "tube").analog(1)
+    .adsr(0.005, 0.5, 0.2, 0.025).lpf(attack = 0.005, decay = 0.1, sustain = 0.0, release = 0.075).hpf(70).lpf(freq = 180)
+    .velocity("<[1.0 0.95 0.975 0.95]>")
     .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
   , // Noise ------------------------------------------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").cylinder(5).bpf("1800 600 1200 600").gain("0.1") // .solo()
@@ -96,22 +96,22 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).cylinder(6).early(0.002).adsr(0.005, 0.2, 0.2, 0.5).gain(0.60).hpf(90).lpf(11500)
+  ).cylinder(6).early(0.002).adsr(0.005, 0.2, 0.2, 0.5).gain(0.50).hpf(90).lpf(11500)
     .superimpose(bpf(195).bpf(q = 1.1).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
   , // Drums 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
     .cylinder(7).late(0.001).adsr(0.007, 0.2, 0.9, 0.7).gain(0.85).hpf(800).lpf(12500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
   , // Master -----------------------------------------------------------------------------------------------------------------------------------------------
-    master(Katalyst(k => k
-    .reverb(0.10, 7, 4500)
-    .gain(1.5)
+    master(Katalyst(k => k.oversampleAtLeast(4, r => r
+    .reverb(0.10, 7, 6500)
     .bands(b => b
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft"))).cut(150)
-      .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.15, "soft")).mul(0.85)).cut(5000)
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")))
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.15, "soft").mul(0.85)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
+    .gain(1.2)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
-  ))
+  )))
 
 
 ).analog(feel) /*

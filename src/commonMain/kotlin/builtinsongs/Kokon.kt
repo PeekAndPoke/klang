@@ -347,7 +347,7 @@ export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 11, spread = 0.05).pregain(0.7)
   .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
-  .gain(0.21).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.06))  
+  .gain(0.20).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.07))  
   .cylinder(1).body(wet = 0.1, material = "oak")
 
 // Sing: the melody on the bright rig, an octave up.
@@ -358,7 +358,7 @@ export sing = notes => n(notes.add(7))
   .vibrato(rate = beatRate(0.33), semitones = perlin(0.025, 0.040))
   .hpf(220)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
   .lpf(4000)                                       // the crunch fizz on held notes covers the arp's picks
-  .gain(0.14).pan(0.6)                             // the melody stands near the centre, a little right
+  .gain(0.15).pan(0.6)                             // the melody stands near the centre, a little right
   .cylinder(2).body(wet = 0.15, material = "rosewood").late(perlin(0.0005, 0.0015))
 
 // Soar: the melody two octaves up, wider, over the wings.
@@ -367,7 +367,7 @@ export soar = notes => n(notes.add(14))
   .ignp("decay", 2.5).clip(2.0)
   .hpf(240)                                        // two octaves up, nothing of the melody lives below
   .lpf(4200)                                       // less fizz, the wall keeps its own
-  .gain(0.44).pan(0.5)
+  .gain(0.45).pan(0.5)
   .cylinder(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -427,7 +427,7 @@ export chime = notes => n(notes.add(14))
 export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
   .ignp("decay", 0.30).ignp("sustain", 0.50).ignp("release", 5.0).clip(40)
-  .gain(0.20).pan(0.45)
+  .gain(0.18).pan(0.45)
   .cylinder(8)
 
 // The drums, for the second run of the heavy block: the band of Der Schmetterling, heavy and half time. The kick on one,
@@ -443,13 +443,13 @@ export kick = pat => sound("bd").struct(pat)
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.45).pan(0.575)
-  .lpf(freq = "12500".add(saw(0, 1200).slow(12)), q = 0.5)
+  .lpf(freq = "13500".add(saw(0, 1200).slow(12)), q = 0.5)
   .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own cylinder for the dalay!
   .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
   .velocity("1.0 0.7 0.85 0.7")
-  .hpf(800).lpf(freq = 14500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
+  .hpf(800).lpf(freq = 15000, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
   .gain(0.83).pan(0.425)                            
   .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035))
 
@@ -473,13 +473,14 @@ let spinning = stack(
 // A second guitar answers.
 let answering = stack(
   spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02)
-    .mask("<[1 1 1 0 1 0 0 0]!2 [1 0 1 1 1 0 1 0]!2 [1 1 1 1 1 0 1 1]!2 1!2>"),
+    .mask("<[1 1 1 0 1 0 0 0]!2 [1 0 1 1 1 0 1 0]!2>"),
   sing(melodyOne).pan(0.75).gain(0.24).hpf(300),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02),
+  spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02)
+    .mask("<[1 1 1 1 1 0 1 1]!2 1!2>"),
   sing(melodyTwo).pan(0.75).gain(0.24).hpf(312),
   beat(cocoonRoots).pan(0.5).gain(saw(0.0, 0.22).slow(4)).lpf(1500),
 )
@@ -535,7 +536,7 @@ let lifting = stack(
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.40).ignp("sustain", 0.15).clip(0.66),
-  soar("[4@6 ~@2]").gain(0.50)
+  soar("[4@6 ~@2]").gain(0.45)
     .tremolo(rate = beatRate(0.25), depth = 0.25)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.5),
@@ -601,19 +602,18 @@ export song = stack(
     .analog(feel)
 
   , sound("pink pink").clip(3).adsr(0.5, 0.5, 0.5, 1.5).gain(perlin(0.005, 0.01))
-    .pan(sine(-0.7, 0.7).slow(6))
-    .bpf(perlin(1400, 1600).slow(4), 0.7)
+    .pan(sine(-0.7, 0.7).slow(6)).legato(2)
+    .bpf(perlin(1400, 1800).slow(17.sqrt()), 0.7)
     .apply(drumRoom)
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
-    .reverb(0.10, 9.5, 6500)                       // the hall: one room for the whole band, about 2 s, warm
-    // .gain(1.20)                                    // the house level, -14 LUFS
+    .reverb(0.10, 9.0, 6500)                       // the hall: one room for the whole band, about 2 s, warm
     .bands(b => b
       .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(1.15)
+    .mul(1.10)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   )))
 )

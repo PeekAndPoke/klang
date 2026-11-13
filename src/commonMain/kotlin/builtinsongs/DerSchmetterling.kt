@@ -304,7 +304,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.cylinder(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.175)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.180)  // .mute()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
 
@@ -402,7 +402,7 @@ export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 0] [~ 0 -1 0  ~ 0 ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(600).lpf("2500".add(perlin(-100, 100).fast(4))).clip(0.33)
+  .hpf(800).lpf("2500".add(perlin(-100, 100).fast(4))).clip(0.33)
   .apply(
     x => x.pan(0.33).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
     x => x.pan(0.66).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
@@ -501,13 +501,13 @@ export kick = sound(kick_pat).apply(kick_shape).tag("kick") //  . solo()
 
 export snare_pat = `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
 export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.12).pan(0.575)
-  .lpf("12000".add(perlin(0, 500).slow(4)))
+  .lpf("13500".add(perlin(0, 500).slow(4)))
 export snare_arrange = x => x.cylinder(7).mute("<0!128 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
 export hats_shape = x => x.gain(0.14).pan(0.425)
-  .hpf(800).lpf(freq = "14000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.70, 2.0)
+  .hpf(800).lpf(freq = "15000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.70, 2.0)
 export hats_arrange = x => x.cylinder(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
@@ -566,11 +566,10 @@ export song = stack(
       .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.20)
+    .mul(4.40)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   )))
 )
-
 
 
 

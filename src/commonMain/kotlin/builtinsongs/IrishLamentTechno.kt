@@ -15,8 +15,7 @@ internal val irishLamentTechnoSong = Song(
     title = "The Synthsale Piper's Last Rave",
     rpm = 38.0,
     icon = "compact disc",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // The Piper traded the recorder for a 303. Same melody, different floor.
@@ -43,16 +42,19 @@ import * from "sprudel"
 //   = 212 cycles total, then arrange loops back to warm
 
 // ── Continuous core: kick + hat + bass ──────────────────────────────
-let kick = s("bd!4").gain(1.0).hpf(60).adsr(0.06, 0.20, 0.2, 0.02).cylinder(0)
+let kick = s("bd!4").gain(0.6).hpf(50).adsr(0.06, 0.20, 0.2, 0.02).cylinder(0)
 let hat  = s("hh!8").gain(0.375).hpf(6000).adsr(0.001, 0.04, 0.0, 0.04).cylinder(1)
 let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
-    .sound("supersaw").unison(spread = 0.1, voices = 15).legato(0.7).hpf(160).lpf(freq = sine.range(450, 1000).slow(7), env = 15.9, q = 1.5, attack = 0.005, decay = 0.08, sustain = 0.7, release = 0.05)
+    .sound("supersaw").unison(spread = 0.1, voices = 15).legato(0.7)
+    .hpf(120).lpf(freq = sine.range(450, 1000).slow(7), env = 15.9, q = 1.5, attack = 0.005, decay = 0.08, sustain = 0.7, release = 0.05)
     .adsr(0.01, 0.2, 0.4, 0.05).distort(0.5, "gentle").onepole(23197).body(material = "membrane")
     .gain(0.75 * 0.22).cylinder(2) // . solo()
 let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
-let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr(0.005, 0.05, 0.5, 0.02).hpf(70).lpf(freq = 180, env = 19).gain(0.42).cylinder(3)
+let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr(0.005, 0.05, 0.5, 0.02)
+  .hpf(70).lpf(freq = 180, env = 19).gain(0.22).cylinder(3)
+  .superimpose(transpose(12).gain(mul(0.25)))
 let clap = s("~ cp ~ cp").gain(0.22).hpf(600).cylinder(8).reverb(wet = 0.2, size = 3) // own cylinder: its reverb is not the hats'
 let oh   = s("[~ ~ ~ oh]!4").gain(0.20).hpf(4000).cylinder(1)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.4).hpf(800).cylinder(1)
@@ -71,7 +73,7 @@ let leadE = leadStyle(note(`<[a5 e5 d6 c6] [a5 f5 d5 c5] [f5  d5 g5  bb4] [e5 g5
 
 // ── Pad ─────────────────────────────────────────────────────────────
 let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.3)))
-    .sound("superpulse").unison(voices = 3, spread = 0.20).hpf(250).lpf(freq = "1650", q = 1, env = 13.7).adsr(1.5, 0.5, 0.3, 1.0).legato(1.4)
+    .sound("superpulse").unison(voices = 3, spread = 0.20).hpf(250).lpf(freq = "1650", q = 1, env = 13.7).adsr(1.6, 0.5, 0.3, 1.2).legato(1.4)
     .pan(0.3).superimpose(pan(0.2).transpose(-12), pan(0.8).transpose(12).velocity(0.9))
     .phaser(rate = 1/6, wet = saw.range(0.3, 0.6).slow(16), sweep = 900, center = 1400)
     .gain(0.065).cylinder(5).reverb(wet = 0.4, size = 6) //  .solo()
@@ -87,13 +89,13 @@ let riser = note("c").fast(3).sound("pink").superimpose(x => x.sound("brown"))
 // The hit segment is 2 cycles, so inner time advances by 2 per arrange loop;
 // plain `t < 1` would only match the very first iteration. `t % 2 < 1`
 // matches the first cycle of every 2-cycle period, so the hit fires every loop.
-let hitKick = s("bd:2").gain(0.95).hpf(60).adsr(0.05, 0.22, 0.5, 1.0).cylinder(1)
+let hitKick = s("bd:2").gain(0.55).hpf(60).adsr(0.05, 0.22, 0.5, 1.0).cylinder(1)
 let hitBass = note("d2").sound("saw").distort(0.8, "hard")
     .hpf(100).lpf(freq = 900, q = 2.5).adsr(0.02, 0.3, 0.5, 10.0)
-    .gain(0.4 * 0.22).onepole(19084)
+    .gain(0.15).onepole(19084)
     .cylinder(0)
 let hitSub  = note("d1").sound("sine")
-    .adsr(0.005, 0.3, 0.5, 10.0).lpf(120).gain(0.45)
+    .adsr(0.005, 0.3, 0.5, 10.0).lpf(120).gain(0.22)
     .cylinder(1)
 let hitCrash = s("cr").gain(0.75).hpf(200).cylinder(9).reverb(wet = 0.25, size = 4).adsr(0.005, 0.3, 1.0, 2.0)
 let hitStab = chord("Dm").voicing()
@@ -126,7 +128,7 @@ let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3500).adsr(0.35, 0.1, 
 // Only the two melodies cross-fade via degradeBy.
 let quietBuild = stack(
     // Kick — clean gain ramp from soft to full
-    s("bd!4").gain(saw.range(0.7, 1.0).slow(64)).hpf(60).adsr(0.03, 0.2, 0.2, 0.02).cylinder(0),
+    s("bd!4").gain(saw.range(0.5, 0.7).slow(64)).hpf(60).adsr(0.03, 0.2, 0.2, 0.02).cylinder(0),
     // Hat — gain grows
     s("hh!8").gain(saw.range(0.15, 0.4).slow(64)).hpf(6000).adsr(0.001, 0.04, 0.0, 0.04).cylinder(2),
     // Clap — gain swells in
@@ -135,7 +137,8 @@ let quietBuild = stack(
     s("[~ hh sd oh]!4").gain(saw.range(0.0, 0.22).slow(64)).hpf(5000).cylinder(2),
     // Sub bass — always present, gain grows
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x]!32 [x!2]!32>").sound("sine").legato(1.0).adsr(0.005, 0.05, 0.5, 0.05)
-        .hpf(60).lpf(freq = 220, env = 27.9).gain(saw.range(0.2, 0.4).slow(64)).cylinder(3),
+      .hpf(60).lpf(freq = 220, env = 27.9).gain(saw.range(0.10, 0.20).slow(64)).cylinder(3)
+      .superimpose(transpose(12).gain(mul(0.25))),
     // Saw bass — gain swells from silent to full
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>").sound("saw").legato(0.7).hpf(160).lpf(800)
         .adsr(0.002, 0.08, 0.5, 0.05).distort(0.4, "soft")
@@ -172,7 +175,7 @@ let quietBuild = stack(
 // in a syncopated rhythm, drifting slowly across the stereo field.
 let darkBuild = stack(
     // Kick — full power, slightly longer body
-    s("bd:1!4").gain(0.8).hpf(50).adsr(0.03, 0.3, 0.5, 0.2).cylinder(0).distort(0.2),
+    s("bd:1!4").gain(0.6).hpf(40).adsr(0.03, 0.3, 0.5, 0.2).cylinder(0).distort(0.2),
     // Hat
     s("hh!8").gain(0.50).hpf(6000).adsr(0.001, 0.04, 0.0, 0.04).cylinder(2),
     // Clap
@@ -182,7 +185,8 @@ let darkBuild = stack(
     // Sub bass — sidechain pump (drops at each kick, recovers between)
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x!4]!32 [x!8]!32>")
         .sound("sine").distort(0.1, "soft").legato(1.0).adsr(0.005, 0.05, 0.5, 0.05)
-        .hpf(50).lpf(300).gain(saw.fast(4).range(0.45, 0.30))
+        .hpf(50).lpf(300).gain(saw.fast(4).range(0.20, 0.15))
+        .superimpose(transpose(12).gain(mul(0.25)))
         .cylinder(3),
     // Saw bass — pumping, LPF closes, warmth + distortion grow
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>")
@@ -219,9 +223,9 @@ let darkBuild = stack(
         .cylinder(7).reverb(wet = 0.7, size = 10),
 
       // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.6, 0.90).slow(64)).struct("x!8").lpf(env = 15.9).clip(0.5),
+    mel3.velocity(saw.range(0.6, 0.95).slow(64)).struct("x!8").lpf(env = 15.9).clip(0.5),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(0.6, 1.00).slow(64)).struct("x!8").lpf(env = 15.9).clip(0.5),
+    mel1.velocity(saw.range(0.6, 1.05).slow(64)).struct("x!8").lpf(env = 15.9).clip(0.5),
 
 )
 
@@ -250,18 +254,20 @@ stack(
     [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
     [96, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
   ),
-  master(Katalyst(k => k.reverb(0.10, 7).gain(1.2).oversampleAtLeast(2, r => r.distort(0.1, "soft"))))
+    master(Katalyst(k => k.oversampleAtLeast(4, r => r
+    .reverb(0.10, 7, 6500)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.10))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .mul(2.50)
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  )))
 ).analog(3.0)
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
 // Composed by: Claude, Motor, peekandpoke
-
-
-
-
-
-
-
 
 
     """,

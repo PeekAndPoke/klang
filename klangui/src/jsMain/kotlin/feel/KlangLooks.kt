@@ -14,7 +14,9 @@ package io.peekandpoke.klang.ui.feel
 object KlangLooks {
 
     /** The theme's own values, no role set apart (the maintainer, 2026-11-02: "Call the 'Default' them 'Classic'"). */
-    val Classic = KlangLookPreset(id = "classic", name = "Classic", values = emptyMap())
+    val Classic = KlangLookPreset(id = "classic", name = "Classic", values = mapOf(
+        KlangRole.GroundEditor to "#010102",
+    ))
 
     /** The ids an older version stored that a look has changed since: "default" is Classic's. */
     private val RENAMED = mapOf("default" to Classic.id)

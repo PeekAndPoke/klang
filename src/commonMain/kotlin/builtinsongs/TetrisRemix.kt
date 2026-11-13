@@ -26,8 +26,7 @@ internal val tetrisRemixSong = Song(
     title = "Remix: Echo um Echo",
     rpm = 30.0,
     icon = "headphones",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 // Here we import parts of the original Tetris, so we can remix them
 import { leadPattern, bassPattern, sub as tetrisSub } from "peekandpoke/tetris"
@@ -70,15 +69,28 @@ export sub = tetrisSub.struct("x!1 [~!1 x!1?] x!5 ~!1").cylinder(7).clip(0.8).di
   .lpf(attack = 0.005, decay = 3.0, sustain = 0.0, release = 0.2).hpf(60).lpf(freq = 300, env = 48, attack = 0.005, decay = 1.0, sustain = 0.0, release = 0.2).gain(0.7 * 0.34) // .solo()  0.7 is tetris subShape's gain; the remix trims it instead of tetris's 0.80
 
 // ── Song: dub plate with broad reverb tail and gentle bus compression ──
-export song = stack(kick, snare, hat, skank, lead, bass, sub)
-  .compressor(-6, 2, 6, 0.02, 0.05).analog(3.5)
+export song = stack(
+  kick, 
+  snare, 
+  hat,
+  skank, 
+  lead, 
+  bass, 
+  sub,
+  master(Katalyst(k => k.oversampleAtLeast(4, r => r
+    .reverb(0.10, 7, 6500)
+    // .gain(4.8)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.10))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .mul(3.50)
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  )))
+)
 
 // Composed by: peekandpoke + Claude (echo of Korobeiniki, by way of King Tubby)
-
-
-
-
-
 
 
 
