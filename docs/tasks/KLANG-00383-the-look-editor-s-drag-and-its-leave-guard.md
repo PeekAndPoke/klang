@@ -17,6 +17,9 @@ KLANG-00382 built the look editor (`LooksPage`) with two parts left for Kraft:
   The request is ULTRA-00266 (`guardLeaving { target -> Proceed | Stop | Ask }`, scoped to the component, with an
   optional `beforeunload`). Meanwhile the editor keeps a draft when it is left (`Drafts` in `LooksPage.kt`) and the
   browser asks before a reload or a closed tab loses one.
+  **Settled by KLANG-00444 (2026-11-13):** the editor keeps every change in the look at once; there are no drafts,
+  no `Drafts` object and no `beforeunload` question, so nothing is left to ask before leaving. This half of the
+  ticket, decision 1 and work item 2 below are done with; the drag is what remains.
 
 ## Decide before implementing
 
@@ -37,7 +40,7 @@ KLANG-00382 built the look editor (`LooksPage`) with two parts left for Kraft:
 - A look dragged from the bench onto a slot is equipped there, the look there goes to the bench; dragged between two
   slots, they swap; dragged onto the bench, its slot is empty. The drawer shows the result at once.
 - Pick and place works as before.
-- Leaving the editor with a draft not applied does what the decision says, for a link, the drawer, and Back.
+- (Gone with KLANG-00444: there is no draft to leave with.)
 
 ## History
 

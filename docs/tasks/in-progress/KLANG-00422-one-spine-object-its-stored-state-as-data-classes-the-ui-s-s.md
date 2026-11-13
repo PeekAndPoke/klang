@@ -291,6 +291,7 @@ This ticket holds the work that follows from the map. The map itself, with every
   files outside the workshop reach it so.
 - **D2, the unsaved look drafts** (`Drafts` in `LooksPage`, a private global, lost when the tab closes): into the
   Spine as stored state, or left as they are.
+  **Settled by KLANG-00444 (2026-11-13):** the look editor keeps a change at once, there are no drafts.
 - **D3, `MarkdownDisplay.cache`** in `klangui` grows with every markdown text drawn: a bound, or a cache per component.
 
 ## The work

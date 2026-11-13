@@ -28,8 +28,9 @@ then "File a ticket for the OKLab style helper for the theme builder please".
 
 - **D1: which helpers, and in which order.** Proposal: the four below, the spectrum steps first (it answers a request
   made twice), the contrast check second (it prevents a look nobody can read).
-- **D2: a helper suggests, the user takes it.** Proposal: a helper fills its colours into the draft the editor already
-  keeps, as a typed value would; nothing changes a look on its own, and the page's **Reset** drops it with the rest of the draft.
+- **D2: a helper suggests, the user takes it.** Proposal: a helper fills its colours into the look as a typed value
+  would, kept at once like any edit (KLANG-00444); nothing changes a look on its own, and the page's **Reset** takes
+  it back to the look as it was when the page was opened.
 - **D3: where the colour maths lives.** Proposal: one small file in `klangui`'s `feel` package (`Oklab.kt`, plain
   functions: to and from OKLab and OKLCH, mix, a lightness step), moved there from `Spectrumeter.kt`, which then uses
   it. No library: the maths is a dozen lines of published formulas.
@@ -57,7 +58,7 @@ then "File a ticket for the OKLab style helper for the theme builder please".
 ## Acceptance
 
 - The maths is one file with specs; `Spectrumeter.kt` uses it and Copper's spectrum draws as before.
-- Each helper fills the draft only, and the page's Reset takes it back.
+- Each helper fills the look as an edit does, and the page's Reset takes it back.
 - The spectrum helper, given the blue look's quiet and peak, gives steps close to the ones tuned by hand.
 - The maintainer has tried the helpers on a new look.
 

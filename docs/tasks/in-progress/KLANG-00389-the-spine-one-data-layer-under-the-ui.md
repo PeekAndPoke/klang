@@ -50,7 +50,7 @@ work.
 | `KlangTheme`, `KlangLookShelf`, `LookStorage` (klangui and app) | the worn look, the shelf | `klang-look`, `klang-looks` | the shelf saves itself; the worn look is saved by hand at 6 call sites next to `KlangTheme.choose` |
 | `KlangToolAutoUpdate` (klangui) | the tools' auto update | `klang-tool-auto-update` | **not in `StorageKeys`**: the Dev Storage page cannot reset it |
 | `keysManager`, `fs`, `version` (`index.kt`) | keys and layers, fullscreen, build info | `klang-keymap` | `keys` is a Kraft attribute; `fs` and `version` are globals; listeners never removed |
-| `LearnSearch`, `motorBackgroundRef`, `Drafts` (LooksPage), `MotorBackground.surfaceCache` | search text, a global ref to the start page's plate, look drafts, the last plate's pixels | no | the pixel cache is a full-screen buffer kept for the app's life |
+| `LearnSearch`, `motorBackgroundRef`, `Drafts` (LooksPage; gone with KLANG-00444), `MotorBackground.surfaceCache` | search text, a global ref to the start page's plate, look drafts, the last plate's pixels | no | the pixel cache is a full-screen buffer kept for the app's life |
 | `SongStorage` (a class per `CodeSongPage`), `MidiInstrumentStorage`, `WorkbenchLayoutStorage` | a song's code and settings, MIDI picks, the layout | `song-<version>-<id>-*`, ... | `SongStorage`'s keys use the version read once when the page is built: "n/a" if it arrives later |
 
 How components reach them: mostly as globals. Kraft attributes carry `keys`, `addons`, `modals`, `popups`,

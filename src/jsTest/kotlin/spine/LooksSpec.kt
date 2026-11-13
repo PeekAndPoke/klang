@@ -229,7 +229,7 @@ class LooksSpec : StringSpec({
                 looks.wear(rust)
                 KlangTheme.choose(rust)
 
-                withClue("changed, as the looks page applies a draft: the page puts it on, not the Spine") {
+                withClue("changed, as the looks page keeps an edit: the page puts it on, not the Spine") {
                     KlangLookShelf.keep(rust.copy(name = "Rusty"))
 
                     KlangTheme.worn shouldBe rust

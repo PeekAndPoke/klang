@@ -94,10 +94,12 @@ fun Tag.LooksPage(slot: Int?) = comp(
  * hand" logic completely. Say somewhere "use drag and drop""). Only the drawer's "+" still fills by click: its slot
  * waits ([target]), and a look clicked on the bench goes there.
  *
- * **Live, then back:** while the page is open the app wears the look being edited, its draft included
- * ([KlangTheme.preview]); leaving, it goes back to the look worn. **Apply** keeps the draft in the look, **Wear it**
- * makes it the look worn, **Reset** drops the draft. A built-in look is read only: "Wear it" and "Duplicate to edit".
- * A draft not applied is kept when the page is left ([Drafts]): coming back shows it, still to apply or reset.
+ * **Live, then back:** while the page is open the app wears the look being edited ([KlangTheme.preview]); leaving, it
+ * goes back to the look worn. **A change is kept in the look at once** (KLANG-00444; the maintainer, 2026-11-13: "the
+ * apply button is not needed. We automatically apply"): there is no draft beside the look and nothing to lose on a
+ * reload. **Reset** puts the look back as it was when this visit of the page first showed it ([LookBaselines]), and
+ * can be pressed only while the look differs from that. **Wear it** makes it the look worn. A built-in look is read
+ * only: "Wear it" and "Duplicate to edit".
  */
 class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
@@ -119,11 +121,14 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     /** An empty slot waiting to be filled by the next look clicked on the bench (from the drawer's "+"). */
     private var target: Int? by value(props.slot?.takeIf { it in 0 until KlangLoadout.SIZE })
 
-    /** The selected look's roles as edited, not applied yet. */
-    private var draft: Map<KlangRole, String> by value(Drafts.valuesOf(KlangTheme.worn))
+    /** The selected look's roles as the editor shows them: what the look holds, for one's own look. */
+    private var draft: Map<KlangRole, String> by value(KlangTheme.worn.values)
 
-    /** The selected look's name as edited. */
-    private var draftName: String by value(Drafts.nameOf(KlangTheme.worn))
+    /** The selected look's name as typed; the look holds it cleaned (`KlangLookText.cleanName`). */
+    private var draftName: String by value(KlangTheme.worn.name)
+
+    /** The user's own looks as they were when this visit first showed them: what Reset goes back to. */
+    private val baselines = LookBaselines().also { it.seen(KlangTheme.worn) }
 
     /** The paste box: open, its text, and why the last paste was not a look. */
     private var pasteOpen: Boolean by value(false)
@@ -176,12 +181,17 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
 
     private val selected: KlangLookPreset get() = shelf.byId(selectedId) ?: KlangLooks.Classic
 
-    private val dirty: Boolean get() = selected.own && (draft != selected.values || draftName != selected.name)
+    /** Whether the selected look differs from how this visit first showed it. */
+    private val changed: Boolean get() = baselines.changed(selected)
 
     private fun select(look: KlangLookPreset) {
-        selectedId = look.id
-        draft = Drafts.valuesOf(look)
-        draftName = Drafts.nameOf(look)
+        // As the shelf holds it now: [look] may come from the last drawing, before an edit kept since
+        val now = shelf.byId(look.id) ?: look
+
+        baselines.seen(now)
+        selectedId = now.id
+        draft = now.values
+        draftName = now.name
         copied = false
         KlangTheme.preview(draft)
     }
@@ -193,13 +203,32 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             else -> return
         }
 
-        Drafts.keep(selected, name = draftName, values = draft)
-        KlangTheme.preview(draft)
+        keep()
     }
 
     private fun rename(name: String) {
         draftName = name.take(KlangLookPreset.NAME_MAX)
-        Drafts.keep(selected, name = draftName, values = draft)
+        keep()
+    }
+
+    /** Keeps what the editor shows in the selected look, at once; the app wears it as long as the page is open. */
+    private fun keep() {
+        val look = selected
+
+        if (look.own) {
+            put(look.copy(name = KlangLookText.cleanName(draftName), values = draft))
+        }
+
+        KlangTheme.preview(draft)
+    }
+
+    /** [look] on the shelf, and worn where it is the look worn. */
+    private fun put(look: KlangLookPreset) {
+        KlangLookShelf.keep(look)
+
+        if (KlangTheme.worn.id == look.id) {
+            KlangTheme.choose(look)
+        }
     }
 
     /** A click on a look, in a slot ([slot]) or on the bench (null): shown for editing; a waiting slot takes a bench look. */
@@ -225,31 +254,20 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         }
     }
 
-    private fun apply(): KlangLookPreset {
-        val kept = selected.copy(name = KlangLookText.cleanName(draftName), values = draft)
-
-        KlangLookShelf.keep(kept)
-        Drafts.forget(kept.id)
-        draftName = kept.name
-
-        if (KlangTheme.worn.id == kept.id) {
-            KlangTheme.choose(kept)
-        }
-
-        return kept
-    }
-
     private fun wear() {
-        val look = if (dirty) apply() else selected
+        val look = selected
 
         KlangTheme.choose(look)
         spine.looks.wear(look)
         KlangTheme.preview(draft)
     }
 
+    /** The selected look as it was when this visit of the page first showed it. */
     private fun reset() {
-        Drafts.forget(selectedId)
-        select(selected)
+        val was = baselines.of(selected)
+
+        put(was)
+        select(was)
     }
 
     /** A look of the user's own from [values], kept, selected, and on the waiting slot if there is one. */
@@ -293,7 +311,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 onResult = { yes ->
                     if (yes) {
                         KlangLookShelf.delete(look.id)
-                        Drafts.forget(look.id)
+                        baselines.forget(look.id)
 
                         if (KlangTheme.worn.id == look.id) {
                             KlangTheme.choose(KlangLooks.Classic)
@@ -626,7 +644,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
         val look = selected
         val own = look.own
 
-        // Stays at the top while the cards scroll under it, so Apply and the other keys stay in reach (the maintainer,
+        // Stays at the top while the cards scroll under it, so Reset and the other keys stay in reach (the maintainer,
         // 2026-10-28); a band of the page's ground above it hides what scrolls past ("the content scrolls past it and
         // is then visible above the sticky panel"), up to the page's top edge, its padding included
         div {
@@ -700,7 +718,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
                 css {
                     put("margin-left", "auto")
                     put("font-size", "12px")
-                    put("color", if (dirty) "var(--kl-lamp-warning)" else "var(--kl-ink-label)")
+                    put("color", "var(--kl-ink-label)")
                 }
                 +standing(look)
             }
@@ -708,11 +726,11 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     }
 
     private fun standing(look: KlangLookPreset): String {
-        val changes = KlangRole.entries.count { draft[it] != look.values[it] } + (if (draftName != look.name) 1 else 0)
+        val changes = baselines.changes(look)
         val worn = KlangTheme.worn.id == look.id
 
         return when {
-            look.own && changes > 0 -> "$changes ${if (changes == 1) "change" else "changes"}, not applied yet"
+            look.own && changes > 0 -> "$changes ${if (changes == 1) "change" else "changes"} since you came, kept as you go"
             worn -> "Worn. The app wears it while you are here"
             look.own -> "Saved. The app wears it while you are here"
             else -> "Duplicate it to make it your own. The app wears it while you are here"
@@ -738,11 +756,10 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
             }
 
             if (own) {
-                KlangButton(onClick = { apply() }, availability = enabledIf(dirty)) { +"Apply" }
-                KlangButton(onClick = { reset() }, availability = enabledIf(dirty)) { +"Reset" }
+                KlangButton(onClick = { reset() }, availability = enabledIf(changed)) { +"Reset" }
             }
 
-            KlangButton(onClick = { wear() }, surface = KlangButton.Surface.Domed, pressed = KlangTheme.worn.id == look.id && !dirty) {
+            KlangButton(onClick = { wear() }, surface = KlangButton.Surface.Domed, pressed = KlangTheme.worn.id == look.id) {
                 +"Wear it"
             }
 
@@ -902,7 +919,7 @@ class LooksPage(ctx: Ctx<Props>) : Component<LooksPage.Props>(ctx) {
     private fun FlowContent.renderRole(role: KlangRole, label: String, editable: Boolean) {
         val value = effective(role)
         val following = role.follows?.takeIf { role !in draft }
-        val saved = selected.values[role]
+        val saved = baselines.of(selected).values[role]
 
         div {
             key = "role-${role.name}"
@@ -1475,52 +1492,3 @@ private const val DROP_LIGHT = "brightness(1.35)"
 
 /** Where a dragged look would land, when no look is there to light up: the focus blue, faint. */
 private const val DROP_WASH = "color-mix(in srgb, var(--kl-focus) 18%, transparent)"
-
-/**
- * The drafts not applied yet, per look, kept while the app runs (KLANG-00382): leaving the editor keeps them, coming
- * back shows them, so leaving the page needs no question. A reload or a closed tab would lose them: the browser asks
- * first while one is pending, for the app's life. Not Kraft's `guardLeaving(beforeUnload = true)` (ULTRA-00266): it
- * holds only while its page is mounted, and the drafts outlive the page.
- */
-private object Drafts {
-
-    private val pending = mutableMapOf<String, Pair<String, Map<KlangRole, String>>>()
-
-    /** The one listener, added with the first draft, for the app's life. */
-    private var guarding = false
-
-    fun nameOf(look: KlangLookPreset): String = pending[look.id]?.first ?: look.name
-
-    fun valuesOf(look: KlangLookPreset): Map<KlangRole, String> = pending[look.id]?.second ?: look.values
-
-    /** [name] and [values] as [look]'s draft; none when they are what it holds, or it is not one of the user's own. */
-    fun keep(look: KlangLookPreset, name: String, values: Map<KlangRole, String>) {
-        if (!look.own || (name == look.name && values == look.values)) {
-            forget(look.id)
-
-            return
-        }
-
-        pending[look.id] = name to values
-        guard()
-    }
-
-    fun forget(id: String) {
-        pending.remove(id)
-    }
-
-    private fun guard() {
-        if (guarding) {
-            return
-        }
-
-        guarding = true
-
-        window.addEventListener("beforeunload", { e ->
-            if (pending.isNotEmpty()) {
-                e.preventDefault()
-                e.asDynamic().returnValue = ""
-            }
-        })
-    }
-}
