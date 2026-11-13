@@ -125,10 +125,11 @@ This ticket holds the work that follows from the map. The map itself, with every
   - **A part read without a listener:** Ultra's `distinct()` gives the last value it passed on, which with no
     listener is the one it was made with, so `spine.recents.entries()` read stale. `Stored.part` now gives the
     part as it is when asked. Sent to Ultra-Main-Dev as a bug request on 2026-11-11 (the maintainer's word): ULTRA-00302,
-    which also covers `cutoff()`, read the same way. Fixed on Ultra's master (bb30ad30, 2026-11-11), not released
-    yet. With the Ultra version that has it: `Stored.part` goes back to plain `distinct()`; and the same release
-    makes a value written by a handler during a publish win (ULTRA-00307), which is the fault `persist` writes
-    first to avoid, so its comment and the note for Ultra are to be read again then.
+    which also covers `cutoff()`, read the same way. Fixed in Ultra 0.118.0, which Klang is on since 2026-11-13:
+    `Stored.part` is plain `map(pick).distinct()` again. The same release makes a value written by a handler
+    during a publish win (ULTRA-00307), so the note for Ultra about later listeners seeing the older value last
+    is settled there. `persist` still writes first, then shows: that order is its own, it keeps a listener's
+    newer write from being followed by the older one in the storage, whatever the stream does.
   - **Left for their own slices:** the keymap (done, below), the looks and the tools' switch, the songs, the MIDI
     play code and setup (with the laptop keys' layout), and the walkthroughs, which move with `KlangGuiDance` in
     step 4.
@@ -362,6 +363,8 @@ after.
   to the bench and back are untested, as before; the mapping itself is). 37 of 37 mutants killed.
 - 2026-11-11: the `distinct()` fault sent to Ultra (ULTRA-00302); the workshop's storage pieces stay here to be
   battle tested (the maintainer).
+- 2026-11-13: on Ultra 0.118.0: `Stored.part` back to plain `distinct()` (ULTRA-00302); `persist` read again
+  after ULTRA-00307 and left as it is.
 - 2026-11-11: step 3, the keymap: `UserKeys`, a field per action, `null` for "back to the defaults"; the key
   manager follows its store. One review round, clean (2 MINOR, applied); 11 of 11 mutants killed.
 - 2026-11-11: step 3, the looks and the tools' switch: `spine.looks` (the look worn with the slots, the own looks a

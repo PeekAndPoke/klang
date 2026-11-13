@@ -12,7 +12,6 @@ import io.peekandpoke.klang.workshop.storage.KeyValueStore
 import io.peekandpoke.klang.workshop.storage.persist
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
-import io.peekandpoke.ultra.streams.Unsubscribe
 import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.serialization.KSerializer
@@ -81,16 +80,10 @@ class Stored<T>(
 
     /**
      * One part of the section as a stream of its own, which only says something when that part changes. Asked for
-     * its value it gives the part as it is now, listened to or not (Ultra's `distinct` gives the last value it
-     * passed on, which with no listener is the one it was made with).
+     * its value it gives the part as it is now, listened to or not (Ultra's `distinct` reads its source since
+     * 0.118.0, ULTRA-00302).
      */
-    fun <R> part(pick: (T) -> R): Stream<R> = object : Stream<R> {
-        private val changes = stream.map(pick).distinct()
-
-        override fun invoke(): R = pick(shown())
-
-        override fun subscribeToStream(sub: (R) -> Unit): Unsubscribe = changes.subscribeToStream(sub)
-    }
+    fun <R> part(pick: (T) -> R): Stream<R> = stream.map(pick).distinct()
 
     /** Changes the section: kept, then shown. A change that changes nothing writes nothing. */
     fun update(change: (T) -> T) {
