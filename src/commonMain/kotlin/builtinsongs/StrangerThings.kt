@@ -47,7 +47,7 @@ stack(
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4").clip(0.7).struct("x!4").slow(16)
     .cylinder(3).s("supersaw").unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).onepole(23846) // . mute()
-    .gain(1.0 * 0.50).adsr(0.01, 0.6, 0.8, 2.75).coarse(factor = 2) // solo()
+    .gain(1.0 * 0.50).adsr(0.01, 1.0, 0.66, 2.75).coarse(factor = 2) // solo()
     .superimpose(
       x => x.cylinder(4).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32")
         .pan(sine.range(0.3, 0.7).slow(20)).clip(0.825)
@@ -85,13 +85,6 @@ stack(
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )
-
-
-
-
-
-
-
 
 
     """,

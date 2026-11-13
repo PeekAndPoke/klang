@@ -15,8 +15,7 @@ internal val derSchmetterlingSong = Song(
     title = "Der Schmetterling",
     rpm = 34.5,
     icon = "bug",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
@@ -60,14 +59,14 @@ let pedalStock = Ign.fn(x => x)
 let pedalScreamer = Ign.fn(x => x
   .parallel(
     clean => clean,
-    dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.25, "soft")).mul(0.5)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+    dirt => dirt.highpass(720).distort(0.25, "soft").mul(0.5)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
   .lowpass(4200)                                   // the tone knob, half way
   .mul(0.55))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
 let pedalFuzz = Ign.fn(x => x
-  .oversampleAtLeast(4, y => y.distort(0.70, "asym"))
+  .distort(0.70, "asym")
   .lowpass(4500)
   .mul(0.28))                                      // level
 
@@ -79,32 +78,30 @@ let pedalBoost = Ign.fn(x => x
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
 // is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
 let preampStock = Ign.fn(x => x
-  .oversampleAtLeast(4, y => y
-    .distort(0.20, "tube").highpass(100)
-    .distort(0.50, "soft").highpass(100)))
+  .distort(0.20, "tube").highpass(100)
+  .distort(0.50, "soft").highpass(100))
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
 let preampClean = Ign.fn(x => x
-  .oversampleAtLeast(2, y => y.distort(0.12, "tube")).highpass(80)
+  .distort(0.12, "tube")
+  .highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
   .mul(3.5))                                       // volume
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
 let preampCrunch = Ign.fn(x => x
   .highpass(120)
-  .oversampleAtLeast(4, y => y
-    .distort(0.40, "tube").highpass(110)
-    .distort(0.20, "asym").highpass(100))
-  .lowpass(5600)
+  .distort(0.40, "tube").highpass(110)
+  .distort(0.20, "asym").highpass(100)
+  .lowpass(5800)
   .mul(0.57))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .oversampleAtLeast(4, y => y                      // the three stages at 8x: one trip up, one down
-    .distort(0.20, "tube").highpass(110)
-    .distort(0.15, "asym").highpass(100)
-    .distort(0.45, "soft"))
+  .distort(0.20, "tube").highpass(110)
+  .distort(0.15, "asym").highpass(100)
+  .distort(0.45, "soft")
   .lowpass(5200)                                   // the fizz
   .mul(0.57))                                      // volume
 
@@ -113,13 +110,13 @@ let powerStock = Ign.fn(x => x.drive(0.3))
 
 // Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
 let powerPushPull = Ign.fn(x => x
-  .oversampleAtLeast(2, y => y.distort(0.25, "soft"))
+  .distort(0.25, "soft")
   .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0)) // presence
   .mul(1.6))                                       // master
 
 // Class A: a lopsided clip, even harmonics, the chime.
 let powerClassA = Ign.fn(x => x
-  .oversampleAtLeast(2, y => y.distort(0.25, "asym"))
+  .distort(0.25, "asym")
   .mul(1.3))                                       // master
 
 // Cabinets: the linear half of the amp. All of these are static and linear, so they move to the cylinder unchanged once
@@ -198,12 +195,13 @@ let makeGuitar = (rig) => {
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
-  return rig(signal)
-    // Missing piece in the chain: Mircophone
-    .mul(0.17).oversampleAtLeast(4, y => y.shape("soft")).mul(1.1)
+  return rig(signal)    
     // sprudel classic
     .classic()
 }
+
+// The Mircophone for the guitar
+let guitarShape = Ign.fn(x => x.mul(0.16).shape("soft").mul(1.10))
 
 // The rigs: the signal path after the string, stage by stage. A/B one stage at a time:
 //   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck
@@ -213,13 +211,11 @@ let makeGuitar = (rig) => {
 //   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
 // Two guitarists, two rigs: the rhythm rig on guitars 2 and 3 (hard left and right), the melody rig on guitar 1 in the
 // centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
-let rhythmRig = Ign.fn(x => x.serial(pickupHumbucker)
-  .oversampleAtLeast(4, y => y.serial(pedalScreamer, preampHighGain, powerPushPull))
-  .serial(snareCut, cab4x12))
-
-let melodyRig = Ign.fn(x => x.serial(pickupSingle)
-  .oversampleAtLeast(4, y => y.serial(pedalBoost, preampCrunch, powerPushPull))
-  .serial(snareCut, cab4x12))
+let rhythmRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
+  .serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, guitarShape)))
+  
+let melodyRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
+  .serial(pickupSingle, pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, guitarShape)))
 
 let guitar       = makeGuitar(rhythmRig)
 let guitarMelody = makeGuitar(melodyRig)
@@ -408,12 +404,12 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
   .hpf(600).lpf("2500".add(perlin(-100, 100).fast(4))).clip(0.33)
   .apply(
-    x => x.pan(0.30).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
-    x => x.pan(0.70).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.00).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
+    x => x.pan(1.00).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
   )
 
 export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
-  .scale("e4:minor").gain(0.38)
+  .scale("e4:minor").gain(0.25)
   .mute("<1!96 0!32>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
@@ -568,9 +564,9 @@ export song = stack(
     .bands(b => b
       .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.00)).cut(150)
       .band(mid => mid.oversampleAtLeast(4, r => r.distort(0.10, "soft")).mul(0.90)).cut(5000)
-      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.15))
+      .band(low => low.oversampleAtLeast(4, r => r.distort(0.01, "soft")).mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(0.92)
+    .mul(0.90)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
   ))
 )

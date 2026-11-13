@@ -15,8 +15,7 @@ internal val kokonSong = Song(
     title = "Kokon",
     rpm = 19.0,
     icon = "egg",
-    code = """
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // Kokon: before there is a butterfly, there is a cocoon.
@@ -36,6 +35,12 @@ import * from "sprudel"
 let feel    =  10     // analog drift of the guitars, as in Der Schmetterling
 let drunk   =   1     // two guitarists, sober this time, mostly
 let snareHz = 205     // where does the snare sit?
+
+// Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
+// string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
+// stage has a menu of caricatures with 2 to 4 tells each, tuned by ear. The *Stock preset of every stage is the sound
+// before that stage existed, so a rig of all-stock presets is the A/B reference. Pick presets one stage at a time, in
+// signal order, with the rest held where they are. A preset you cannot name in an A/B gets deleted, not tuned.
 
 // Pickups: the coil's resonance sets the colour, its output sets how hard the amp is pushed, its position on the string
 // cancels one harmonic.
@@ -65,14 +70,14 @@ let pedalStock = Ign.fn(x => x)
 let pedalScreamer = Ign.fn(x => x
   .parallel(
     clean => clean,
-    dirt => dirt.highpass(720).oversampleAtLeast(2, y => y.distort(0.25, "soft")).mul(0.5)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+    dirt => dirt.highpass(720).distort(0.25, "soft").mul(0.5)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
   .lowpass(4200)                                   // the tone knob, half way
   .mul(0.55))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
 let pedalFuzz = Ign.fn(x => x
-  .oversampleAtLeast(4, y => y.distort(0.70, "asym"))
+  .distort(0.70, "asym")
   .lowpass(4500)
   .mul(0.28))                                      // level
 
@@ -84,32 +89,30 @@ let pedalBoost = Ign.fn(x => x
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
 // is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
 let preampStock = Ign.fn(x => x
-  .oversampleAtLeast(4, y => y
-    .distort(0.20, "tube").highpass(100)
-    .distort(0.50, "soft").highpass(100)))
+  .distort(0.20, "tube").highpass(100)
+  .distort(0.50, "soft").highpass(100))
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
 let preampClean = Ign.fn(x => x
-  .oversampleAtLeast(2, y => y.distort(0.12, "tube")).highpass(80)
+  .distort(0.12, "tube")
+  .highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
   .mul(3.5))                                       // volume
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
 let preampCrunch = Ign.fn(x => x
   .highpass(120)
-  .oversampleAtLeast(4, y => y
-    .distort(0.40, "tube").highpass(110)
-    .distort(0.20, "asym").highpass(100))
-  .lowpass(5600)
+  .distort(0.40, "tube").highpass(110)
+  .distort(0.20, "asym").highpass(100)
+  .lowpass(5800)
   .mul(0.57))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .oversampleAtLeast(4, y => y                      // the three stages at 8x: one trip up, one down
-    .distort(0.20, "tube").highpass(110)
-    .distort(0.15, "asym").highpass(100)
-    .distort(0.45, "soft"))
+  .distort(0.20, "tube").highpass(110)
+  .distort(0.15, "asym").highpass(100)
+  .distort(0.45, "soft")
   .lowpass(5200)                                   // the fizz
   .mul(0.57))                                      // volume
 
@@ -118,13 +121,13 @@ let powerStock = Ign.fn(x => x.drive(0.3))
 
 // Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
 let powerPushPull = Ign.fn(x => x
-  .oversampleAtLeast(2, y => y.distort(0.25, "soft"))
+  .distort(0.25, "soft")
   .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0)) // presence
   .mul(1.6))                                       // master
 
 // Class A: a lopsided clip, even harmonics, the chime.
 let powerClassA = Ign.fn(x => x
-  .oversampleAtLeast(2, y => y.distort(0.25, "asym"))
+  .distort(0.25, "asym")
   .mul(1.3))                                       // master
 
 // Cabinets: the linear half of the amp. All of these are static and linear, so they move to the cylinder unchanged once
@@ -203,33 +206,30 @@ let makeGuitar = (rig) => {
   // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
-  return rig(signal)
-    // Missing piece in the chain: Mircophone
-    .mul(0.17).oversampleAtLeast(4, y => y.shape("soft")).mul(1.1)
+  return rig(signal)    
     // sprudel classic
     .classic()
 }
+
+// The Mircophone for the guitar
+let guitarShape = Ign.fn(x => x.mul(0.16).shape("soft").mul(1.10))
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
 // The pedal, the preamp and the power amp share ONE oversampling region per rig, at the highest rate a stage of them
 // asks for (the stages' own regions inside then convert nothing); the pickup, the snare cut and the cab are linear and
 // stay outside, as in Der Schmetterling.
-let cleanRig  = Ign.fn(x => x.serial(pickupNeck)
-  .oversampleAtLeast(4, y => y.serial(pedalStock, preampClean, powerClassA))
-  .serial(snareCut, cab1x12))
+let cleanRig  = Ign.fn(x => x.oversampleAtLeast(4, y => y
+  .serial(pickupNeck, pedalStock, preampClean, powerClassA, snareCut, cab1x12, guitarShape)))
 
-let brightRig = Ign.fn(x => x.serial(pickupSingle)
-  .oversampleAtLeast(4, y => y.serial(pedalBoost, preampCrunch, powerPushPull))
-  .serial(snareCut, cab4x12))
+let brightRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
+  .serial(pickupSingle, pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, guitarShape)))
 
-let deepRig   = Ign.fn(x => x.serial(pickupNeck)
-  .oversampleAtLeast(4, y => y.serial(pedalStock, preampClean, powerClassA))
-  .serial(snareCut, cab4x12))
+let deepRig   = Ign.fn(x => x.oversampleAtLeast(4, y => y
+  .serial(pickupNeck, pedalStock, preampClean, powerClassA, snareCut, cab4x12, guitarShape)))
 
-let heavyRig  = Ign.fn(x => x.serial(pickupHumbucker)
-  .oversampleAtLeast(4, y => y.serial(pedalScreamer, preampHighGain, powerPushPull))
-  .serial(snareCut, cab4x12))
+let heavyRig  = Ign.fn(x => x.oversampleAtLeast(4, y => y
+  .serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, guitarShape)))
 
 let clean  = makeGuitar(cleanRig)
 let bright = makeGuitar(brightRig)
