@@ -426,7 +426,7 @@ let metalKick = (() => {
     .adsr(0.0005, 0.22, 0.0, 0.05)
     .distort(0.2, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(3300, 0.8).adsr(0.0003, 0.012, 0.0, 0.02).mul(3.0)
+  let crack = Ign.whitenoise().bandpass(3300, 0.8).adsr(0.0003, 0.015, 0.0, 0.02).mul(3.0)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)

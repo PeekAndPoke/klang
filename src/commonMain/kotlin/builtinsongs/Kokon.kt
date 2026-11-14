@@ -242,7 +242,7 @@ let metalKick = (() => {
     .adsr(0.0005, 0.22, 0.0, 0.05)
     .distort(0.5, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(3200, 0.8).adsr(0.0003, 0.020, 0.0, 0.02).mul(3.0)
+ let crack = Ign.whitenoise().bandpass(3300, 0.8).adsr(0.0003, 0.015, 0.0, 0.02).mul(3.0)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
@@ -392,18 +392,14 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.60).late(perlin(0.0005, 0.0010).seed(2)).apply(
-    x => x.pan(0.50),
-    // x => x.pan(0.70),
-  )
-  .cylinder(4)
+  .gain(0.60).late(perlin(0.0005, 0.0010).seed(2)).cylinder(4)
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   .ignp("decay", "[0.9 0.8]*8").clip(1)
   .velocity("1.0 0.90!2 0.96 0.88 0.92 0.94 0.92".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.42).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.45).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.05),
     x => x.pan(0.95),
   )
@@ -539,7 +535,7 @@ let lifting = stack(
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.40).ignp("sustain", 0.15).clip(0.66),
-  soar("[4@6 ~@2]").gain(0.45)
+  soar("[4@6 ~@2]").gain(0.42)
     .tremolo(rate = beatRate(0.25), depth = 0.25)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.5),
@@ -616,7 +612,7 @@ export song = stack(
       .band(mid => mid.distort(0.10, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.01, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(1.10)
+    .mul(1.05)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   )))
 )
