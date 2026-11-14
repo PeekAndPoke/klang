@@ -101,7 +101,7 @@ let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.20, "tube").highpass(110)
   .distort(0.15, "asym").highpass(100)
-  .distort(0.45, "soft")
+  .distort(0.40, "soft")
   .lowpass(5200)                                   // the fizz
   .mul(0.57))                                      // volume
 
@@ -235,12 +235,12 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 0.925).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.0).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
-    .mul(0.2)
     .shape("soft")
+    .mul(0.2)
     .classic()
 })()
 
@@ -304,7 +304,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.cylinder(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.180)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.175)  // .mute()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
 
@@ -325,7 +325,7 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
   .body(material = "maple", wet = 0.15)
 
 export guitar2_arrange = x => x.cylinder(2)  // . solo()
-  .scale("<e2:minor>").gain(0.0825).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").gain(0.085).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
@@ -345,7 +345,7 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .body(material = "mahogany", wet = 0.15)
 
 export guitar3_arrange = x => x.cylinder(3) //  . solo()
-  .scale("<e2:minor>").gain(0.0825).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.085).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
@@ -357,7 +357,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.29) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.30) // . mute()
     .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
     .adsr(0.003, 2.50, 0.00, 0.015).hpf(35)
 

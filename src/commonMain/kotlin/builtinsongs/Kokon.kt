@@ -48,12 +48,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4600, 2.4)                              // the peak, up high and narrow
+  .lowpass(4600, 2.5)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3200, 1.5)                              // the peak, low and wide
+  .lowpass(3500, 1.5)                              // the peak, low and wide
   .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -112,7 +112,7 @@ let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.20, "tube").highpass(110)
   .distort(0.15, "asym").highpass(100)
-  .distort(0.45, "soft")
+  .distort(0.40, "soft")
   .lowpass(5200)                                   // the fizz
   .mul(0.57))                                      // volume
 
@@ -306,10 +306,11 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 8f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 1.05).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.00).fundamental(0).analog(pAnalog).analogSpread(0.01)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -2)) // let the snare cut through
+    .shape("soft")
     .mul(0.2)
     .classic()
 })()
