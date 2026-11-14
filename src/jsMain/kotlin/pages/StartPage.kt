@@ -175,35 +175,35 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 lamp = KlangLamp.State.On,
             )
 
-            voiceCount >= 265 -> PerformanceRating(
+            voiceCount >= 250 -> PerformanceRating(
                 tier = "Excellent",
                 message = "This machine is a true work-horse!",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
-            voiceCount >= 230 -> PerformanceRating(
+            voiceCount >= 215 -> PerformanceRating(
                 tier = "Great",
                 message = "This machine handles this like a champ!",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
-            voiceCount >= 195 -> PerformanceRating(
+            voiceCount >= 180 -> PerformanceRating(
                 tier = "Good",
                 message = "This machine is ready to make some music!",
                 showWarning = false,
                 lamp = KlangLamp.State.On,
             )
 
-            voiceCount >= 160 -> PerformanceRating(
+            voiceCount >= 150 -> PerformanceRating(
                 tier = "Fair",
                 message = "This thing is doing okay. Nothing fancy, it'll work... hopefully...",
                 showWarning = false,
-                lamp = KlangLamp.State.On,
+                lamp = KlangLamp.State.Warning,
             )
 
-            voiceCount >= 130 -> PerformanceRating(
+            voiceCount >= 120 -> PerformanceRating(
                 tier = "Limited",
                 message = "C'mon, it's ${today.year}... maybe consider an upgrade?",
                 showWarning = true,
