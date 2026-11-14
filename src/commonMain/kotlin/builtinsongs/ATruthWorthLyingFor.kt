@@ -96,11 +96,12 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).cylinder(6).early(0.002).adsr(0.005, 0.2, 0.2, 0.5).gain(0.50).hpf(90).lpf(11500)
-    .superimpose(bpf(195).bpf(q = 1.1).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
+  ).cylinder(6).early(0.002).adsr(0.005, 0.2, 0.2, 0.5).gain(0.47).hpf(90).lpf(12500)
+    .reverb(wet = 0.25, size = 4.0)
   , // Drums 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
-    .cylinder(7).late(0.001).adsr(0.007, 0.2, 0.9, 0.7).gain(0.85).hpf(800).lpf(12500).velocity("<[1.0 0.95 0.975 0.95]>") // .solo()
+    .cylinder(7).late(0.001).adsr(0.007, 0.2, 0.9, 0.7).gain(0.80).hpf(800).lpf(15000).velocity("<[1.0 0.95 0.975 0.95]>")
+    .reverb(wet = 0.25, size = 4.0)// .solo()
   , // Master -----------------------------------------------------------------------------------------------------------------------------------------------
     master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 6500)
