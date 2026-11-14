@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val strangerThingsSong = Song(
     id = "${BuiltInSongs.PREFIX}-stranger-synths",
     title = "Seltsamere Dinge",
-    rpm = 32.0,
+    rpm = 30.0,
     icon = "film",
     code = """import * from "stdlib"
 import * from "sprudel"
