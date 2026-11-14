@@ -139,9 +139,9 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  1.60)        // thump: closed-back box resonance
-    .band(freq =  400, q = 0.5, db =  4.40)        // roar:  low mids
-    .band(freq = 2700, q = 1.7, db =  1.40)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.8, db =  2.20)        // thump: closed-back box resonance
+    .band(freq =  800, q = 0.5, db =  3.80)        // roar:  low mids
+    .band(freq = 2700, q = 1.7, db =  1.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(80, 0.707, x => x.passes(2)))
@@ -212,7 +212,7 @@ let makeGuitar = (rig) => {
 }
 
 // The Mircophone for the guitar
-let guitarShape = Ign.fn(x => x.mul(0.15).shape("soft").mul(1.15))
+let guitarShape = Ign.fn(x => x.mul(0.20).shape("soft").mul(0.85))
 
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
 // box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
@@ -393,7 +393,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .sound(heavy).adsrOff().unison(voices = 7, spread = 0.08)
   //.ignp("decay", "0.4 0.8!2 0.4 0.8!2 0.3 0.2").clip(1)
   .velocity("1.0 0.90 0.80 0.85  0.90 0.80 0.75 0.85".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.60).late(perlin(0.0005, 0.0010).seed(2)).cylinder(4)
+  .gain(0.70).late(perlin(0.0005, 0.0010).seed(2)).cylinder(4)
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
@@ -458,7 +458,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.98).ignp("harmonics", 1.00)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.80).cylinder(15)
+  .clip(0.95).gain(0.80).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -607,13 +607,14 @@ export song = stack(
     .apply(drumRoom)
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
-    .reverb(0.10, 8.5, 7500)       
+    .reverb(0.10, 8.5, 7500)     
+    .mul(0.9)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.001, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(1.05)
+    .mul(1.10)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   )))
 )
