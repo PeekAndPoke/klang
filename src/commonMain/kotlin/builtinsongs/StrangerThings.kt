@@ -13,7 +13,7 @@ import io.peekandpoke.klang.Song
 internal val strangerThingsSong = Song(
     id = "${BuiltInSongs.PREFIX}-stranger-synths",
     title = "Seltsamere Dinge",
-    rpm = 30.0,
+    rpm = 31.0,
     icon = "film",
     code = """import * from "stdlib"
 import * from "sprudel"
@@ -27,7 +27,7 @@ let notchFreq = sine.range(320, 520).slow(20)
 stack(
   // Claps --------------------------------------------------------------------------------------------------------------------
   sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).cylinder(0).gain(0.225).legato(2.0)
-    .bpf(sine.range(2000, 2200).fast(3.14)).hpf(800)
+    .bpf(sine.range(2000, 2200).fast(3.14)).hpf(600)
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").cylinder(1)
@@ -38,7 +38,7 @@ stack(
   n("<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>") // .solo()
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .cylinder(2).s("supersaw").unison(voices = 11, spread = saw.range(0.05, 0.35).slow(16))
-    .gain(0.6 * 0.11).distort(0.7).adsr(0.008, 3.0, 0.5, 0.1).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
+    .gain(0.6 * 0.11).distort(0.7).adsr(0.008, 3.0, 0.5, 0.2).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
     .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body(material = "violin", wet = 0.5)
     .pan(0.5).superimpose(
       x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.08).pan(0.3).superimpose(pan(0.7)),
