@@ -84,10 +84,10 @@ stack( // Gitarre! -------------------------------------------------------------
           [0]                                     [[[8]@12     [8]@4]          [10]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8] [7]]                    [[[8]!4 [8]!3 [10]]          [10]*8]>`).repeat(2),
-  ).cylinder(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(0.5).distort(0.2, "tube").analog(1)
-    .adsr(0.005, 0.5, 0.2, 0.025).lpf(attack = 0.005, decay = 0.1, sustain = 0.0, release = 0.075).hpf(70).lpf(freq = 180)
+  ).cylinder(4).scale("C2:chromatic").clip(0.95).sound("saw").gain(0.47).distort(0.2, "tube").analog(1)
+    .adsr(0.005, 5.0, 0.0, 0.025).lpf(freq = 180, attack = 0.005, decay = 0.1, sustain = 0.0, release = 0.075, env = 10).hpf(70)
     .velocity("<[1.0 0.95 0.975 0.95]>")
-    .pan(0.55).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
+    .pan(0.50).transpose(tp).filterWhen(t => t % stay >= 4)  // .solo()
   , // Noise ------------------------------------------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").cylinder(5).bpf("1800 600 1200 600").gain("0.1") // .solo()
   ,note("a").sound("brown").gain(0.1).hpf(3000).lpf(13500).crush(bits = 6) // .solo()
@@ -96,7 +96,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).cylinder(6).early(0.002).adsr(0.005, 0.2, 0.2, 0.5).gain(0.47).hpf(90).lpf(12500)
+  ).cylinder(6).early(0.002).adsr(0.005, 0.2, 0.2, 0.5).gain(0.47).hpf(90).lpf(13500)
     .reverb(wet = 0.25, size = 4.0)
   , // Drums 1 ----------------------------------------------------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [oh hh] [oh hh]]>")
