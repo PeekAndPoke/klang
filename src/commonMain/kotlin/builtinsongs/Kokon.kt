@@ -238,14 +238,15 @@ let heavy  = makeGuitar(heavyRig)
 
 let metalKick = (() => {
   let thump = Ign.sine()
-    .pitchEnvelope(36, x => x.adsr(0.0003, 0.025, 0, 0))
+    .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
     .adsr(0.0005, 0.22, 0.0, 0.05)
-    .distort(0.5, "soft")   // the hard hit: the loud start clips, the tail stays clean
+    .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
- let crack = Ign.whitenoise().bandpass(3300, 0.8).adsr(0.0003, 0.015, 0.0, 0.02).mul(3.0)
+  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.015, 0.0, 0.02).mul(3.0)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
+    .oversampleAtLeast(2, y => y.shape("soft"))
     .classic()
 })()
 
@@ -436,7 +437,7 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(0.98).pan(0.5)
+  .gain(1.00).pan(0.5)
   .cylinder(11).apply(drumRoom)
 
 export snare = pat => sound(pat)

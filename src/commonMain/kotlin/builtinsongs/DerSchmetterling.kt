@@ -404,8 +404,8 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
   .hpf(700).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.33)
   .apply(
-    x => x.pan(0.33).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
-    x => x.pan(0.66).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.62).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
   )
 
 export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
@@ -424,7 +424,7 @@ let metalKick = (() => {
   let thump = Ign.sine()
     .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
     .adsr(0.0005, 0.22, 0.0, 0.05)
-    .distort(0.2, "soft")   // the hard hit: the loud start clips, the tail stays clean
+    .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
   let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.015, 0.0, 0.02).mul(3.0)
 
@@ -495,7 +495,7 @@ let metalSnare = (() => {
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.25).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.24).velocity("0.98 0.94 0.96 0.94").pan(0.5)
 export kick_arrange = x => x.cylinder(6).mute("<0!128 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick") //  . solo()
 
