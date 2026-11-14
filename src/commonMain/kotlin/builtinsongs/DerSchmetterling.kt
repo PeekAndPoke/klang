@@ -20,7 +20,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =    7    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  205    // Where does the snare cut through?
@@ -213,7 +213,7 @@ let guitarShape = Ign.fn(x => x.mul(0.15).shape("soft").mul(1.15))
 // centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
 let rhythmRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
   .serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, guitarShape)))
-  
+ 
 let melodyRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
   .serial(pickupSingle, pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, guitarShape)))
 
@@ -357,9 +357,9 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.36) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.30) // . mute()
     .ignp("sub", 0.97).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  // . solo()
-    .adsr(0.003, 0.50, 0.33, 0.015).hpf(35)
+    .adsr(0.003, 2.50, 0.00, 0.015).hpf(35)
 
 export bass_arrange = x => x.cylinder(4) // . mute()
   .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
@@ -380,11 +380,11 @@ let gummiEimer = (() => {
  
   let ring = Ign.constant(300).div(Ign.freq()).mul(0.85)  
  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(1.5, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.45)
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(-1.5, x => x.adsr(0.015, 0.050, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.45)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(15, 0.8).fundamental(0).analog(pAnalog).analogSpread(0.2))
-    .pitchEnvelope(5, x => x.adsr(0.015, 0.150, 0, 0)).adsr(0.010, 0.75, 0.4, 0.30).mul(1.3)
+    .pitchEnvelope(-5, x => x.adsr(0.015, 0.150, 0, 0)).adsr(0.010, 0.75, 0.4, 0.30).mul(1.3)
  
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.25)
   let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
@@ -409,7 +409,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   )
 
 export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
-  .scale("e4:minor").gain(0.30)
+  .scale("e5:minor").gain(0.28)
   .mute("<1!96 0!32>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
