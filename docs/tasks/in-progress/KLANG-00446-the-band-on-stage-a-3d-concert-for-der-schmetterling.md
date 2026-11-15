@@ -72,4 +72,14 @@ The maintainer watches Der Schmetterling played by the band and says it is good 
   `snare`, `hats`, `countin`; marimba `lead`; Gummieimer `trommel` (maintainer); bass `bass`; lead guitar `guitar1`;
   rhythm guitar `guitar2` and `guitar3` (my choice, open). Known: the events carry almost no dynamics (the gain of a
   part is nearly constant), so strokes and eyes do not follow how hard a part is played yet.
+- 2026-11-16: the maintainer on the standalone show: "this really makes me laugh ... it is good". What was settled on
+  the way, all in `tmp/band/web/`: `trommel` is a trumpet (it sounds like a held melody, the bucket drum did not fit;
+  between phrases he holds it at his side in one hand); the marimba floats, without legs, and is smaller; the drummer
+  sits on a riser, the open hat goes to the crash, a crash is the free left hand's; a played string alone lights up
+  (flash, hold at 30 %, fade); the band stands in an arc, the trumpet player in front but left of the bass drum. The
+  nod: as strong as the sound's energy over a second and a half (measured once from the audio, `energy.py`), never a
+  single loud moment for the head; a character per player (`CHARACTERS` in `main.js`: depth, beats, lateness,
+  chance, which body parts take the beat, steady, fits), the trumpet player as frontman the balanced one, the bass
+  player steady, the rhythm guitarist headbanging only in rare fits. The recording is 328 cycles now (9 min); the
+  song's parts come and go on schedules of their own and the recording is a cut, not an ending.
 
