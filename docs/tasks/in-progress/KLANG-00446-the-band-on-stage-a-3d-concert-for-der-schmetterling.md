@@ -1,6 +1,6 @@
 # KLANG-00446: The band on stage: a 3d concert for Der Schmetterling
 
-> **Status (2026-11-15): IN PROGRESS.** The pipeline is proven (Blender headless, a first figure rendered); the look of the figures is next.
+> **Status (2026-11-15): IN PROGRESS.** Standalone in `tmp/band/` (git-ignored): six figures, a stage, and the drummer playing a test beat; the maintainer: "we keep it like this for now". Next: the other instruments, then the song's real events.
 
 ## Why this exists
 
@@ -60,3 +60,9 @@ The maintainer watches Der Schmetterling played by the band and says it is good 
 ## History
 
 - 2026-11-15: created. Blender headless proven, a first figure rendered.
+- 2026-11-15: the standalone stage (`tmp/band/`, not in git): `blender/figures.py` builds six figures on one
+  skeleton (a bone per real joint, named after the joint it ends at; shaping points add no bone) and exports glTF;
+  `web/` is a three.js page (`rig.js`: bones by name, the figure's own measures, a two-bone reach; `drummer.js`: stool,
+  kit, sticks, hits as events). Maintainer's steers: figures less comic and closer in size; the nod on the beat with
+  small variations; the hand in line with the forearm, the stick along the hand; the kit far enough out that the
+  elbows hang. Stills by `app-shot` with WebGL; the maintainer watches it live through a local server he starts.
