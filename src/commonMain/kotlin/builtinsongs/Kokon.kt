@@ -452,7 +452,7 @@ export snare = pat => sound(pat)
   .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
-  .velocity("1.0 0.4 0.6 0.4")
+  .velocity("1.0 0.5 0.7 0.5")
   .hpf(800).lpf(freq = 15000, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
   .gain(0.95).pan(0.40)                            
   .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035))
@@ -460,9 +460,9 @@ export hats = pat => sound(pat).n(0)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
-  .ignp("sub", 0.97).ignp("harmonics", 1.00)
+  .ignp("sub", 0.95).ignp("harmonics", 1.00)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.65).cylinder(15)
+  .clip(0.90).gain(0.70).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
