@@ -139,7 +139,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.8, db =  4.00)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.8, db =  4.20)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  6.20)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  3.70)        // bark:  the upper-mid speaker peak
   )
@@ -452,7 +452,7 @@ export snare = pat => sound(pat)
   .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat).n(0)
-  .velocity("1.0 0.5 0.7 0.5")
+  .velocity("1.0 0.5 0.6 0.5")
   .hpf(800).lpf(freq = 15000, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
   .gain(0.95).pan(0.40)                            
   .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035))
@@ -462,7 +462,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.95).ignp("harmonics", 1.00)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.70).cylinder(15)
+  .clip(0.90).gain(0.75).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -605,7 +605,7 @@ export song = stack(
     .scale("c3:minor")
     .analog(feel)
 
-  , sound("pink pink").clip(3).adsr(0.5, 0.5, 0.5, 1.5).gain(perlin(0.005, 0.01))
+  , sound("pink!4").clip(3).adsr(0.5, 0.5, 0.5, 1.5).gain(perlin(0.005, 0.01))
     .pan(sine(-0.7, 0.7).slow(6)).legato(2)
     .bpf(perlin(1400, 1800).slow(17.sqrt()), 0.7)
     .apply(drumRoom)
