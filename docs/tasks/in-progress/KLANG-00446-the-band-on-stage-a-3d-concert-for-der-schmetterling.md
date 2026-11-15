@@ -66,3 +66,10 @@ The maintainer watches Der Schmetterling played by the band and says it is good 
   kit, sticks, hits as events). Maintainer's steers: figures less comic and closer in size; the nod on the beat with
   small variations; the hand in line with the forearm, the stick along the hand; the kit far enough out that the
   elbows hang. Stills by `app-shot` with WebGL; the maintainer watches it live through a local server he starts.
+- 2026-11-15: the whole band plays the recorded song in the standalone page. One render writes the audio and the
+  events of that very render (a scratch spec, kept as `tmp/band/BandRecordingScratch.kt.txt`, never in the sources;
+  the song is seeded by the time of day, so audio and events must come from one run). Who plays what: drums `kick`,
+  `snare`, `hats`, `countin`; marimba `lead`; Gummieimer `trommel` (maintainer); bass `bass`; lead guitar `guitar1`;
+  rhythm guitar `guitar2` and `guitar3` (my choice, open). Known: the events carry almost no dynamics (the gain of a
+  part is nearly constant), so strokes and eyes do not follow how hard a part is played yet.
+
