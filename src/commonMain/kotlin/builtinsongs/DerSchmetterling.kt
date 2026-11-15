@@ -272,6 +272,7 @@ let marimba = (() => {
       .band(freq = Ign.freq(), q = 30.0, db = 9) // the resonator tube
     )
     .adsr(0.010, 1.0, 0.0, 0.5).mul(0.1)
+    .shape("soft")
     .classic()
 })()
 
@@ -357,7 +358,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.19) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.18) // . mute()
     .ignp("sub", 0.95).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
@@ -410,7 +411,7 @@ export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   )
 
 export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
-  .scale("e5:minor").gain(0.30)
+  .scale("e5:minor").gain(0.27)
   .mute("<1!96 0!32 1!64>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
