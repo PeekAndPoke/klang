@@ -16,7 +16,7 @@ import { Trumpet } from './trumpet.js';
 import { StringPlayer } from './strings.js';
 import { loadSong, drumHits, notesOf, strumsOf } from './song.js';
 import { setEnergy } from './strike.js';
-import { pattern } from './pattern.js';
+import { pattern, wall } from './pattern.js';
 import { enter, stepLegs, walkPose, capture, blend } from './entrance.js';
 import { Choreography, HOME } from './camera.js';
 
@@ -60,8 +60,9 @@ scene.add(floor);
 const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95 }));
 back.position.set(0, 6, -5);
 back.receiveShadow = true;
-// the wall wears the frontwoman's pattern, the braid, laid flat and large: darker in its lines, matt all over
-later.push(() => pattern(back.material, 'braidWall', 0.95, 0.95, null, 0, 0.5, { amount: 0.017, width: 5.5, color: [0.55, 0.62, 1.0] }));
+// the wall has two faces: an ornament in its own faint glow under the back light, a wire mesh under the front lamp
+let wallFront = () => {};
+later.push(() => { wallFront = wall(back.material); });
 scene.add(back);
 scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
 
@@ -97,6 +98,7 @@ function analog(t) {
   front = frontAt(t);
   // the wall is black unless the front lamp is on: it takes no light from the other lamps at all
   back.material.color.setHex(0x8a8f9c).multiplyScalar(front);
+  wallFront(Math.min(1, front));
   // without the front lamp it is ever so slightly there by itself (its own faint glow, see pattern()): over the full
   // width, darker to the sides; it catches no other lamp
   for (const { light, base, seed, group } of lamps) {
