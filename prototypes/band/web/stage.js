@@ -9,6 +9,7 @@ import { params, seed, BPM } from './show.js';
 import { smooth, hash01 } from './util.js';
 import { wall, dress } from './pattern.js';
 import { groundFog } from './fog.js';
+import { buildAudience } from './audience.js';
 
 // The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others
 export const RISER = 0.40;
@@ -32,7 +33,7 @@ export function buildStage() {
   scene.fog = new THREE.Fog(0x020308, 9, 22);
   const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 60);
 
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.35, metalness: 0.2 }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.35, metalness: 0.2 }));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
@@ -143,6 +144,7 @@ export function buildStage() {
     });
   }
 
+  const audience = buildAudience(scene);
   // fog on the floor (?nofog: none)
   const fog = params.has('nofog') ? null : groundFog(scene);
 
@@ -163,6 +165,7 @@ export function buildStage() {
       light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : strobing ? 0 : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
     }
     if (fog) { fog(t, lamps, camera); }
+    audience(t, renderer.domElement.height);
   }
 
   /**

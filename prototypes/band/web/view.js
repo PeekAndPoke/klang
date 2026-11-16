@@ -6,7 +6,7 @@
 // Where the camera is: a fixed look where the page asks for one, else the choreography, else the total.
 import * as THREE from 'three';
 import { params, view, song, seed, BPM, times } from './show.js';
-import { Choreography } from './camera.js';
+import { Choreography, HOME, STADIUM } from './camera.js';
 
 /** Returns look(t), which places [camera] for this frame. Call it after everything that moves a figure. */
 export function initView(scene, camera, rigs) {
@@ -26,7 +26,7 @@ export function initView(scene, camera, rigs) {
     if (params.has('outline')) { scene.background = new THREE.Color(0xffffff); scene.fog = null; }
   }
 
-  return function look(t) {
+  function place(t) {
     if (params.has('head') && rigs[params.get('head')]) {
       const rig = rigs[params.get('head')];
       const at = rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.07 * rig.height / 1.6, 0));
@@ -51,6 +51,11 @@ export function initView(scene, camera, rigs) {
       const c = params.get('cam').split(',').map(Number), a = (params.get('at') || '0,1,0').split(',').map(Number);
       camera.position.set(c[0], c[1], c[2]); camera.lookAt(a[0], a[1], a[2]); return;
     }
+    if (view === 'stadium') {
+      camera.position.set(...STADIUM.pos); camera.lookAt(...STADIUM.at);
+      if (camera.fov !== STADIUM.fov) { camera.fov = STADIUM.fov; camera.updateProjectionMatrix(); }
+      return;
+    }
     if (view === 'side') { camera.position.set(8.5, 2.2, 5.5); camera.lookAt(0, 1.0, -0.4); return; }
     if (rigs[view]) {
       const p = rigs[view].root.position;
@@ -64,5 +69,17 @@ export function initView(scene, camera, rigs) {
       return;
     }
     camera.position.set(0, 1.85, 9.4); camera.lookAt(0, 1.0, 0.0);
+  }
+
+  // The haze that darkens what is far begins at the stage as seen from the start position. From further away it
+  // begins that much later, so the stage is as clear from the back of the audience as from its front.
+  const near = scene.fog ? scene.fog.near : 0, deep = scene.fog ? scene.fog.far - scene.fog.near : 0;
+  const usual = HOME.pos.distanceTo(HOME.at);
+  return function look(t) {
+    place(t);
+    if (scene.fog) {
+      scene.fog.near = near + Math.max(0, camera.position.distanceTo(HOME.at) - usual);
+      scene.fog.far = scene.fog.near + deep;
+    }
   };
 }

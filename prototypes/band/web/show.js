@@ -7,7 +7,7 @@
 //   ?seed=7      this performance again (else another one each time the page opens)
 //   ?t=1.25      freeze the time at 1.25 s (for stills; without a seed it takes seed 0, so stills stay comparable)
 //   ?still       the camera stays on the total     ?nohud  no fps line (for stills that are compared)
-//   ?view=side   or a player's name: a fixed camera     ?cam=x,y,z&at=x,y,z  any camera
+//   ?view=side   or stadium, or a player's name: a fixed camera     ?cam=x,y,z&at=x,y,z  any camera
 //   ?head=eimer&from=side   a close look at one head in plain light (&outline: its bare shape, black on white)
 //   ?move=circle  every camera round is that kind: circle, arc or looks (to see one; else the seed decides)
 //   ?front=1     the front lamp on (0: off)     ?nostrobe  no stroboscope     ?nofog  no fog on the floor     ?test  test notes, no recording

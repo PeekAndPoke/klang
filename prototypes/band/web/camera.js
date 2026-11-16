@@ -42,12 +42,15 @@ const LOOKS = {
     { pos: [-0.8, 1.5, 2.2], at: [0, 1.25, 0.2], fov: 32 },
   ],
 };
+// The stadium shot: from far back and high in the audience, the whole stage small above a field of held-up lights
+export const STADIUM = { pos: [5.0, 9.0, 34.0], at: [0.0, 2.2, 3.0], fov: 30 };
 // The stage from elsewhere
 const ANGLES = [
   { pos: [-7.2, 1.1, 5.6], at: [0.0, 1.0, 0.6], fov: 40 },        // from the left, low
   { pos: [0.0, 5.6, 7.4], at: [0.0, 0.6, 0.6], fov: 38 },         // from above
   { pos: [7.0, 1.4, 5.2], at: [0.0, 1.0, 0.6], fov: 40 },         // from the right
   { pos: [0.0, 0.45, 6.6], at: [0.0, 1.5, 0.0], fov: 44 },        // from the floor
+  STADIUM,                                                        // from far back in the audience
 ];
 // Round one player, in the player's own space: how far off, how high, what it looks at, the lens
 const ARCS = {
