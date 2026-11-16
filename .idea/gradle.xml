@@ -37,6 +37,8 @@
             <option value="$PROJECT_DIR$/klangscript-libs" />
             <option value="$PROJECT_DIR$/klangscript-ui" />
             <option value="$PROJECT_DIR$/klangui" />
+            <option value="$PROJECT_DIR$/klangviz" />
+            <option value="$PROJECT_DIR$/klangviz-demo" />
             <option value="$PROJECT_DIR$/sprudel" />
             <option value="$PROJECT_DIR$/tones" />
             <option value="$PROJECT_DIR$/workshop" />
