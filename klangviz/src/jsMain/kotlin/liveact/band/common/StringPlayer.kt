@@ -15,6 +15,7 @@ import io.peekandpoke.klang.viz.liveact.around
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.song.Strum
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
@@ -192,7 +193,7 @@ class StringPlayer(
     private val show: Show,
     private val rig: Rig,
     private val kind: StringKind,
-    notes: List<Strum>,
+    private val part: Part<Strum>,
     traits: Traits,
     private val seed: Double = 4.0,
     private val lean: Double = 0.06,
@@ -212,7 +213,13 @@ class StringPlayer(
     /** A string each, the lowest first, lit on its own when it is the one played. */
     private val strings: List<MeshStandardMaterial>
 
-    private val notes: List<Pluck>
+    private var notes: List<Pluck> = emptyList()
+
+    /** The string each pitch is played on. A pitch keeps its string once it has one, also when the song grows. */
+    private val share = mutableMapOf<Int, Int>()
+
+    /** The fret each pitch is played at; kept as well, so a hand that holds a note stays where it is. */
+    private val frets = mutableMapOf<Int, Double>()
 
     init {
         val addon = Three.addon
@@ -316,7 +323,8 @@ class StringPlayer(
 
         (rig.root.parent ?: error("The figure stands in no scene")).add(g)
 
-        this.notes = fingered(notes)
+        part.refresh()
+        notes = fingered(part.events)
     }
 
     /**
@@ -324,18 +332,23 @@ class StringPlayer(
      * high, each string taking its share of the notes: so a part that lives on a few low notes still goes across the
      * strings, as a player would choose positions, and not all on the lowest one. Along the neck: by how far the note
      * is above the lowest one on its string.
+     *
+     * Where the song grows, the pitches that are new get their string and their fret by the notes known then; the
+     * others keep theirs, so a hand that holds a note does not jump when more of the song is read.
      */
     private fun fingered(notes: List<Strum>): List<Pluck> {
         val k = kind
         val pitches = notes.map { it.midi }.distinct().sorted()
         // by how often each is played: a string takes its share of the notes, not of the pitches
-        val share = mutableMapOf<Int, Int>()
         var passed = 0
 
         for (p in pitches) {
             val count = notes.count { it.midi == p }
 
-            share[p] = min(k.strings - 1, floor((passed + count / 2.0) * k.strings / max(1, notes.size)).toInt())
+            if (p !in share) {
+                share[p] = min(k.strings - 1, floor((passed + count / 2.0) * k.strings / max(1, notes.size)).toInt())
+            }
+
             passed += count
         }
 
@@ -354,14 +367,21 @@ class StringPlayer(
             top[stringOf(p)] = p
         }
 
+        for (p in pitches) {
+            if (p !in frets) {
+                val low = base.getValue(stringOf(p))
+                val span = top.getValue(stringOf(p)) - low
+
+                frets[p] = 3 + if (span > 3) (p - low) * 3.0 / span else (p - low).toDouble()
+            }
+        }
+
         // the right hand's way through the strings at each note: down after a pause, else down and up in turn
         var way = 1.0
 
         return notes.mapIndexed { i, n ->
             val string = stringOf(n.midi)
-            val low = base.getValue(string)
-            val span = top.getValue(string) - low
-            val fret = 3 + if (span > 3) (n.midi - low) * 3.0 / span else (n.midi - low).toDouble()
+            val fret = frets.getValue(n.midi)
             // the strings that sound: the note's own, and for a chord one more for each further note
             val sounding = n.all.indices.map { j -> min(k.strings - 1, string + j) }
             // the right hand plays at the middle of the strings that sound; one string is picked, several are strummed
@@ -449,6 +469,10 @@ class StringPlayer(
 
     /** The player at [t]: the strings' light, the body with the beat, the instrument on the trunk, both hands. */
     fun update(t: Double) {
+        if (part.refresh()) {
+            notes = fingered(part.events)
+        }
+
         val k = kind
 
         var energy = 0.0

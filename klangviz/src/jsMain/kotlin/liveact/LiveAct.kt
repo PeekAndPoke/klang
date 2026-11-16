@@ -98,7 +98,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     private val viewer by lazy { HOME.pos.clone() }
 
     /** When the frontwoman plays: she looks at nobody then. */
-    private val herNotes by lazy { props.show.times("trommel") }
+    private val herNotes: List<Double> get() = props.show.times("trommel")
 
     // frames a second, counted over each half second, and the longest single frame in it (a stutter shows there)
     private var fps = 0.0

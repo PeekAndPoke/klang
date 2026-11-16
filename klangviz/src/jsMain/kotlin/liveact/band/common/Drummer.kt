@@ -14,6 +14,7 @@ import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.song.Drum
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
 import io.peekandpoke.klang.viz.liveact.song.Limb
+import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.createCircleGeometry
@@ -195,13 +196,13 @@ private class KitPiece(
 private class KitHit(override val t: Double, override val at: Vector3, override val v: Double) : Stroke
 
 /**
- * The drummer of [show]: the figure [rig] on a stool behind a kit, playing [hits] (sorted by time). He moves with
- * the music by his [traits], his chance drawn under [seed].
+ * The drummer of [show]: the figure [rig] on a stool behind a kit, playing [hits] (sorted by time, as far as
+ * the song is known). He moves with the music by his [traits], his chance drawn under [seed].
  */
 class Drummer(
     private val show: Show,
     private val rig: Rig,
-    hits: List<DrumHit>,
+    private val hits: Part<DrumHit>,
     traits: Traits,
     seed: Double = 1.0,
     /** The band's name, written on the bass drum's front head. */
@@ -209,7 +210,7 @@ class Drummer(
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
     private val s: Double = rig.s
-    private val all: List<DrumHit> = hits
+    private var all: List<DrumHit> = emptyList()
 
     /** The kit: the stage shades it. */
     val kit: Group = Three.addon.createGroup()
@@ -313,7 +314,16 @@ class Drummer(
             }
         }
 
-        for (h in hits) {
+        hits.refresh()
+        plan()
+    }
+
+    /** Which limb hits what and when, from the hits as far as they are known. */
+    private fun plan() {
+        all = hits.events
+        byLimb.values.forEach { it.clear() }
+
+        for (h in all) {
             byLimb.getValue(h.limb).add(KitHit(t = h.t, at = pieces.getValue(h.drum).at, v = h.v))
         }
     }
@@ -399,6 +409,10 @@ class Drummer(
 
     /** The drummer and his kit at [t] (seconds). */
     fun update(t: Double) {
+        if (hits.refresh()) {
+            plan()
+        }
+
         // what was hit: a cymbal swings, a drum dips, and it all feeds the body
         var energy = 0.0
         var snare = 0.0

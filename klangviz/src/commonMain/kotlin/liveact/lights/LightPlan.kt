@@ -130,7 +130,21 @@ fun lampFlicker(t: Double, own: Double): Double {
 class LightPlan(private val show: Show) {
 
     /** Where the bass drum runs fast: the stroboscope's stretches. */
-    val runs: List<Run> = bassDrumRuns(show.times("kick"))
+    val runs: List<Run>
+        get() {
+            val kicks = show.times("kick")
+
+            // the same list as long as the song has not grown
+            if (kicks !== runsOf) {
+                runsOf = kicks
+                found = bassDrumRuns(kicks)
+            }
+
+            return found
+        }
+
+    private var runsOf: List<Double>? = null
+    private var found: List<Run> = emptyList()
 
     /** The moods in the order they come, as far as asked for: the show opens in the first. */
     private val order = mutableListOf(0)

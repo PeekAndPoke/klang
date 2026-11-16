@@ -76,14 +76,39 @@ also while its code is edited.
 4. Done, a first version: the app's side. `LiveActVisual` (the visual "Live act" in the Visuals tab) compiles the
    playing code once more, reads its events for 512 cycles ahead, and mounts the live act on the playback's clock
    and the analyser's loudness (`LiveLoudness`). Seen running in the built app. Its limits:
-   - the band appears only once the whole stretch is read (seconds; the page counts meanwhile);
+   - the band appears only once the whole stretch is read (seconds; the page counts meanwhile): gone with step 5;
    - the marimba is not played note for note until KLANG-00450 lands;
    - the stage tells the editor's code, not the code that plays (`KlangCodePlaybackCtrl.publishNowPlaying`): a
      song edited and not played again is read as edited;
    - a change of the code or the tempo makes the whole band anew; a tempo change shifts heard seconds against
      the song's cycles;
    - in the app Esc closes the visual, so only 0 gives the camera back to the choreography.
-5. Plans that follow a changing song (point 5).
+5. Done, as a trial (the maintainer, 2026-11-16: "keep a rolling look ahead of 8 cycles and try if things still
+   work"): the song grows while it plays. `LiveActVisual` reads from one cycle before what is heard to 8 cycles
+   ahead, then reads on, a whole cycle at a time; the band is there after the first stretch. Never less than 14
+   seconds ahead, though (the review's finding): the frontwoman must know her next note 13 seconds ahead to come
+   back from a stroll without a jump, and 8 cycles are fewer seconds in a faster song. For Der Schmetterling (a
+   cycle is 1.64 s) that makes 9 cycles. `Song` takes more
+   events (`add`, `version`), a player reads its `Part` and plans again when the song has grown. What had to get
+   a rule of its own, because it was worked out from the whole song before:
+   - the marimba's bars: a growing song gets bars up to the c three octaves above the middle one, and a note
+     beyond the bars is played an octave nearer;
+   - a string player's fingering: a pitch keeps the string it got, new pitches are shared out by the notes known
+     then;
+   - the frontwoman's strolls: after her last known note she is free for as long as nothing more is known; a
+     stroll that has begun stays when the song then says her next note comes sooner than half a minute, and she
+     is back four seconds before it;
+   - how hard a note is played is its gain against the loudest of its tag known when it is read, and stays that.
+   Its limits: everything read is kept, so a very long set grows in memory and each new cycle costs a little more
+   to plan; whether it runs smoothly is for the maintainer's eyes (the browser here draws one frame a second).
+   Klang-Main-Dev found (KLANG-00450) that a pattern asked in pieces smaller than a cycle can give other events,
+   and that the live scheduler asks in whole cycles: so does the band.
+6. Plans that follow a changing song (point 5): an edit or a tempo change still makes the band anew.
+7. An idea of the maintainer's (2026-11-16), for later: the song sends choreography signals to the band, "f.e. in
+   the form of 'empty voices' with special tags or similar... this can than also use the sprudel patterns". So a
+   move, a light or a camera is asked for from the song itself, in time with it, by a voice that makes no sound.
+   Today the reader drops events without tags and control events; a signal would come through there. Likely a
+   ticket of its own in KLANG-00447, together with how a song says who plays what.
 
 ## Acceptance
 
@@ -93,3 +118,4 @@ from the moment it is opened.
 ## History
 
 - 2026-11-16: created.
+- 2026-11-16: the rolling look ahead of 8 cycles, as a trial (step 5); the idea of choreography signals noted (step 7).

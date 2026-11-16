@@ -21,7 +21,6 @@ import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Transport
 import io.peekandpoke.klang.viz.liveact.TransportControls
 import io.peekandpoke.klang.viz.liveact.song.RecordedEvent
-import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
@@ -30,11 +29,16 @@ import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import kotlinx.browser.window
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -48,13 +52,17 @@ fun Tag.LiveActVisual() = comp {
  * The live act for whatever plays in the app (KLANG-00449): the band Notstrom on its stage, playing the song on the
  * stage of the app (the Spine's `playbacks.nowPlaying`).
  *
- * The band needs the song ahead of the sound, so the playing code is compiled once more here and asked for its
- * events from the start to [HORIZON] cycles ahead. The music itself is the app's: the live act follows the
- * playback's time and starts and stops nothing. Its loudness is read from the player's analyser.
+ * The band needs the song a little ahead of the sound, so the playing code is compiled once more here and asked for
+ * its events as it plays: always [AHEAD] cycles ahead of what is heard (and never less than [AHEAD_SEC] seconds:
+ * a body's moves take seconds, however fast the song), a whole cycle at a time (as the player asks it). The band
+ * is there as soon as the first stretch is read, and plans on as the song grows. The music itself is the app's:
+ * the live act follows the playback's time and starts and stops nothing. Its loudness is read from the
+ * player's analyser.
  *
- * Known limits, for now. Asking a song again gives other events where the song draws at random without a seed, so a
- * part that does (Der Schmetterling's marimba) is not played note for note (KLANG-00450). A change of the code or of
- * the tempo makes the band anew. The stage says the code in the editor, not the code that plays: a song edited and
+ * Known limits, for now. Asking a song again gives other events where the song's seed is another at every asking,
+ * so a part that draws at random under it (Der Schmetterling's marimba) is not played note for note (KLANG-00450).
+ * What is read is kept for as long as the band plays, so a very long set grows in memory. A change of the code or
+ * of the tempo makes the band anew. The stage says the code in the editor, not the code that plays: a song edited and
  * not played again is read as edited. The band plays the parts it knows by their tags (the ones of Der
  * Schmetterling); a song without them shows the band standing. And Esc closes the visual here, so of the live
  * act's two keys that give the camera back only 0 is of use.
@@ -67,6 +75,15 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
     /** What plays, as far as it matters to the band: another code, tempo or playback is another show. */
     private data class Playing(val code: String, val rpm: Double, val playback: KlangCyclicPlayback)
 
+    /** A song as it is read while it plays: the [pattern] asked, and how far ([to], in cycles) it is read into [song]. */
+    private class Reading(val song: Song, val pattern: KlangPattern, val cps: Double, var to: Double) {
+        /** How far ahead of what is heard it is read, in cycles. */
+        val ahead: Double = max(AHEAD, AHEAD_SEC * cps)
+
+        /** Whether a cycle that could not be read was told of already. */
+        var failed: Boolean = false
+    }
+
     private val scope = MainScope()
     private var shows = 0
 
@@ -75,29 +92,35 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
     /** Whether something plays at all. */
     private var playing: Boolean by value(false)
 
-    /** How far the playing song is read ahead so far, in cycles. */
-    private var read: Int by value(0)
+    /** What reads the song on, for the show that is seen. */
+    private var following: Job? = null
 
-    /** The song read ahead for what plays now; a read for what no longer plays makes no show. */
-    private val songs = LatestRead<Playing, Song>(
+    /** The song's first stretch for what plays now; a read for what no longer plays makes no show. */
+    private val songs = LatestRead<Playing, Reading>(
         scope = scope,
-        read = { songOf(code = it.code, rpm = it.rpm) },
+        read = { begin(it) },
         changed = { before, now ->
-            read = 0
             playing = now != null
 
             // Another playback, or none: its band leaves at once. The same playback with another code or tempo: its
-            // band plays on until the new song is read.
+            // band plays on, and its song is read on, until the new song's first stretch is read.
             if (now == null || now.playback !== before?.playback) {
+                following?.cancel()
+                following = null
                 ready = null
             }
         },
-        done = { now, song ->
+        done = { now, reading ->
+            following?.cancel()
+            following = reading?.let { scope.launch { follow(reading = it, playback = now.playback) } }
+
             shows++
             ready = Ready(
                 show = Show(
                     seed = Random.nextInt(100_000),
-                    music = PlayingMusic(song = song, playback = now.playback) { spine.player.player()?.getAnalyzer() },
+                    music = PlayingMusic(song = reading?.song, playback = now.playback) {
+                        spine.player.player()?.getAnalyzer()
+                    },
                 ),
                 key = "live-act-$shows",
             )
@@ -117,52 +140,86 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * The song as the band reads it: the code compiled, and its events from the start to [HORIZON] cycles, asked a
-     * few cycles at a time so the page stays alive meanwhile. Null where the code gives no pattern.
+     * Begins to read what plays: the code compiled, and its events from where the playback is to as far ahead as it
+     * is read ([Reading.ahead]).
+     * Null where the code gives no pattern.
      */
-    private suspend fun songOf(code: String, rpm: Double): Song? {
+    private suspend fun begin(playing: Playing): Reading? {
         // compiled once more, on an engine of its own; what the build swallows was said to the editor already when the
         // song was started, so it is gathered here and dropped
         val pattern: KlangPattern = SprudelDiagnostics.collectingInto(mutableListOf()) {
-            SprudelPattern.compile(spine.player.scriptEngine(), code)
+            SprudelPattern.compile(spine.player.scriptEngine(), playing.code)
         } ?: return null
-        val cps = rpm / 60.0
-        val events = mutableListOf<RecordedEvent>()
-        var from = 0.0
+        val cps = playing.rpm / 60.0
+        val now = (playing.playback.heardSec() ?: 0.0) * cps
+        // a bar back as well: a note that began just before still sounds
+        val reading = Reading(song = Song(rpm = playing.rpm), pattern = pattern, cps = cps, to = max(0.0, floor(now) - 1))
 
-        while (from < HORIZON) {
-            val to = minOf(HORIZON, from + SLICE)
+        readOn(reading = reading, playback = playing.playback)
 
-            for (event in pattern.queryEvents(fromCycles = from, toCycles = to, cps = cps)) {
-                val data = event.toVoiceData()
-                val tags = data.tags?.sorted().orEmpty()
+        return reading
+    }
 
-                if (tags.isEmpty() || data.control == true) {
-                    continue
-                }
+    /** Reads [reading] on for as long as it is followed: ahead of what is heard of [playback]. */
+    private suspend fun follow(reading: Reading, playback: KlangCyclicPlayback) {
+        while (true) {
+            delay(FOLLOW_MS)
+            readOn(reading = reading, playback = playback)
+        }
+    }
 
-                events.add(
-                    RecordedEvent(
-                        t = event.startCycles / cps,
-                        d = event.durationCycles / cps,
-                        c = event.startCycles,
-                        tags = tags,
-                        note = data.note,
-                        freq = data.freqHz?.takeIf { it.isFinite() },
-                        gain = data.gain?.takeIf { it.isFinite() },
-                        sound = data.sound,
-                        index = data.soundIndex,
-                        pan = data.pan?.takeIf { it.isFinite() },
-                    )
-                )
-            }
+    /**
+     * Reads [reading] up to as far ahead of what is heard of [playback] as it is read ([Reading.ahead]), a whole
+     * cycle at a time (asked in other pieces, a pattern can give other events: KLANG-00450), and lets the page
+     * breathe between them. A cycle that cannot be read is left out, as the player leaves it out, and told of once.
+     */
+    private suspend fun readOn(reading: Reading, playback: KlangCyclicPlayback) {
+        val now = (playback.heardSec() ?: 0.0) * reading.cps
 
-            from = to
-            read = to.toInt()
-            delay(1)
+        // fallen behind what is heard (the page was hidden): what is past is not read any more
+        if (reading.to < floor(now) - 1) {
+            reading.to = floor(now) - 1
         }
 
-        return Song(Recording(rpm = rpm, cps = cps, cycles = HORIZON, seconds = HORIZON / cps, events = events))
+        while (reading.to < now + reading.ahead) {
+            val from = reading.to
+            val events = try {
+                reading.pattern.queryEvents(fromCycles = from, toCycles = from + 1, cps = reading.cps).mapNotNull { event ->
+                    val data = event.toVoiceData()
+                    val tags = data.tags?.sorted().orEmpty()
+
+                    if (tags.isEmpty() || data.control == true) {
+                        null
+                    } else {
+                        RecordedEvent(
+                            t = event.startCycles / reading.cps,
+                            d = event.durationCycles / reading.cps,
+                            c = event.startCycles,
+                            tags = tags,
+                            note = data.note,
+                            freq = data.freqHz?.takeIf { it.isFinite() },
+                            gain = data.gain?.takeIf { it.isFinite() },
+                            sound = data.sound,
+                            index = data.soundIndex,
+                            pan = data.pan?.takeIf { it.isFinite() },
+                        )
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                if (!reading.failed) {
+                    reading.failed = true
+                    console.error("The live act could not read cycle ${from.toInt()} of the playing song", e)
+                }
+
+                emptyList()
+            }
+
+            reading.song.add(events)
+            reading.to = from + 1
+            delay(1)
+        }
     }
 
     override fun VDom.render() {
@@ -198,7 +255,7 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
                         put("font", "14px monospace")
                     }
 
-                    +(if (playing) "the band reads the song: $read of ${HORIZON.toInt()} bars" else "play a song: the band plays it")
+                    +(if (playing) "the band reads the song" else "play a song: the band plays it")
                 }
             }
         }
@@ -208,9 +265,17 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
         /** Where the figures lie, beside the page (klangviz's resources). */
         const val MODELS = "/liveact/notstrom/"
 
-        /** How far ahead the song is read, in cycles, and how many at a time. */
-        const val HORIZON = 512.0
-        const val SLICE = 8.0
+        /** How far ahead of what is heard the song is read, in cycles. */
+        const val AHEAD = 8.0
+
+        /**
+         * And never less than this, in seconds: the frontwoman must know her next note thirteen seconds ahead to
+         * come back from a stroll without a jump (see TrumpetPlayer), and a look between two players takes nine.
+         */
+        const val AHEAD_SEC = 14.0
+
+        /** How often it is looked whether the song is to be read on, in milliseconds. */
+        const val FOLLOW_MS = 200L
     }
 }
 

@@ -68,14 +68,16 @@ class View(
         Choreography(
             show = show,
             rigs = rigs,
-            activity = mapOf(
-                Player.Drums to show.times("kick", "snare"),
-                Player.Bass to show.times("bass"),
-                Player.Guitar1 to show.times("guitar1"),
-                Player.Guitar2 to show.times("guitar2", "guitar3"),
-                Player.Marimba to show.times("lead"),
-                Player.Eimer to show.times("trommel"),
-            ),
+            activity = { player ->
+                when (player) {
+                    Player.Drums -> show.times("kick", "snare")
+                    Player.Bass -> show.times("bass")
+                    Player.Guitar1 -> show.times("guitar1")
+                    Player.Guitar2 -> show.times("guitar2", "guitar3")
+                    Player.Marimba -> show.times("lead")
+                    Player.Eimer -> show.times("trommel")
+                }
+            },
             force = forcedKind(switches["move"]),
         )
     } else {

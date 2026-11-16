@@ -14,6 +14,7 @@ import io.peekandpoke.klang.viz.liveact.around
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.Note
+import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
@@ -97,7 +98,7 @@ private class MalletHit(override val t: Double, override val v: Double, override
 class MarimbaPlayer(
     private val show: Show,
     private val rig: Rig,
-    private val notes: List<Note>,
+    private val part: Part<Note>,
     traits: Traits,
     seed: Double = 2.0,
 ) {
@@ -118,8 +119,16 @@ class MarimbaPlayer(
 
     private val bars = mutableMapOf<Int, MarimbaBar>()
 
+    /** Her notes, sorted by time, as far as the song is known. */
+    private var notes: List<Note> = emptyList()
+
     /** Which hand plays which note. */
-    private val byHand: Map<Side, List<Stroke>>
+    private var byHand: Map<Side, List<Stroke>> = emptyMap()
+
+    /** The lowest and the highest bar, and how wide a bar is. */
+    private val lowest: Int
+    private val highest: Int
+    private val width: Double
 
     /** Where a mallet idles when its hand has nothing to play. */
     private val rests: Map<Side, Vector3> = mapOf(
@@ -144,6 +153,9 @@ class MarimbaPlayer(
         group.rotation.y = rig.root.rotation.y
         floor = rig.root.position.y
 
+        part.refresh()
+        notes = part.events
+
         // the bars: from the lowest note played to the highest, widened to whole naturals; low notes to the player's
         // left
         var lo = min(notes.minOfOrNull { it.midi } ?: 60, 60)
@@ -152,6 +164,12 @@ class MarimbaPlayer(
         if (notes.isEmpty()) {
             lo = 60
             hi = 84
+        }
+
+        // a song that grows has not said its highest note yet: three octaves from the middle c, as a marimba has
+        // them. A note beyond the bars is played octaves nearer (see barOf)
+        if (part.grows) {
+            hi = max(hi, GROWING_TOP)
         }
 
         while (!NATURAL[((lo % 12) + 12) % 12]) {
@@ -164,6 +182,10 @@ class MarimbaPlayer(
 
         val naturals = (lo..hi).filter { isNatural(it) }
         val width = min(0.058 * s, 1.25 * s / naturals.size)
+
+        lowest = lo
+        highest = hi
+        this.width = width
         val span = width * (naturals.size - 1)
         // (kept under full strength: brighter, the colour washes out to white)
         // a hit bar glows purple, the two rows in slightly different tones: the near row bluer, the far row redder
@@ -245,31 +267,7 @@ class MarimbaPlayer(
             }
         }
 
-        // which hand plays which note: in turn, but never crossing over the other hand
-        val hands = mapOf(Side.L to mutableListOf<Stroke>(), Side.R to mutableListOf<Stroke>())
-        var last = Side.R
-        val where = mutableMapOf<Side, MalletHit>()
-
-        for (n in notes) {
-            val at = (bars[n.midi] ?: bars.getValue(lo)).at
-            var hand = last.other
-            val other = hand.other
-            val there = where[other]
-            val recent = if (there != null && n.t - there.t < 0.6) there.at.x else null
-
-            // the left hand is on the side of the low notes (x > 0): it never plays to the right of the right hand
-            if (recent != null && ((hand == Side.L && at.x < recent - width) || (hand == Side.R && at.x > recent + width))) {
-                hand = other
-            }
-
-            val hit = MalletHit(t = n.t, v = n.v, at = at, midi = n.midi)
-
-            hands.getValue(hand).add(hit)
-            where[hand] = hit
-            last = hand
-        }
-
-        byHand = hands
+        plan()
 
         mallets = listOf(Side.L, Side.R).associateWith {
             val mallet = Three.addon.createGroup()
@@ -296,8 +294,58 @@ class MarimbaPlayer(
         }
     }
 
+    /** The bar of the note [midi]: its own, or the same note as many octaves nearer as it takes where it lies beyond the bars. */
+    private fun barOf(midi: Int): MarimbaBar {
+        var m = midi
+
+        while (m < lowest) {
+            m += 12
+        }
+
+        while (m > highest) {
+            m -= 12
+        }
+
+        return bars[m] ?: bars.getValue(lowest)
+    }
+
+    /** Which hand plays which note, from the notes as far as they are known. */
+    private fun plan() {
+        notes = part.events
+
+        // which hand plays which note: in turn, but never crossing over the other hand
+        val hands = mapOf(Side.L to mutableListOf<Stroke>(), Side.R to mutableListOf<Stroke>())
+        var last = Side.R
+        val where = mutableMapOf<Side, MalletHit>()
+
+        for (n in notes) {
+            val at = barOf(n.midi).at
+            var hand = last.other
+            val other = hand.other
+            val there = where[other]
+            val recent = if (there != null && n.t - there.t < 0.6) there.at.x else null
+
+            // the left hand is on the side of the low notes (x > 0): it never plays to the right of the right hand
+            if (recent != null && ((hand == Side.L && at.x < recent - width) || (hand == Side.R && at.x > recent + width))) {
+                hand = other
+            }
+
+            val hit = MalletHit(t = n.t, v = n.v, at = at, midi = n.midi)
+
+            hands.getValue(hand).add(hit)
+            where[hand] = hit
+            last = hand
+        }
+
+        byHand = hands
+    }
+
     /** The marimba player and her marimba at [t] (seconds). */
     fun update(t: Double) {
+        if (part.refresh()) {
+            plan()
+        }
+
         // the bars just hit glow and fade; how much is played feeds the eyes
         var energy = 0.0
         val (last, coming) = notes.around(t)
@@ -310,9 +358,9 @@ class MarimbaPlayer(
 
         while (i >= 0 && notes[i].t > t - 1.2) {
             val n = notes[i]
-            val b = bars[n.midi]
+            val b = barOf(n.midi)
 
-            if (b != null && b.hitT < 0) {
+            if (b.hitT < 0) {
                 b.hitT = n.t
                 b.v = n.v
             }
@@ -434,6 +482,9 @@ class MarimbaPlayer(
     }
 
     private companion object {
+        /** The highest bar of a marimba whose song still grows: the c three octaves above the middle one. */
+        const val GROWING_TOP = 96
+
         /** Whether the midi note [m] is a natural; none below midi 0, as in the prototype. */
         fun isNatural(m: Int): Boolean = NATURAL.getOrElse(m % 12) { false }
     }

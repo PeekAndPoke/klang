@@ -106,4 +106,99 @@ class SongSpec : StringSpec({
 
         s.times(listOf("a", "b")) shouldBe listOf(1.0, 2.0, 3.0)
     }
+
+    "a song that grows reads as the same song given whole, once all of it is added" {
+        val events = listOf(
+            event(0.0, "kick"), event(0.2, "kick"), event(0.5, "snare"), event(0.55, "hats", sound = "cr"),
+            event(1.0, "kick"), event(1.1, "snare"), event(1.15, "hats", sound = "oh"), event(1.2, "hats", sound = "hh"),
+            // (the loudest of a part comes first here: a strength is measured against the loudest known when it is added)
+            event(1.5, "lead", note = "c4", gain = 1.0), event(2.5, "lead", note = "e4", gain = 0.5),
+            event(1.5, "bass", note = "e1"), event(2.5, "bass", note = "g1"),
+        )
+        val whole = Song(Recording(rpm = 30.0, events = events))
+        val grown = Song(rpm = 30.0)
+
+        grown.add(events.filter { it.t < 1.0 })
+        grown.add(events.filter { it.t >= 1.0 && it.t < 2.0 })
+        grown.add(events.filter { it.t >= 2.0 })
+
+        grown.drumHits() shouldBe whole.drumHits()
+        grown.notesOf("lead") shouldBe whole.notesOf("lead")
+        grown.strumsOf(listOf("bass")) shouldBe whole.strumsOf(listOf("bass"))
+        grown.times(listOf("kick", "snare")) shouldBe whole.times(listOf("kick", "snare"))
+        grown.bpm shouldBe whole.bpm
+    }
+
+    "a song that grows is read anew after each addition, and not when nothing was added" {
+        val s = Song(rpm = 30.0)
+
+        s.version shouldBe 0
+        s.notesOf("lead") shouldBe emptyList()
+        s.drumHits() shouldBe emptyList()
+        s.strumsOf(listOf("lead")) shouldBe emptyList()
+
+        s.add(listOf(event(1.0, "lead", note = "c4")))
+        s.version shouldBe 1
+        s.notesOf("lead").map { it.midi } shouldBe listOf(60)
+        s.times(listOf("lead")) shouldBe listOf(1.0)
+
+        s.add(emptyList())
+        s.version shouldBe 1
+
+        s.add(listOf(event(2.0, "lead", note = "e4"), event(2.0, "kick")))
+        s.version shouldBe 2
+        s.notesOf("lead").map { it.midi } shouldBe listOf(60, 64)
+        s.times(listOf("lead")) shouldBe listOf(1.0, 2.0)
+        s.drumHits().map { it.t } shouldBe listOf(2.0)
+        s.strumsOf(listOf("lead")).map { it.midi } shouldBe listOf(60, 64)
+    }
+
+    "a part is read again only where its song has grown" {
+        val s = Song(rpm = 30.0)
+        val part = s.part { notesOf("lead") }
+
+        part.grows shouldBe true
+        part.refresh() shouldBe true
+        part.events shouldBe emptyList()
+        part.refresh() shouldBe false
+
+        s.add(listOf(event(1.0, "lead", note = "c4")))
+        part.events shouldBe emptyList()
+        part.refresh() shouldBe true
+        part.events.map { it.midi } shouldBe listOf(60)
+        part.refresh() shouldBe false
+
+        val fixed = Part.fixed(listOf(1, 2))
+
+        fixed.grows shouldBe false
+        fixed.refresh() shouldBe true
+        fixed.events shouldBe listOf(1, 2)
+        fixed.refresh() shouldBe false
+        Song(Recording(rpm = 30.0, events = emptyList())).part { drumHits() }.grows shouldBe false
+    }
+
+    "a hand is busy with what it plays within the given time, whatever it plays before and after" {
+        // the crash at 25.1 finds the left hand busy with the snare at 25.0, among the many before and after it
+        val snares = (0 until 50).map { event(it * 1.0, "snare") }
+        val crashes = listOf(event(25.1, "hats", sound = "cr"), event(60.0, "hats", sound = "cr"))
+        val s = song(*(snares + crashes).toTypedArray())
+
+        s.drumHits().filter { it.drum == Drum.Crash }.map { it.limb } shouldBe listOf(Limb.R, Limb.L)
+    }
+
+    "a hand is busy up to the given time and not at it, measured as the difference of the two moments" {
+        // 1.5599999999999998 - 1.44 is a little under 0.12 as a floating number: the hand is still busy
+        val s = song(event(1.44, "hats", sound = "hh"), event(1.5599999999999998, "hats", sound = "hh"))
+
+        s.drumHits().map { it.t } shouldBe listOf(1.44)
+    }
+
+    "how hard an event is played stays as it was when a louder one is added later" {
+        val s = Song(rpm = 30.0)
+
+        s.add(listOf(event(0.0, "bass", gain = 0.2, note = "e1"), event(1.0, "bass", gain = 0.1, note = "e1")))
+        s.add(listOf(event(2.0, "bass", gain = 0.4, note = "e1"), event(3.0, "bass", gain = 0.2, note = "e1")))
+
+        s.byTag.getValue("bass").map { it.v } shouldBe listOf(1.0, 0.5, 1.0, 0.5)
+    }
 })

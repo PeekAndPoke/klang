@@ -32,6 +32,7 @@ import io.peekandpoke.klang.viz.liveact.band.common.testBeat
 import io.peekandpoke.klang.viz.liveact.band.common.walkPose
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.Note
+import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.song.Strum
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.vec
@@ -282,7 +283,7 @@ class Notstrom private constructor(
     val drummer = Drummer(
         show = show,
         rig = rig(Player.Drums),
-        hits = song?.drumHits() ?: testBeat(64, show.bpm),
+        hits = song?.part { drumHits() } ?: Part.fixed(testBeat(64, show.bpm)),
         traits = character(Player.Drums).traits,
         seed = character(Player.Drums).seed,
         name = NAME,
@@ -291,7 +292,7 @@ class Notstrom private constructor(
     val marimba = MarimbaPlayer(
         show = show,
         rig = rig(Player.Marimba),
-        notes = song?.notesOf("lead") ?: testTune(),
+        part = song?.part { notesOf("lead") } ?: Part.fixed(testTune()),
         traits = character(Player.Marimba).traits,
         seed = character(Player.Marimba).seed,
     )
@@ -299,7 +300,7 @@ class Notstrom private constructor(
     val frontwoman = TrumpetPlayer(
         show = show,
         rig = rig(Player.Eimer),
-        notes = song?.notesOf("trommel") ?: testCall(),
+        part = song?.part { notesOf("trommel") } ?: Part.fixed(testCall()),
         traits = character(Player.Eimer).traits,
         seed = character(Player.Eimer).seed,
     )
@@ -310,7 +311,7 @@ class Notstrom private constructor(
             show = show,
             rig = rig(Player.Bass),
             kind = StringKind.Bass,
-            notes = song?.strumsOf(listOf("bass")) ?: testRiff(step = 0.5, low = 28),
+            part = song?.part { strumsOf(listOf("bass")) } ?: Part.fixed(testRiff(step = 0.5, low = 28)),
             traits = character(Player.Bass).traits,
             seed = character(Player.Bass).seed,
             lean = 0.10,
@@ -321,7 +322,7 @@ class Notstrom private constructor(
             show = show,
             rig = rig(Player.Guitar1),
             kind = StringKind.Guitar,
-            notes = song?.strumsOf(listOf("guitar1")) ?: testRiff(step = 0.25, low = 52),
+            part = song?.part { strumsOf(listOf("guitar1")) } ?: Part.fixed(testRiff(step = 0.25, low = 52)),
             traits = character(Player.Guitar1).traits,
             seed = character(Player.Guitar1).seed,
             lean = -0.05,
@@ -332,7 +333,7 @@ class Notstrom private constructor(
             show = show,
             rig = rig(Player.Guitar2),
             kind = StringKind.Guitar,
-            notes = song?.strumsOf(listOf("guitar2", "guitar3")) ?: testRiff(step = 0.125, low = 40),
+            part = song?.part { strumsOf(listOf("guitar2", "guitar3")) } ?: Part.fixed(testRiff(step = 0.125, low = 40)),
             traits = character(Player.Guitar2).traits,
             seed = character(Player.Guitar2).seed,
             lean = 0.10,

@@ -15,6 +15,7 @@ import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.Note
+import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Quaternion
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
@@ -88,13 +89,13 @@ private var MaterialParameters.emissiveIntensity: Double
     }
 
 /**
- * The frontwoman with her trumpet. [notes]: her notes, sorted by time; the beat for the nod is the [show]'s.
+ * The frontwoman with her trumpet. [part]: her notes, sorted by time, as far as the song is known; the beat for the nod is the [show]'s.
  * [traits] and [seed] make her [Mover] (the prototype's fallback seed is 3; the band gives her her own).
  */
 class TrumpetPlayer(
     private val show: Show,
     val rig: Rig,
-    val notes: List<Note>,
+    private val part: Part<Note>,
     traits: Traits,
     seed: Double = 3.0,
 ) {
@@ -115,24 +116,33 @@ class TrumpetPlayer(
 
     /**
      * A stretch in which he has nothing to play and strolls about the front of the stage, from [from] to [to]
-     * seconds. Which way he faces, worked out once per stroll (here when it is made) in tenths of a second: the
+     * seconds. Which way he faces is worked out once per stroll in tenths of a second, as far as it is asked for: the
      * direction of his way jumps where he turns round or nearly stands, so he follows it with a body's inertia, never
      * faster than a calm turn.
      */
     private inner class Stroll(val from: Double, val to: Double) {
-        val turns: List<Double> = buildList {
-            var now = 0.0
-            var x = from
-            val end = min(to, from + 1500) + 0.2
+        private val turns = mutableListOf<Double>()
+        private var now = 0.0
+        private var x = from
+        private val end = min(to, from + 1500) + 0.2
 
-            while (x < end) {
+        /** Which way he faces at [t], off the way he faces at his place. */
+        fun turnAt(t: Double): Double {
+            val at = max(0, floor((t - from) / 0.1).toInt())
+
+            while (turns.size < at + 2 && x < end) {
                 // by the shorter way round, and at most 57 degrees a second
-                val want = facing(this@Stroll, x).turn - now
+                val want = facing(this, x).turn - now
 
                 now += max(-0.10, min(0.10, atan2(sin(want), cos(want)) * 0.2))
-                add(now)
+                turns.add(now)
                 x += 0.1
             }
+
+            val i = min(turns.size - 2, at)
+            val u = min(1.0, max(0.0, (t - from) / 0.1 - i))
+
+            return turns[i] + (turns[i + 1] - turns[i]) * u
         }
     }
 
@@ -140,9 +150,11 @@ class TrumpetPlayer(
     private val bpm: Double = show.bpm
     private val s: Double = rig.s
 
-    /** Her lowest and her highest note. */
-    private val lowest: Int = notes.minOfOrNull { it.midi } ?: 60
-    private val highest: Int = notes.maxOfOrNull { it.midi } ?: 72
+    private var notes: List<Note> = emptyList()
+
+    /** Her lowest and her highest note, of those known. */
+    private var lowest: Int = 60
+    private var highest: Int = 72
 
     private val brass: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(
         jsObject<MaterialParameters> {
@@ -177,11 +189,12 @@ class TrumpetPlayer(
     val homeTurn: Double
 
     /** Where a phrase begins: a note after six seconds of silence or more (and her first note). */
-    val phrases: List<Double>
+    var phrases: List<Double> = emptyList()
+        private set
 
     // where he stands to play, and the stretches in which he has nothing to play and strolls about the front of the
     // stage: from a little after a phrase to well before the next, so he is back in his place in time
-    private val strolls: List<Stroll>
+    private var strolls: List<Stroll> = emptyList()
 
     init {
         rig.update()
@@ -190,8 +203,25 @@ class TrumpetPlayer(
         home = rig.root.position.clone()
         homeTurn = rig.root.rotation.y
 
+        part.refresh()
+        plan(now = Double.NEGATIVE_INFINITY)
+    }
+
+    /**
+     * Her phrases and her strolls, from the notes as far as they are known at [now].
+     *
+     * After the last note known she is free for as long as nothing more is known, and strolls. So a stroll can have
+     * begun before the song said that her next note comes sooner than a stroll needs: one that has begun stays, and
+     * she is back four seconds before that note. Her way back takes up to nine seconds, so she comes back without a
+     * jump only where the song is known thirteen seconds ahead or more (who reads the song sees to that).
+     */
+    private fun plan(now: Double) {
+        notes = part.events
+        lowest = notes.minOfOrNull { it.midi } ?: 60
+        highest = notes.maxOfOrNull { it.midi } ?: 72
         phrases = notes.filterIndexed { i, n -> i == 0 || n.t - (notes[i - 1].t + notes[i - 1].d) > 6 }.map { it.t }
 
+        val before = strolls
         val found = mutableListOf<Stroll>()
         var free = 3.0
 
@@ -199,8 +229,15 @@ class TrumpetPlayer(
             val next = if (i < notes.size) notes[i].t else 1e9
 
             // he stands a good while first (the maintainer, 2026-11-16): twelve seconds after his last note, or after the start
-            if (next - free > 30) {
-                found.add(Stroll(from = free + 12, to = min(next - 4, free + 12 + 3600)))
+            val from = free + 12
+            // one that has begun: it was planned before, and now is in it
+            val begun = from < now && next > now && before.any { it.from == from }
+
+            if (next - free > 30 || begun) {
+                val to = min(next - 4, free + 12 + 3600)
+
+                // the same stroll as before keeps what was worked out for it
+                found.add(before.firstOrNull { it.from == from && it.to == to } ?: Stroll(from = from, to = to))
             }
 
             if (i < notes.size) {
@@ -337,9 +374,7 @@ class TrumpetPlayer(
     fun walkAt(t: Double): Walk {
         val k = strolls.firstOrNull { t > it.from && t < it.to } ?: return Walk(at = home, turn = homeTurn, speed = 0.0)
         val now = facing(k, t)
-        val i = min(k.turns.size - 2, max(0, floor((t - k.from) / 0.1).toInt()))
-        val u = min(1.0, max(0.0, (t - k.from) / 0.1 - i))
-        val turn = k.turns[i] + (k.turns[i + 1] - k.turns[i]) * u
+        val turn = k.turnAt(t)
 
         return Walk(at = home.clone().add(strollAt(k, t)), turn = homeTurn + turn, speed = now.speed, going = now.going)
     }
@@ -360,6 +395,10 @@ class TrumpetPlayer(
 
     /** [put]: where she is put from outside (her walk-in); else she is at her place, or strolling. */
     fun update(t: Double, put: Walk? = null) {
+        if (part.refresh()) {
+            plan(now = t)
+        }
+
         val (before, after) = notes.around(t)
 
         // is a note sounding, how high is it, and is the trumpet up: up from a little before a phrase to a little after

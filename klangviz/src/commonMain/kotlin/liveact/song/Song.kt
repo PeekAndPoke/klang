@@ -71,39 +71,126 @@ data class Note(override val t: Double, val midi: Int, val v: Double, val d: Dou
 data class Strum(override val t: Double, val d: Double, val midi: Int, val v: Double, val all: List<Int>) : Timed
 
 /**
- * A recorded song as the band reads it: the events by their tags, each with its strength within its tag. Each
- * player takes the events with its tags.
+ * A part of a song, as its player reads it: the [events] it plays, as far as the song is known. A recording is known
+ * whole; a song played live grows while it plays ([grows]), and the part with it. A player asks [refresh] before it
+ * moves and plans anew where that says true.
+ */
+class Part<T>(val grows: Boolean, private val version: () -> Int, private val read: () -> List<T>) {
+    private var seen: Int? = null
+
+    /** The part's events as of the last [refresh], sorted by time. */
+    var events: List<T> = emptyList()
+        private set
+
+    /** Reads the part again where the song has grown since the last call; true where it did (and at the first call). */
+    fun refresh(): Boolean {
+        val now = version()
+
+        if (now == seen) {
+            return false
+        }
+
+        seen = now
+        events = read()
+
+        return true
+    }
+
+    companion object {
+        /** A part that is [events] and stays so (test notes). */
+        fun <T> fixed(events: List<T>): Part<T> = Part(grows = false, version = { 0 }, read = { events })
+    }
+}
+
+/**
+ * A song as the band reads it: the events by their tags, each with its strength within its tag. Each player takes
+ * the events with its tags.
+ *
+ * A recording is given whole. A song played live starts empty and grows ([add]) as it is read ahead of the sound:
+ * every reading (the hits, the notes, the strums, the times) is then of the song as far as it is known, and
+ * [version] says when that has changed. What was read of the past stays as it was when more is added, except within
+ * a fifth of a second of the newest events (a doubled hit, or a cymbal a hand is not free for, is told from what
+ * sounds beside it). An event's strength is its gain against the loudest of its tag known when it is added, and
+ * stays that: a recording, added at once, is measured against its loudest event.
  *
  * An event with several tags has a strength for each of them. (The prototype this was ported from kept one for the
  * event, the last tag's; no recording so far has an event with two tags.)
  */
-class Song(recording: Recording) {
+class Song(rpm: Double, val grows: Boolean = true) {
+
+    /** A [recording], known whole. */
+    constructor(recording: Recording) : this(rpm = recording.rpm, grows = false) {
+        add(recording.events)
+    }
+
     /** Beats a minute: a cycle is a bar of four beats. */
-    val bpm: Double = recording.rpm * 4
+    val bpm: Double = rpm * 4
 
-    /** The events by tag, each list sorted by time. */
-    val byTag: Map<String, List<SongEvent>> = recording.events
-        .flatMap { e -> e.tags.map { tag -> tag to e } }
-        .groupBy(keySelector = { it.first }, valueTransform = { it.second })
-        .mapValues { (_, list) ->
-            // how hard an event is played: its gain against the loudest of its tag, never under a quarter
-            val loudest = max(list.maxOf { it.gain ?: 1.0 }, 1e-9)
+    /** Counts up whenever events are added: what was read before is to be read again. */
+    var version: Int = 0
+        private set
 
-            list.sortedBy { it.t }.map { e ->
-                SongEvent(
-                    t = e.t,
-                    d = e.d,
-                    v = min(1.0, max(0.25, (e.gain ?: loudest) / loudest)),
-                    midi = midiOf(e),
-                    sound = e.sound,
+    private val known = mutableMapOf<String, MutableList<SongEvent>>()
+
+    /** The loudest gain of each tag so far. */
+    private val loudest = mutableMapOf<String, Double>()
+
+    private var tagged: Map<String, List<SongEvent>>? = null
+    private var hits: List<DrumHit>? = null
+    private val notes = mutableMapOf<String, List<Note>>()
+    private val strums = mutableMapOf<List<String>, List<Strum>>()
+    private val starts = mutableMapOf<List<String>, List<Double>>()
+
+    /** More of the song: [events], in any order. */
+    fun add(events: List<RecordedEvent>) {
+        if (events.isEmpty()) {
+            return
+        }
+
+        for (e in events) {
+            for (tag in e.tags) {
+                loudest[tag] = max(loudest[tag] ?: 1e-9, e.gain ?: 1.0)
+            }
+        }
+
+        for (e in events) {
+            for (tag in e.tags) {
+                // how hard an event is played: its gain against the loudest of its tag, never under a quarter
+                val most = loudest.getValue(tag)
+
+                known.getOrPut(tag) { mutableListOf() }.add(
+                    SongEvent(
+                        t = e.t,
+                        d = e.d,
+                        v = min(1.0, max(0.25, (e.gain ?: most) / most)),
+                        midi = midiOf(e),
+                        sound = e.sound,
+                    )
                 )
             }
         }
 
+        version++
+        tagged = null
+        hits = null
+        notes.clear()
+        strums.clear()
+        starts.clear()
+    }
+
+    /** The events by tag, each list sorted by time. */
+    val byTag: Map<String, List<SongEvent>>
+        get() = tagged ?: known.mapValues { (_, list) -> list.sortedBy { it.t } }.also { tagged = it }
+
     private fun tagged(tag: String): List<SongEvent> = byTag[tag].orEmpty()
 
+    /** This song's part read by [read] (its hits, the notes of a tag, ...), growing with it. */
+    fun <T> part(read: Song.() -> List<T>): Part<T> = Part(grows = grows, version = { version }, read = { read() })
+
     /** When the events with any of [tags] start, sorted. */
-    fun times(tags: List<String>): List<Double> = tags.flatMap { tag -> tagged(tag).map { it.t } }.sorted()
+    fun times(tags: List<String>): List<Double> = starts.getOrPut(tags) {
+        tags.flatMap { tag -> tagged(tag).map { it.t } }.sorted()
+    }
 
     /**
      * The drummer's hits. The kick with both feet: the right one leads, and in a run the two take turns. A fast run
@@ -111,8 +198,13 @@ class Song(recording: Recording) {
      * open hat between them is the left hand's when it is free (no snare just then), so no hand has to jump between
      * two cymbals.
      */
-    fun drumHits(): List<DrumHit> {
+    fun drumHits(): List<DrumHit> = hits ?: readDrumHits().also { hits = it }
+
+    private fun readDrumHits(): List<DrumHit> {
         val hits = mutableListOf<DrumHit>()
+        // when each hand hits, sorted: the snare's hits come in order, and so do the cymbals' after them
+        val snares = mapOf(Limb.L to mutableListOf<Double>(), Limb.R to mutableListOf())
+        val cymbalHits = mapOf(Limb.L to mutableListOf<Double>(), Limb.R to mutableListOf())
 
         var foot: DrumHit? = null
 
@@ -132,9 +224,13 @@ class Song(recording: Recording) {
             val limb = if (fast && before.limb == Limb.L) Limb.R else Limb.L
 
             previous = DrumHit(t = e.t, drum = Drum.Snare, limb = limb, v = e.v).also { hits.add(it) }
+            snares.getValue(limb).add(e.t)
         }
 
-        fun busy(limb: Limb, t: Double, within: Double) = hits.any { it.limb == limb && abs(it.t - t) < within }
+        fun busy(limb: Limb, t: Double, within: Double): Boolean {
+            return near(times = snares.getValue(limb), t = t, within = within) ||
+                near(times = cymbalHits.getValue(limb), t = t, within = within)
+        }
 
         val cymbals = (tagged("hats") + tagged("countin")).sortedBy { it.t }
 
@@ -147,14 +243,15 @@ class Song(recording: Recording) {
             }
 
             hits.add(DrumHit(t = e.t, drum = drum, limb = limb, v = e.v))
+            cymbalHits.getValue(limb).add(e.t)
         }
 
         return hits.sortedBy { it.t }
     }
 
     /** A player's notes from the events with [tag]. */
-    fun notesOf(tag: String): List<Note> {
-        return merged(tagged(tag)) { it.midi.toString() }.mapNotNull { e ->
+    fun notesOf(tag: String): List<Note> = notes.getOrPut(tag) {
+        merged(tagged(tag)) { it.midi.toString() }.mapNotNull { e ->
             e.midi?.let { Note(t = e.t, midi = it, v = e.v, d = e.d) }
         }
     }
@@ -163,7 +260,9 @@ class Song(recording: Recording) {
      * A string player's plucks and strums from the events with any of [tags]: what sounds together is one, its
      * lowest note leading.
      */
-    fun strumsOf(tags: List<String>): List<Strum> {
+    fun strumsOf(tags: List<String>): List<Strum> = strums.getOrPut(tags) { readStrums(tags) }
+
+    private fun readStrums(tags: List<String>): List<Strum> {
         val all = tags.flatMap { tagged(it) }.filter { it.midi != null }.sortedBy { it.t }
         val out = mutableListOf<Strum>()
 
@@ -222,6 +321,25 @@ class Song(recording: Recording) {
             }
 
             return out
+        }
+
+        /** Whether any of [times] (sorted) is less than [within] seconds from [t]. */
+        private fun near(times: List<Double>, t: Double, within: Double): Boolean {
+            var lo = 0
+            var hi = times.size
+
+            while (lo < hi) {
+                val mid = (lo + hi) shr 1
+
+                // (written as the difference, as the test below is: the two then never disagree by a rounding)
+                if (t - times[mid] >= within) {
+                    lo = mid + 1
+                } else {
+                    hi = mid
+                }
+            }
+
+            return lo < times.size && abs(times[lo] - t) < within
         }
 
         /** Which cymbal an event of the hats sounds: hh the closed hat, oh the second hat (open), cr the crash, rd the ride. */

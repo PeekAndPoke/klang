@@ -157,13 +157,13 @@ val ORDER: List<Player> = listOf(Player.Drums, Player.Guitar1, Player.Eimer, Pla
  * The camera's choreography under [show]: a bar is its cycle, and every seed gives another show (who is looked at,
  * from where, in which order, when, and how it comes back).
  *
- * [rigs]: the players' figures. [activity]: the times each player plays a note, sorted. [force]: makes every round
- * that kind (to see one; else the seed decides).
+ * [rigs]: the players' figures. [activity]: the times a player plays a note, sorted, as far as the song is known
+ * (asked at every look). [force]: makes every round that kind (to see one; else the seed decides).
  */
 class Choreography(
     show: Show,
     private val rigs: Map<Player, Rig>,
-    private val activity: Map<Player, List<Double>>,
+    private val activity: (Player) -> List<Double>,
     private val force: RoundKind? = null,
 ) {
     private val seed: Int = show.seed
@@ -186,7 +186,7 @@ class Choreography(
     private fun plays(player: Player, a: Double, b: Double): Int {
         var n = 0
 
-        for (t in activity[player].orEmpty()) {
+        for (t in activity(player)) {
             if (t >= a && t < b) {
                 n++
             } else if (t >= b) {
