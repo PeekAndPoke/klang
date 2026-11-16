@@ -14,7 +14,7 @@ export function initView(scene, camera, rigs) {
   const choreography = song && !params.has('still') ? new Choreography(rigs, {
     drums: times(['kick', 'snare']), bass: times(['bass']), guitar1: times(['guitar1']), guitar2: times(['guitar2', 'guitar3']),
     marimba: times(['lead']), eimer: times(['trommel']),
-  }, 240 / BPM, seed) : null;
+  }, 240 / BPM, seed, params.get('move')) : null;
   // ?head=<player>[&from=side|front|back|threequarter]: a close look at one head, with a plain inspection light, to
   // judge a head's shape (a still for the maintainer; no part of the show)
   let inspect = null;
@@ -29,7 +29,11 @@ export function initView(scene, camera, rigs) {
       const rig = rigs[params.get('head')];
       const at = rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.07 * rig.height / 1.6, 0));
       const from = { side: [1, 0.05, 0], front: [0, 0.05, 1], back: [0, 0.1, -1], threequarter: [0.7, 0.1, 0.7] }[params.get('from') || 'side'];
-      camera.position.copy(at).addScaledVector(rig.dir(...from).normalize(), 1.2);
+      // by where the face looks just now, not the body: a profile stays a profile when the head is turned
+      const ahead = rig.faceAhead.clone().applyQuaternion(rig.bones.head.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
+      const side = new THREE.Vector3(0, 1, 0).cross(ahead);
+      const toward = side.multiplyScalar(from[0]).addScaledVector(ahead, from[2]).add(new THREE.Vector3(0, from[1], 0));
+      camera.position.copy(at).addScaledVector(toward.normalize(), 1.2);
       camera.lookAt(at);
       if (camera.fov !== 24) { camera.fov = 24; camera.updateProjectionMatrix(); }
       inspect.position.copy(camera.position).add(new THREE.Vector3(0.4, 0.8, 0));

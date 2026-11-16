@@ -9,6 +9,7 @@
 //   ?still       the camera stays on the total     ?nohud  no fps line (for stills that are compared)
 //   ?view=side   or a player's name: a fixed camera     ?cam=x,y,z&at=x,y,z  any camera
 //   ?head=eimer&from=side   a close look at one head in plain light
+//   ?move=circle  every camera round is that kind: circle, arc or looks (to see one; else the seed decides)
 //   ?front=1     the front lamp on (0: off)     ?nostrobe  no stroboscope     ?test  test notes, no recording
 import { loadSong } from './song.js';
 import { setShow } from './strike.js';

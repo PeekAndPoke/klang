@@ -8,6 +8,9 @@
 /** 0 below 0, 1 above 1, and a soft S between. */
 export const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 
+/** As [smooth], and softer still where it starts and ends: no jolt in the pace, for what a viewer rides along with. */
+export const smoother = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * c * (c * (6 * c - 15) + 10); };
+
 /** A number from 0 to 1 that belongs to [arg], always the same one: the chance behind every seeded choice. */
 export const hash01 = (arg) => { const x = Math.sin(arg) * 43758.5453; return x - Math.floor(x); };
 

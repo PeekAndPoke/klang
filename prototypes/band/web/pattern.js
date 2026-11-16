@@ -91,7 +91,10 @@ export function wall(material, { amount = 0.017, width = 5.5, color = [0.55, 0.6
     float second = 1.0 - smoothstep(0.0, 0.035, abs(abs(field) - 0.62));
     float flower = smoothstep(0.70, 0.86, abs(field)) * (0.45 + 0.55 * cos(6.0 * atan(sin(u), sin(v))));
     float stud = smoothstep(0.90, 0.97, abs(cos(u + 1.5708) * cos(v + 1.5708)));
-    float ornament = clamp(max(max(ring, 0.6 * second), max(flower, stud)), 0.0, 1.0);`;
+    float ornament = clamp(max(max(ring, 0.6 * second), max(flower, stud)), 0.0, 1.0);
+    // the glow: the same lines again, wide and soft, so the light seems to spill from them onto the wall
+    float halo = max(max(exp(-9.0 * abs(abs(field) - 0.38)), 0.6 * exp(-12.0 * abs(abs(field) - 0.62))),
+                     max(0.7 * smoothstep(0.45, 0.86, abs(field)), smoothstep(0.60, 0.97, abs(cos(u + 1.5708) * cos(v + 1.5708)))));`;
   // the mesh is the braid laid flat (PATTERNS.braidWall): woven wires between hoops, as wire fencing is woven
   const MESH = `float mesh = ${PATTERNS.braidWall};`;
   material.onBeforeCompile = (shader) => {
@@ -102,9 +105,9 @@ export function wall(material, { amount = 0.017, width = 5.5, color = [0.55, 0.6
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;\nuniform float uFront;')
       .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; ${MESH} diffuseColor.rgb *= 1.0 - 0.55 * mesh; }`)
-      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\n{ vec3 p = vRest; ${ORNAMENT} totalEmissiveRadiance += vec3(${color.join(', ')}) * ${amount.toFixed(4)} * (0.28 + 1.5 * ornament) * exp(-(p.x * p.x) / ${(width * width).toFixed(2)}) * (1.0 - uFront); }`);
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\n{ vec3 p = vRest; ${ORNAMENT} totalEmissiveRadiance += vec3(${color.join(', ')}) * ${amount.toFixed(4)} * (0.28 + 1.5 * ornament + 0.75 * halo) * exp(-(p.x * p.x) / ${(width * width).toFixed(2)}) * (1.0 - uFront); }`);
   };
-  material.customProgramCacheKey = () => 'wall-two-faces-braid';
+  material.customProgramCacheKey = () => 'wall-two-faces-braid-glow';
   material.needsUpdate = true;
   return (front) => { uniforms.uFront.value = front; };
 }

@@ -10,6 +10,14 @@ import { around, strokeAt, holdStick, Mover } from './strike.js';
 
 const shell = new THREE.MeshStandardMaterial({ color: 0x08080b, roughness: 0.3, metalness: 0.4 });
 const skin = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.6 });
+// The kick's front head and the snare (head and shell: from the audience the head is hardly seen) light up when
+// hit and fade as the sound does, exponentially: the colour, how bright at the hit, and the seconds to 1/e. The
+// kick's head is a big face, so a little is a lot; the eye reads light steeply, so the falls are short.
+const HIT = {
+  kick: { color: 0xffa050, peak: 0.03, fade: 0.09 },
+  snare: { color: 0xffe8c8, peak: 0.10, fade: 0.07 },
+};
+const lit = (material, drum) => { const m = material.clone(); m.emissive = new THREE.Color(HIT[drum].color); m.emissiveIntensity = 0; return m; };
 const brass = new THREE.MeshStandardMaterial({ color: 0x4a3a18, roughness: 0.25, metalness: 0.95, side: THREE.DoubleSide });
 const wood = new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.6 });
 const steel = new THREE.MeshStandardMaterial({ color: 0x15151a, roughness: 0.3, metalness: 0.9 });
@@ -53,10 +61,10 @@ export class Drummer {
     const kick = new THREE.Mesh(new THREE.CylinderGeometry(0.29 * s, 0.29 * s, 0.40 * s, 32), shell);
     kick.rotation.x = Math.PI / 2;
     kick.position.set(-0.06 * s, 0.29 * s, 1.00 * s);
-    const front = new THREE.Mesh(new THREE.CircleGeometry(0.27 * s, 32), skin);
+    const front = new THREE.Mesh(new THREE.CircleGeometry(0.27 * s, 32), lit(skin, 'kick'));
     front.position.set(-0.06 * s, 0.29 * s, 1.201 * s);
     this.kit.add(kick, front);
-    this.drums.kick = { mesh: kick, at: new THREE.Vector3(), base: kick.position.clone(), hitT: -9, v: 0 };
+    this.drums.kick = { mesh: kick, at: new THREE.Vector3(), base: kick.position.clone(), hitT: -9, v: 0, lit: [front.material], glow: HIT.kick, front, frontZ: front.position.z };
 
     // the feet's places, the ankles: both on the kick's double pedal, the right one at the drum, the left one
     // beside it
@@ -79,9 +87,9 @@ export class Drummer {
     const group = new THREE.Group();
     group.position.set(at[0] * s, at[1] * s, at[2] * s);
     group.rotation.x = -tilt;
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(radius * s, radius * s, height * s, 28), shell);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(radius * s, radius * s, height * s, 28), name === 'snare' ? lit(shell, 'snare') : shell);
     body.position.y = -height * s / 2;
-    const head = new THREE.Mesh(new THREE.CircleGeometry(radius * s * 0.94, 28), skin);
+    const head = new THREE.Mesh(new THREE.CircleGeometry(radius * s * 0.94, 28), name === 'snare' ? lit(skin, 'snare') : skin);
     head.rotation.x = -Math.PI / 2;
     head.position.y = 0.002;
     group.add(body, head);
@@ -91,7 +99,7 @@ export class Drummer {
       this.kit.add(stand);
     }
     this.kit.add(group);
-    this.drums[name] = { mesh: group, at: new THREE.Vector3(at[0] * s, at[1] * s, at[2] * s), tilt, hitT: -9, v: 0 };
+    this.drums[name] = { mesh: group, at: new THREE.Vector3(at[0] * s, at[1] * s, at[2] * s), tilt, hitT: -9, v: 0, lit: name === 'snare' ? [head.material, body.material] : null, glow: HIT.snare };
   }
 
   cymbal(name, at, radius, tilt) {
@@ -134,11 +142,14 @@ export class Drummer {
     }
     for (const d of Object.values(this.drums)) {
       const age = t - d.hitT;
+      if (d.lit) { for (const m of d.lit) { m.emissiveIntensity = d.hitT < 0 ? 0 : d.glow.peak * Math.max(0.6, d.v) * Math.exp(-age / d.glow.fade); } }
       if (d.cymbal) {
         const swing = d.v * 0.22 * Math.exp(-age / 0.5) * Math.sin(age * 22);
         d.mesh.rotation.set(d.tilt * 0.5 + swing, 0, swing * 0.6);
       } else if (d.base) {
-        d.mesh.position.z = d.base.z + d.v * 0.012 * Math.exp(-age / 0.06);
+        const push = d.v * 0.012 * Math.exp(-age / 0.06);
+        d.mesh.position.z = d.base.z + push;
+        d.front.position.z = d.frontZ + push;          // the head goes with its drum (else the shell hides it, and its light)
       }
     }
 

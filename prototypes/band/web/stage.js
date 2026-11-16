@@ -6,7 +6,7 @@
 // The stage: floor, the wall behind it, the lamps, the drummer's riser. Nothing here knows the band.
 import * as THREE from 'three';
 import { params, seed, BPM } from './show.js';
-import { smooth } from './util.js';
+import { smooth, hash01 } from './util.js';
 import { wall, dress } from './pattern.js';
 
 // The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others
@@ -42,7 +42,7 @@ export function buildStage() {
   const back = new THREE.Mesh(new THREE.PlaneGeometry(60, 16), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95, fog: false }));
   back.position.set(0, 8, -8);
   back.receiveShadow = true;
-  const wallFront = wall(back.material, { amount: 0.010 });
+  const wallFront = wall(back.material, { amount: 0.014 });
   scene.add(back);
   scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
 
@@ -106,7 +106,44 @@ export function buildStage() {
     return { front: smooth((x - 26) * bar / 1.0) * smooth((34 - x) * bar / 1.0), strobing: false };
   }
 
+  // The moods: the colours of the two main lamps behind (the left one, the right one), and where each seems to
+  // hang, off its first place (x, y, z in metres): as if other lamps of the rig had been turned on, so the shadows
+  // lie a little differently. A mood stays for 24 bars; over the next 4 it goes over into another, the seed's
+  // choice, never the same again at once. The show opens in the first.
+  const MOODS = [
+    { left: 0x3070ff, right: 0xff3070, l: [0, 0, 0], r: [0, 0, 0] },                  // cold against hot
+    { left: 0x7a3cff, right: 0xff9030, l: [1.2, 0.5, 0.6], r: [-0.8, -0.4, 0.3] },    // violet and amber
+    { left: 0x18b8c0, right: 0xe030c0, l: [-1.0, -0.5, 0.9], r: [1.1, 0.6, -0.4] },   // teal and magenta
+    { left: 0x2038ff, right: 0x3c98ff, l: [0.8, 0.8, -0.5], r: [-1.3, 0.3, 0.8] },    // cold all over
+    { left: 0xff2a2a, right: 0xff7a20, l: [-0.7, -0.6, 0.4], r: [0.9, -0.5, 0.7] },   // hot all over
+    { left: 0xff3070, right: 0x3070ff, l: [1.4, 0.2, 0.2], r: [-1.4, 0.2, 0.2] },     // the first, the sides swapped
+  ];
+  const HOLD = 24, TURN = 4;
+  const order = [0];
+  function moodOf(k) {
+    while (order.length <= k) {
+      const n = order.length;
+      const pick = 1 + Math.floor(hash01(n * 12.9 + seed * 0.71 + 3.3) * (MOODS.length - 1)) % (MOODS.length - 1);
+      order.push(pick === order[n - 1] ? 1 + pick % (MOODS.length - 1) : pick);
+    }
+    return MOODS[order[Math.max(0, k)]];
+  }
+  const main = lamps.slice(0, 2).map((lamp) => ({ lamp, home: lamp.light.position.clone() }));
+  const hue = new THREE.Color(), shift = new THREE.Vector3();
+  function mood(t) {
+    const x = Math.max(0, t) / (240 / BPM);
+    const k = Math.floor(x / (HOLD + TURN));
+    const u = smooth((x - k * (HOLD + TURN) - HOLD) / TURN);
+    const a = moodOf(k), b = moodOf(k + 1);
+    main.forEach(({ lamp, home }, side) => {
+      lamp.light.color.setHex(side ? a.right : a.left).lerp(hue.setHex(side ? b.right : b.left), u);
+      const from = side ? a.r : a.l, to = side ? b.r : b.l;
+      lamp.light.position.copy(home).add(shift.set(from[0] + (to[0] - from[0]) * u, from[1] + (to[1] - from[1]) * u, from[2] + (to[2] - from[2]) * u));
+    });
+  }
+
   function light(t, house, waiting) {
+    mood(t);
     const { front, strobing } = frontAt(t, waiting);
     back.material.color.setHex(0x8a8f9c).multiplyScalar(front);
     wallFront(Math.min(1, front));

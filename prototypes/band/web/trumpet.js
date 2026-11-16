@@ -92,15 +92,16 @@ export class Trumpet {
     // The rounds differ in length, so it is no clockwork
     // (under the show's seed: the rounds start elsewhere in their order, and her way is another one)
     const z = showSeed();
-    const ROUNDS = [[36, 50, 42, 58], [50, 42, 58, 36], [42, 58, 36, 50], [58, 36, 50, 42]][z % 4];
+    const ROUNDS = [[47, 61, 53, 69], [61, 53, 69, 47], [53, 69, 47, 61], [69, 47, 61, 53]][z % 4];
     let x = t - k.from, round = 0;
     while (x > ROUNDS[round % ROUNDS.length]) { x -= ROUNDS[round % ROUNDS.length]; round++; }
     const length = ROUNDS[round % ROUNDS.length];
-    const wait = 9;
+    // at her place she stands a good while (the maintainer, 2026-11-16: "stand still more between walking")
+    const wait = 20;
     const out = ease(x / 6) * ease((length - wait - x) / 6) * ease((k.to - t) / 7);
-    // he never quite stops: every nine seconds or so he slows right down, to a fifth of his pace, and goes on
-    const w = 2 * Math.PI / 9;
-    const tau = (t - k.from) + (0.8 / w) * Math.sin(w * (t - k.from));
+    // on her way she stops too: seven seconds of walking, then four of standing where she is, and on
+    const leg = (t - k.from) / 11;
+    const tau = 7 * (Math.floor(leg) + ease((leg - Math.floor(leg)) * 11 / 7));
     const s = this.s;
     return new THREE.Vector3(
       out * (0.60 * Math.sin(0.15 * tau + z * 1.7) + 0.18 * Math.sin(0.34 * tau + 1.0 + z * 2.3) + 0.30) * s,

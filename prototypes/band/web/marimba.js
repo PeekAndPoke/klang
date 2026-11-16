@@ -42,7 +42,9 @@ export class Marimba {
     this.height = 0.86 * s;
     this.near = 0.42 * s;
     this.bars = {};
-    const glow = rig.eyes ? rig.eyes.emissive.clone() : new THREE.Color(0x40ffcc);
+    // (kept under full strength: brighter, the colour washes out to white)
+    // a hit bar glows purple, the two rows in slightly different tones: the near row bluer, the far row redder
+    const glows = { near: new THREE.Color(0x8a3cff), far: new THREE.Color(0xc23cf0) };
     for (let m = lo; m <= hi; m++) {
       const natural = NATURAL[m % 12];
       const index = natural ? naturals.indexOf(m) : naturals.indexOf(m - 1) + 0.5;
@@ -51,7 +53,7 @@ export class Marimba {
       const length = (0.24 - 0.08 * share) * s;
       const z = natural ? this.near + length / 2 : this.near + 0.25 * s + length / 2;
       const y = this.height + (natural ? 0 : 0.025 * s);
-      const material = new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 0.45, emissive: glow, emissiveIntensity: 0 });
+      const material = new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 0.45, emissive: natural ? glows.near : glows.far, emissiveIntensity: 0 });
       const bar = new THREE.Mesh(new THREE.BoxGeometry(width * 0.86, 0.02 * s, length), material);
       bar.position.set(x, y, z);
       this.group.add(bar);
@@ -125,7 +127,7 @@ export class Marimba {
     }
     for (const b of Object.values(this.bars)) {
       const age = t - b.hitT;
-      b.material.emissiveIntensity = b.hitT < 0 ? 0 : 1.6 * b.v * Math.exp(-age / 0.22);
+      b.material.emissiveIntensity = b.hitT < 0 ? 0 : 1.0 * Math.max(0.6, b.v) * Math.exp(-age / 0.22);
       b.bar.position.y = b.restY - (b.hitT < 0 ? 0 : 0.004 * s * b.v * Math.exp(-age / 0.05));
     }
 
