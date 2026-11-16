@@ -482,11 +482,11 @@ def build(key):
     if near:
         tip = max(near, key=lambda v: -0.62 * (v.co.y - head.pos.y) - 0.78 * (v.co.z - head.pos.z) - 6.0 * abs(v.co.x)).co.copy()
         strength = p.get("jaw", 1.0)
-        pull = Vector((0, -0.74, -0.67)) * (0.024 * hs * strength)
+        pull = Vector((0, -0.80, -0.60)) * (0.050 * hs * strength)
         for v in body.data.vertices:
             d = v.co - tip
-            if d.length < 0.12 * hs:
-                w = math.exp(-((d.x / (0.019 * hs)) ** 2 + (d.y / (0.034 * hs)) ** 2 + (d.z / (0.030 * hs)) ** 2) / 2)
+            if d.length < 0.16 * hs:
+                w = math.exp(-((d.x / (0.028 * hs)) ** 2 + (d.y / (0.042 * hs)) ** 2 + (d.z / (0.034 * hs)) ** 2) / 2)
                 v.co += pull * w
 
     # A long skull, where one is worn, before the eyes: they have to find the forehead it makes
