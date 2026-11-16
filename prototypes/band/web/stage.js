@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { params, seed, BPM } from './show.js';
 import { smooth, hash01 } from './util.js';
 import { wall, dress } from './pattern.js';
+import { groundFog } from './fog.js';
 
 // The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others
 export const RISER = 0.40;
@@ -142,6 +143,9 @@ export function buildStage() {
     });
   }
 
+  // fog on the floor (?nofog: none)
+  const fog = params.has('nofog') ? null : groundFog(scene);
+
   function light(t, house, waiting) {
     mood(t);
     const { front, strobing } = frontAt(t, waiting);
@@ -158,6 +162,7 @@ export function buildStage() {
       const sag = phase < 1.2 ? 0.16 * Math.sin(Math.PI * phase / 1.2) ** 2 : 0;
       light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : strobing ? 0 : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
     }
+    if (fog) { fog(t, lamps, camera); }
   }
 
   /**
