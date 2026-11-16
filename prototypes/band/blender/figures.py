@@ -73,11 +73,11 @@ FIGURES = {
                  eye_drop=0.016),                      # his eyes sit lower in the face
     # the drums: the muscular one: wide shoulders, a deep chest over a small waist, heavy arms, a thick neck
     "drums": dict(height=1.04, scale=dict(torso=1.08, waist=1.02, chest=1.30, shoulder=1.55, arm=1.55, hand=1.25,
-                                          thigh=1.25, leg=1.25, neck=1.75, head=1.24),
-                  # a head to match the frame: a quarter bigger, and carried a little higher
-                  move=dict(head=(0, 0, 0.018), crown=(0, 0, 0.030), chin=(0, -0.014, -0.012)),   # a square jaw, well forward
+                                          thigh=1.25, leg=1.25, neck=1.9, head=1.24),
+                  # a head to match the frame: a quarter bigger, set down into a bull neck (carried higher it floated)
+                  move=dict(head=(0, 0, -0.012), crown=(0, 0, 0.004), chin=(0, -0.014, -0.012), neck=(0, 0, -0.006)),
                   radius=dict(bicep=1.25, ribs=1.18, chin=1.35), shoulders=1.30, hips=1.05, neck=0.75, stoop=0.03,
-                  eye=(1.0, 0.25, 0.02), jaw=1.5),
+                  eye=(1.0, 0.25, 0.02), jaw=1.5, eye_deep=0.90),
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
@@ -469,6 +469,7 @@ def build(key):
         # under a long skull's forehead the eyes sit a little lower and further out, or it covers them
         # (her skull has since grown a higher, fuller forehead, which swallowed them: further out and lower again)
         deep, low = (1.03, -0.008) if p.get("skull") is True else (0.80, 0.012)
+        deep = p.get("eye_deep", deep)
         at = head.pos + Vector((0.034 * s * size, -head.radius * deep, (low - p.get("eye_drop", 0.0)) * size))
         bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=at)
         eye = bpy.context.object
