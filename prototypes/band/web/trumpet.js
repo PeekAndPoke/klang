@@ -240,7 +240,7 @@ export class Trumpet {
     const hang = rig.dir(-0.03, -0.97, 0.22).normalize();
     const shoulderR = rig.bones.elbowR.getWorldPosition(new THREE.Vector3());
     const loose = shoulderR.clone()
-      .addScaledVector(rig.dir(1, 0, 0), -0.04 * s).addScaledVector(rig.dir(0, 1, 0), -0.95 * rig.armLength)
+      .addScaledVector(rig.dir(1, 0, 0), -0.11 * s).addScaledVector(rig.dir(0, 1, 0), -0.93 * rig.armLength)
       .addScaledVector(rig.dir(0, 0, 1), (0.07 + 0.13 * going * swing) * s).addScaledVector(rig.dir(0, 1, 0), 0.05 * s * going * Math.abs(swing));
     const hangUp = rig.dir(0, 0.22, 0.97);
     const hangY = hangUp.addScaledVector(hang, -hangUp.dot(hang)).normalize();
@@ -267,6 +267,15 @@ export class Trumpet {
     // playing, the hand turns onto the valves; hanging, it just follows the arm
     const forearm = wristR.clone().sub(rig.bones.wristR.getWorldPosition(new THREE.Vector3())).normalize();
     point('handR', forearm.lerp(valvesTop.clone().sub(wristR).normalize(), smooth(up)));
+    // hanging, the trumpet is where the hand really is (the arm may not reach where it was meant to hang): its
+    // valves lie in the palm, whatever her build
+    if (up < 1) {
+      rig.update();
+      const wrist = rig.bones.handR.getWorldPosition(new THREE.Vector3());
+      const along = new THREE.Vector3(0, 1, 0).applyQuaternion(rig.bones.handR.getWorldQuaternion(new THREE.Quaternion()));
+      const palm = wrist.addScaledVector(along, 0.05 * s);
+      this.trumpet.position.add(palm.sub(place(0.19, 0.0, 0.03)).multiplyScalar(1 - smooth(up)));
+    }
     const grip = place(0.20, -0.02, 0);
     // the left hand comes to the trumpet only to play; else that arm hangs
     const hanging = hip.clone()

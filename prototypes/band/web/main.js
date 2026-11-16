@@ -418,7 +418,7 @@ function look() {
     const rig = rigs[params.get('head')];
     const at = rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.07 * rig.height / 1.6, 0));
     const from = { side: [1, 0.05, 0], front: [0, 0.05, 1], back: [0, 0.1, -1], threequarter: [0.7, 0.1, 0.7] }[params.get('from') || 'side'];
-    camera.position.copy(at).addScaledVector(rig.dir(...from).normalize(), 1.7);
+    camera.position.copy(at).addScaledVector(rig.dir(...from).normalize(), 1.2);
     camera.lookAt(at);
     if (camera.fov !== 24) { camera.fov = 24; camera.updateProjectionMatrix(); }
     window.__inspect.position.copy(camera.position).add(new THREE.Vector3(0.4, 0.8, 0));

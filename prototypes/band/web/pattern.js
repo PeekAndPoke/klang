@@ -63,11 +63,14 @@ export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, 
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\nfloat klOn; { vec3 p = vRest; klOn = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, klOn); }${sparkle}${combed}`)
-      .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; diffuseColor.rgb *= 1.0 - ${shade.toFixed(3)} * (${PATTERNS[kind]}); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; float figure = ${PATTERNS[kind]}; diffuseColor.rgb *= (1.0 - ${shade.toFixed(3)} * figure) * ${shade > 0 ? '1.0' : 'mix(0.15, 1.0, figure)'}; }`)
+      // the cloth's ground is dark: it throws back an eighth of the light the pattern does, so lit from the front the
+      // figure stays dark and its pattern (and the spangles in the ground) stand out (the maintainer, 2026-11-16)
+      .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>\n{ ${GRAIN} float lit = mix(0.12, 1.0, max(klOn, spangle)); material.specularColor *= lit; material.specularF90 *= lit; }`)
       .replace('#include <emissivemap_fragment>', glow ? `#include <emissivemap_fragment>\n{ vec3 p = vRest; totalEmissiveRadiance += vec3(${glow.color.join(', ')}) * ${glow.amount.toFixed(4)} * (1.0 - 0.6 * (${PATTERNS[kind]})) * exp(-(p.x * p.x) / ${(glow.width * glow.width).toFixed(2)}); }` : '#include <emissivemap_fragment>')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n{ ${GRAIN} normal = normalize(normal + (vec3(grain, fract(grain * 17.3), fract(grain * 113.7)) - 0.5) * (0.12 + 0.50 * spangle)); }`);
   };
-  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-ground-glitter' + glitter + '-shade' + shade + (glow ? '-glow' + glow.amount + '-' + glow.width : '');
+  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-darkground3-glitter' + glitter + '-shade' + shade + (glow ? '-glow' + glow.amount + '-' + glow.width : '');
   material.needsUpdate = true;
 }
 

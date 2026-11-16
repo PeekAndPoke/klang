@@ -62,7 +62,7 @@ FIGURES = {
     "guitar1": dict(height=1.02, scale=dict(torso=0.90, waist=0.88, chest=0.92, arm=0.88, thigh=0.86, leg=0.88),
                     stoop=0.07, eye=(1.0, 0.15, 0.1),
                     # a plain round back of the head: the hair alone left it flat
-                    skull=dict(long=1.0, high=0.094, back=0.034, rise=0.022, tilt=8.0, wide=0.086),
+                    head=dict(long=1.12), nose=1.15,
                     # long hair: combed straight back over the skull as a pattern in the light (`pattern.js`, the page),
                     # and from there one smooth mane down his back, see mane(). Hanging locks were tried (hair(), kept)
                     # and not wanted.
@@ -79,20 +79,21 @@ FIGURES = {
                   # into the shoulders he had none, the maintainer, 2026-11-16)
                   move=dict(crown=(0, 0, 0.004)),
                   radius=dict(bicep=1.25, ribs=1.18), shoulders=1.30, hips=1.05, neck=1.25, stoop=0.03,
-                  eye=(1.0, 0.25, 0.02), jaw=1.5, eye_deep=0.84),
+                  eye=(1.0, 0.25, 0.02), jaw=1.35, nose=1.1),
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
                   shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
                   # see skull(). A long neck, carried forward; the shell hat (shell()) is kept but not worn.
-                  radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06), skull=True,
-                  move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.022, -0.004),
+                  radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08),
+                  head=dict(long=1.38, lift=0.22), nose=0.85, jaw=0.9,
+                  move=dict(head=(0, -0.022, 0), crown=(0, -0.022, 0), chin=(0, -0.022, 0),
                             # proud shoulders: level, not sloping, and held back a little
                             shoulderL=(0, 0.014, 0.026), shoulderR=(0, 0.014, 0.026)),
                   extras=[("bustL", "chest", (0.058, -0.084, -0.035), 0.058, 1.0, False),
                           ("bustR", "chest", (-0.058, -0.084, -0.035), 0.058, 1.0, False),
-                          ("nose", "head", (0, -0.094, -0.014), 0.014, 1.0, False)]),
+                          ]),
     # the marimba: a woman: narrow shoulders, a waist, hips, long legs, a long tail of hair
     "marimba": dict(height=0.97, scale=dict(torso=0.90, waist=0.74, chest=0.80, shoulder=0.72, arm=0.70, hand=0.82,
                                             thigh=1.0, leg=0.80, neck=0.72, head=0.95),
@@ -113,8 +114,7 @@ FIGURES = {
                     move=dict(shoulderL=(0, 0, -0.020), shoulderR=(0, 0, -0.020)),
                     hips=1.2, shoulders=1.06, neck=0.84, eye=(1.0, 0.6, 0.1),
                     extras=[("gut", "belly", (0, -0.09, -0.01), 0.165, 1.0, False),
-                            ("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
-                            ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
+                            ]),      # (his flat cap is gone: as points with a thickness it swallowed the head)
 }
 ORDER = ["guitar1", "bass", "drums", "eimer", "marimba", "guitar2"]
 
@@ -268,6 +268,64 @@ def hair(head, size, mat, strands=11, length=0.30, spread=2.1):
     return made
 
 
+def face(head, size, mat, p):
+    """
+    A head with a face, as one smooth shape: a ball of points pressed into a skull (narrower than deep, the jaw
+    tapering to the chin, the back of the head longer and higher where [p]'s `head` asks for it), and on its front
+    the profile drawn in: a brow, the hollows of the eyes, a nose that grows from between the eyes to its tip and
+    falls back under it, the mouth's dip, a chin. Every feature is a smooth rise or dip of the same skin, so nothing
+    is set on and nothing has a seam. Returns the head and where its two eyes sit (in their hollows, half sunk).
+      p["head"]: long (the back of the head, 1 plain), lift (how much higher the back is, in head heights)
+      p["nose"], p["jaw"]: how strong the nose and the chin are, 1 plain
+    """
+    shape = dict(long=1.0, lift=0.0)
+    shape.update(p.get("head", {}))
+    nose, chin = p.get("nose", 1.0), p.get("jaw", 1.0)
+    W, D, H = 0.074 * size, 0.092 * size, 0.118 * size
+    centre = head + Vector((0, 0.004 * size, 0.022 * size))
+    drop = p.get("eye_drop", 0.0) / 0.118
+    bump = lambda v, at, width: math.exp(-((v - at) / width) ** 2 / 2)
+
+    def place(x, y, z):
+        """A point of the unit ball (x across, -y the face, z up) on the head."""
+        jawline = 1.0 - 0.42 * max(0.0, -z) ** 1.6                      # narrower toward the chin
+        out = Vector((x * W * jawline, y * D * (1.0 - 0.10 * max(0.0, -z) ** 2), z * H))
+        if y > 0:                                                       # the back of the head
+            high = max(0.0, z + 0.35)
+            out.y *= 1.0 + (shape["long"] - 1.0) * min(1.0, high * 1.2)
+            out.z += shape["lift"] * H * y * min(1.0, high)
+        front = max(0.0, -y) ** 1.3
+        middle = bump(x, 0.0, 0.17)
+        # the nose: from between the eyes it grows to its tip, then falls back steeply
+        if z > -0.22:
+            ridge = max(0.0, min(1.0, (0.16 - z) / 0.38)) ** 1.4
+        else:
+            ridge = max(0.0, 1.0 - (-0.22 - z) / 0.07)
+        f = 0.036 * nose * ridge * middle
+        f += 0.007 * bump(z, 0.22, 0.09) * bump(x, 0.0, 0.75)           # the brow
+        f -= 0.011 * bump(z, 0.07 - drop, 0.10) * (bump(x, 0.38, 0.16) + bump(x, -0.38, 0.16))   # the eyes' hollows
+        f -= 0.006 * bump(z, -0.44, 0.07) * bump(x, 0.0, 0.34)          # the mouth
+        f += 0.005 * bump(z, -0.37, 0.035) * bump(x, 0.0, 0.26)         # the upper lip
+        f += 0.016 * chin * bump(z, -0.78, 0.15) * bump(x, 0.0, 0.34)   # the chin
+        out.y -= f * size * front
+        out.z -= 0.006 * size * chin * bump(z, -0.9, 0.2) * front
+        return centre + out
+
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=64, ring_count=44, location=(0, 0, 0))
+    obj = bpy.context.object
+    for v in obj.data.vertices:
+        v.co = place(v.co.x, v.co.y, v.co.z)
+    bpy.ops.object.shade_smooth()
+    obj.data.materials.append(mat)
+    obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
+    eyes = []
+    for side in (1.0, -1.0):
+        x, z = 0.38 * side, 0.07 - drop
+        y = -math.sqrt(max(0.0, 1.0 - x * x - z * z))
+        eyes.append(place(x, y, z) + Vector((0, -0.003 * size, 0)))       # half out of its hollow
+    return obj, eyes
+
+
 def jaw(head, size, mat, strength=1.0):
     """
     NOT USED any more: the chin is the head's own skin drawn out (build()). Kept for the record.
@@ -382,7 +440,10 @@ def build(key):
     body.modifiers.new("Skin", "SKIN")
     for i, n in enumerate(names):
         v = mesh.skin_vertices[0].data[i]
-        v.radius = (P[n].radius, P[n].radius)
+        # the body's own head is made small, to lie hidden inside the head that face() makes (the sizes of everything
+        # else on the head still go by the head's full radius)
+        thin = 0.62 if n in ("head", "crown", "chin") else 1.0
+        v.radius = (P[n].radius * thin, P[n].radius * thin)
         v.use_root = (n == "hips")
 
     # Blender's armature for the skeleton gives every piece of the skin its group, named here after the point the
@@ -475,38 +536,12 @@ def build(key):
     head = P["head"]
     hs = head.radius / 0.092
 
-    # The chin is no added piece but the head's own skin, drawn out: the point of the real surface under the front of
-    # the face is found, and the skin round it is pulled forward and down, most at that point and fading smoothly
-    # round it, narrower across than along, so it comes to a soft point and runs back into the jaw without an edge.
-    near = [v for v in body.data.vertices if (v.co - head.pos).length < 1.05 * head.radius and v.co.z < head.pos.z]
-    if near:
-        tip = max(near, key=lambda v: -0.62 * (v.co.y - head.pos.y) - 0.78 * (v.co.z - head.pos.z) - 6.0 * abs(v.co.x)).co.copy()
-        strength = p.get("jaw", 1.0)
-        pull = Vector((0, -0.80, -0.60)) * (0.050 * hs * strength)
-        for v in body.data.vertices:
-            d = v.co - tip
-            if d.length < 0.16 * hs:
-                w = math.exp(-((d.x / (0.028 * hs)) ** 2 + (d.y / (0.042 * hs)) ** 2 + (d.z / (0.034 * hs)) ** 2) / 2)
-                v.co += pull * w
-
-    # A long skull, where one is worn, before the eyes: they have to find the forehead it makes
-    back = None
-    if p.get("skull"):
-        shape = p["skull"] if isinstance(p["skull"], dict) else {}
-        back = skull(head.pos, hs, body.data.materials[0], **shape)
-    surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
-    if back:
-        surface += [v.co.copy() for v in back.data.vertices]
-
-    # The eyes: narrow, in the face, part of the body, moved by the head. Each is set on the real surface: the skin
-    # (and the skull) is looked up in front of the eye's place, and the eye sits half sunk into it, from every side
+    # The head is a shape of its own, modelled as a head: see face(). The body's own head (three points with a
+    # thickness, a ball) is made small enough to lie hidden inside it and only carries the neck up into it.
+    made, eyes_at = face(head.pos, hs, body.data.materials[0], p)
     size = p["eye_size"] * hs
-    low = (-0.008 if p.get("skull") is True else 0.012) - p.get("eye_drop", 0.0)
-    for s in (1.0, -1.0):
-        x, z = head.pos.x + 0.034 * s * size, head.pos.z + low * size
-        front = [c.y for c in surface if abs(c.x - x) < 0.020 * hs and abs(c.z - z) < 0.016 * hs]
-        y = (min(front) if front else head.pos.y - head.radius * 0.7) + 0.003 * hs
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=(x, y, z))
+    for at in eyes_at:
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.016 * size, segments=12, ring_count=8, location=at)
         eye = bpy.context.object
         eye.scale = p.get("eye_shape", (1.5, 0.6, 0.55))        # wide, flat, low: a slit; rounder where set
         bpy.ops.object.transform_apply(scale=True)
@@ -516,12 +551,10 @@ def build(key):
         eye.select_set(True); body.select_set(True)
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.join()
-
-    if back:
-        bpy.ops.object.select_all(action='DESELECT')
-        back.select_set(True); body.select_set(True)
-        bpy.context.view_layer.objects.active = body
-        bpy.ops.object.join()
+    bpy.ops.object.select_all(action='DESELECT')
+    made.select_set(True); body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
 
     if p.get("mane"):
         hair_mat = material(key + "_hair", (0.012, 0.012, 0.016))
