@@ -64,12 +64,13 @@ floor.receiveShadow = true;
 scene.add(floor);
 // A wall behind the stage: it takes the light and the shadows. Dark and matt, so the back lamps (which shine away
 // from it) leave it nearly black and a lamp from the front paints the band on it.
-const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95 }));
-back.position.set(0, 6, -5);
+// three metres further back than at first, well clear of the riser; the fog does not dim it (it has its own light)
+const back = new THREE.Mesh(new THREE.PlaneGeometry(60, 16), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95, fog: false }));
+back.position.set(0, 8, -8);
 back.receiveShadow = true;
 // the wall has two faces: an ornament in its own faint glow under the back light, a wire mesh under the front lamp
 let wallFront = () => {};
-later.push(() => { wallFront = wall(back.material); });
+later.push(() => { wallFront = wall(back.material, { amount: 0.010 }); });
 scene.add(back);
 scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
 
@@ -139,7 +140,7 @@ spot(0, 6, 8, 0xfff0e0, 25, 0, 0, false);
 {
   const low = new THREE.SpotLight(0xffb070, 95, 40, 0.62, 0.5, 1.0);
   low.position.set(0.6, 0.25, 8.6);
-  low.target.position.set(0, 2.2, -5);
+  low.target.position.set(0, 2.6, -8);
   low.castShadow = true;
   low.shadow.mapSize.set(2048, 2048);
   low.shadow.bias = -0.0006;

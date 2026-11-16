@@ -120,12 +120,12 @@ export class Trumpet {
     const facing = (x) => {
       const ahead = this.strollAt(k, x + 0.2).sub(this.strollAt(k, x - 0.2)).multiplyScalar(1 / 0.4);
       const speed = ahead.length();
-      // he looks where he goes, the more the faster he goes; standing, he faces the audience. He never turns his
-      // back on it: at most a little past sideways
+      // she looks where she goes, the more the faster she goes; standing, she faces the audience. Going away from it
+      // she turns round and walks, her back to it: held sideways she slid backwards (the maintainer, 2026-11-16)
       const going = smooth(Math.min(1, speed / (0.05 * this.s)));
       let heading = Math.atan2(ahead.x, ahead.z) - this.homeTurn;
-      heading = Math.max(-1.9, Math.min(1.9, Math.atan2(Math.sin(heading), Math.cos(heading))));
-      return { speed, going, turn: heading * going * 0.85 };
+      heading = Math.atan2(Math.sin(heading), Math.cos(heading));
+      return { speed, going, turn: heading * going };
     };
     // which way he faces, worked out once per stroll in tenths of a second: the direction of his way jumps where he
     // turns round or nearly stands, so he follows it with a body's inertia, never faster than a calm turn
@@ -133,7 +133,9 @@ export class Trumpet {
       k.turns = [];
       let now = 0;
       for (let x = k.from; x < Math.min(k.to, k.from + 1500) + 0.2; x += 0.1) {
-        now += Math.max(-0.07, Math.min(0.07, (facing(x).turn - now) * 0.2));
+        // by the shorter way round, and at most 57 degrees a second
+        const want = facing(x).turn - now;
+        now += Math.max(-0.10, Math.min(0.10, Math.atan2(Math.sin(want), Math.cos(want)) * 0.2));
         k.turns.push(now);
       }
     }
