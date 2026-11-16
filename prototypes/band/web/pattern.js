@@ -47,8 +47,9 @@ export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, 
   // The cloth: less of a mirror, and it glitters. The skin is cut into grains of about 4 mm (in its rest shape, so
   // they stay on it); each grain has its own roughness and faces a little its own way, and a share of them
   // ([glitter], about one in seven) is a spangle: smooth, and tilted more. So a highlight is no streak but a
-  // scatter of points that come and go as the figure moves.
-  const GRAIN = `vec3 cell = floor(vRest * 250.0); float grain = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453); float spangle = step(${(1 - glitter).toFixed(3)}, grain);`;
+  // scatter of points that come and go as the figure moves. The spangles are in the cloth's ground, hardly on its
+  // pattern (a tenth of them there): the pattern stays a calm gloss and the glitter lies between its figures.
+  const GRAIN = `vec3 cell = floor(vRest * 250.0); float grain = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453); float spangle = step(${(1 - glitter).toFixed(3)}, grain) * (1.0 - 0.9 * klOn);`;
   const sparkle = `\n{ ${GRAIN} roughnessFactor = clamp(roughnessFactor + 0.20 + 0.30 * (grain - 0.5), 0.05, 1.0); roughnessFactor = mix(roughnessFactor, 0.20, spangle); }`;
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
@@ -56,9 +57,9 @@ export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, 
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
-      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n{ vec3 p = vRest; float on = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, on); }${sparkle}${combed}`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\nfloat klOn; { vec3 p = vRest; klOn = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, klOn); }${sparkle}${combed}`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n{ ${GRAIN} normal = normalize(normal + (vec3(grain, fract(grain * 17.3), fract(grain * 113.7)) - 0.5) * (0.12 + 0.50 * spangle)); }`);
   };
-  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-glitter' + glitter;
+  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-ground-glitter' + glitter;
   material.needsUpdate = true;
 }
