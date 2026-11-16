@@ -109,7 +109,17 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     private var before = window.performance.now()
     private var frames = 0
 
-    private val onResize: (Event) -> Unit = { resize() }
+    /** The page is seen again, or no more: the frames are counted anew, so the time it was away is not a slow frame. */
+    private val onVisibility: (Event) -> Unit = { recount(window.performance.now()) }
+
+    private val onResize: (Event) -> Unit = {
+        // another size is another number of pixels: the picture starts fine again and is judged anew
+        if (sharpness.reset(full = screenRatio())) {
+            sample()
+        } else {
+            resize()
+        }
+    }
 
     /**
      * Oversampling: the picture is drawn with more pixels than the screen shows and scaled down, which smooths edges
@@ -118,11 +128,25 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      */
     private var over: Int = maxOf(0, SAMPLES.indexOf(props.show.switches["oversample"]?.toIntOrNull() ?: 1))
 
+    /**
+     * How finely the picture is drawn: it follows the frame rate (see [Sharpness]). Not where the picture is frozen
+     * (a still is the same on every machine), not with oversampling (that asks for more pixels), and not with
+     * `?sharp`, which keeps the screen's own pixels whatever the frames do.
+     */
+    private val sharpness = Sharpness(full = screenRatio())
+
+    private val adapts: Boolean get() = over == 0 && props.show.frozen == null && !props.show.switches.has("sharp")
+
+    /** The line that says what the camera does, once it was looked up, and when it was last written. */
+    private var hud: HTMLElement? = null
+    private var hudAt = 0.0
+
     private val onKey: (Event) -> Unit = { event ->
         val e = event as? KeyboardEvent
 
         if (e != null && !event.fromTyping() && e.key.lowercase() == "o" && !e.ctrlKey && !e.metaKey && !e.altKey) {
             over = (over + 1) % SAMPLES.size
+            sharpness.reset(full = screenRatio())
             sample()
         }
     }
@@ -131,11 +155,13 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         lifecycle {
             onMount {
                 window.addEventListener("resize", onResize)
+                window.document.addEventListener("visibilitychange", onVisibility)
                 window.addEventListener("keydown", onKey)
             }
 
             onUnmount {
                 window.removeEventListener("resize", onResize)
+                window.document.removeEventListener("visibilitychange", onVisibility)
                 window.removeEventListener("keydown", onKey)
                 // the loading too, where it still runs: nothing is built after this
                 scope.cancel()
@@ -251,6 +277,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         val nowMs = window.performance.now()
 
+        if (window.document.asDynamic().hidden == true) {
+            // nobody sees the page: some browsers go on with a frame a second, which says nothing about the
+            // machine. The counting starts anew with each of them, so none is counted or judged
+            recount(nowMs)
+
+            return
+        }
+
         worst = maxOf(worst, nowMs - before)
         before = nowMs
         counted++
@@ -261,18 +295,32 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             counted = 0
             worst = 0.0
             since = nowMs
+
+            if (adapts && sharpness.judge(fps)) {
+                sample()
+            }
         }
 
-        element(HUD_ID)?.textContent = listOf(
-            "music: ${show.music.source}",
-            "camera: ${now.view.what()}",
-            "seed ${show.seed}",
-            "oversampling ${SAMPLES[over]}x (key o)",
-            "${fixed(fps, 0)} fps",
-            "slowest frame $worstShown ms",
-            "t ${fixed(t, 2)} s",
-            "beat ${fixed(t * show.bpm / 60, 2)}",
-        ).joinToString("  |  ")
+        // the line is written ten times a second, not with every frame: writing it makes the page lay itself out
+        if (nowMs - hudAt >= HUD_MS && !show.switches.has("nohud")) {
+            hudAt = nowMs
+
+            val line = hud ?: element(HUD_ID).also { hud = it }
+            val drawn: dynamic = renderer?.asDynamic()?.info?.render
+
+            line?.textContent = listOf(
+                "music: ${show.music.source}",
+                "camera: ${now.view.what()}",
+                "seed ${show.seed}",
+                "oversampling ${SAMPLES[over]}x (key o)",
+                "${fixed(fps, 0)} fps",
+                "slowest frame $worstShown ms",
+                "pixels ${fixed(sharpness.ratio, 2)}x",
+                "${drawn?.calls ?: "-"} draws, ${drawn?.triangles ?: "-"} triangles",
+                "t ${fixed(t, 2)} s",
+                "beat ${fixed(t * show.bpm / 60, 2)}",
+            ).joinToString("  |  ")
+        }
 
         frames++
 
@@ -282,9 +330,20 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
     }
 
-    /** Sets the renderer's pixels by the oversampling chosen, on top of the stage's own ratio (the screen's, at most 2). */
+    /** Starts the counting of frames anew at [nowMs]: what was counted so far is not judged. */
+    private fun recount(nowMs: Double) {
+        since = nowMs
+        before = nowMs
+        counted = 0
+        worst = 0.0
+    }
+
+    /**
+     * Sets the renderer's pixels: the screen's (at most 2) or fewer where the frames come too slowly ([sharpness]),
+     * times the oversampling chosen.
+     */
     private fun sample() {
-        renderer?.setPixelRatio(minOf(window.devicePixelRatio, 2.0) * sqrt(SAMPLES[over].toDouble()))
+        renderer?.setPixelRatio(sharpness.ratio * sqrt(SAMPLES[over].toDouble()))
         resize()
     }
 
@@ -310,6 +369,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     private companion object {
         const val NOTICE_ID = "liveact-notice"
         const val HUD_ID = "liveact-hud"
+
+        /** The line is written this often, in milliseconds. */
+        const val HUD_MS = 100.0
+
+        /** The screen's pixels for each of the page's, each way, as it is now; at most 2. */
+        fun screenRatio(): Double = minOf(window.devicePixelRatio, 2.0)
 
         /** How many times the screen's pixels are drawn. */
         val SAMPLES = listOf(1, 2, 4)

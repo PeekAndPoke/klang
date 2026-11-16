@@ -26,6 +26,18 @@ object Strobe {
     const val REST = 0.35
 }
 
+/**
+ * Whether a lamp's shadow is drawn this frame: [intensity] is the lamp's light, [made] whether its shadow was ever
+ * drawn. A dark lamp throws no shadow, and drawing one means drawing the whole band once more. Once it must be
+ * drawn all the same: every lit surface reads every lamp's shadow, and without one to read nothing lit is drawn at
+ * all (seen 2026-11-16: what three.js puts in an unmade shadow's place does not fit the shader, and the browser
+ * refuses the drawing).
+ */
+fun shadowDrawn(intensity: Double, made: Boolean): Boolean {
+    // NaN-guard: an intensity that is no number (?front=x) is not above 0
+    return intensity > 0.0 || !made
+}
+
 /** Which lamps a lamp belongs to: the ones behind the band, the fill from the front, the one low at the front. */
 enum class LampGroup {
     BACK,

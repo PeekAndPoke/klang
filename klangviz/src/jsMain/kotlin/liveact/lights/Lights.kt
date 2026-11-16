@@ -160,6 +160,10 @@ class Lights(show: Show, scene: Scene) {
 
             val own = plan.own(lamp.seed)
             lamp.light.intensity = lamp.base * lampFlicker(t, own) * house * lamp.group.share(front.level, front.strobing)
+            // the front lamp is dark most of the show: its shadow is not drawn then (see shadowDrawn)
+            val shadow: dynamic = lamp.light.asDynamic().shadow
+
+            shadow.autoUpdate = shadowDrawn(intensity = lamp.light.intensity, made = shadow.map != null)
         }
     }
 

@@ -12,6 +12,14 @@ import io.peekandpoke.klang.viz.liveact.Show
 
 class LightPlanSpec : StringSpec({
 
+    "a dark lamp's shadow is drawn once and then no more, a lit lamp's always" {
+        shadowDrawn(intensity = 0.0, made = false) shouldBe true
+        shadowDrawn(intensity = 0.0, made = true) shouldBe false
+        shadowDrawn(intensity = Double.NaN, made = true) shouldBe false
+        shadowDrawn(intensity = 0.001, made = true) shouldBe true
+        shadowDrawn(intensity = 260.0, made = false) shouldBe true
+    }
+
     "eight fast bass drum hits in a row are a run, seven are none" {
         val seven = List(7) { 1.0 + it * 0.1 }
         val eight = List(8) { 1.0 + it * 0.1 }

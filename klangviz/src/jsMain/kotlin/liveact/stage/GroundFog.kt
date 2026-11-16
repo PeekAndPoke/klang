@@ -19,18 +19,25 @@ import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.utils.jsObject
+import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.set
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.min
+import kotlin.random.Random
 
 // Fog from a fog machine, lying on the floor. It is a volume drawn in slices: a stack of thin level sheets from the
 // floor to knee height, each showing the fog's density at its own height. The density is a noise that drifts with a
 // slight wind and is stirred by a slower one (the turbulence); it is thick at the floor and only its billows reach
 // the top, thickest near the two machines behind the band. The lamps light it, each in its cone and colour, so the
 // beams show in it; it throws and takes no shadows.
+//
+// The noise is read from a picture: a block of random numbers, made once and repeating in every direction, which the
+// graphics card blends between its points. Five readings a pixel and sheet stand in place of forty computed random
+// numbers, which made the fog cost more than everything else on the stage together (measured 2026-11-16).
 
-/** Adds the fog to [scene]. Each frame, after the lamps are set: [update]. */
+/** Adds the fog to [scene]. Each frame, after the lamps are set: [update]. When the stage goes: [dispose]. */
 class GroundFog(scene: Scene) {
 
     /** One sheet of the stack, with its own see-through share. */
@@ -47,6 +54,9 @@ class GroundFog(scene: Scene) {
     private val colorsUniform = uniform(colors)
     private val cosinesUniform = uniform(cosines)
 
+    /** The random numbers the noise is read from (see the top of the file). */
+    private val noise: dynamic = noiseBlock()
+
     private val layers: List<Layer>
     private val target = vec()
 
@@ -58,6 +68,7 @@ class GroundFog(scene: Scene) {
             val alpha = uniform(0.0)
             val uniforms: dynamic = jsObject()
             uniforms.uTime = time
+            uniforms.uNoise = uniform(noise)
             uniforms.uPos = positionsUniform
             uniforms.uDir = directionsUniform
             uniforms.uCol = colorsUniform
@@ -108,7 +119,43 @@ class GroundFog(scene: Scene) {
         }
     }
 
+    /** Frees the noise's picture on the graphics card (the sheets go with the scene). */
+    fun dispose() {
+        noise.dispose()
+    }
+
     private companion object {
+        /** The noise's block has this many random numbers each way; it repeats after them. */
+        const val NOISE = 64
+
+        /**
+         * A block of [NOISE] cubed random numbers as a picture in three directions, repeating in each. The numbers
+         * are the same on every run, so a still shows the same fog.
+         */
+        fun noiseBlock(): dynamic {
+            val random = Random(seed = 20261116)
+            val values = Uint8Array(NOISE * NOISE * NOISE)
+
+            for (i in 0 until values.length) {
+                values[i] = random.nextInt(256).toByte()
+            }
+
+            val three: dynamic = Three.addon.raw
+            val create = js("(function (three, values, n) { return new three.Data3DTexture(values, n, n, n) })")
+            val block: dynamic = create(three, values, NOISE)
+
+            block.format = three.RedFormat
+            block.minFilter = three.LinearFilter
+            block.magFilter = three.LinearFilter
+            block.wrapS = three.RepeatWrapping
+            block.wrapT = three.RepeatWrapping
+            block.wrapR = three.RepeatWrapping
+            block.unpackAlignment = 1
+            block.needsUpdate = true
+
+            return block
+        }
+
         const val LAYERS = 12
         const val TOP = 0.50
         const val LAMPS = 5
@@ -126,13 +173,13 @@ class GroundFog(scene: Scene) {
   uniform float uTime, uHeight, uAlpha;
   uniform vec3 uPos[${LAMPS}], uDir[${LAMPS}], uCol[${LAMPS}];
   uniform float uCos[${LAMPS}];
+  uniform highp sampler3D uNoise;
 
-  float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  // a random number at every whole point, blended smoothly between them: the card blends, between the points' middles
   float noise(vec3 x) {
     vec3 i = floor(x), f = fract(x);
     f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x), mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
-               mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x), mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+    return texture(uNoise, (i + f + 0.5) / ${NOISE}.0).r;
   }
 
   void main() {

@@ -203,9 +203,10 @@ class Stage(
         scene.add(mesh)
     }
 
-    /** Stops what the stage listens for: the key f, which tries the front lamp's colours. */
+    /** Stops what the stage listens for (the key f, which tries the front lamp's colours) and frees the fog's noise. */
     fun dispose() {
         lights.dispose()
+        groundFog?.dispose()
     }
 
     companion object {
