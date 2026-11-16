@@ -107,8 +107,8 @@ scene.add(riser);
 const SKINS = { drums: 'tiger', bass: 'pinstripe', guitar1: 'spiral', guitar2: 'spots', marimba: 'diamonds', eimer: 'braid' };
 // Who wears hair as a pattern in the light, combed straight back
 const HAIR = { guitar1: true };
-// Who glitters a little: the two women
-const GLITTER = { eimer: true, marimba: true };
+// Everyone glitters; the two women a little more (the share of spangles in the skin)
+const GLITTER = { eimer: 0.21, marimba: 0.21 };
 // the head's middle and size, in the body's rest space: a little above and behind where the head's bone starts
 function hairOf(rig) {
   const neck = rig.root.worldToLocal(rig.rest.head.world.clone());
@@ -126,7 +126,7 @@ await Promise.all(Object.entries(PLACES).map(async ([name, [x, z, turn, y = 0]])
   gltf.scene.traverse((o) => {
     if (o.isSkinnedMesh) {
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-        if (m.name.endsWith('_dark')) { pattern(m, SKINS[name], 0.12, 0.85, HAIR[name] ? hairOf(rigs[name]) : null, !!GLITTER[name]); }
+        if (m.name.endsWith('_dark')) { pattern(m, SKINS[name], 0.12, 0.85, HAIR[name] ? hairOf(rigs[name]) : null, GLITTER[name] ?? 0.14); }
       }
     }
   });
