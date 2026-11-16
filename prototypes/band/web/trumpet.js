@@ -5,7 +5,7 @@
 
 // The trumpet player (the song's `trommel` part, the "Gummieimer", which sounds like a held melody): raises the
 // trumpet to the lips before a phrase, fingers the valves on every note, points the bell higher for a high note and
-// lets it sink between phrases. The bell glows while a note sounds. All places are in the figure's own measures.
+// lets it sink between phrases. The bell lights up at each note and fades. All places are in the figure's own measures.
 import * as THREE from 'three';
 import { around, Mover, showSeed } from './strike.js';
 import { smooth } from './util.js';
@@ -58,7 +58,8 @@ export class Trumpet {
       g.add(casing, cap);
       this.valves.push(cap);
     }
-    const glow = rig.eyes ? rig.eyes.emissive.clone() : new THREE.Color(0xffee88);
+    // the bell's light has its own colour, a turquoise (kept under full strength: brighter, it washes out to white)
+    const glow = new THREE.Color(0x30ffd0);
     this.mouth = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: glow, emissiveIntensity: 0, side: THREE.DoubleSide });
     const disc = new THREE.Mesh(new THREE.CircleGeometry(0.034 * s, 24), this.mouth);
     disc.rotation.y = Math.PI / 2;
@@ -287,7 +288,15 @@ export class Trumpet {
     const fingers = note && sounding > 0.05 ? FINGERS[((note.midi % 7) + 7) % 7] : [0, 0, 0];
     this.valves.forEach((cap, i) => { cap.position.y = (0.035 - 0.014 * fingers[i]) * s; });
 
-    this.mouth.emissiveIntensity = 5 * blow;
+    // the bell's light fades as the strings' does: an exponential fall from the note's start, a quicker one from
+    // where it ends (the next note at the latest)
+    let bell = 0;
+    if (before) {
+      const age = t - before.t;
+      const held = Math.min(before.d ?? 0.3, after ? after.t - before.t : 9);
+      bell = Math.max(0.6, before.v) * Math.exp(-age / 0.25 - Math.max(0, age - held) / 0.06);
+    }
+    this.mouth.emissiveIntensity = 1.6 * bell;
     if (rig.eyes) { rig.eyes.emissiveIntensity = 2 + 14 * blow; }
   }
 }
