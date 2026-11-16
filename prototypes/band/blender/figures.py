@@ -441,6 +441,61 @@ def shape_face(body, head, hs, taper=0.0, throat=0.0):
 SOCKET = 0.010
 
 
+# The muscles that show under the skin, each a soft rise drawn out of it: at which point of the figure, where
+# from that point and how far out, and how wide, all in that point's own radius, so a thin figure gets thin muscles
+# and a heavy one heavy ones. x is toward the figure's own side (outward), y back (negative: forward), z up.
+#   (point, offset, direction of the rise, height, size, which half of the limb it lies on)
+MUSCLES = {
+    "glute":   ("hip",      (0.05, 0.70, -0.25), (0.0, 1.0, -0.15), 0.32, (0.70, 0.70, 0.80), "back"),
+    "calf":    ("calf",     (0.00, 0.75, 0.50),  (0.0, 1.0, 0.0),   0.26, (0.65, 0.80, 1.30), "back"),
+    "quad":    ("thigh",    (0.10, -0.75, 0.40), (0.0, -1.0, 0.0),  0.13, (0.55, 0.60, 1.30), "front"),
+    "deltoid": ("shoulder", (0.45, 0.00, -0.15), (1.0, 0.0, 0.2),   0.16, (0.70, 0.80, 0.80), None),
+    "bicep":   ("bicep",    (0.00, -0.65, 0.00), (0.0, -1.0, 0.0),  0.18, (0.60, 0.70, 1.20), "front"),
+    "blade":   ("chest",    (0.45, 0.60, 0.00),  (0.0, 1.0, 0.0),   0.07, (0.33, 0.30, 0.45), "back"),
+    "pec":     ("chest",    (0.42, -0.62, -0.15), (0.0, -1.0, 0.0), 0.06, (0.33, 0.30, 0.28), "front"),
+}
+
+
+def shape_muscles(body, P, H, strength=1.0, only=None):
+    """
+    A little more of a body under the skin (the maintainer, 2026-11-16: "a little butt", "a little more emphasis on
+    the musculature everywhere, but not too much"): the buttocks, the calves, the thighs' fronts, the shoulders,
+    the upper arms, the shoulder blades and the chest (see MUSCLES; [only]: just these of them), the small of the
+    back drawn in above the buttocks, and a shallow groove down the spine. [strength] scales all of it.
+    """
+    for name, (point, offset, direction, height, size, half) in MUSCLES.items():
+        if only is not None and name not in only:
+            continue
+        for side, sx in (("L", 1.0), ("R", -1.0)):
+            at = P[point + side] if point + side in P else P[point]
+            R = at.radius
+            centre = at.pos + Vector((sx * offset[0], offset[1], offset[2])) * R
+            rise = Vector((sx * direction[0], direction[1], direction[2])).normalized() * (height * R * strength)
+            for v in body.data.vertices:
+                d = v.co - centre
+                q = (d.x / (size[0] * R)) ** 2 + (d.y / (size[1] * R)) ** 2 + (d.z / (size[2] * R)) ** 2
+                if q > 9.0:
+                    continue
+                if half == "back" and v.co.y < at.pos.y:
+                    continue
+                if half == "front" and v.co.y > at.pos.y:
+                    continue
+                v.co += rise * math.exp(-q / 2)
+
+    # the small of the back, drawn in: with the buttocks below it the back gets its curve
+    hips, belly, chest = P["hips"], P["belly"], P["chest"]
+    for v in body.data.vertices:
+        if v.co.y <= belly.pos.y or abs(v.co.x) > 0.25 * H:
+            continue
+        if hips.pos.z - 0.05 * H < v.co.z < chest.pos.z + 0.08 * H:
+            hollow = math.exp(-((v.co.z - belly.pos.z) / (0.07 * H)) ** 2 / 2 - (v.co.x / (0.10 * H)) ** 2 / 2)
+            # the spine's groove: narrow, from the hips to between the shoulder blades, fading at both ends
+            low = min(1.0, max(0.0, (v.co.z - hips.pos.z) / (0.06 * H)))
+            high = min(1.0, max(0.0, (chest.pos.z + 0.06 * H - v.co.z) / (0.06 * H)))
+            groove = low * high * math.exp(-(v.co.x / (0.018 * H)) ** 2 / 2)
+            v.co.y -= (0.012 * hollow + 0.006 * groove) * H * strength
+
+
 def shape_bust(body, chest, H, apart, down, out, size):
     """
     A hint of breasts, drawn out of the chest's own skin (two added pieces left a flat plate with a crease round
@@ -532,6 +587,9 @@ def build(key):
     body.data.materials.append(material(key + "_dark", DARK))
     body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
 
+    # who has a bust has no chest muscle drawn over it
+    shape_muscles(body, P, p["height"], strength=p.get("muscle", 1.0),
+                  only=[m for m in MUSCLES if m != "pec"] if p.get("bust") else None)
     if p.get("bust"):
         shape_bust(body, P["chest"], p["height"], **p["bust"])
     head = P["head"]
