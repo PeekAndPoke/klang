@@ -89,7 +89,13 @@ private class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val 
 }
 
 /** One note as one hand plays it: when, how hard, where the mallet lands, and the note. */
-private class MalletHit(override val t: Double, override val v: Double, override val at: Vector3, val midi: Int) : Stroke
+private class MalletHit(
+    override val t: Double,
+    override val v: Double,
+    override val at: Vector3,
+    val midi: Int,
+    val side: Side,
+) : Stroke
 
 /**
  * The marimba player of [show]: the figure [rig] behind a marimba, playing [notes] (sorted by time) with two
@@ -123,7 +129,18 @@ class MarimbaPlayer(
     private var notes: List<Note> = emptyList()
 
     /** Which hand plays which note. */
-    private var byHand: Map<Side, List<Stroke>> = emptyMap()
+    private var byHand: Map<Side, List<MalletHit>> = emptyMap()
+
+    /** The notes known as they are played, in their order. */
+    private var played: List<MalletHit> = emptyList()
+
+    /**
+     * Where the hands were before the first note known, where the song has forgotten its past: the hand that played
+     * last, and each hand's last hit. The hands go on from there, so no note that is still known changes hands, and
+     * each hand's list begins with its last hit forgotten: the mallet stays where that hit left it.
+     */
+    private var lastBefore: Side = Side.R
+    private val hitsBefore = mutableMapOf<Side, MalletHit>()
 
     /** The lowest and the highest bar, and how wide a bar is. */
     private val lowest: Int
@@ -313,10 +330,21 @@ class MarimbaPlayer(
     private fun plan() {
         notes = part.events
 
+        // what the song has forgotten since the last plan: the hands go on from the last of it
+        val from = notes.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
+        val gone = played.filter { it.t < from }
+
+        gone.lastOrNull()?.let { lastBefore = it.side }
+
+        for (side in Side.entries) {
+            gone.lastOrNull { it.side == side }?.let { hitsBefore[side] = it }
+        }
+
         // which hand plays which note: in turn, but never crossing over the other hand
-        val hands = mapOf(Side.L to mutableListOf<Stroke>(), Side.R to mutableListOf<Stroke>())
-        var last = Side.R
-        val where = mutableMapOf<Side, MalletHit>()
+        val hands = Side.entries.associateWith { side -> listOfNotNull(hitsBefore[side]).toMutableList() }
+        val all = mutableListOf<MalletHit>()
+        var last = lastBefore
+        val where = hitsBefore.toMutableMap()
 
         for (n in notes) {
             val at = barOf(n.midi).at
@@ -330,14 +358,16 @@ class MarimbaPlayer(
                 hand = other
             }
 
-            val hit = MalletHit(t = n.t, v = n.v, at = at, midi = n.midi)
+            val hit = MalletHit(t = n.t, v = n.v, at = at, midi = n.midi, side = hand)
 
+            all.add(hit)
             hands.getValue(hand).add(hit)
             where[hand] = hit
             last = hand
         }
 
         byHand = hands
+        played = all
     }
 
     /** The marimba player and her marimba at [t] (seconds). */

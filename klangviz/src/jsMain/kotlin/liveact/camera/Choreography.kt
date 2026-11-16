@@ -197,8 +197,28 @@ class Choreography(
         return n
     }
 
-    /** What the look number [i] (0, 1, 2) of round [n] shows: a player who plays then, or the stage from another angle. */
+    /** The moment the camera was last asked for ([at]). */
+    private var heard: Double = Double.NEGATIVE_INFINITY
+
+    /** The looks that have begun, by round and number: what they show stays, whatever the song forgets or learns. */
+    private val begun = mutableMapOf<Int, Subject>()
+
+    /**
+     * What the look number [i] (0, 1, 2) of round [n] shows: a player who plays then, or the stage from another angle.
+     * It is chosen from the notes known, and kept once the look has begun: a song played live forgets those notes
+     * while the round still asks for its looks (the way back from the last look goes on long after the first).
+     */
     fun subject(n: Int, i: Int): Subject {
+        val key = n * 3 + i
+
+        return begun[key] ?: choose(n, i).also {
+            if (heard >= start + n * round + (FIRST + 3 * i) * cycle) {
+                begun[key] = it
+            }
+        }
+    }
+
+    private fun choose(n: Int, i: Int): Subject {
         val a = start + n * round + (FIRST + 3 * i) * cycle
         val b = a + 3 * cycle
 
@@ -356,6 +376,10 @@ class Choreography(
 
         val n = floor((t - start) / round).toInt()
         val x = (t - start - n * round) / cycle           // 0 to 48, in bars
+
+        heard = t
+        // (the looks of the rounds before the last are of no use any more)
+        begun.keys.removeAll { it < (n - 1) * 3 }
         val roundKind = kind(n)
 
         if (roundKind == RoundKind.Circle) {

@@ -152,7 +152,14 @@ class TrumpetPlayer(
 
     private var notes: List<Note> = emptyList()
 
-    /** Her lowest and her highest note, of those known. */
+    /**
+     * Until when she played before the first note known, where the song has forgotten its past, and her last note
+     * of it; null where it has not. Her strolls go on from the one, her phrases from the other.
+     */
+    private var playedUntil: Double? = null
+    private var lastBefore: Note? = null
+
+    /** Her lowest and her highest note so far: of those known, and of those the song has forgotten. */
     private var lowest: Int = 60
     private var highest: Int = 72
 
@@ -216,14 +223,33 @@ class TrumpetPlayer(
      * jump only where the song is known thirteen seconds ahead or more (who reads the song sees to that).
      */
     private fun plan(now: Double) {
-        notes = part.events
-        lowest = notes.minOfOrNull { it.midi } ?: 60
-        highest = notes.maxOfOrNull { it.midi } ?: 72
-        phrases = notes.filterIndexed { i, n -> i == 0 || n.t - (notes[i - 1].t + notes[i - 1].d) > 6 }.map { it.t }
+        // what the song has forgotten since the last plan: she is free from the end of the last of it
+        val known = part.events
+        val from = known.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
+
+        for (n in notes) {
+            if (n.t < from) {
+                playedUntil = max(playedUntil ?: 0.0, n.t + n.d)
+                lastBefore = n
+            }
+        }
+
+        val until = playedUntil
+        val last = lastBefore
+
+        notes = known
+        // (a note forgotten still counts for her range)
+        lowest = listOfNotNull(notes.minOfOrNull { it.midi }, lowest.takeIf { until != null }).minOrNull() ?: 60
+        highest = listOfNotNull(notes.maxOfOrNull { it.midi }, highest.takeIf { until != null }).maxOrNull() ?: 72
+        phrases = notes.filterIndexed { i, n ->
+            val previous = if (i == 0) last else notes[i - 1]
+
+            previous == null || n.t - (previous.t + previous.d) > 6
+        }.map { it.t }
 
         val before = strolls
         val found = mutableListOf<Stroll>()
-        var free = 3.0
+        var free = max(3.0, until ?: 0.0)
 
         for (i in 0..notes.size) {
             val next = if (i < notes.size) notes[i].t else 1e9

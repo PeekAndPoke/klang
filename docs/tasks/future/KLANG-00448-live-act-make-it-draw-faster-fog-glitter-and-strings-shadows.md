@@ -26,6 +26,14 @@ Nothing is measured yet. Read from the shaders, where the cost is likely to sit:
 
 A first test costs nothing: 4x with `?nofog`. If that holds 60, the fog is the place.
 
+A second cost, apart from the drawing (the maintainer, 2026-11-16, after seeing the band follow a live song): "when
+sprudel fetches the next cycle it start to stutter a little... so in the long run we will need have more
+webworkers ... one for klangscript and sprudel etc ... and one for visuals." Today the page's own thread asks the
+pattern for each cycle (the player's scheduler, and the band's reader once more in KLANG-00449), and draws. A
+worker for KlangScript and sprudel would take the asking off the thread that draws; one for the visuals would take
+the drawing off the thread the app's interface runs on. Larger than this ticket, and touching the player: likely a
+ticket of its own when it is taken up, with Klang-Main-Dev.
+
 ## Decide before implementing
 
 - Measure first, on the maintainer's machine: with and without the fog, with and without shadows, at 1x, 2x, 4x.
@@ -50,3 +58,4 @@ maintainer's machine.
 ## History
 
 - 2026-11-16: created.
+- 2026-11-16: the maintainer's direction for the long run noted: web workers for KlangScript with sprudel, and for the visuals.

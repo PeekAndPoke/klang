@@ -318,10 +318,21 @@ class Drummer(
         plan()
     }
 
-    /** Which limb hits what and when, from the hits as far as they are known. */
+    /**
+     * Which limb hits what and when, from the hits as far as they are known. Where the song has forgotten its past,
+     * each limb's list begins with its last hit forgotten: the stick stays where that hit left it, as it would with
+     * the whole song.
+     */
     private fun plan() {
+        val from = hits.events.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
+        val gone = byLimb.mapValues { (_, list) -> list.lastOrNull { it.t < from } }
+
         all = hits.events
-        byLimb.values.forEach { it.clear() }
+
+        for ((limb, list) in byLimb) {
+            list.clear()
+            gone.getValue(limb)?.let { list.add(it) }
+        }
 
         for (h in all) {
             byLimb.getValue(h.limb).add(KitHit(t = h.t, at = pieces.getValue(h.drum).at, v = h.v))

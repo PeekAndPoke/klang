@@ -99,10 +99,22 @@ also while its code is edited.
      stroll that has begun stays when the song then says her next note comes sooner than half a minute, and she
      is back four seconds before it;
    - how hard a note is played is its gain against the loudest of its tag known when it is read, and stays that.
-   Its limits: everything read is kept, so a very long set grows in memory and each new cycle costs a little more
-   to plan; whether it runs smoothly is for the maintainer's eyes (the browser here draws one frame a second).
-   Klang-Main-Dev found (KLANG-00450) that a pattern asked in pieces smaller than a cycle can give other events,
-   and that the live scheduler asks in whole cycles: so does the band.
+   The maintainer saw it run (2026-11-16): "partially smoothly but when sprudel fetches the next cycle it start to
+   stutter a little". Asking a pattern for a cycle runs on the page's own thread, and so does the band's planning
+   after it; where that goes in the long run is in KLANG-00448 (web workers).
+   The song forgets its past (the maintainer, 2026-11-16: "yes implement 'forget the past'"): what lies more than
+   16 seconds behind what is heard is dropped (`Song.forget`), so a long set stays as small as a short one and a
+   new cycle costs the same to plan after an hour as after a minute. What alternates from the start of a part
+   goes on from the last thing forgotten, so nothing that is still known changes: the drummer's feet and hands,
+   the marimba player's hands, a string player's way through the strings, the frontwoman's phrases and strolls.
+   Klang-Main-Dev found (KLANG-00450) that a pattern is to be asked one whole cycle at a time: asked in smaller
+   pieces, or several cycles at once, it can give other events. The band asks one cycle at a time.
+   The camera keeps a look once it has begun, and each player's list begins with its last note forgotten (a hand
+   stays where that note left it through a long rest). The song is cut at a quiet moment, never through notes
+   that sound together. Known and accepted: while the page is hidden nobody plans, so seen again the band takes
+   up as if it had begun there. The players' own carrying over has no spec yet: KLANG-00451.
+   Decided by the maintainer (2026-11-16): the marimba not being note for note is fine for now ("only an expert
+   would see this"), and so is the band being made anew by an edit or a tempo change.
 6. Plans that follow a changing song (point 5): an edit or a tempo change still makes the band anew.
 7. An idea of the maintainer's (2026-11-16), for later: the song sends choreography signals to the band, "f.e. in
    the form of 'empty voices' with special tags or similar... this can than also use the sprudel patterns". So a
@@ -119,3 +131,4 @@ from the moment it is opened.
 
 - 2026-11-16: created.
 - 2026-11-16: the rolling look ahead of 8 cycles, as a trial (step 5); the idea of choreography signals noted (step 7).
+- 2026-11-16: the song forgets what lies 16 seconds behind what is heard; the maintainer saw the trial run.

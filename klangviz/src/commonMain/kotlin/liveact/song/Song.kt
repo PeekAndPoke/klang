@@ -82,7 +82,7 @@ class Part<T>(val grows: Boolean, private val version: () -> Int, private val re
     var events: List<T> = emptyList()
         private set
 
-    /** Reads the part again where the song has grown since the last call; true where it did (and at the first call). */
+    /** Reads the part again where the song has grown or forgotten since the last call; true then, and at the first call. */
     fun refresh(): Boolean {
         val now = version()
 
@@ -113,6 +113,11 @@ class Part<T>(val grows: Boolean, private val version: () -> Int, private val re
  * sounds beside it). An event's strength is its gain against the loudest of its tag known when it is added, and
  * stays that: a recording, added at once, is measured against its loudest event.
  *
+ * A song played live for long also forgets ([forget]): what lies well behind what is heard is dropped, so the song
+ * stays as small as the stretch the band looks at. The readings then begin where the song still knows itself, and
+ * what remains reads as it did before: which foot and which hand hits a drum goes on from the last hits forgotten.
+ * Only an event longer than the stretch kept is forgotten while it still sounds (it goes by its start).
+ *
  * An event with several tags has a strength for each of them. (The prototype this was ported from kept one for the
  * event, the last tag's; no recording so far has an event with two tags.)
  */
@@ -126,7 +131,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
     /** Beats a minute: a cycle is a bar of four beats. */
     val bpm: Double = rpm * 4
 
-    /** Counts up whenever events are added: what was read before is to be read again. */
+    /** Counts up whenever events are added or forgotten: what was read before is to be read again. */
     var version: Int = 0
         private set
 
@@ -140,6 +145,13 @@ class Song(rpm: Double, val grows: Boolean = true) {
     private val notes = mutableMapOf<String, List<Note>>()
     private val strums = mutableMapOf<List<String>, List<Strum>>()
     private val starts = mutableMapOf<List<String>, List<Double>>()
+
+    /** The last kick and the last hit on the snare that were forgotten: the feet and the hands go on from them. */
+    private var kickBefore: DrumHit? = null
+    private var snareBefore: DrumHit? = null
+
+    /** What the hands hit last of what was forgotten, as far back as a hand is busy with it ([BUSY] seconds). */
+    private var handsBefore: List<DrumHit> = emptyList()
 
     /** More of the song: [events], in any order. */
     fun add(events: List<RecordedEvent>) {
@@ -170,6 +182,48 @@ class Song(rpm: Double, val grows: Boolean = true) {
             }
         }
 
+        changed()
+    }
+
+    /**
+     * Forgets the events that start before [before] (seconds). Ask it only for what lies well behind what is heard:
+     * a player still needs its last note before now, and looks back a few seconds.
+     *
+     * The song is cut at a quiet moment: where events lie within 30 ms before [before], the cut goes back to before
+     * them. So what sounds together (a part doubled, the notes of a strum) is never cut in two, and what remains is
+     * told apart as it was.
+     */
+    fun forget(before: Double) {
+        var cut = before
+
+        for (t in known.values.flatMap { list -> list.map { it.t }.filter { it < before } }.sortedDescending()) {
+            if (cut - t > 0.03) {
+                break
+            }
+
+            cut = t
+        }
+
+        if (known.values.none { list -> list.any { it.t < cut } }) {
+            return
+        }
+
+        // which foot and which hand hit last, of the hits that go
+        val gone = drumHits().filter { it.t < cut }
+
+        kickBefore = gone.lastOrNull { it.drum == Drum.Kick } ?: kickBefore
+        snareBefore = gone.lastOrNull { it.drum == Drum.Snare } ?: snareBefore
+        handsBefore = (handsBefore + gone).filter { it.drum != Drum.Kick && it.t >= cut - BUSY }
+
+        for (list in known.values) {
+            list.removeAll { it.t < cut }
+        }
+
+        changed()
+    }
+
+    /** What was read is to be read again. */
+    private fun changed() {
         version++
         tagged = null
         hits = null
@@ -206,7 +260,12 @@ class Song(rpm: Double, val grows: Boolean = true) {
         val snares = mapOf(Limb.L to mutableListOf<Double>(), Limb.R to mutableListOf())
         val cymbalHits = mapOf(Limb.L to mutableListOf<Double>(), Limb.R to mutableListOf())
 
-        var foot: DrumHit? = null
+        // (what the hands hit last of what was forgotten still keeps them busy)
+        for (h in handsBefore) {
+            (if (h.drum == Drum.Snare) snares else cymbalHits).getValue(h.limb).add(h.t)
+        }
+
+        var foot: DrumHit? = kickBefore
 
         for (e in merged(tagged("kick")) { "k" }) {
             val before = foot
@@ -216,7 +275,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
             foot = DrumHit(t = e.t, drum = Drum.Kick, limb = limb, v = e.v).also { hits.add(it) }
         }
 
-        var previous: DrumHit? = null
+        var previous: DrumHit? = snareBefore
 
         for (e in merged(tagged("snare")) { "s" }) {
             val before = previous
@@ -236,9 +295,9 @@ class Song(rpm: Double, val grows: Boolean = true) {
 
         for (e in merged(cymbals) { it.sound.orEmpty() }) {
             val drum = cymbalOf(e)
-            val limb = if ((drum == Drum.Crash || drum == Drum.Hat2) && !busy(Limb.L, e.t, 0.19)) Limb.L else Limb.R
+            val limb = if ((drum == Drum.Crash || drum == Drum.Hat2) && !busy(limb = Limb.L, t = e.t, within = BUSY)) Limb.L else Limb.R
 
-            if (busy(limb, e.t, 0.12)) {
+            if (busy(limb = limb, t = e.t, within = 0.12)) {
                 continue
             }
 
@@ -286,6 +345,9 @@ class Song(rpm: Double, val grows: Boolean = true) {
     }
 
     companion object {
+        /** How long a hand is busy with a hit at the most, in seconds: what a crash or the open hat asks of the left hand. */
+        private const val BUSY = 0.19
+
         private val NAMES = mapOf('c' to 0, 'd' to 2, 'e' to 4, 'f' to 5, 'g' to 7, 'a' to 9, 'b' to 11)
         private val NOTE = Regex("^([a-g])([#sb]*)(-?\\d+)$", RegexOption.IGNORE_CASE)
 

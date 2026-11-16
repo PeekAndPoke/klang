@@ -218,6 +218,12 @@ class StringPlayer(
     /** The string each pitch is played on. A pitch keeps its string once it has one, also when the song grows. */
     private val share = mutableMapOf<Int, Int>()
 
+    /**
+     * The last pluck before the first one known, where the song has forgotten its past: the right hand's way
+     * through the strings goes on from it, and the plucks begin with it: the hands stay where it left them.
+     */
+    private var forgotten: Pluck? = null
+
     /** The fret each pitch is played at; kept as well, so a hand that holds a note stays where it is. */
     private val frets = mutableMapOf<Int, Double>()
 
@@ -376,17 +382,22 @@ class StringPlayer(
             }
         }
 
-        // the right hand's way through the strings at each note: down after a pause, else down and up in turn
-        var way = 1.0
+        // what the song has forgotten since the last plan: the right hand goes on from the last of it
+        val from = notes.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
 
-        return notes.mapIndexed { i, n ->
+        forgotten = this.notes.lastOrNull { it.t < from } ?: forgotten
+
+        // the right hand's way through the strings at each note: down after a pause, else down and up in turn
+        var way = forgotten?.way ?: 1.0
+
+        return listOfNotNull(forgotten) + notes.mapIndexed { i, n ->
             val string = stringOf(n.midi)
             val fret = frets.getValue(n.midi)
             // the strings that sound: the note's own, and for a chord one more for each further note
             val sounding = n.all.indices.map { j -> min(k.strings - 1, string + j) }
             // the right hand plays at the middle of the strings that sound; one string is picked, several are strummed
             val mid = sounding.sum().toDouble() / sounding.size
-            val gap = if (i > 0) n.t - notes[i - 1].t else 9.0
+            val gap = if (i > 0) n.t - notes[i - 1].t else forgotten?.let { n.t - it.t } ?: 9.0
 
             way = if (gap > 0.28) 1.0 else -way
 

@@ -56,6 +56,9 @@ ported to Kotlin once the show is right.
 6. Later: the throwing and the audible mistake.
 7. Later, asked for by the maintainer (2026-11-16): a camera movement that very slowly zooms out from the total.
 8. Later, from the maintainer (2026-11-16): the stroboscope "is still a bit too bright ... hurts the eyes".
+9. Later, seen 2026-11-16 (recording and live alike, seed 2897 at 157 s): the frontwoman on a stroll can stand
+   right in front of the camera during a close look at another player, and fills the picture. A look should
+   avoid her, or she the look.
 
 ## Acceptance
 

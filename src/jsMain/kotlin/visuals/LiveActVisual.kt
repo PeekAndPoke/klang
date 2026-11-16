@@ -57,15 +57,17 @@ fun Tag.LiveActVisual() = comp {
  * a body's moves take seconds, however fast the song), a whole cycle at a time (as the player asks it). The band
  * is there as soon as the first stretch is read, and plans on as the song grows. The music itself is the app's:
  * the live act follows the playback's time and starts and stops nothing. Its loudness is read from the
- * player's analyser.
+ * player's analyser. What lies more than [KEEP_SEC] seconds behind what is heard is forgotten again, so a long
+ * set stays as small as a short one.
  *
  * Known limits, for now. Asking a song again gives other events where the song's seed is another at every asking,
  * so a part that draws at random under it (Der Schmetterling's marimba) is not played note for note (KLANG-00450).
- * What is read is kept for as long as the band plays, so a very long set grows in memory. A change of the code or
- * of the tempo makes the band anew. The stage says the code in the editor, not the code that plays: a song edited and
- * not played again is read as edited. The band plays the parts it knows by their tags (the ones of Der
- * Schmetterling); a song without them shows the band standing. And Esc closes the visual here, so of the live
- * act's two keys that give the camera back only 0 is of use.
+ * A change of the code or of the tempo makes the band anew. The stage says the code in the editor, not the code
+ * that plays: a song edited and not played again is read as edited. The band plays the parts it knows by their
+ * tags (the ones of Der Schmetterling); a song without them shows the band standing. While the page is hidden the
+ * song is read and forgotten on, but nobody plans: seen again, the band takes up as if it had begun there (where a
+ * hand was, and when the frontwoman played last, is not known to it). And Esc closes the visual here, so of the
+ * live act's two keys that give the camera back only 0 is of use.
  */
 class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
 
@@ -216,6 +218,8 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
                 emptyList()
             }
 
+            // in one go with what is new, so the band plans once: what lies well behind what is heard is forgotten
+            reading.song.forget(before = now / reading.cps - KEEP_SEC)
             reading.song.add(events)
             reading.to = from + 1
             delay(1)
@@ -273,6 +277,12 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
          * come back from a stroll without a jump (see TrumpetPlayer), and a look between two players takes nine.
          */
         const val AHEAD_SEC = 14.0
+
+        /**
+         * How long what was heard is kept, in seconds. The players look back a few seconds; what they need of
+         * longer ago (their last note, a look the camera has begun) they keep themselves.
+         */
+        const val KEEP_SEC = 16.0
 
         /** How often it is looked whether the song is to be read on, in milliseconds. */
         const val FOLLOW_MS = 200L
