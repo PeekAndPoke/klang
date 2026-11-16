@@ -285,7 +285,13 @@ def jaw(head, size, mat, strength=1.0):
         wide = (0.005 + 0.050 * back * back) * k
         deep = 0.044 * k
         high = (0.010 + 0.016 * back) * k
-        v.co = centre + Vector((v.co.x * wide, v.co.y * deep, v.co.z * high - 0.010 * k * (1 - back) + 0.024 * k * back * back))
+        # upward the shape is no thin piece but the face itself: it rises from the chin into the head and widens
+        # to the cheeks, so nothing is hollow between chin and face (the maintainer, 2026-11-16: "the head must go up
+        # from there")
+        up = max(0.0, v.co.z)
+        rise = high if v.co.z < 0 else 0.062 * k
+        broad = wide + 0.040 * k * up
+        v.co = centre + Vector((v.co.x * broad, v.co.y * deep * (1 - 0.15 * up), v.co.z * rise - 0.010 * k * (1 - back) + 0.024 * k * back * back * (1 - up)))
     bpy.ops.object.shade_smooth()
     obj.data.materials.append(mat)
     obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
