@@ -389,10 +389,13 @@ function groove(rig, beat, phase) {
 
 // The camera's choreography, when the song is there (?still: the wide view only)
 const times = (tags) => (song ? tags.flatMap((tag) => (song.byTag[tag] || []).map((e) => e.t)).sort((a, b) => a - b) : []);
+// another camera show every time the page is opened; ?seed=7 gives a certain one again (a frozen still without a
+// seed takes seed 0, so stills stay comparable)
+const cameraSeed = params.has('seed') ? parseInt(params.get('seed'), 10) : frozen !== null ? 0 : Math.floor(Math.random() * 100000);
 const choreography = song && !params.has('still') ? new Choreography(rigs, {
   drums: times(['kick', 'snare']), bass: times(['bass']), guitar1: times(['guitar1']), guitar2: times(['guitar2', 'guitar3']),
   marimba: times(['lead']), eimer: times(['trommel']),
-}, 240 / BPM) : null;
+}, 240 / BPM, cameraSeed) : null;
 let showT = 0;
 // ?head=<player>[&from=side|front|back|threequarter]: a close look at one head, with a plain inspection light, to
 // judge a head's shape (a still for the maintainer; no part of the show)
@@ -509,7 +512,7 @@ function frame() {
   before = nowMs;
   counted++;
   if (nowMs - since >= 500) { fps = counted * 1000 / (nowMs - since); hud.dataset.worst = worst.toFixed(0); counted = 0; worst = 0; since = nowMs; }
-  hud.textContent = `${fps.toFixed(0)} fps  (slowest frame ${hud.dataset.worst || '-'} ms)   t ${t.toFixed(2)} s  beat ${beat.toFixed(2)}  ${window.__dbg || ''}`;
+  hud.textContent = `seed ${cameraSeed}  ${fps.toFixed(0)} fps  (slowest frame ${hud.dataset.worst || '-'} ms)   t ${t.toFixed(2)} s  beat ${beat.toFixed(2)}  ${window.__dbg || ''}`;
   frames++;
   if (frames > 2) { window.__ready = true; }
   requestAnimationFrame(frame);

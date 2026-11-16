@@ -48,12 +48,21 @@ const ORDER = ['drums', 'guitar1', 'eimer', 'bass', 'guitar2', 'marimba'];
 
 export class Choreography {
   /** [rigs] by name; [activity]: name -> the times its player plays a note, sorted; [cycle]: a bar, in seconds. */
-  constructor(rigs, activity, cycle) {
+  /** [seed]: every seed gives another show: who is looked at, from where, in which order, when, and how it comes back. */
+  constructor(rigs, activity, cycle, seed = 0) {
+    this.seed = seed;
     this.rigs = rigs;
     this.activity = activity;
     this.cycle = cycle;
     this.round = 48 * cycle;
-    this.start = 2 * cycle;                 // the song starts after the count-in
+    // the song starts after the count-in; the rounds begin up to twelve bars later, by the seed
+    this.start = (2 + Math.floor(this.chance(0, 0, 9) * 13)) * cycle;
+  }
+
+  /** A number from 0 to 1 that belongs to the round [n], the look [i] and a purpose [salt], under this seed. */
+  chance(n, i, salt) {
+    const x = Math.sin(n * 127.1 + i * 311.7 + salt * 74.7 + this.seed * 0.618) * 43758.5453;
+    return x - Math.floor(x);
   }
 
   /** How many notes [name] plays between [a] and [b]. */
@@ -67,18 +76,21 @@ export class Choreography {
   /** What the look number [i] (0, 1, 2) of round [n] shows: a player who plays then, or the stage from another angle. */
   subject(n, i) {
     const a = this.start + n * this.round + (36 + 3 * i) * this.cycle, b = a + 3 * this.cycle;
-    const index = n * 3 + i;
-    if (i === 1 && n % 2 === 1) { return { angle: ANGLES[Math.floor(n / 2) % ANGLES.length] }; }
+    const pick = (list, salt) => list[Math.floor(this.chance(n, i, salt) * list.length) % list.length];
+    // about one look in five is the stage from another angle
+    if (this.chance(n, i, 1) < 0.2) { return { angle: pick(ANGLES, 2) }; }
     // the marimba and the trumpet play seldom: when one of them does, the round's first look is theirs
     const rare = ['marimba', 'eimer'].filter((name) => this.plays(name, a, b) > 2);
-    let name = rare.length && i === 0 ? rare[0] : null;
+    let name = rare.length && i === 0 ? pick(rare, 3) : null;
+    // else someone who plays just then, and not the one the look before showed
+    const before = i > 0 ? this.subject(n, i - 1).name : null;
+    const first = Math.floor(this.chance(n, i, 4) * ORDER.length);
     for (let k = 0; k < ORDER.length && !name; k++) {
-      const candidate = ORDER[(index * 5 + k) % ORDER.length];
-      if (this.plays(candidate, a, b) > 3) { name = candidate; }
+      const candidate = ORDER[(first + k) % ORDER.length];
+      if (candidate !== before && this.plays(candidate, a, b) > 3) { name = candidate; }
     }
-    if (!name) { return { angle: ANGLES[index % ANGLES.length] }; }
-    const looks = LOOKS[name] || LOOKS.standing;
-    return { name, look: looks[index % looks.length] };
+    if (!name) { return { angle: pick(ANGLES, 2) }; }
+    return { name, look: pick(LOOKS[name] || LOOKS.standing, 5) };
   }
 
   /** A look as the camera's place, target and lens, in the world. */
@@ -105,7 +117,7 @@ export class Choreography {
     if (t < this.start) { return home; }
     const n = Math.floor((t - this.start) / this.round);
     const x = (t - this.start - n * this.round) / this.cycle;           // 0 to 48, in bars
-    const dolly = n % 3 === 2;
+    const dolly = this.chance(n, 0, 6) < 0.34;
     if (x < 36 || (x >= 45 && !dolly)) { return home; }
     const i = Math.min(2, Math.floor((x - 36) / 3));
     const shot = this.shot(this.subject(n, i));
