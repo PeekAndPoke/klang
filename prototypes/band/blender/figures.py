@@ -84,6 +84,8 @@ FIGURES = {
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
                   shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
+                  # a face that comes to a small chin, the throat set back under it (see shape_face())
+                  face=dict(taper=0.24, throat=0.030), jaw=0.7, eye_drop=-0.012,
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
                   # see skull(). A long neck, carried forward. (A sea shell for a hat was tried and taken off:
                   # shell() in the history, see 0eb7378ad^.)
@@ -398,6 +400,33 @@ def draw_chin(body, head, hs, strength):
                 v.co += pull * w
 
 
+def shape_face(body, head, hs, taper=0.0, throat=0.0):
+    """
+    A face that comes to a chin, for a head that else runs straight down into its neck. [taper]: how much narrower
+    the head is at the chin than at the eyes (seen from the front it becomes a V, and the upper neck stays that
+    slim). [throat]: how far, in metres at a head of normal size, the front of the neck is set back under the chin,
+    so the chin stands out before it and a jaw line runs back from it. Call it before draw_chin().
+    """
+    chin_z = head.pos.z - 0.085 * hs
+
+    def smooth(x):
+        x = min(1.0, max(0.0, x))
+        return x * x * (3 - 2 * x)
+
+    for v in body.data.vertices:
+        d = v.co - head.pos
+        if d.length > 2.4 * head.radius or d.z > 0.012 * hs:
+            continue
+        # narrower from the eyes down to the chin, held through the upper neck, and out again to the shoulders
+        down = smooth((head.pos.z - v.co.z) / (head.pos.z - chin_z))
+        out = smooth((chin_z - 0.05 * hs - v.co.z) / (0.09 * hs))
+        v.co.x *= 1.0 - taper * down * (1.0 - out)
+        # the throat: the neck's front goes back, most a little under the chin
+        front = smooth((head.pos.y + 0.020 * hs - v.co.y) / (0.060 * hs))
+        under = math.exp(-((v.co.z - (chin_z - 0.050 * hs)) / (0.034 * hs)) ** 2 / 2)
+        v.co.y += throat * hs * front * under
+
+
 def add_eyes(body, p, head, hs, surface):
     """[surface]: the points of the head's real surface (skin and skull), taken before the first eye is joined."""
     # The eyes: narrow, in the face, part of the body, moved by the head. Each is set on the real surface: the skin
@@ -458,6 +487,8 @@ def build(key):
 
     head = P["head"]
     hs = head.radius / 0.092
+    if p.get("face"):
+        shape_face(body, head, hs, **p["face"])
     draw_chin(body, head, hs, p.get("jaw", 1.0))
     # a long skull, where one is worn, before the eyes: they have to find the forehead it makes
     back = None

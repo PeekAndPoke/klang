@@ -22,6 +22,8 @@ export function initView(scene, camera, rigs) {
     scene.add(new THREE.AmbientLight(0xffffff, 0.9));
     inspect = new THREE.DirectionalLight(0xffffff, 2.2);
     scene.add(inspect, inspect.target);
+    // &outline: the bare shape, black on white (pattern and glitter hide a profile)
+    if (params.has('outline')) { scene.background = new THREE.Color(0xffffff); scene.fog = null; }
   }
 
   return function look(t) {
@@ -36,6 +38,11 @@ export function initView(scene, camera, rigs) {
       camera.position.copy(at).addScaledVector(toward.normalize(), 1.2);
       camera.lookAt(at);
       if (camera.fov !== 24) { camera.fov = 24; camera.updateProjectionMatrix(); }
+      if (params.has('outline')) {
+        // nothing but this figure: no light, no stage, no instrument, nobody else
+        scene.traverse((o) => { if (o.isLight) { o.intensity = 0; } else if (o.isMesh && !o.isSkinnedMesh) { o.visible = false; } });
+        for (const other of Object.values(rigs)) { other.root.visible = other === rig; }
+      }
       inspect.position.copy(camera.position).add(new THREE.Vector3(0.4, 0.8, 0));
       inspect.target.position.copy(at);
       return;
