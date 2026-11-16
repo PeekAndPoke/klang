@@ -13,7 +13,8 @@
     #hud { position: fixed; left: 12px; top: 10px; color: #789; font: 12px monospace; }
   </style>
   <script type="importmap">
-    { "imports": { "three": "../ignored/three/build/three.module.js", "three/addons/": "../ignored/three/examples/jsm/" } }
+    { "imports": { "three": "../ignored/three/build/three.module.js", "three/addons/": "../ignored/three/examples/jsm/",
+      "./camera.js": "./camera.js?v=2", "./drummer.js": "./drummer.js?v=2", "./entrance.js": "./entrance.js?v=2", "./marimba.js": "./marimba.js?v=2", "./pattern.js": "./pattern.js?v=2", "./rig.js": "./rig.js?v=2", "./song.js": "./song.js?v=2", "./strike.js": "./strike.js?v=2", "./strings.js": "./strings.js?v=2", "./trumpet.js": "./trumpet.js?v=2" } }
   </script>
 </head>
 <body>
@@ -24,6 +25,7 @@
   addEventListener('error', (e) => fail((e.message || 'error') + '\n' + (e.filename || '') + ':' + (e.lineno || '') + '\n' + (e.error && e.error.stack || '')));
   addEventListener('unhandledrejection', (e) => fail('rejected: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)));
 </script>
-<script type="module" src="./main.js"></script>
+<!-- v=2: the browser may hold copies from before the server forbade keeping them; a new address gets fresh ones -->
+<script type="module" src="./main.js?v=2"></script>
 </body>
 </html>
