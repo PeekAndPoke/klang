@@ -6,9 +6,9 @@
 // Striking with a stick or a mallet: where its tip is between two hits, and the arm that holds it.
 // Shared by everyone who hits something (the drummer, the marimba player, the Gummieimer).
 import * as THREE from 'three';
+import { smooth, hash01, valueNoise } from './util.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
-const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 
 /** The hit before and the one after [t] in [list] (sorted by t). */
 export function around(list, t) {
@@ -105,17 +105,13 @@ export function setShow(seed) { show = seed; }
 export function showSeed() { return show; }
 
 /** A number from 0 to 1 that belongs to [index] and [seed], always the same one under the show's seed. */
-function own(index, seed) {
-  const x = Math.sin(index * 12.9898 + seed * 78.233 + show * 0.6180339) * 43758.5453;
-  return x - Math.floor(x);
+export function own(index, seed) {
+  return hash01(index * 12.9898 + seed * 78.233 + show * 0.6180339);
 }
 
 /** A smooth wandering value from -1 to 1 along [x]: a new random aim at every whole number, eased between them. */
 function drift(x, seed) {
-  const i = Math.floor(x);
-  const u = x - i;
-  const ease = u * u * (3 - 2 * u);
-  return (own(i, seed) + (own(i + 1, seed) - own(i, seed)) * ease) * 2 - 1;
+  return valueNoise(x, (i) => own(i, seed)) * 2 - 1;
 }
 
 /**
@@ -197,7 +193,3 @@ export class Mover {
     rig.turn('chest', X_AXIS, c.lean * 0.6 * alive * drift(t * 0.17, this.seed + 14));
   }
 }
-
-const plain = new Mover(1);
-/** The plain nod, with no character. */
-export function nodAt(beat) { return plain.nod(beat); }

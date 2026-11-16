@@ -30,21 +30,16 @@ const PATTERNS = {
   strands: 'smoothstep(0.25, 0.5, fract(p.x * 75.0 + 0.5 * sin(p.y * 11.0))) * (1.0 - smoothstep(0.62, 0.9, fract(p.x * 75.0 + 0.5 * sin(p.y * 11.0))))',
   // the braid laid flat, for a wall (x across, y up, in metres): the same woven lines between hoops, a pace wide
   braidWall: '1.0 - smoothstep(0.06, 0.16, min(min(abs(sin(p.x * 3.0 + 1.6 * sin(p.y * 4.2))), abs(sin(p.x * 3.0 - 1.6 * sin(p.y * 4.2)))), 1.6 * abs(sin(p.y * 2.1))))',
-  // even hoops
-  hoops: 'smoothstep(0.42, 0.58, fract(p.y * 10.0))',
 };
 
 /**
  * Gives [material] (a body's) the pattern [kind]; [gloss] and [matt] are the two roughnesses.
- * [shade]: how much darker the pattern also is in colour (0: in the reflections only, as on the bodies).
- * [glow]: { amount, width, color }: the surface shows faintly by itself, without any lamp, its pattern darker in it,
- *   fading to the sides (x) over [width] metres.
  * [glitter]: the share of the skin's grains that are spangles (see below).
  * [hair]: { centre (the head's middle, in the body's rest space), radius }: on the head, behind a hairline that
  * runs from the brow back over the ears, the pattern is hair combed straight back: fine glossy strands that run
  * from the front over the skull to the nape, a little uneven, as wet or oiled hair catches the light.
  */
-export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, glitter = 0.14, shade = 0, glow = null) {
+export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, glitter = 0.14) {
   material.metalness = 0;
   const combed = hair ? `
     { vec3 h = (vRest - vec3(${hair.centre.x.toFixed(4)}, ${hair.centre.y.toFixed(4)}, ${hair.centre.z.toFixed(4)})) / ${hair.radius.toFixed(4)};
@@ -69,14 +64,13 @@ export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, 
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;\nuniform float uDress;')
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\nfloat klOn; { vec3 p = vRest; klOn = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, klOn); }${sparkle}${combed}`)
-      .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; float figure = ${PATTERNS[kind]}; diffuseColor.rgb *= (1.0 - ${shade.toFixed(3)} * figure) * ${shade > 0 ? '1.0' : 'mix(mix(1.0, 0.15, uDress), 1.0, figure)'}; }`)
-      // the cloth's ground is dark: it throws back an eighth of the light the pattern does, so lit from the front the
-      // figure stays dark and its pattern (and the spangles in the ground) stand out (the maintainer, 2026-11-16)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; float figure = ${PATTERNS[kind]}; diffuseColor.rgb *= mix(mix(1.0, 0.15, uDress), 1.0, figure); }`)
+      // lit from the front ([dress]) the cloth's ground goes dark: it throws back an eighth of the light the pattern
+      // does, so the figure stays dark and its pattern (and the spangles in the ground) stand out
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>\n{ ${GRAIN} float lit = mix(mix(1.0, 0.12, uDress), 1.0, max(klOn, spangle)); material.specularColor *= lit; material.specularF90 *= lit; }`)
-      .replace('#include <emissivemap_fragment>', glow ? `#include <emissivemap_fragment>\n{ vec3 p = vRest; totalEmissiveRadiance += vec3(${glow.color.join(', ')}) * ${glow.amount.toFixed(4)} * (1.0 - 0.6 * (${PATTERNS[kind]})) * exp(-(p.x * p.x) / ${(glow.width * glow.width).toFixed(2)}); }` : '#include <emissivemap_fragment>')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n{ ${GRAIN} normal = normalize(normal + (vec3(grain, fract(grain * 17.3), fract(grain * 113.7)) - 0.5) * (0.12 + 0.50 * spangle)); }`);
   };
-  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-frontdark-glitter' + glitter + '-shade' + shade + (glow ? '-glow' + glow.amount + '-' + glow.width : '');
+  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-glitter' + glitter;
   material.needsUpdate = true;
 }
 

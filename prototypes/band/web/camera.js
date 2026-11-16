@@ -13,8 +13,8 @@
 // movement, not always though").
 // Everything follows from the time alone, so the same moment always has the same picture.
 import * as THREE from 'three';
+import { smooth, hash01 } from './util.js';
 
-const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 export const HOME = { pos: new THREE.Vector3(0, 1.85, 9.4), at: new THREE.Vector3(0, 1.0, 0), fov: 35 };
 
 // Looks at a player, in the player's own space (x to their left, y up, z ahead of them): where the camera is, what
@@ -61,8 +61,7 @@ export class Choreography {
 
   /** A number from 0 to 1 that belongs to the round [n], the look [i] and a purpose [salt], under this seed. */
   chance(n, i, salt) {
-    const x = Math.sin(n * 127.1 + i * 311.7 + salt * 74.7 + this.seed * 0.618) * 43758.5453;
-    return x - Math.floor(x);
+    return hash01(n * 127.1 + i * 311.7 + salt * 74.7 + this.seed * 0.618);
   }
 
   /** How many notes [name] plays between [a] and [b]. */
@@ -107,6 +106,18 @@ export class Choreography {
     };
   }
 
+  /**
+   * A look's slow move, [u] of the way through it (0 to 1): a push in, and a slide to one side (the other side on
+   * the next look) of about a twentieth of its distance. Returns that distance, as it was before the move.
+   */
+  slide(shot, i, u) {
+    const far = shot.pos.distanceTo(shot.at);
+    const side = new THREE.Vector3().subVectors(shot.at, shot.pos).cross(new THREE.Vector3(0, 1, 0)).normalize();
+    shot.pos.lerp(shot.at, 0.03 * u);
+    shot.pos.addScaledVector(side, (i % 2 === 0 ? 1 : -1) * 0.05 * far * (u - 0.5));
+    return far;
+  }
+
   /** The camera at [t]: { pos, at, fov }. */
   at(t) {
     // the wide view breathes: a slow drift, never still
@@ -124,23 +135,14 @@ export class Choreography {
     if (x < 45) {
       // the look itself is never quite still: a very slow push in, a slow slide to one side (the other side on the
       // next look) of about a twentieth of its distance, and a faint float up and down
-      const u = (x - 36 - 3 * i) / 3;
-      const far = shot.pos.distanceTo(shot.at);
-      const side = new THREE.Vector3().subVectors(shot.at, shot.pos).cross(new THREE.Vector3(0, 1, 0)).normalize();
-      shot.pos.lerp(shot.at, 0.03 * u);
-      shot.pos.addScaledVector(side, (i % 2 === 0 ? 1 : -1) * 0.05 * far * (u - 0.5));
+      const far = this.slide(shot, i, (x - 36 - 3 * i) / 3);
       shot.pos.y += 0.008 * far * Math.sin(t * 0.8 + i);
       return shot;
     }
     // back by a dolly zoom over three bars: the camera travels to the start; the lens keeps the subject's size for
     // the first half of the way, then opens to the wide view, and the look turns from the subject to the stage
     // the dolly zoom starts where the last look's slide ended
-    {
-      const far = shot.pos.distanceTo(shot.at);
-      const side = new THREE.Vector3().subVectors(shot.at, shot.pos).cross(new THREE.Vector3(0, 1, 0)).normalize();
-      shot.pos.lerp(shot.at, 0.03);
-      shot.pos.addScaledVector(side, (i % 2 === 0 ? 1 : -1) * 0.05 * far * 0.5);
-    }
+    this.slide(shot, i, 1);
     const u = smooth((x - 45) / 3);
     const pos = shot.pos.clone().lerp(home.pos, u);
     const held = 2 * Math.atan(shot.pos.distanceTo(shot.at) * Math.tan(shot.fov * Math.PI / 360) / pos.distanceTo(shot.at)) * 180 / Math.PI;

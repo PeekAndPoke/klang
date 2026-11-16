@@ -14,7 +14,7 @@
   </style>
   <script type="importmap">
     { "imports": { "three": "../ignored/three/build/three.module.js", "three/addons/": "../ignored/three/examples/jsm/",
-      "./camera.js": "./camera.js?v=2", "./drummer.js": "./drummer.js?v=2", "./entrance.js": "./entrance.js?v=2", "./marimba.js": "./marimba.js?v=2", "./pattern.js": "./pattern.js?v=2", "./rig.js": "./rig.js?v=2", "./song.js": "./song.js?v=2", "./strike.js": "./strike.js?v=2", "./strings.js": "./strings.js?v=2", "./trumpet.js": "./trumpet.js?v=2" } }
+      "./band.js": "./band.js?v=3", "./camera.js": "./camera.js?v=3", "./clock.js": "./clock.js?v=3", "./drummer.js": "./drummer.js?v=3", "./entrance.js": "./entrance.js?v=3", "./life.js": "./life.js?v=3", "./marimba.js": "./marimba.js?v=3", "./pattern.js": "./pattern.js?v=3", "./rig.js": "./rig.js?v=3", "./show.js": "./show.js?v=3", "./song.js": "./song.js?v=3", "./stage.js": "./stage.js?v=3", "./strike.js": "./strike.js?v=3", "./strings.js": "./strings.js?v=3", "./trumpet.js": "./trumpet.js?v=3", "./util.js": "./util.js?v=3", "./view.js": "./view.js?v=3" } }
   </script>
 </head>
 <body>
@@ -25,7 +25,7 @@
   addEventListener('error', (e) => fail((e.message || 'error') + '\n' + (e.filename || '') + ':' + (e.lineno || '') + '\n' + (e.error && e.error.stack || '')));
   addEventListener('unhandledrejection', (e) => fail('rejected: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)));
 </script>
-<!-- v=2: the browser may hold copies from before the server forbade keeping them; a new address gets fresh ones -->
-<script type="module" src="./main.js?v=2"></script>
+<!-- v=3: the browser may hold copies from before the server forbade keeping them; a new address gets fresh ones -->
+<script type="module" src="./main.js?v=3"></script>
 </body>
 </html>

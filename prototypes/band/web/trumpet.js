@@ -8,8 +8,8 @@
 // lets it sink between phrases. The bell glows while a note sounds. All places are in the figure's own measures.
 import * as THREE from 'three';
 import { around, Mover, showSeed } from './strike.js';
+import { smooth } from './util.js';
 
-const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const brass = new THREE.MeshStandardMaterial({ color: 0x3a2c12, roughness: 0.28, metalness: 0.95, side: THREE.DoubleSide });
 /** Which of the three valves are down, by the note: not a real fingering, but it changes as one does. */
 const FINGERS = [[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 0], [0, 1, 1], [1, 0, 1], [1, 1, 1]];
@@ -21,7 +21,7 @@ export class Trumpet {
     this.mover = new Mover(character.seed ?? 3, character);
     this.bpm = bpm;
     this.notes = notes;
-    this.s = rig.pelvis.y / 0.92;
+    this.s = rig.s;
     const s = this.s;
     this.low = notes.length ? Math.min(...notes.map((n) => n.midi)) : 60;
     this.high = notes.length ? Math.max(...notes.map((n) => n.midi)) : 72;
@@ -34,7 +34,6 @@ export class Trumpet {
       m.position.x = (from + to) / 2 * s;
       return m;
     };
-    this.length = 0.50 * s;
     g.add(tube(0.0, 0.05, 0.010), tube(0.03, 0.38, 0.0065));
     const profile = [];
     for (let i = 0; i <= 10; i++) {
@@ -81,14 +80,14 @@ export class Trumpet {
     for (let i = 0; i <= notes.length; i++) {
       const next = i < notes.length ? notes[i].t : 1e9;
       // he stands a good while first (the maintainer, 2026-11-16): twelve seconds after his last note, or after the start
-      if (next - free > 30) { this.strolls.push({ from: free + 12, to: Math.min(next - 4, free + 12 + 3600), far: null }); }
+      if (next - free > 30) { this.strolls.push({ from: free + 12, to: Math.min(next - 4, free + 12 + 3600) }); }
       if (i < notes.length) { free = Math.max(free, notes[i].t + notes[i].d); }
     }
   }
 
   /** Where the stroll [k] has him at [t], off his place: a slow wandering that leaves from his place and comes back to it. */
   strollAt(k, t) {
-    const ease = (x) => smooth(Math.min(1, Math.max(0, x)));
+    const ease = smooth;
     // a stroll is rounds: out from his place, about, back to it, and there he waits a while before the next round.
     // The rounds differ in length, so it is no clockwork
     // (under the show's seed: the rounds start elsewhere in their order, and her way is another one)
@@ -116,7 +115,7 @@ export class Trumpet {
   /** His place on the stage at [t], which way he walks, how fast, and how far he has walked in this stroll. */
   walkAt(t) {
     const k = this.strolls.find((x) => t > x.from && t < x.to);
-    if (!k) { return { at: this.home, turn: this.homeTurn, speed: 0, far: 0 }; }
+    if (!k) { return { at: this.home, turn: this.homeTurn, speed: 0 }; }
     const facing = (x) => {
       const ahead = this.strollAt(k, x + 0.2).sub(this.strollAt(k, x - 0.2)).multiplyScalar(1 / 0.4);
       const speed = ahead.length();
@@ -143,7 +142,7 @@ export class Trumpet {
     const i = Math.min(k.turns.length - 2, Math.max(0, Math.floor((t - k.from) / 0.1)));
     const u = Math.min(1, Math.max(0, (t - k.from) / 0.1 - i));
     const turn = k.turns[i] + (k.turns[i + 1] - k.turns[i]) * u;
-    return { at: this.home.clone().add(this.strollAt(k, t)), turn: this.homeTurn + turn, speed, far: 0, going };
+    return { at: this.home.clone().add(this.strollAt(k, t)), turn: this.homeTurn + turn, speed, going };
   }
 
   /** What sounds at [t]: the note, whether it sounds (fading shortly after it ends), how high it is, how hard it is blown. */
@@ -180,7 +179,7 @@ export class Trumpet {
     const until = after ? after.t - t : 99;
     const since = before ? t - before.t - before.d : 99;
     const up = Math.max(smooth(1 - (until - 0.15) / 0.7), 1 - smooth((since - 0.9) / 0.8));
-    const blow = before ? before.v * sounding : 0;
+    const blow = now.blow;
 
     const beat = t * this.bpm / 60;
     const nod = this.mover.nod(beat) * (1 - 0.7 * up);
@@ -254,10 +253,7 @@ export class Trumpet {
     this.trumpet.position.copy(at);
     this.trumpet.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
     const place = (x, y, z) => at.clone().addScaledVector(X, x * s).addScaledVector(Y, y * s).addScaledVector(Z, z * s);
-    const point = (bone, d) => {
-      const now = new THREE.Vector3(0, 1, 0).applyQuaternion(rig.bones[bone].getWorldQuaternion(new THREE.Quaternion()));
-      rig.turnWorld(bone, new THREE.Quaternion().setFromUnitVectors(now, d.clone().normalize()));
-    };
+    const point = (bone, d) => rig.point(bone, d);
 
     // the right hand on the valves from the right, the left hand round them from the left and below; elbows out.
     // Z points to the player's right when the trumpet points ahead.

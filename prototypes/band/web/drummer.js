@@ -8,8 +8,6 @@
 import * as THREE from 'three';
 import { around, strokeAt, holdStick, Mover } from './strike.js';
 
-const UP = new THREE.Vector3(0, 1, 0);
-const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 
 const shell = new THREE.MeshStandardMaterial({ color: 0x08080b, roughness: 0.3, metalness: 0.4 });
 const skin = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.6 });
@@ -23,7 +21,7 @@ export class Drummer {
     this.rig = rig;
     this.mover = new Mover(character.seed ?? 1, character);
     this.bpm = bpm;
-    this.s = rig.pelvis.y / 0.92;
+    this.s = rig.s;
     const s = this.s;
     this.kit = new THREE.Group();
     // the kit stands where he plays, whether he sits there yet or not

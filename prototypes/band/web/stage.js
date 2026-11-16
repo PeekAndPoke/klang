@@ -1,0 +1,153 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+// The stage: floor, the wall behind it, the lamps, the drummer's riser. Nothing here knows the band.
+import * as THREE from 'three';
+import { params, seed, BPM } from './show.js';
+import { smooth } from './util.js';
+import { wall, dress } from './pattern.js';
+
+// The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others
+export const RISER = 0.40;
+
+/**
+ * Builds the stage. Returns the renderer, the scene, the camera, the riser, and
+ *   light(t, house, waiting): sets every lamp for this frame ([house]: 0 dark to 1; [waiting]: before the click)
+ *   shade(kit): the faint dark on the floor under the kit and the riser
+ */
+export function buildStage() {
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  document.body.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x020308);
+  scene.fog = new THREE.Fog(0x020308, 9, 22);
+  const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 60);
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.35, metalness: 0.2 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+  // A wall behind the stage, well clear of the riser: it takes the front lamp's light and the band's shadows. It
+  // has two faces (see wall()): an ornament in its own faint glow under the back light, a wire mesh under the front
+  // lamp. It takes no light from the other lamps (its colour is black unless the front lamp is on), and the fog
+  // does not dim it.
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(60, 16), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95, fog: false }));
+  back.position.set(0, 8, -8);
+  back.receiveShadow = true;
+  const wallFront = wall(back.material, { amount: 0.010 });
+  scene.add(back);
+  scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
+
+  // The lamps are analog: old stage lamps on a tired supply. Each one's brightness wanders slowly on its own,
+  // breathes a little, shivers faintly, and now and then sags for a moment as if something else drew current; none
+  // is ever quite steady and no two do the same.
+  const lamps = [];
+  function spot(x, y, z, color, intensity, tx, tz, shadow) {
+    const light = new THREE.SpotLight(color, intensity, 30, 0.5, 0.7, 1.2);
+    light.position.set(x, y, z);
+    light.target.position.set(tx, 1.0, tz);
+    light.castShadow = !!shadow;
+    light.shadow.mapSize.set(2048, 2048);
+    light.shadow.bias = -0.0005;
+    scene.add(light, light.target);
+    lamps.push({ light, base: intensity, seed: lamps.length * 7.31 + 1.7, group: z < 0 ? 'back' : 'fill' });
+  }
+  spot(-4.5, 5.0, -4.0, 0x3070ff, 260, -2.0, 0, true);
+  spot(4.5, 5.0, -4.0, 0xff3070, 260, 2.0, 0, true);
+  spot(0, 5.5, -4.5, 0x70a0ff, 180, 0, -1, true);
+  spot(0, 6, 8, 0xfff0e0, 25, 0, 0, false);
+  // the lamp at the front: on the floor before the stage, looking up at the band and the wall, wide
+  {
+    const low = new THREE.SpotLight(0xffb070, 95, 40, 0.62, 0.5, 1.0);
+    low.position.set(0.6, 0.25, 8.6);
+    low.target.position.set(0, 2.6, -8);
+    low.castShadow = true;
+    low.shadow.mapSize.set(2048, 2048);
+    low.shadow.bias = -0.0006;
+    low.shadow.camera.near = 1;
+    low.shadow.camera.far = 30;
+    scene.add(low, low.target);
+    lamps.push({ light: low, base: 95, seed: 31.7, group: 'front' });
+  }
+
+  const riser = new THREE.Mesh(new THREE.BoxGeometry(2.9, RISER, 2.2), new THREE.MeshStandardMaterial({ color: 0x08090c, roughness: 0.5, metalness: 0.2 }));
+  riser.position.set(0.0, RISER / 2, -1.75);
+  riser.castShadow = true;
+  riser.receiveShadow = true;
+  scene.add(riser);
+
+  /**
+   * How much the front lamp is on at [t] (0 to 1), and whether it strobes. The light changes sides now and then:
+   * for eight bars in every forty the lamps behind go down and the one lamp low at the front comes up, so the band
+   * throws big shadows up the wall; a second each way. Where in the song, the seed decides.
+   */
+  function frontAt(t, waiting) {
+    if (waiting) { return { front: 0, strobing: false }; }
+    const bar = 240 / BPM;
+    const x = ((t / bar + (seed * 7) % 40) % 40 + 40) % 40;
+    if (params.has('front')) { return { front: parseFloat(params.get('front')), strobing: false }; }
+    if (t < 0) { return { front: 0, strobing: false }; }
+    // and as a stroboscope: for two bars in every forty it flashes on the sixteenths (about ten a second, the
+    // maintainer's choice, 2026-11-16: the eighths were too slow), all other lamps off, the band frozen on the wall
+    // in each flash. Flashing this fast over the whole picture can trigger seizures in people with photosensitive
+    // epilepsy: a public showing needs a warning before it. ?nostrobe switches it off.
+    if (x >= 12 && x < 14 && !params.has('nostrobe')) {
+      const sixteenth = (t * BPM / 60 * 4) % 1;
+      return { front: sixteenth < 0.28 ? 1 : 0, strobing: true };
+    }
+    return { front: smooth((x - 26) * bar / 1.0) * smooth((34 - x) * bar / 1.0), strobing: false };
+  }
+
+  function light(t, house, waiting) {
+    const { front, strobing } = frontAt(t, waiting);
+    back.material.color.setHex(0x8a8f9c).multiplyScalar(front);
+    wallFront(Math.min(1, front));
+    dress.value = Math.min(1, front);
+    for (const lamp of lamps) {
+      const { light, base, group } = lamp;
+      const own = lamp.seed + (seed % 97) * 0.37;
+      const wander = 0.060 * Math.sin(t * 0.23 + own) + 0.040 * Math.sin(t * 0.61 + own * 2.3) + 0.025 * Math.sin(t * 1.37 + own * 0.7);
+      const shiver = 0.012 * Math.sin(t * 9.1 + own * 3.1) + 0.008 * Math.sin(t * 14.7 + own * 1.9);
+      // a sag: a dip of a sixth, about every twenty seconds, at its own moment per lamp
+      const phase = ((t + own * 5.3) % 19.7 + 19.7) % 19.7;
+      const sag = phase < 1.2 ? 0.16 * Math.sin(Math.PI * phase / 1.2) ** 2 : 0;
+      light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : strobing ? 0 : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
+    }
+  }
+
+  /**
+   * What stands on the floor darkens it right below itself, whatever the lamps do: the kit and the riser. None
+   * under the players' feet (the maintainer, 2026-11-15): the lamps' own shadows hold them on the floor.
+   */
+  function shade(kit) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const fill = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    fill.addColorStop(0, 'rgba(0,0,0,0.85)');
+    fill.addColorStop(0.5, 'rgba(0,0,0,0.5)');
+    fill.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = fill;
+    g.fillRect(0, 0, 128, 128);
+    const texture = new THREE.CanvasTexture(c);
+    const at = new THREE.Vector3();
+    [[kit, 2.2, 1.9, 0.5, RISER], [riser, 3.6, 2.9, 0, 0]].forEach(([over, width, depth, forward, floorY], index) => {
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, opacity: 0.38 }));
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.scale.set(width, depth, 1);
+      over.getWorldPosition(at);
+      mesh.position.set(at.x, floorY + 0.004 + index * 0.0004, at.z + forward);
+      scene.add(mesh);
+    });
+  }
+
+  return { renderer, scene, camera, riser, light, shade };
+}

@@ -7,6 +7,7 @@
 // so the player moves along the instrument with the tune. All places are in the figure's own measures.
 import * as THREE from 'three';
 import { around, strokeAt, holdStick, Mover } from './strike.js';
+import { smooth } from './util.js';
 
 const wood = new THREE.MeshStandardMaterial({ color: 0x241710, roughness: 0.5 });
 const steel = new THREE.MeshStandardMaterial({ color: 0x15151a, roughness: 0.3, metalness: 0.9 });
@@ -19,7 +20,7 @@ export class Marimba {
     this.rig = rig;
     this.mover = new Mover(character.seed ?? 2, character);
     this.bpm = bpm;
-    this.s = rig.pelvis.y / 0.92;
+    this.s = rig.s;
     const s = this.s;
     this.notes = notes;
     this.group = new THREE.Group();
@@ -28,9 +29,6 @@ export class Marimba {
     this.group.position.copy(rig.root.position);
     this.group.rotation.y = rig.root.rotation.y;
     this.floor = rig.root.position.y;
-    this.home = rig.root.position.clone();
-    this.turn = rig.root.rotation.y;
-    this.fly = 1;                                    // 1: it has landed; less: on its way in ([flyIn])
 
     // the bars: from the lowest note played to the highest, widened to whole naturals; low notes to the player's left
     let lo = Math.min(...notes.map((n) => n.midi), 60), hi = Math.max(...notes.map((n) => n.midi), 72);
@@ -78,7 +76,6 @@ export class Marimba {
       this.group.add(end);
     }
     this.group.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
-    this.half = span / 2;
 
     // which hand plays which note: in turn, but never crossing over the other hand
     this.byHand = { L: [], R: [] };
@@ -97,6 +94,8 @@ export class Marimba {
       last = hand;
     }
 
+    // where a mallet idles when its hand has nothing to play
+    this.rests = { L: new THREE.Vector3(0.12 * s, this.height + 0.012 * s, this.near + 0.08 * s), R: new THREE.Vector3(-0.12 * s, this.height + 0.012 * s, this.near + 0.08 * s) };
     this.malletLength = 0.40 * s;
     this.mallets = {};
     for (const side of ['L', 'R']) {
@@ -132,25 +131,19 @@ export class Marimba {
 
     // it hovers, a slow breath up and down; the mallets follow it
     const hover = 0.012 * s * Math.sin(t * 1.3);
-    // lowered from the ceiling (the maintainer, 2026-11-16): straight down onto its place, out of sight above the
-    // picture until then, swinging a little as it comes and settling
-    const left = 1 - this.fly;
-    this.group.position.set(this.home.x, this.floor + hover + 7.5 * left, this.home.z);
-    this.group.rotation.set(0.05 * left * Math.sin(t * 2.1), this.turn, 0.07 * left * Math.sin(t * 1.7));
+    this.group.position.y = this.floor + hover;
 
     // is she playing: up from well before a phrase to a little after it; between phrases she relaxes, the
     // arms hanging with the mallets down beside her, standing upright
     const [, coming] = around(this.notes, t);
     const until = coming ? coming.t - t : 99;
     const since = last ? t - last.t : 99;
-    const ease = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
     // into position a few cycles ahead: the arms start to rise three cycles before her first note and she stands
     // ready, mallets over the bars, a good cycle before it
     const cycle = 240 / this.bpm;
-    const up = Math.max(ease(1 - (until - 1.2 * cycle) / (1.8 * cycle)), 1 - ease((since - 1.4) / 1.2));
+    const up = Math.max(smooth(1 - (until - 1.2 * cycle) / (1.8 * cycle)), 1 - smooth((since - 1.4) / 1.2));
 
     const hands = {};
-    this.rests = this.rests || { L: new THREE.Vector3(0.12 * s, this.height + 0.012 * s, this.near + 0.08 * s), R: new THREE.Vector3(-0.12 * s, this.height + 0.012 * s, this.near + 0.08 * s) };
     for (const side of ['L', 'R']) {
       const sign = side === 'L' ? 1 : -1;
       hands[side] = strokeAt(this.byHand[side], t, {
@@ -209,11 +202,5 @@ export class Marimba {
       });
     }
     if (rig.eyes) { rig.eyes.emissiveIntensity = 2 + 12 * Math.min(1.6, energy); }
-    if (window.__debug) {
-      const f = (v) => `${v.x.toFixed(2)},${v.y.toFixed(2)},${v.z.toFixed(2)}`;
-      const sh = rig.root.worldToLocal(rig.bones.elbowL.getWorldPosition(new THREE.Vector3()));
-      const hl = rig.root.worldToLocal(rig.bones.handL.getWorldPosition(new THREE.Vector3()));
-      window.__dbg = `s ${s.toFixed(2)} shift ${shift.toFixed(2)} tipL ${f(hands.L.tip)} aimL ${f(hands.L.aim)} tipR ${f(hands.R.tip)} shoulderL ${f(sh)} handL ${f(hl)} nL ${this.byHand.L.length} nR ${this.byHand.R.length}`;
-    }
   }
 }

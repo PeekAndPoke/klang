@@ -7,8 +7,8 @@
 // (the song's start); a player's entrance sets where the figure stands, and the legs then step by the way made,
 // whatever the rest of the body does (a guitarist walks in holding the guitar, the frontwoman with her trumpet).
 import * as THREE from 'three';
+import { smooth } from './util.js';
 
-const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 
 /**
  * Puts [rig] where its entrance has it at [t]: from `from` (x, z, off the stage) to its place `home` (x, z, turn, y)
@@ -37,7 +37,7 @@ export function enter(rig, entrance, home, t) {
 /** The legs step by the way made ([walk] from [enter]); the feet the pose had are kept as far as it stands. */
 export function stepLegs(rig, walk) {
   if (walk.going < 0.002) { return; }
-  const s = rig.pelvis.y / 0.92;
+  const s = rig.s;
   const step = 0.42 * s;
   const stride = walk.far / (step / 0.6);
   rig.update();
@@ -56,7 +56,7 @@ export function stepLegs(rig, walk) {
 
 /** A plain walk for a figure with nothing to hold up: upright, the arms hanging and swinging against the legs. */
 export function walkPose(rig, walk) {
-  const s = rig.pelvis.y / 0.92;
+  const s = rig.s;
   const step = 0.42 * s;
   const stride = walk.far / (step / 0.6);
   const swing = Math.cos(2 * Math.PI * stride) * walk.going;

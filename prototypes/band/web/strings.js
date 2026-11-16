@@ -7,9 +7,9 @@
 // right hand plucks (bass) or strums down and up (guitar) on every note; the strings light up when played.
 // All places are in the figure's own measures; the instrument hangs from the trunk and moves with it.
 import * as THREE from 'three';
-import { around, Mover, showSeed } from './strike.js';
+import { around, Mover, own } from './strike.js';
+import { smooth } from './util.js';
 
-const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const lacquer = new THREE.MeshStandardMaterial({ color: 0x0a0a0d, roughness: 0.25, metalness: 0.3 });
 const neckWood = new THREE.MeshStandardMaterial({ color: 0x1c140e, roughness: 0.5 });
 
@@ -59,7 +59,7 @@ export class StringPlayer {
     this.style = { lean: 0.06, bang: 0.2, bounce: 0.03, ...style };
     this.mover = new Mover(this.style.character?.seed ?? 4, this.style.character);
     this.kind = KINDS[this.style.kind];
-    this.s = rig.pelvis.y / 0.92;
+    this.s = rig.s;
     const s = this.s;
     const k = this.kind;
 
@@ -177,7 +177,7 @@ export class StringPlayer {
     const g = this.style.glance;
     if (!g) { return 0; }
     const slot = Math.floor(t / g.every);
-    const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + this.mover.seed * 78.233 + showSeed() * 0.6180339) * 43758.5453; return x - Math.floor(x); };
+    const roll = (n) => own(slot + n, this.mover.seed);
     if (roll(0) > g.chance) { return 0; }
     const start = slot * g.every + 0.8 + roll(1) * (g.every - 6);
     const hold = 2.2 + 2.0 * roll(2);
@@ -264,10 +264,7 @@ export class StringPlayer {
     this.instrument.position.copy(at);
     this.instrument.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
     const place = (x, y, z) => at.clone().addScaledVector(X, x).addScaledVector(Y, y).addScaledVector(Z, z);
-    const point = (bone, d) => {
-      const now = new THREE.Vector3(0, 1, 0).applyQuaternion(rig.bones[bone].getWorldQuaternion(new THREE.Quaternion()));
-      rig.turnWorld(bone, new THREE.Quaternion().setFromUnitVectors(now, d.clone().normalize()));
-    };
+    const point = (bone, d) => rig.point(bone, d);
 
     // a hand points toward what it plays, but a wrist only bends so far: never more than [most] radians off the
     // line of its forearm (bent further it looked broken, the maintainer, 2026-11-16)

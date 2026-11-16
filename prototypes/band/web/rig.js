@@ -31,8 +31,9 @@ export class Rig {
     }
     // The measures, in the figure's own space (the root at the origin): motion is written in these, not in metres
     const local = (name) => this.root.worldToLocal(this.rest[name].world.clone());
-    this.hipHeight = local('hips').y + this.bones.hips.children.length * 0;
     this.pelvis = this.restTail('hips');
+    // the figure's scale: its leg against the plain one's. Every player's instrument and motion is measured in it
+    this.s = this.pelvis.y / 0.92;
     this.shoulder = { L: local('elbowL'), R: local('elbowR') };       // the bone to the elbow starts at the shoulder
     this.armLength = local('elbowL').distanceTo(local('wristL')) + local('wristL').distanceTo(local('handL'));
     this.ankle = { L: local('toeL'), R: local('toeR') };              // the bone to the toe starts at the ankle
@@ -142,8 +143,15 @@ export class Rig {
     }
   }
 
-  /** A point of the figure's space in the world. */
-  world(x, y, z) { return this.root.localToWorld(new THREE.Vector3(x, y, z)); }
+  /** Which way the bone [name] points (its own y axis), in the world. */
+  axisOf(name) {
+    return new THREE.Vector3(0, 1, 0).applyQuaternion(this.bones[name].getWorldQuaternion(new THREE.Quaternion()));
+  }
+
+  /** Points the bone [name] along [d] (world). */
+  point(name, d) {
+    this.turnWorld(name, new THREE.Quaternion().setFromUnitVectors(this.axisOf(name), d.clone().normalize()));
+  }
 
   /** A direction of the figure's space in the world. */
   dir(x, y, z) { return new THREE.Vector3(x, y, z).transformDirection(this.root.matrixWorld); }
