@@ -16,7 +16,7 @@ import { Trumpet } from './trumpet.js';
 import { StringPlayer } from './strings.js';
 import { loadSong, drumHits, notesOf, strumsOf } from './song.js';
 import { setEnergy, setShow } from './strike.js';
-import { pattern, wall } from './pattern.js';
+import { pattern, wall, dress } from './pattern.js';
 import { enter, stepLegs, walkPose, capture, blend } from './entrance.js';
 import { Choreography, HOME } from './camera.js';
 
@@ -108,6 +108,7 @@ function analog(t) {
   // the wall is black unless the front lamp is on: it takes no light from the other lamps at all
   back.material.color.setHex(0x8a8f9c).multiplyScalar(front);
   wallFront(Math.min(1, front));
+  dress.value = Math.min(1, front);
   // without the front lamp it is ever so slightly there by itself (its own faint glow, see pattern()): over the full
   // width, darker to the sides; it catches no other lamp
   for (const lamp of lamps) {
