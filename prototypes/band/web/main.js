@@ -243,7 +243,7 @@ function placeBlobs() {
 // to each other: the rhythm section, neighbours, the frontwoman and whoever she passes.
 const PAIRS = [['bass', 'drums'], ['guitar1', 'bass'], ['eimer', 'guitar1'], ['marimba', 'guitar2'], ['drums', 'marimba'],
   ['eimer', 'marimba'], ['eimer', 'drums'], ['bass', 'eimer'], ['guitar2', 'drums'], ['guitar1', 'guitar2']];
-const CONTACT = { every: 11, chance: 0.7 };
+const CONTACT = { every: 11, chance: 0.4 };
 let herNotes = null;
 function contactAt(t) {
   if (t < 1) { return null; }
