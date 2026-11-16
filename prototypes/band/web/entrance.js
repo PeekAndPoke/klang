@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // The walk-in before the song: each player comes from off the stage to their place. The clock runs from -INTRO to 0
 // (the song's start); a player's entrance sets where the figure stands, and the legs then step by the way made,
 // whatever the rest of the body does (a guitarist walks in holding the guitar, the frontwoman with her trumpet).

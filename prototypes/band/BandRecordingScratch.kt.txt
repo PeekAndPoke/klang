@@ -20,14 +20,14 @@ import java.io.File
 
 /**
  * SCRATCH for KLANG-00446 (the band on stage), never committed: renders Der Schmetterling to a WAV and writes the
- * events of that very render beside it, for the standalone stage in `workshop/band/`. Runs only while `workshop/band/ignored/RECORD`
+ * events of that very render beside it, for the standalone stage in `prototypes/band/`. Runs only while `prototypes/band/ignored/RECORD`
  * exists, so nobody else's test run does it.
  */
 class BandRecordingScratch : StringSpec({
 
     "record Der Schmetterling with its events" {
-        val dir = generateSequence(File("").absoluteFile) { it.parentFile }.first { File(it, "workshop/band").isDirectory }
-            .let { File(it, "workshop/band/ignored") }
+        val dir = generateSequence(File("").absoluteFile) { it.parentFile }.first { File(it, "prototypes/band").isDirectory }
+            .let { File(it, "prototypes/band/ignored") }
 
         if (File(dir, "RECORD").exists()) {
             val song = BuiltInSongs.songs.first { it.id.endsWith("der-schmetterling") }

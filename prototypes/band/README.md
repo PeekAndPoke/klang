@@ -1,16 +1,16 @@
 # The band on stage (KLANG-00446)
 
 A standalone prototype: a 3d band that plays Der Schmetterling, for the demo that closes Klang's first year. It is
-a plain page with three.js, outside the app and outside the build, so that a change shows after a reload. It is
-parked in the workshop folder (the maintainer, 2026-11-16) until the show is right; then it is ported into the app
-in Kotlin, and this folder goes. It is Klang's own and not bound for Kraft or Ultra, unlike the pieces beside it.
+a plain page with three.js, outside the app and outside the build, so that a change shows after a reload. It
+lives in `prototypes/` (the maintainer, 2026-11-16) until the show is right; then it is ported into the app in
+Kotlin, and this folder goes. Licensed like Klang: AGPL-3.0-or-later.
 
 What it is, what was decided and what is open: KLANG-00446.
 
 ## Run it
 
 ```
-python3 workshop/band/serve.py        # then open http://localhost:18750/web/
+python3 prototypes/band/serve.py        # then open http://localhost:18750/web/
 ```
 
 Click to start. Space pauses, left and right jump 10 s (right skips the walk-in). `?still` keeps the camera on the
@@ -29,9 +29,9 @@ Two things are not in git and have to be there. They live in `ignored/`, the one
 The audio and the events must come from one render: the song is seeded by the time of day.
 
 1. Copy `BandRecordingScratch.kt.txt` to `src/jvmTest/kotlin/BandRecordingScratch.kt` (never commit it there).
-2. Write the number of cycles into `workshop/band/ignored/RECORD` (328 is nine minutes).
+2. Write the number of cycles into `prototypes/band/ignored/RECORD` (328 is nine minutes).
 3. Run `./gradlew :jvmTest --rerun --tests io.peekandpoke.klang.BandRecordingScratch` through the build lock.
-4. Remove the spec and `RECORD` again, then `python3 workshop/band/energy.py` (needs numpy) for the loudness.
+4. Remove the spec and `RECORD` again, then `python3 prototypes/band/energy.py` (needs numpy) for the loudness.
 
 ## What is where
 

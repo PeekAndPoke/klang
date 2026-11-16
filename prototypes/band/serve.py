@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Serves this folder on http://localhost:18750/web/ and tells the browser never to keep a file, so a reload always
 shows the latest scripts and models. three.js is not kept here: where ignored/three is missing, it is served from
 the app's own copy (build/js/node_modules/three, there after any Kotlin/JS build of the app)."""

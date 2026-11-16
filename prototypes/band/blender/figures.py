@@ -1,3 +1,6 @@
+# Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 # The band's figures (KLANG-00446): a human skeleton of points with a thickness each (Skin modifier), shaped by extra
 # points along the limbs and the trunk, flattened front to back, with an armature of the real joints only.
 # One skeleton, six characters by their build.

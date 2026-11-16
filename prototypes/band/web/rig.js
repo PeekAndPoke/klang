@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // A figure's rig: its bones by the names of the joints they end at, its measures, and the two-bone reach.
 // Nothing here knows a figure's shape: every length is read from the bones, so a reshaped figure moves the same.
 import * as THREE from 'three';

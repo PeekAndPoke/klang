@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // The trumpet player (the song's `trommel` part, the "Gummieimer", which sounds like a held melody): raises the
 // trumpet to the lips before a phrase, fingers the valves on every note, points the bell higher for a high note and
 // lets it sink between phrases. The bell glows while a note sounds. All places are in the figure's own measures.

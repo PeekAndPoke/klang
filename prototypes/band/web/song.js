@@ -1,4 +1,9 @@
-// The song as recorded: the events of one render of Der Schmetterling (workshop/band/ignored/schmetterling-events.json) beside
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+// The song as recorded: the events of one render of Der Schmetterling (prototypes/band/ignored/schmetterling-events.json) beside
 // its audio. Each player takes the events with its tags.
 export async function loadSong(url) {
   const response = await fetch(url);

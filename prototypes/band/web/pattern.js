@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // A pattern across a figure's whole body, in how it throws back the light and not in its colour: where the pattern
 // is, the skin is glossy and gives sharp bright highlights; elsewhere it is matt and gives soft dim ones. In the dark
 // the body stays black, and the pattern shows only where a lamp catches it. It is drawn from the body's own shape at

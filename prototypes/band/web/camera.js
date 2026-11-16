@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // The camera's choreography. Mostly the total: the wide view from the audience, the start position. The song is cut
 // into rounds of 48 cycles (bars, about 79 s): 36 on the total, then three looks in a row, three bars each, with a
 // cut between them (close on one player, or the stage from another angle), then back to the total: by a plain cut

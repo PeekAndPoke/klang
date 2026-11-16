@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // The drummer: sits on a stool behind a kit and plays a list of hits. Every place is in the figure's own measures
 // (its leg's length), so the kit fits whoever sits there.
 import * as THREE from 'three';

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // Striking with a stick or a mallet: where its tip is between two hits, and the arm that holds it.
 // Shared by everyone who hits something (the drummer, the marimba player, the Gummieimer).
 import * as THREE from 'three';

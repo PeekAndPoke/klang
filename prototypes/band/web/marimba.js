@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // The marimba player: stands behind a marimba and plays notes with two mallets. Which bar is hit follows the note,
 // so the player moves along the instrument with the tune. All places are in the figure's own measures.
 import * as THREE from 'three';

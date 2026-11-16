@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // The band on stage, standalone (KLANG-00446). Step 1: the figures on a dark stage, all moving by the same motion
 // code: a groove written in each figure's own measures.
 //   ?t=1.25      freeze the time at 1.25 s (for stills)

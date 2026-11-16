@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Measures the recording's loudness over time (overall and in three bands, a value every 20 ms) and writes it beside
 the audio: schmetterling.wav -> schmetterling-energy.json. Run after every new recording."""
 import json

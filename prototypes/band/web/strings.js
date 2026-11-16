@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // The string players: a bass or a guitar on a strap. The left hand goes along the neck with the note's pitch, the
 // right hand plucks (bass) or strums down and up (guitar) on every note; the strings light up when played.
 // All places are in the figure's own measures; the instrument hangs from the trunk and moves with it.
