@@ -52,6 +52,7 @@ export class Rig {
     for (const [name, bone] of Object.entries(this.bones)) {
       bone.quaternion.copy(this.rest[name].q);
       bone.position.copy(this.rest[name].p);
+      bone.scale.set(1, 1, 1);
     }
   }
 
@@ -123,6 +124,21 @@ export class Rig {
       const now = this.faceAhead.clone().applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()));
       const turn = new THREE.Quaternion().setFromUnitVectors(now, want);
       this.turnWorld(bone, new THREE.Quaternion().slerp(turn, share));
+    }
+  }
+
+  /**
+   * Breathing: the belly goes out and in, the chest a little with it ([breath] 0 breathed out to 1 breathed in,
+   * [depth] how far the belly goes, as a share of its girth). A bone is made wider across (its own y runs along it),
+   * and the bones that hang on it are made narrower by as much, so only this part of the body swells. Call it last
+   * in a frame: the other moves read the bones' turns, which a width would blur.
+   */
+  breathe(breath, depth) {
+    const belly = 1 + depth * breath, chest = 1 + 0.4 * depth * breath;
+    this.bones.belly.scale.set(belly, 1, belly);
+    this.bones.chest.scale.set(chest / belly, 1, chest / belly);
+    for (const child of this.bones.chest.children) {
+      if (child.isBone) { child.scale.set(1 / chest, 1, 1 / chest); }
     }
   }
 

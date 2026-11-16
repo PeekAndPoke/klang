@@ -25,7 +25,7 @@ CENTRE = [
     ("head",  "neck",  (0, -0.025, 1.645), 0.092, 1.08, True, "head"),
     ("crown", "head",  (0, -0.015, 1.715), 0.082, 1.12, False, "head"),
     # a chin that shows in profile: well ahead of the neck and below the face
-    ("chin",  "head",  (0, -0.082, 1.562), 0.036, 1.0, False, "head"),
+    ("chin",  "head",  (0, -0.104, 1.566), 0.034, 1.0, False, "head"),
 ]
 SIDE = [
     ("shoulder", "chest",    (0.190, 0.00, 1.445), 0.068, 0.95, True,  "shoulder"),
@@ -75,9 +75,9 @@ FIGURES = {
     "drums": dict(height=1.04, scale=dict(torso=1.08, waist=1.02, chest=1.30, shoulder=1.55, arm=1.55, hand=1.25,
                                           thigh=1.25, leg=1.25, neck=1.75, head=1.24),
                   # a head to match the frame: a quarter bigger, and carried a little higher
-                  move=dict(head=(0, 0, 0.018), crown=(0, 0, 0.030), chin=(0, -0.006, 0.006)),
-                  radius=dict(bicep=1.25, ribs=1.18), shoulders=1.30, hips=1.05, neck=0.75, stoop=0.03,
-                  eye=(1.0, 0.25, 0.02)),
+                  move=dict(head=(0, 0, 0.018), crown=(0, 0, 0.030), chin=(0, -0.014, -0.012)),   # a square jaw, well forward
+                  radius=dict(bicep=1.25, ribs=1.18, chin=1.35), shoulders=1.30, hips=1.05, neck=0.75, stoop=0.03,
+                  eye=(1.0, 0.25, 0.02), jaw=1.6),
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
@@ -85,7 +85,7 @@ FIGURES = {
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
                   # see skull(). A long neck, carried forward; the shell hat (shell()) is kept but not worn.
                   radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06), skull=True,
-                  move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.028, -0.004),
+                  move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.012, -0.004),
                             # proud shoulders: level, not sloping, and held back a little
                             shoulderL=(0, 0.014, 0.026), shoulderR=(0, 0.014, 0.026)),
                   extras=[("bustL", "chest", (0.058, -0.084, -0.035), 0.058, 1.0, False),
@@ -264,6 +264,25 @@ def hair(head, size, mat, strands=11, length=0.30, spread=2.1):
         obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
         made.append(obj)
     return made
+
+
+def jaw(head, size, mat, strength=1.0):
+    """
+    A chin that shows: a small rounded shape of its own under the front of the face, a little ahead of it, moved by
+    the head (as a point with a thickness the chin was smoothed away with the rest of the head).
+    """
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=16, ring_count=12, location=(0, 0, 0))
+    obj = bpy.context.object
+    k = size * (0.85 + 0.15 * strength)
+    centre = head + Vector((0, -0.066 - 0.010 * strength, -0.074 - 0.006 * strength)) * size
+    for v in obj.data.vertices:
+        # wide across, rounded forward, flat below; it runs back into the head as a jaw
+        back = max(0.0, v.co.y)
+        v.co = centre + Vector((v.co.x * 0.050 * k * (1 + 0.5 * back), v.co.y * (0.036 + 0.030 * back) * k, v.co.z * 0.030 * k))
+    bpy.ops.object.shade_smooth()
+    obj.data.materials.append(mat)
+    obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
+    return obj
 
 
 def mane(head, size, mat, length=0.46):
@@ -464,6 +483,12 @@ def build(key):
         back.select_set(True); body.select_set(True)
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.join()
+
+    chin = jaw(head.pos, head.radius / 0.092, body.data.materials[0], p.get("jaw", 1.0))
+    bpy.ops.object.select_all(action='DESELECT')
+    chin.select_set(True); body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
 
     if p.get("mane"):
         hair_mat = material(key + "_hair", (0.012, 0.012, 0.016))

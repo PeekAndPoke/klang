@@ -406,6 +406,13 @@ function frame() {
     }
   }
   eyeContact(t);
+  // everyone breathes: at their own pace (14 to 19 breaths a minute), in a little faster than out, and deeper when
+  // the band is loud
+  Object.values(rigs).forEach((rig, i) => {
+    const phase = 2 * Math.PI * (0.23 + 0.016 * ((i * 7) % 6)) * t + i * 1.9;
+    const breath = 0.5 + 0.5 * Math.sin(phase + 0.45 * Math.sin(phase));
+    rig.breathe(breath, 0.045 * (0.7 + 0.6 * energyAt(t).slow));
+  });
   // waiting for the click: nearly dark. From the click: up within a second, a flash first, like lamps switched on
   if (frozen === null && audio && !playing) {
     const since = introAt === null ? -1 : (performance.now() - introAt) / 1000;
