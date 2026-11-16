@@ -17,6 +17,32 @@ const HIT = {
   kick: { color: 0xffa050, peak: 0.03, fade: 0.09 },
   snare: { color: 0xffe8c8, peak: 0.04, fade: 0.07 },
 };
+/**
+ * A drum head with [name] written across it: the head's own dark grey, a thin ring near its rim, the name in
+ * pale capitals. A picture for the head's material.
+ */
+function named(name) {
+  const SIZE = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = SIZE;
+  const g = c.getContext('2d');
+  g.fillStyle = '#1a1a20';
+  g.fillRect(0, 0, SIZE, SIZE);
+  g.strokeStyle = '#8f93a3';
+  g.lineWidth = 5;
+  g.beginPath();
+  g.arc(SIZE / 2, SIZE / 2, SIZE * 0.43, 0, 2 * Math.PI);
+  g.stroke();
+  g.fillStyle = '#c9ccd8';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `bold ${SIZE * 0.13}px sans-serif`;
+  g.fillText(name.split('').join('\u200a'), SIZE / 2, SIZE / 2 + SIZE * 0.01);
+  const texture = new THREE.CanvasTexture(c);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  return texture;
+}
 const lit = (material, drum) => { const m = material.clone(); m.emissive = new THREE.Color(HIT[drum].color); m.emissiveIntensity = 0; return m; };
 const brass = new THREE.MeshStandardMaterial({ color: 0x4a3a18, roughness: 0.25, metalness: 0.95, side: THREE.DoubleSide });
 const wood = new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.6 });
@@ -63,6 +89,9 @@ export class Drummer {
     kick.position.set(-0.06 * s, 0.29 * s, 1.00 * s);
     const front = new THREE.Mesh(new THREE.CircleGeometry(0.27 * s, 32), lit(skin, 'kick'));
     front.position.set(-0.06 * s, 0.29 * s, 1.201 * s);
+    // the band's name on it; the head's own colour is in the picture, so the material's is white
+    front.material.color.set(0xffffff);
+    front.material.map = named('NOTSTROM');
     this.kit.add(kick, front);
     this.drums.kick = { mesh: kick, at: new THREE.Vector3(), base: kick.position.clone(), hitT: -9, v: 0, lit: [front.material], glow: HIT.kick, front, frontZ: front.position.z };
 
