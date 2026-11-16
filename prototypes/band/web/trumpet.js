@@ -10,6 +10,9 @@ import * as THREE from 'three';
 import { around, Mover, showSeed } from './strike.js';
 import { smooth } from './util.js';
 
+// The raised arm before a phrase: it starts to go up [from] s before the first note, takes [rise] s to get there,
+// and is down again [until] s before the note, coming down over [fall] s
+const RAISE = { from: 4.2, rise: 0.8, until: 1.1, fall: 0.8 };
 const brass = new THREE.MeshStandardMaterial({ color: 0x3a2c12, roughness: 0.28, metalness: 0.95, side: THREE.DoubleSide });
 /** Which of the three valves are down, by the note: not a real fingering, but it changes as one does. */
 const FINGERS = [[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 0], [0, 1, 1], [1, 0, 1], [1, 1, 1]];
@@ -76,6 +79,8 @@ export class Trumpet {
     // stage: from a little after a phrase to well before the next, so he is back in his place in time
     this.home = rig.root.position.clone();
     this.homeTurn = rig.root.rotation.y;
+    // where a phrase begins: a note after six seconds of silence or more (and her first note)
+    this.phrases = notes.filter((n, i) => i === 0 || n.t - (notes[i - 1].t + (notes[i - 1].d ?? 0)) > 6).map((n) => n.t);
     this.strolls = [];
     let free = 3;
     for (let i = 0; i <= notes.length; i++) {
@@ -281,8 +286,18 @@ export class Trumpet {
       .addScaledVector(rig.dir(0, 0, 1), (0.04 + 0.03 * sway * (1 - going) - 0.20 * going * swing) * s)
       .addScaledVector(rig.dir(0, 1, 0), 0.07 * s * going * Math.abs(swing)).addScaledVector(rig.dir(1, 0, 0), 0.04 * s * going);
     const wristL = hanging.clone().lerp(place(0.18, -0.05, -0.085), up);
-    rig.hand('L', wristL, rig.dir(0.9, -0.6, 0.1).lerp(rig.dir(0.3, -0.3, -1), 1 - up));
-    if (up > 0.5) { point('handL', grip.clone().sub(wristL)); }
+    // before she starts to play again after a silence, she raises the left arm high for a moment: here I come
+    // (a first pose asked of a body from outside, to try that out: the maintainer, 2026-11-16). It is up from
+    // RAISE.from seconds before the phrase's first note and down again in time for the hand to take the trumpet.
+    const next = this.phrases.find((start) => start > t - 0.2);
+    const ahead2 = next === undefined ? 99 : next - t;
+    const raised = smooth((RAISE.from - ahead2) / RAISE.rise) * smooth((ahead2 - RAISE.until) / RAISE.fall);
+    const shoulderL = rig.bones.elbowL.getWorldPosition(new THREE.Vector3());
+    const aloft = shoulderL.clone().addScaledVector(rig.dir(0.22, 0.95, 0.16).normalize(), 0.97 * rig.armLength);
+    wristL.lerp(aloft, raised);
+    rig.hand('L', wristL, rig.dir(0.9, -0.6, 0.1).lerp(rig.dir(0.3, -0.3, -1), 1 - up).lerp(rig.dir(1, -0.3, -0.4), raised));
+    if (raised > 0.5) { point('handL', aloft.clone().sub(shoulderL)); }
+    else if (up > 0.5) { point('handL', grip.clone().sub(wristL)); }
 
     // the valves go down with the note's fingering
     const fingers = note && sounding > 0.05 ? FINGERS[((note.midi % 7) + 7) % 7] : [0, 0, 0];
