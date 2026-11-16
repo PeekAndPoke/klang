@@ -98,4 +98,13 @@ The maintainer watches Der Schmetterling played by the band and says it is good 
   A walk-in of 15 s before the song: dark stage until the click, the lamps up at once on it, the players in one
   after another, the marimba in place from the start. The camera (`camera.js`): mostly the total, three looks in a
   row about every 80 s, back by a cut or now and then a slow dolly zoom. Lamps with an analog wander, shiver and sag.
-
+- 2026-11-16: the show grew in the prototype, now `prototypes/band` (a new top-level folder for prototypes): a wall
+  with an ornament behind the band, light moods for the two main lamps, a low front lamp in several colours, a
+  stroboscope on the bass drum's fast runs, fog on the floor, the audience as held-up lights with a stadium shot,
+  camera rounds (looks, a way round one player, a flight round the band) and camera keys, one seed for a whole
+  performance, eye sockets, a chin for the frontwoman, NOTSTROM on the bass drum, oversampling on a key. The code
+  was sorted and reviewed (no change in what it shows, by 18 identical stills).
+- 2026-11-16: ported to Kotlin (cb169d069): the module `klangviz` (package `io.peekandpoke.klang.viz.liveact`), the
+  demo app `klangviz-demo` that plays the recording, and the three.js types it needs in `workshop/threejs`. The same
+  picture as the prototype: of 18 fixed stills 17 are identical pixel for pixel, one differs in one pixel. Next:
+  the music and its events from the engine, live (no ticket yet; see the epic, KLANG-00447).
