@@ -40,6 +40,10 @@ include(
 
     // Interactive/Notebook support
     ":klang-notebook",
+
+    // Visualizations: the live act (a band on a stage); and a small app that shows them alone
+    ":klangviz",
+    ":klangviz-demo",
 )
 
 // Per-user build outputs (MC-00031). Append to the project's settings.gradle.kts.

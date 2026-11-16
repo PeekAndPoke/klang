@@ -1,0 +1,71 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.viz.demo
+
+import io.peekandpoke.klang.viz.liveact.LiveAct
+import io.peekandpoke.klang.viz.liveact.Loudness
+import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switches
+import io.peekandpoke.klang.viz.liveact.song.Recording
+import io.peekandpoke.klang.viz.liveact.song.Song
+import io.peekandpoke.kraft.addons.registry.addons
+import io.peekandpoke.kraft.addons.threejs.threeJs
+import io.peekandpoke.kraft.kraftApp
+import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
+import kotlinx.browser.window
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.await
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlin.random.Random
+
+// The demo: the live act alone on a page, playing a recording and its recorded events.
+// The page's switches (`?seed=7&t=62.1&still`) are the show's: see the prototype's list in prototypes/band/web/show.js.
+
+/** Where the recording lies, beside the page (git-ignored: see resources/recording/README.md). */
+private const val RECORDING = "recording/schmetterling"
+
+/** Where the figures lie, beside the page (klangviz's resources). */
+private const val MODELS = "liveact/notstrom/"
+
+private val kraft = kraftApp {
+    addons {
+        threeJs()
+    }
+}
+
+/** The text at [url]; null where it is not there. */
+private suspend fun textAt(url: String): String? {
+    return try {
+        val response = window.fetch(url).await()
+
+        if (response.ok) response.text().await() else null
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+fun main() {
+    val switches = Switches.parse(window.location.search)
+
+    // Another performance every time the page is opened: one seed for all of the choreography. A frozen time
+    // without a seed takes seed 0, so stills stay comparable.
+    val seed = switches["seed"]?.toIntOrNull() ?: if (switches.has("t")) 0 else Random.nextInt(100_000)
+
+    MainScope().launch {
+        // The song as recorded, when it is there (?test: the test notes instead), and its loudness
+        val song = if (switches.has("test")) null else textAt("$RECORDING-events.json")?.let { Song(Recording.parse(it)) }
+        val loudness = song?.let { textAt("$RECORDING-energy.json") }?.let {
+            Json { ignoreUnknownKeys = true }.decodeFromString(Loudness.serializer(), it)
+        }
+
+        val show = Show(seed = seed, song = song, loudness = loudness, switches = switches)
+
+        kraft.mount(selector = "#app", engine = PreactVDomEngine()) {
+            LiveAct(show = show, models = MODELS, audio = if (song != null) "$RECORDING.wav" else null)
+        }
+    }
+}

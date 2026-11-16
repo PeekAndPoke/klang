@@ -60,6 +60,8 @@ kotlin {
         jsMain {
             dependencies {
                 api(Deps.KotlinLibs.Kraft.core)
+                // The three.js types the addon lacks grow in threejs/ (KLANG-00446)
+                api(Deps.KotlinLibs.Kraft.addons_threejs)
             }
         }
 
