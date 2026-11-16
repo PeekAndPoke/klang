@@ -76,8 +76,8 @@ export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, 
  * wealthy ... then prison"):
  * - by itself, under the back light: an ornament, a damask of round medallions with a flower in each, ringed, small
  *   studs between them, seen ever so slightly in a faint glow of its own that fades to the sides;
- * - under the front lamp ([front] 0 to 1, set every frame through the returned function): a wire mesh, the diamonds
- *   of a chain-link fence, dark on the lit wall. The ornament's glow goes as the lamp comes.
+ * - under the front lamp ([front] 0 to 1, set every frame through the returned function): a wire mesh, the braid
+ *   laid flat (the maintainer: "like perfect like wire mesh"), dark on the lit wall. The ornament's glow goes as the lamp comes.
  */
 export function wall(material, { amount = 0.017, width = 5.5, color = [0.55, 0.62, 1.0] } = {}) {
   const uniforms = { uFront: { value: 0 } };
@@ -89,10 +89,8 @@ export function wall(material, { amount = 0.017, width = 5.5, color = [0.55, 0.6
     float flower = smoothstep(0.70, 0.86, abs(field)) * (0.45 + 0.55 * cos(6.0 * atan(sin(u), sin(v))));
     float stud = smoothstep(0.90, 0.97, abs(cos(u + 1.5708) * cos(v + 1.5708)));
     float ornament = clamp(max(max(ring, 0.6 * second), max(flower, stud)), 0.0, 1.0);`;
-  const MESH = `
-    float a = (p.x + p.y * 0.62) * 3.1, b = (p.x - p.y * 0.62) * 3.1;
-    float wire = min(abs(fract(a) - 0.5), abs(fract(b) - 0.5));
-    float mesh = 1.0 - smoothstep(0.018, 0.045, wire);`;
+  // the mesh is the braid laid flat (PATTERNS.braidWall): woven wires between hoops, as wire fencing is woven
+  const MESH = `float mesh = ${PATTERNS.braidWall};`;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uFront = uniforms.uFront;
     shader.vertexShader = shader.vertexShader
@@ -100,10 +98,10 @@ export function wall(material, { amount = 0.017, width = 5.5, color = [0.55, 0.6
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;\nuniform float uFront;')
-      .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; ${MESH} diffuseColor.rgb *= 1.0 - 0.72 * mesh; }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; ${MESH} diffuseColor.rgb *= 1.0 - 0.55 * mesh; }`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\n{ vec3 p = vRest; ${ORNAMENT} totalEmissiveRadiance += vec3(${color.join(', ')}) * ${amount.toFixed(4)} * (0.28 + 1.5 * ornament) * exp(-(p.x * p.x) / ${(width * width).toFixed(2)}) * (1.0 - uFront); }`);
   };
-  material.customProgramCacheKey = () => 'wall-two-faces';
+  material.customProgramCacheKey = () => 'wall-two-faces-braid';
   material.needsUpdate = true;
   return (front) => { uniforms.uFront.value = front; };
 }
