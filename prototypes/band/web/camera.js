@@ -110,13 +110,25 @@ export class Choreography {
     const i = Math.min(2, Math.floor((x - 36) / 3));
     const shot = this.shot(this.subject(n, i));
     if (x < 45) {
-      // the look itself, nearly still: a very slow push in
-      shot.pos.lerp(shot.at, 0.03 * (x - 36 - 3 * i) / 3);
+      // the look itself is never quite still: a very slow push in, a slow slide to one side (the other side on the
+      // next look) of about a twentieth of its distance, and a faint float up and down
+      const u = (x - 36 - 3 * i) / 3;
+      const far = shot.pos.distanceTo(shot.at);
+      const side = new THREE.Vector3().subVectors(shot.at, shot.pos).cross(new THREE.Vector3(0, 1, 0)).normalize();
+      shot.pos.lerp(shot.at, 0.03 * u);
+      shot.pos.addScaledVector(side, (i % 2 === 0 ? 1 : -1) * 0.05 * far * (u - 0.5));
+      shot.pos.y += 0.008 * far * Math.sin(t * 0.8 + i);
       return shot;
     }
     // back by a dolly zoom over three bars: the camera travels to the start; the lens keeps the subject's size for
     // the first half of the way, then opens to the wide view, and the look turns from the subject to the stage
-    shot.pos.lerp(shot.at, 0.03);
+    // the dolly zoom starts where the last look's slide ended
+    {
+      const far = shot.pos.distanceTo(shot.at);
+      const side = new THREE.Vector3().subVectors(shot.at, shot.pos).cross(new THREE.Vector3(0, 1, 0)).normalize();
+      shot.pos.lerp(shot.at, 0.03);
+      shot.pos.addScaledVector(side, (i % 2 === 0 ? 1 : -1) * 0.05 * far * 0.5);
+    }
     const u = smooth((x - 45) / 3);
     const pos = shot.pos.clone().lerp(home.pos, u);
     const held = 2 * Math.atan(shot.pos.distanceTo(shot.at) * Math.tan(shot.fov * Math.PI / 360) / pos.distanceTo(shot.at)) * 180 / Math.PI;
