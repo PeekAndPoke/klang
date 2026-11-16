@@ -46,8 +46,8 @@ const metal = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.25,
 const KINDS = {
   //        scale: nut to bridge; body: half length, half width; strings; tilt of the neck; how the right hand plays
   //        (swing: how far it goes through the strings; arm: the share of that the arm does, the rest is the wrist)
-  guitar: { scale: 0.64, body: [0.22, 0.165], strings: 6, neck: 0.044, tilt: 0.50, swing: 0.075, tau: 0.028, hang: -0.09, arm: 0.2, outline: 'double', pickups: [0.01, 0.075] },
-  bass: { scale: 0.84, body: [0.25, 0.17], strings: 4, neck: 0.05, tilt: 0.62, swing: 0.022, tau: 0.02, hang: -0.13, arm: 1, outline: 'bass', pickups: [0.0, 0.07] },
+  guitar: { scale: 0.64, body: [0.22, 0.165], strings: 6, neck: 0.044, tilt: 0.50, swing: 0.095, tau: 0.028, hang: -0.09, arm: 0.15, outline: 'double', pickups: [0.01, 0.075] },
+  bass: { scale: 0.84, body: [0.25, 0.17], strings: 4, neck: 0.05, tilt: 0.62, swing: 0.040, tau: 0.02, hang: -0.13, arm: 0.35, outline: 'bass', pickups: [0.0, 0.07] },
 };
 
 export class StringPlayer {
@@ -301,7 +301,7 @@ export class StringPlayer {
     const wristR = place(this.bridge + 0.13 * s, fret.pick - strum * k.swing * fret.wide * k.arm * s, 0.03 * s)
       .addScaledVector(X, -0.07 * s).addScaledVector(Y, 0.05 * s).addScaledVector(Z, 0.05 * s);
     rig.hand('R', wristR, rig.dir(-0.9, -0.1, -0.7));
-    aim('R', onStrings.clone().sub(wristR), 0.55);
+    aim('R', onStrings.clone().sub(wristR), 0.80);
 
     if (rig.eyes) { rig.eyes.emissiveIntensity = 2 + 13 * Math.min(1.6, energy); }
   }

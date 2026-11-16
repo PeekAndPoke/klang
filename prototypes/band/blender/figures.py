@@ -57,23 +57,13 @@ BASE = dict(
     eye=(1.0, 0.35, 0.05), eye_size=1.0,
 )
 
-# The right hand of who plays with a plectrum: half closed. The hand ends at its knuckles (its tip is moved up),
-# the fingers come back from there toward the palm, the thumb lies against them, and the plectrum's point stands
-# out between the two. All of it moves with the hand's one bone. (x: toward the body.)
-def picking_hand(size=1.0):
-    return dict(
-        move=dict(handR=(0, 0, 0.045)),
-        extras=[("fingersR", "handR", (0.026 * size, -0.012 * size, 0.030 * size), 0.019 * size, 1.0, False),
-                ("thumbR", "handR", (0.030 * size, -0.034 * size, 0.046 * size), 0.014 * size, 1.0, False),
-                ("pickR", "fingersR", (0.010 * size, -0.020 * size, -0.014 * size), 0.005 * size, 1.0, False)])
-
-
-def with_pick(figure, size=1.0):
-    """[figure] with the half closed right hand added to what it moves and adds itself."""
-    hand = picking_hand(size)
+# The right hand of who picks strings is a little shorter than a plain hand: held half closed, it reaches less far.
+# (A hand modelled closed, with fingers, a thumb and a plectrum, was tried and looked crippled: the maintainer,
+# 2026-11-16; see 6d4c101b7.)
+def with_pick(figure):
+    """[figure] with its right hand shortened."""
     out = dict(figure)
-    out["move"] = {**figure.get("move", {}), **hand["move"]}
-    out["extras"] = list(figure.get("extras", [])) + hand["extras"]
+    out["move"] = {**figure.get("move", {}), "handR": (0, 0, 0.032)}
     return out
 
 
@@ -137,8 +127,8 @@ FIGURES = {
                             ("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
                             ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
 }
-for _key, _size in (("guitar1", 0.88), ("bass", 0.78), ("guitar2", 1.1)):
-    FIGURES[_key] = with_pick(FIGURES[_key], _size)
+for _key in ("guitar1", "bass", "guitar2"):
+    FIGURES[_key] = with_pick(FIGURES[_key])
 ORDER = ["guitar1", "bass", "drums", "eimer", "marimba", "guitar2"]
 
 
