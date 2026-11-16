@@ -76,7 +76,15 @@ function frontAt(t) {
   const bar = 240 / BPM;
   const x = ((t / bar) % 40 + 40) % 40;
   if (params.has('front')) { return parseFloat(params.get('front')); }
-  return t < 0 ? 0 : smooth01((x - 26) * bar / 1.0) * smooth01((34 - x) * bar / 1.0);
+  if (t < 0) { return 0; }
+  // and as a stroboscope: for two bars in every forty it flashes on the eighths (about five a second), short and
+  // hard, the band frozen on the wall in each flash. Not faster on purpose: quick flashing over the whole picture
+  // can trigger seizures in people with photosensitive epilepsy. ?nostrobe switches it off.
+  if (x >= 12 && x < 14 && !params.has('nostrobe')) {
+    const eighth = (t * BPM / 60 * 2) % 1;
+    return eighth < 0.20 ? 1 : 0;
+  }
+  return smooth01((x - 26) * bar / 1.0) * smooth01((34 - x) * bar / 1.0);
 }
 function analog(t) {
   front = frontAt(t);
