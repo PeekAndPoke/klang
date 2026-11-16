@@ -98,6 +98,8 @@ function analog(t) {
   front = frontAt(t);
   // the wall is black unless the front lamp is on: it takes no light from the other lamps at all
   back.material.color.setHex(0x8a8f9c).multiplyScalar(front);
+  // black means gone: the glossy lines of its pattern still caught the other lamps (the maintainer's picture)
+  back.visible = front > 0.002;
   for (const { light, base, seed, group } of lamps) {
     const wander = 0.060 * Math.sin(t * 0.23 + seed) + 0.040 * Math.sin(t * 0.61 + seed * 2.3) + 0.025 * Math.sin(t * 1.37 + seed * 0.7);
     const shiver = 0.012 * Math.sin(t * 9.1 + seed * 3.1) + 0.008 * Math.sin(t * 14.7 + seed * 1.9);
