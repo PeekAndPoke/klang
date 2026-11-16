@@ -60,7 +60,7 @@ function frame() {
   before = nowMs;
   counted++;
   if (nowMs - since >= 500) { fps = counted * 1000 / (nowMs - since); hud.dataset.worst = worst.toFixed(0); counted = 0; worst = 0; since = nowMs; }
-  hud.textContent = `seed ${seed}  ${fps.toFixed(0)} fps  (slowest frame ${hud.dataset.worst || '-'} ms)   t ${t.toFixed(2)} s  beat ${(t * BPM / 60).toFixed(2)}`;
+  hud.textContent = `camera: ${look.what()}   seed ${seed}  ${fps.toFixed(0)} fps  (slowest frame ${hud.dataset.worst || '-'} ms)   t ${t.toFixed(2)} s  beat ${(t * BPM / 60).toFixed(2)}`;
   frames++;
   if (frames > 2) { window.__ready = true; }
   requestAnimationFrame(frame);

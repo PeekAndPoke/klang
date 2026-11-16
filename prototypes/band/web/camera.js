@@ -43,7 +43,7 @@ export const LOOKS = {
   ],
 };
 // The stadium shot: from far back and high in the audience, the whole stage small above a field of held-up lights
-export const STADIUM = { pos: [5.0, 9.0, 34.0], at: [0.0, 2.2, 3.0], fov: 30 };
+export const STADIUM = { pos: [5.0, 11.0, 46.0], at: [0.0, 0.0, 14.0], fov: 27 };
 // The stage from elsewhere
 export const ANGLES = [
   { pos: [-7.2, 1.1, 5.6], at: [0.0, 1.0, 0.6], fov: 40 },        // from the left, low
@@ -199,20 +199,28 @@ export class Choreography {
   /** The camera at [t]: { pos, at, fov }. */
   at(t) {
     const home = this.home(t);
+    this.label = 'total';
     if (t < this.start) { return home; }
     const n = Math.floor((t - this.start) / this.round);
     const x = (t - this.start - n * this.round) / this.cycle;           // 0 to 48, in bars
     const kind = this.kind(n);
-    if (kind === 'circle') { return x < CIRCLE ? home : this.circle(n, smoother((x - CIRCLE) / (ROUND - CIRCLE)), home); }
+    if (kind === 'circle') {
+      if (x < CIRCLE) { return home; }
+      this.label = 'circle round the band';
+      return this.circle(n, smoother((x - CIRCLE) / (ROUND - CIRCLE)), home);
+    }
     const dolly = this.chance(n, 0, 6) < 0.34;
     if (x < FIRST || (x >= BACK && !dolly)) { return home; }
     let shot;
     if (kind === 'arc') {
       shot = this.arc(n, Math.min(1, (x - FIRST) / (BACK - FIRST)));
+      this.label = `arc round ${this.subject(n, 0).name}`;
       if (x < BACK) { return shot; }
     } else {
       const i = Math.min(2, Math.floor((x - FIRST) / 3));
-      shot = this.shot(this.subject(n, i));
+      const subject = this.subject(n, i);
+      shot = this.shot(subject);
+      this.label = `look ${i + 1} of 3: ${subject.name || (subject.angle === STADIUM ? 'stadium' : 'the stage from elsewhere')}`;
       if (x < BACK) {
         // the look itself is never quite still: a very slow push in, a slow slide to one side (the other side on
         // the next look) of about a twentieth of its distance, and a faint float up and down
@@ -224,6 +232,7 @@ export class Choreography {
       this.slide(shot, i, 1);
     }
     // back by a dolly zoom over five bars, leaving and arriving very softly
+    this.label = 'dolly back to the total';
     return this.back(shot, home, smoother((x - BACK) / (ROUND - BACK)));
   }
 }

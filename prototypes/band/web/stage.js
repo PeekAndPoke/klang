@@ -5,7 +5,7 @@
 
 // The stage: floor, the wall behind it, the lamps, the drummer's riser. Nothing here knows the band.
 import * as THREE from 'three';
-import { params, seed, BPM } from './show.js';
+import { params, seed, BPM, energyAt } from './show.js';
 import { smooth, hash01 } from './util.js';
 import { wall, dress } from './pattern.js';
 import { groundFog } from './fog.js';
@@ -165,7 +165,9 @@ export function buildStage() {
       light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : strobing ? 0 : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
     }
     if (fog) { fog(t, lamps, camera); }
-    audience(t, renderer.domElement.height);
+    // the crowd moves with the music: still while it waits, and by how loud it is once it plays
+    const sound = waiting || t < 0 ? null : energyAt(t);
+    audience(t, renderer.domElement.height, sound ? Math.min(1, sound.slow) : 0, sound ? Math.min(1, sound.low) : 0, t * BPM / 60);
   }
 
   /**

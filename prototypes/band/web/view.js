@@ -33,6 +33,7 @@ export function initView(scene, camera, rigs) {
   //   a a flight round the whole band (again: the other way round)    s a slow way round the last player chosen
   //   d a dolly zoom back to the total from wherever the camera is
   const bar = 240 / BPM;
+  let label = 'fixed';
   let hand = null, shown = null, clock = 0, player = 'guitar1', lookOf = {}, way = 1;
   const ANGLE_KEYS = { e: ANGLES[0], r: ANGLES[1], t: ANGLES[2], y: ANGLES[3], z: ANGLES[3], w: STADIUM };
   if (choreography) {
@@ -58,6 +59,8 @@ export function initView(scene, camera, rigs) {
     if (!hand) { return null; }
     const home = choreography.home(t);
     const u = hand.from === undefined ? 0 : Math.max(0, t - hand.from);
+    label = 'by hand: ' + (hand.kind === 'shot' ? (hand.subject.name || (hand.subject.angle === STADIUM ? 'stadium' : 'the stage from elsewhere'))
+      : hand.kind === 'circle' ? 'circle round the band' : hand.kind === 'arc' ? `arc round ${hand.name}` : hand.kind === 'back' ? 'dolly back' : 'total');
     if (hand.kind === 'shot') { return choreography.shot(hand.subject); }
     if (hand.kind === 'circle' && u < 16 * bar) { return choreography.circleBy(hand.way, smoother(u / (16 * bar)), home); }
     if (hand.kind === 'arc') { return choreography.arcBy(hand.name, hand.way, Math.min(1, u / (9 * bar))); }
@@ -103,7 +106,9 @@ export function initView(scene, camera, rigs) {
       camera.position.set(p.x + 1.6, 1.5, p.z + 4.2); camera.lookAt(p.x, 1.0, p.z); return;
     }
     if (choreography) {
-      const shot = byHand(t) || choreography.at(t);
+      const mine = byHand(t);
+      const shot = mine || choreography.at(t);
+      if (!mine) { label = choreography.label; }
       shown = shot;
       camera.position.copy(shot.pos);
       camera.lookAt(shot.at);
@@ -117,11 +122,14 @@ export function initView(scene, camera, rigs) {
   // begins that much later, so the stage is as clear from the back of the audience as from its front.
   const near = scene.fog ? scene.fog.near : 0, deep = scene.fog ? scene.fog.far - scene.fog.near : 0;
   const usual = HOME.pos.distanceTo(HOME.at);
-  return function look(t) {
+  function look(t) {
     place(t);
     if (scene.fog) {
       scene.fog.near = near + Math.max(0, camera.position.distanceTo(HOME.at) - usual);
       scene.fog.far = scene.fog.near + deep;
     }
-  };
+  }
+  /** What the camera is doing just now, in words (for the line at the top). */
+  look.what = () => label;
+  return look;
 }
