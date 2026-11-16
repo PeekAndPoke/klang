@@ -38,11 +38,20 @@ also while its code is edited.
    - `lead` (the marimba): other notes every time, and another number of them (692, 550, 512 and 672 events in the
      same 32 cycles). Its random doubling is drawn anew on every asking, not from the time asked about.
 
-   So asking ahead is a forecast, not the truth. What follows: the events really played come from the scheduler's
-   own askings (as the recording's did), two cycles ahead; asking further ahead serves only what plans far ahead
-   (the strolls, the camera, the bass drum runs) and is replaced by the truth as it arrives. Whether the song's or
-   the pattern language's randomness should be the same on every asking is a question for the pattern language,
-   not for the live act.
+   So as things are, asking ahead is a forecast, not the truth.
+
+   **The maintainer's decision (2026-11-16):** "we need to fix the randomness even when there is no seed set...
+   no seed set could mean 'set a random seed' so that every playback differs. But querying the same cycles must
+   be idempotent". So: a song without a seed gets one random seed for the whole playback, and the same cycles
+   asked twice give the same events. Once that holds, the live act can know the song ahead exactly.
+
+   **Where it comes from: not found yet.** Probed (2026-11-16, throwaway tests): every random construct of the
+   pattern language asked twice on its own gives the same events (`a|b`, `ply` with a choice, `rand`, `perlin`,
+   `berlin`, `degradeBy`, `sometimes`, `shuffle`, `late` with a noise, `seed`, also sped up and combined as the
+   song's `lead` has them). Only the whole song does not. One of them is not the same when asked in two halves
+   (`late` with `berlin`, without `seg`). The next step is to ask the song part by part (each of its exports)
+   until the part and the construct are found. The fix belongs to the pattern language (`sprudel`).
+
 2. **Joining a song that already plays.** The maintainer: "probably skip the walk-in or similar". The clock today
    owns the start (a click, a walk-in of 15 s, then the music): mounted beside music that runs, it must take the
    music's time as it is.
@@ -60,8 +69,8 @@ also while its code is edited.
 ## The work
 
 1. Done (in review): the `Music` seam, the recording moved onto it, the same picture as before.
-2. Done: point 1 above is measured. The `Music` for a live song gives the played events (two cycles ahead) and a
-   forecast beyond them.
+2. Point 1 above is measured and decided: asking the same cycles twice is to give the same events. Open: find
+   where the song's askings differ (part by part), and fix it in the pattern language.
 3. The clock beside music it does not own (points 2 and 3).
 4. The app's side: a `Music` over the playing song (events asked ahead, the playback's clock, the analyser's
    loudness), and a visual in the app's `visuals/` that mounts the live act.
