@@ -71,18 +71,22 @@ let house = 1;
 // The light changes sides now and then: for eight bars in every forty the lamps behind go down and one lamp low at the
 // front comes up, so the band throws big shadows up the wall. A second each way.
 let front = 0;
+let strobing = false;
 function frontAt(t) {
   if (frozen === null && audio && !playing) { return 0; }
   const bar = 240 / BPM;
   const x = ((t / bar) % 40 + 40) % 40;
   if (params.has('front')) { return parseFloat(params.get('front')); }
+  strobing = false;
   if (t < 0) { return 0; }
-  // and as a stroboscope: for two bars in every forty it flashes on the eighths (about five a second), short and
-  // hard, the band frozen on the wall in each flash. Not faster on purpose: quick flashing over the whole picture
-  // can trigger seizures in people with photosensitive epilepsy. ?nostrobe switches it off.
-  if (x >= 12 && x < 14 && !params.has('nostrobe')) {
-    const eighth = (t * BPM / 60 * 2) % 1;
-    return eighth < 0.20 ? 1 : 0;
+  // and as a stroboscope: for two bars in every forty it flashes on the sixteenths (about ten a second, the
+  // maintainer's choice, 2026-11-16: the eighths were too slow), all other lamps off, the band frozen on the wall
+  // in each flash. Flashing this fast over the whole picture can trigger seizures in people with photosensitive
+  // epilepsy: a public showing needs a warning before it. ?nostrobe switches it off.
+  strobing = x >= 12 && x < 14 && !params.has('nostrobe');
+  if (strobing) {
+    const sixteenth = (t * BPM / 60 * 4) % 1;
+    return sixteenth < 0.28 ? 1 : 0;
   }
   return smooth01((x - 26) * bar / 1.0) * smooth01((34 - x) * bar / 1.0);
 }
@@ -96,7 +100,7 @@ function analog(t) {
     // a sag: a dip of a sixth, about every twenty seconds, at its own moment per lamp
     const phase = ((t + seed * 5.3) % 19.7 + 19.7) % 19.7;
     const sag = phase < 1.2 ? 0.16 * Math.sin(Math.PI * phase / 1.2) ** 2 : 0;
-    light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
+    light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : strobing ? 0 : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
   }
 }
 function spot(x, y, z, color, intensity, tx, tz, shadow) {
