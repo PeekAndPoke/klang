@@ -50,6 +50,7 @@ scene.background = new THREE.Color(0x020308);
 scene.fog = new THREE.Fog(0x020308, 9, 22);
 const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 60);
 
+const later = [];
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.35, metalness: 0.2 }));
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
@@ -59,6 +60,9 @@ scene.add(floor);
 const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95 }));
 back.position.set(0, 6, -5);
 back.receiveShadow = true;
+// the wall wears the frontwoman's pattern, the braid, laid flat and large: a little darker in its lines and glossier,
+// so it shows when the front lamp is on
+later.push(() => pattern(back.material, 'braidWall', 0.35, 0.95, null, 0, 0.5));
 scene.add(back);
 scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
 
@@ -340,6 +344,7 @@ function eyeContact(t) {
 }
 
 const smooth01 = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+for (const run of later) { run(); }
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 
 /** A stroke's height over its beat: up slowly, down fast; 0 at the hit, at both ends. */

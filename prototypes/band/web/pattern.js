@@ -23,18 +23,21 @@ const PATTERNS = {
   braid: '1.0 - smoothstep(0.10, 0.24, min(min(abs(sin(atan(p.z, p.x) * 5.0 + 1.6 * sin(p.y * 14.0))), abs(sin(atan(p.z, p.x) * 5.0 - 1.6 * sin(p.y * 14.0)))), 1.6 * abs(sin(p.y * 7.0))))',
   // long hair hanging: fine strands down its length, a little wavy
   strands: 'smoothstep(0.25, 0.5, fract(p.x * 75.0 + 0.5 * sin(p.y * 11.0))) * (1.0 - smoothstep(0.62, 0.9, fract(p.x * 75.0 + 0.5 * sin(p.y * 11.0))))',
+  // the braid laid flat, for a wall (x across, y up, in metres): the same woven lines between hoops, a pace wide
+  braidWall: '1.0 - smoothstep(0.06, 0.16, min(min(abs(sin(p.x * 3.0 + 1.6 * sin(p.y * 4.2))), abs(sin(p.x * 3.0 - 1.6 * sin(p.y * 4.2)))), 1.6 * abs(sin(p.y * 2.1))))',
   // even hoops
   hoops: 'smoothstep(0.42, 0.58, fract(p.y * 10.0))',
 };
 
 /**
  * Gives [material] (a body's) the pattern [kind]; [gloss] and [matt] are the two roughnesses.
+ * [shade]: how much darker the pattern also is in colour (0: in the reflections only, as on the bodies).
  * [glitter]: the share of the skin's grains that are spangles (see below).
  * [hair]: { centre (the head's middle, in the body's rest space), radius }: on the head, behind a hairline that
  * runs from the brow back over the ears, the pattern is hair combed straight back: fine glossy strands that run
  * from the front over the skull to the nape, a little uneven, as wet or oiled hair catches the light.
  */
-export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, glitter = 0.14) {
+export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, glitter = 0.14, shade = 0) {
   material.metalness = 0;
   const combed = hair ? `
     { vec3 h = (vRest - vec3(${hair.centre.x.toFixed(4)}, ${hair.centre.y.toFixed(4)}, ${hair.centre.z.toFixed(4)})) / ${hair.radius.toFixed(4)};
@@ -58,8 +61,9 @@ export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, 
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\nfloat klOn; { vec3 p = vRest; klOn = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, klOn); }${sparkle}${combed}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; diffuseColor.rgb *= 1.0 - ${shade.toFixed(3)} * (${PATTERNS[kind]}); }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n{ ${GRAIN} normal = normalize(normal + (vec3(grain, fract(grain * 17.3), fract(grain * 113.7)) - 0.5) * (0.12 + 0.50 * spangle)); }`);
   };
-  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-ground-glitter' + glitter;
+  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-ground-glitter' + glitter + '-shade' + shade;
   material.needsUpdate = true;
 }
