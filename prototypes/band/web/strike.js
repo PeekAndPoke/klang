@@ -98,9 +98,15 @@ export function setEnergy(now) { energy = now; }
 
 const X_AXIS = new THREE.Vector3(1, 0, 0), Y_AXIS = new THREE.Vector3(0, 1, 0), Z_AXIS = new THREE.Vector3(0, 0, 1);
 
-/** A number from 0 to 1 that belongs to [index] and [seed], always the same one. */
+// The show's seed: every chance in the choreography is drawn under it, so each seed is another performance (who
+// nods how at which moment, the wandering, the fits, the looks, the strolls) and the same seed the same one again.
+let show = 0;
+export function setShow(seed) { show = seed; }
+export function showSeed() { return show; }
+
+/** A number from 0 to 1 that belongs to [index] and [seed], always the same one under the show's seed. */
 function own(index, seed) {
-  const x = Math.sin(index * 12.9898 + seed * 78.233) * 43758.5453;
+  const x = Math.sin(index * 12.9898 + seed * 78.233 + show * 0.6180339) * 43758.5453;
   return x - Math.floor(x);
 }
 

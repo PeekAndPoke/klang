@@ -7,7 +7,7 @@
 // right hand plucks (bass) or strums down and up (guitar) on every note; the strings light up when played.
 // All places are in the figure's own measures; the instrument hangs from the trunk and moves with it.
 import * as THREE from 'three';
-import { around, Mover } from './strike.js';
+import { around, Mover, showSeed } from './strike.js';
 
 const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const lacquer = new THREE.MeshStandardMaterial({ color: 0x0a0a0d, roughness: 0.25, metalness: 0.3 });
@@ -177,7 +177,7 @@ export class StringPlayer {
     const g = this.style.glance;
     if (!g) { return 0; }
     const slot = Math.floor(t / g.every);
-    const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + this.mover.seed * 78.233) * 43758.5453; return x - Math.floor(x); };
+    const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + this.mover.seed * 78.233 + showSeed() * 0.6180339) * 43758.5453; return x - Math.floor(x); };
     if (roll(0) > g.chance) { return 0; }
     const start = slot * g.every + 0.8 + roll(1) * (g.every - 6);
     const hold = 2.2 + 2.0 * roll(2);

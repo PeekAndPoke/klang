@@ -7,7 +7,7 @@
 // trumpet to the lips before a phrase, fingers the valves on every note, points the bell higher for a high note and
 // lets it sink between phrases. The bell glows while a note sounds. All places are in the figure's own measures.
 import * as THREE from 'three';
-import { around, Mover } from './strike.js';
+import { around, Mover, showSeed } from './strike.js';
 
 const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const brass = new THREE.MeshStandardMaterial({ color: 0x3a2c12, roughness: 0.28, metalness: 0.95, side: THREE.DoubleSide });
@@ -91,7 +91,9 @@ export class Trumpet {
     const ease = (x) => smooth(Math.min(1, Math.max(0, x)));
     // a stroll is rounds: out from his place, about, back to it, and there he waits a while before the next round.
     // The rounds differ in length, so it is no clockwork
-    const ROUNDS = [36, 50, 42, 58];
+    // (under the show's seed: the rounds start elsewhere in their order, and her way is another one)
+    const z = showSeed();
+    const ROUNDS = [[36, 50, 42, 58], [50, 42, 58, 36], [42, 58, 36, 50], [58, 36, 50, 42]][z % 4];
     let x = t - k.from, round = 0;
     while (x > ROUNDS[round % ROUNDS.length]) { x -= ROUNDS[round % ROUNDS.length]; round++; }
     const length = ROUNDS[round % ROUNDS.length];
@@ -102,9 +104,9 @@ export class Trumpet {
     const tau = (t - k.from) + (0.8 / w) * Math.sin(w * (t - k.from));
     const s = this.s;
     return new THREE.Vector3(
-      out * (0.60 * Math.sin(0.15 * tau) + 0.18 * Math.sin(0.34 * tau + 1.0) + 0.30) * s,
+      out * (0.60 * Math.sin(0.15 * tau + z * 1.7) + 0.18 * Math.sin(0.34 * tau + 1.0 + z * 2.3) + 0.30) * s,
       0,
-      out * (0.18 * Math.sin(0.21 * tau + 2.0) + 0.30) * s,
+      out * (0.18 * Math.sin(0.21 * tau + 2.0 + z * 0.9) + 0.30) * s,
     );
   }
 

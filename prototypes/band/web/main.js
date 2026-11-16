@@ -15,13 +15,20 @@ import { Marimba } from './marimba.js';
 import { Trumpet } from './trumpet.js';
 import { StringPlayer } from './strings.js';
 import { loadSong, drumHits, notesOf, strumsOf } from './song.js';
-import { setEnergy } from './strike.js';
+import { setEnergy, setShow } from './strike.js';
 import { pattern, wall } from './pattern.js';
 import { enter, stepLegs, walkPose, capture, blend } from './entrance.js';
 import { Choreography, HOME } from './camera.js';
 
 const params = new URLSearchParams(location.search);
 window.__debug = params.has('debug');
+// Another performance every time the page is opened: one seed for all of the choreography (how each one moves with
+// the music, the looks, the strolls, the lights' turns, the camera). ?seed=7 gives a certain one again; a frozen
+// still without a seed takes seed 0, so stills stay comparable.
+const showSeedNow = params.has('seed') ? parseInt(params.get('seed'), 10)
+  : params.has('t') ? 0 : Math.floor(Math.random() * 100000);
+setShow(showSeedNow);
+const cameraSeed = showSeedNow;
 const frozen = params.has('t') ? parseFloat(params.get('t')) : null;
 const view = params.get('view') || 'front';
 // The song as recorded, when it is there (?test: the test beat instead)
@@ -79,7 +86,8 @@ let strobing = false;
 function frontAt(t) {
   if (frozen === null && audio && !playing) { return 0; }
   const bar = 240 / BPM;
-  const x = ((t / bar) % 40 + 40) % 40;
+  // (the turns of the light fall elsewhere in the song under each seed)
+  const x = ((t / bar + (showSeedNow * 7) % 40) % 40 + 40) % 40;
   if (params.has('front')) { return parseFloat(params.get('front')); }
   strobing = false;
   if (t < 0) { return 0; }
@@ -101,7 +109,9 @@ function analog(t) {
   wallFront(Math.min(1, front));
   // without the front lamp it is ever so slightly there by itself (its own faint glow, see pattern()): over the full
   // width, darker to the sides; it catches no other lamp
-  for (const { light, base, seed, group } of lamps) {
+  for (const lamp of lamps) {
+    const { light, base, group } = lamp;
+    const seed = lamp.seed + (showSeedNow % 97) * 0.37;
     const wander = 0.060 * Math.sin(t * 0.23 + seed) + 0.040 * Math.sin(t * 0.61 + seed * 2.3) + 0.025 * Math.sin(t * 1.37 + seed * 0.7);
     const shiver = 0.012 * Math.sin(t * 9.1 + seed * 3.1) + 0.008 * Math.sin(t * 14.7 + seed * 1.9);
     // a sag: a dip of a sixth, about every twenty seconds, at its own moment per lamp
@@ -309,7 +319,7 @@ let herNotes = null;
 function contactAt(t) {
   if (t < 1) { return null; }
   const slot = Math.floor(t / CONTACT.every);
-  const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + 311.7 + showSeedNow * 0.6180339) * 43758.5453; return x - Math.floor(x); };
   if (roll(0) > CONTACT.chance) { return null; }
   // one of the two starts it; the other notices and answers one to three seconds later
   const drawn = PAIRS[Math.floor(roll(1) * PAIRS.length) % PAIRS.length];
@@ -389,9 +399,6 @@ function groove(rig, beat, phase) {
 
 // The camera's choreography, when the song is there (?still: the wide view only)
 const times = (tags) => (song ? tags.flatMap((tag) => (song.byTag[tag] || []).map((e) => e.t)).sort((a, b) => a - b) : []);
-// another camera show every time the page is opened; ?seed=7 gives a certain one again (a frozen still without a
-// seed takes seed 0, so stills stay comparable)
-const cameraSeed = params.has('seed') ? parseInt(params.get('seed'), 10) : frozen !== null ? 0 : Math.floor(Math.random() * 100000);
 const choreography = song && !params.has('still') ? new Choreography(rigs, {
   drums: times(['kick', 'snare']), bass: times(['bass']), guitar1: times(['guitar1']), guitar2: times(['guitar2', 'guitar3']),
   marimba: times(['lead']), eimer: times(['trommel']),
@@ -483,7 +490,7 @@ function frame() {
     if (!rig.eyes) { return; }
     const noise = (x, seed) => {
       const n = Math.floor(x), u = x - n, e = u * u * (3 - 2 * u);
-      const at = (k) => { const v = Math.sin((k + seed * 57.3) * 12.9898) * 43758.5453; return v - Math.floor(v); };
+      const at = (k) => { const v = Math.sin((k + seed * 57.3) * 12.9898 + showSeedNow * 0.6180339) * 43758.5453; return v - Math.floor(v); };
       return at(n) + (at(n + 1) - at(n)) * e;
     };
     const waver = 0.62 * noise(t * 0.7, i + 1) + 0.38 * noise(t * 2.9, i + 11);
@@ -492,7 +499,7 @@ function frame() {
   // everyone breathes: at their own pace (14 to 19 breaths a minute), in a little faster than out, and deeper when
   // the band is loud
   Object.values(rigs).forEach((rig, i) => {
-    const phase = 2 * Math.PI * (0.23 + 0.016 * ((i * 7) % 6)) * t + i * 1.9;
+    const phase = 2 * Math.PI * (0.23 + 0.016 * ((i * 7) % 6)) * t + i * 1.9 + showSeedNow * 0.7;
     const breath = 0.5 + 0.5 * Math.sin(phase + 0.45 * Math.sin(phase));
     rig.breathe(breath, 0.045 * (0.7 + 0.6 * energyAt(t).slow));
   });
