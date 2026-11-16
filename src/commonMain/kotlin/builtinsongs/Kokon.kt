@@ -139,7 +139,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.8, db =  4.20)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.6, db =  4.20)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  5.00)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  3.00)        // bark:  the upper-mid speaker peak
   )
@@ -152,7 +152,7 @@ let cab1x12 = Ign.fn(x => x
   .eq(e => e
     .band(freq = 3200, q = 1.0, db = 3.0)          // chime: broad upper presence
   )
-  .lowpass(6500, 0.707, x => x.passes(2)))         // soft, late roll-off, some air stays
+  .lowpass(7500, 0.707, x => x.passes(2)))         // soft, late roll-off, some air stays
 
 // Small combo: a tiny speaker in a tiny box. No bass, a boxy honk, and the highs die early.
 let cabCombo = Ign.fn(x => x
@@ -308,7 +308,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -396,8 +396,8 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .ignp("decay", "[2.0 1.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.90 0.85 0.90 0.93".sub(perlin(0.0, 0.2).seed(2)))
   .gain(0.45).late(perlin(0.0005, 0.0010).seed(2)).apply(
-    x => x.pan(0.80),
-    x => x.pan(0.20),
+    x => x.pan(0.95),
+    x => x.pan(0.05),
   ).cylinder(4)
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
@@ -406,7 +406,7 @@ export wings = chords => n(chords).ply(16)
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[2.0 1.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.92 0.85 0.90 0.94".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.45).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.40).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.50),
     // x => x.pan(0.10),
   ).cylinder(4)
@@ -415,7 +415,7 @@ export wings = chords => n(chords).ply(16)
 export strike = chords => n(chords)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
   .ignp("decay", 3.5).clip(1)
-  .gain(0.42).apply(x => x.pan(0.10),x => x.pan(0.90))
+  .gain(0.33).apply(x => x.pan(0.10),x => x.pan(0.90))
   .cylinder(5)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
@@ -423,7 +423,7 @@ export chime = notes => n(notes.add(14))
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.08).pregain(0.45)
   .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.1).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.10)))
-  .gain(0.33).pan(0.75).late(perlin(0.001, 0.002))
+  .gain(0.32).pan(0.75).late(perlin(0.001, 0.002))
   .tremolo(rate = beatRate(0.166), depth = perlin(0.100, 0.150))     // The guitar finger
   .vibrato(rate = beatRate(0.166), semitones = perlin(0.020, 0.030))
   .cylinder(10)
@@ -442,12 +442,12 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(0.85).pan(0.5)
+  .gain(0.70).pan(0.5)
   .cylinder(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
-  .gain(0.40).pan(0.575)
+  .gain(0.39).pan(0.575)
   .lpf(freq = "13500".add(saw(0, 1200).slow(12)), q = 0.5)
   .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own cylinder for the dalay!
   .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
@@ -463,7 +463,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.92).ignp("harmonics", 1.00)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.50).cylinder(15)
+  .clip(0.90).gain(0.45).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -521,7 +521,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.45).pan(0.25).superimpose(pan(0.75)),
+  spin(cocoonArp.add(7)).ply(2).gain(0.48).pan(0.25).superimpose(pan(0.75)),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -540,8 +540,8 @@ let lifting = stack(
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
-  spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.40).ignp("sustain", 0.15).clip(0.66),
-  soar("[4@6 ~@2]").gain(0.40)
+  spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.35).ignp("sustain", 0.15).clip(0.66),
+  soar("[4@6 ~@2]").gain(0.35)
     .tremolo(rate = beatRate(0.25), depth = 0.25)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.5),

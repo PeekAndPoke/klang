@@ -128,7 +128,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.8, db =  4.20)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.6, db =  4.20)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  5.00)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  3.00)        // bark:  the upper-mid speaker peak
   )
@@ -235,12 +235,12 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
     .mul(0.2)
-    .distort(0.2, "soft")
+    .distort(0.1, "soft")
     .classic()
 })()
 
