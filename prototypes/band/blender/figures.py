@@ -113,17 +113,15 @@ FIGURES = {
                   move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.022, -0.004),
                             # proud shoulders: level, not sloping, and held back a little
                             shoulderL=(0, 0.014, 0.026), shoulderR=(0, 0.014, 0.026)),
-                  extras=[("bustL", "chest", (0.058, -0.084, -0.035), 0.058, 1.0, False),
-                          ("bustR", "chest", (-0.058, -0.084, -0.035), 0.058, 1.0, False),
-                          ("nose", "head", (0, -0.094, -0.014), 0.014, 1.0, False)]),
+                  bust=dict(apart=0.054, down=0.045, out=0.036, size=0.050),
+                  extras=[("nose", "head", (0, -0.094, -0.014), 0.014, 1.0, False)]),
     # the marimba: a woman: narrow shoulders, a waist, hips, long legs, a long tail of hair
     "marimba": dict(height=0.97, scale=dict(torso=0.90, waist=0.74, chest=0.80, shoulder=0.72, arm=0.70, hand=0.82,
                                             thigh=1.0, leg=0.80, neck=0.72, head=0.95),
                     radius=dict(hips=1.20, ribs=0.86, hip=1.06, calf=0.95), shoulders=0.84, hips=1.06, neck=1.15,
                     eye=(0.4, 1.0, 0.8), eye_size=1.0,
-                    extras=[("bustL", "chest", (0.062, -0.085, -0.035), 0.060, 1.0, False),
-                            ("bustR", "chest", (-0.062, -0.085, -0.035), 0.060, 1.0, False),
-                            ("hair1", "crown", (0, 0.085, 0.015), 0.062, 1.0, False),
+                    bust=dict(apart=0.056, down=0.045, out=0.038, size=0.052),
+                    extras=[("hair1", "crown", (0, 0.085, 0.015), 0.062, 1.0, False),
                             ("hair2", "hair1", (0, 0.06, -0.14), 0.050, 1.0, True),
                             ("hair3", "hair2", (0, 0.02, -0.18), 0.040, 1.0, True),
                             ("hair4", "hair3", (0, 0.01, -0.18), 0.026, 1.0, True),
@@ -453,6 +451,28 @@ def shape_face(body, head, hs, taper=0.0, throat=0.0):
 SOCKET = 0.010
 
 
+def shape_bust(body, chest, H, apart, down, out, size):
+    """
+    A hint of breasts, drawn out of the chest's own skin (two added pieces left a flat plate with a crease round
+    it). Each is a soft round rise on the chest's front: [apart] from the middle, [down] below the chest's point,
+    [out] high at its middle and [size] across (its fall-off), all in metres at a figure of height 1. A little
+    fuller below its middle than above, as weight makes it.
+    """
+    for side in (1.0, -1.0):
+        cx, cz = chest.pos.x + side * apart * H, chest.pos.z - down * H
+        for v in body.data.vertices:
+            dx, dz = (v.co.x - cx) / (size * H), (v.co.z - cz) / (size * H)
+            if dx * dx + dz * dz > 12.0:
+                continue
+            # on the front only, fading out round the sides (no edge where the waist's skin lies further back)
+            front = min(1.0, max(0.0, (chest.pos.y + 0.045 * H - v.co.y) / (0.05 * H)))
+            front = front * front * (3 - 2 * front)
+            dz *= 1.25 if dz > 0 else 0.85
+            rise = out * H * front * math.exp(-(dx * dx + dz * dz) / 2)
+            v.co.y -= rise
+            v.co.z -= 0.10 * rise
+
+
 def add_eyes(body, p, head, hs, surface, skins):
     """
     [surface]: the points of the head's real surface (skin and skull), taken before the first eye is joined.
@@ -522,6 +542,8 @@ def build(key):
     body.data.materials.append(material(key + "_dark", DARK))
     body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
 
+    if p.get("bust"):
+        shape_bust(body, P["chest"], p["height"], **p["bust"])
     head = P["head"]
     hs = head.radius / 0.092
     if p.get("face"):

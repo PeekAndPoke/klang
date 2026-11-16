@@ -73,13 +73,14 @@ export function initView(scene, camera, rigs) {
     clock = t;
     if (params.has('head') && rigs[params.get('head')]) {
       const rig = rigs[params.get('head')];
-      const at = rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.07 * rig.height / 1.6, 0));
+      // &down=0.3: look that far below the head (the chest); &far=1.8: from that far off
+      const at = rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.07 * rig.height / 1.6 - parseFloat(params.get('down') || '0'), 0));
       const from = { side: [1, 0.05, 0], front: [0, 0.05, 1], back: [0, 0.1, -1], threequarter: [0.7, 0.1, 0.7] }[params.get('from') || 'side'];
       // by where the face looks just now, not the body: a profile stays a profile when the head is turned
       const ahead = rig.faceAhead.clone().applyQuaternion(rig.bones.head.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
       const side = new THREE.Vector3(0, 1, 0).cross(ahead);
       const toward = side.multiplyScalar(from[0]).addScaledVector(ahead, from[2]).add(new THREE.Vector3(0, from[1], 0));
-      camera.position.copy(at).addScaledVector(toward.normalize(), 1.2);
+      camera.position.copy(at).addScaledVector(toward.normalize(), parseFloat(params.get('far') || '1.2'));
       camera.lookAt(at);
       if (camera.fov !== 24) { camera.fov = 24; camera.updateProjectionMatrix(); }
       if (params.has('outline')) {

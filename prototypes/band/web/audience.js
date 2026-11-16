@@ -27,10 +27,10 @@ const VERTEX = `
     // level pushes it further
     float lively = 0.5 + group;
     float off = 0.5 * (seed - 0.5);
-    p.x += lively * (0.05 + 0.22 * uEnergy) * sin(uTime * (0.7 + 0.5 * group) + group * 40.0 + off);
+    p.x += lively * (0.03 + 0.11 * uEnergy) * sin(uTime * (0.7 + 0.5 * group) + group * 40.0 + off);
     p.y += 0.03 * sin(uTime * (0.9 + 0.4 * group) + group * 71.0 + off);
     float beat = uBeat * (fract(group * 7.0) > 0.7 ? 0.5 : 1.0) + fract(group * 13.0) + 0.06 * (seed - 0.5);
-    p.y += lively * uEnergy * (0.16 + 0.20 * uLow) * abs(sin(3.14159 * beat));
+    p.y += lively * uEnergy * (0.08 + 0.10 * uLow) * abs(sin(3.14159 * beat));
     // a small flame: never steady, and now and then it nearly goes out
     float flicker = 0.75 + 0.17 * sin(uTime * (7.0 + 5.0 * seed) + seed * 90.0) + 0.08 * sin(uTime * 23.0 + seed * 13.0);
     float gust = smoothstep(0.92, 1.0, sin(uTime * (0.13 + 0.1 * seed) + seed * 55.0));
