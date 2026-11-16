@@ -25,11 +25,15 @@ const VERTEX = `
     // liveliness; each of them only a little off the others. It sways slowly when the music is quiet, wider the
     // louder it is; with the music it goes up on the beat (some groups on every second beat), and the low end's
     // level pushes it further
-    float lively = 0.5 + group;
-    float off = 0.5 * (seed - 0.5);
-    p.x += lively * (0.03 + 0.11 * uEnergy) * sin(uTime * (0.7 + 0.5 * group) + group * 40.0 + off);
-    p.y += 0.03 * sin(uTime * (0.9 + 0.4 * group) + group * 71.0 + off);
-    float beat = uBeat * (fract(group * 7.0) > 0.7 ? 0.5 : 1.0) + fract(group * 13.0) + 0.06 * (seed - 0.5);
+    // (not as one man, though: each has their own reach and pace, comes in a little early or late, and about
+    // one in six goes their own way altogether)
+    float g = fract(seed * 31.0) > 0.84 ? seed : group;
+    float own = fract(seed * 17.0);
+    float lively = (0.5 + g) * (0.6 + 0.8 * own);
+    float off = 1.5 * (seed - 0.5);
+    p.x += lively * (0.03 + 0.11 * uEnergy) * sin(uTime * (0.7 + 0.5 * g) * (0.94 + 0.12 * own) + g * 40.0 + off);
+    p.y += 0.03 * sin(uTime * (0.9 + 0.4 * g) + g * 71.0 + off);
+    float beat = uBeat * (fract(g * 7.0) > 0.7 ? 0.5 : 1.0) + fract(g * 13.0) + 0.20 * (seed - 0.5);
     p.y += lively * uEnergy * (0.08 + 0.10 * uLow) * abs(sin(3.14159 * beat));
     // a small flame: never steady, and now and then it nearly goes out
     float flicker = 0.75 + 0.17 * sin(uTime * (7.0 + 5.0 * seed) + seed * 90.0) + 0.08 * sin(uTime * 23.0 + seed * 13.0);
