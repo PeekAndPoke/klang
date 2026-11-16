@@ -52,6 +52,7 @@ ported to Kotlin once the show is right.
    by inverse kinematics; a sway on the beat in between. The eyes glow with how hard the player plays.
 5. The lights from the music: kick, snare, the song's parts, the level.
 6. Later: the throwing and the audible mistake.
+7. Later, asked for by the maintainer (2026-11-16): a camera movement that very slowly zooms out from the total.
 
 ## Acceptance
 
