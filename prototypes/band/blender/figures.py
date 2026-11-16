@@ -73,7 +73,9 @@ FIGURES = {
                  eye_drop=0.016),                      # his eyes sit lower in the face
     # the drums: the muscular one: wide shoulders, a deep chest over a small waist, heavy arms, a thick neck
     "drums": dict(height=1.04, scale=dict(torso=1.08, waist=1.02, chest=1.30, shoulder=1.55, arm=1.55, hand=1.25,
-                                          thigh=1.25, leg=1.25, neck=1.75, head=1.0),
+                                          thigh=1.25, leg=1.25, neck=1.75, head=1.24),
+                  # a head to match the frame: a quarter bigger, and carried a little higher
+                  move=dict(head=(0, 0, 0.018), crown=(0, 0, 0.030), chin=(0, -0.006, 0.006)),
                   radius=dict(bicep=1.25, ribs=1.18), shoulders=1.30, hips=1.05, neck=0.75, stoop=0.03,
                   eye=(1.0, 0.25, 0.02)),
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
