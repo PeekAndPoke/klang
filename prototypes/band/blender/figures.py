@@ -268,12 +268,12 @@ def hair(head, size, mat, strands=11, length=0.30, spread=2.1):
 
 def mane(head, size, mat, length=0.46):
     """
-    Long hair as one smooth mane: from the back of the skull down the back to between the shoulder blades, wide and
-    flat, a little fuller in the middle of its way. Its top moves with the head, its end lies on the back (the chest),
+    Long hair worn open, as one smooth mane: from the back of the skull down over the shoulders and the back to
+    between the shoulder blades, widening as it falls and wrapping round the head and the neck. Its top moves with the head, its end lies on the back (the chest),
     and it stretches between the two, so it does not swing like a board when the head nods.
     """
     import math
-    root = head + Vector((0, 0.070, 0.075)) * size
+    root = head + Vector((0, 0.055, 0.085)) * size
     end = head + Vector((0, 0.150, 0.075 - length)) * size
     axis = (end - root).normalized()
     across = Vector((1, 0, 0))
@@ -286,11 +286,16 @@ def mane(head, size, mat, length=0.46):
     head_w, chest_w = [], []
     for v in obj.data.vertices:
         t = (1 - v.co.z) / 2                                # 0 at the root, 1 at the end
-        wide = (0.098 - 0.028 * t + 0.020 * math.sin(math.pi * t)) * size
-        thick = (0.030 + 0.016 * math.sin(math.pi * t)) * size
-        bow = out * (0.030 * size * math.sin(math.pi * t))
+        # open hair: it widens as it falls, over the shoulders, and wraps round the head and the neck: its edges
+        # come forward past the ears, less so further down where it lies on the back
+        wide = (0.105 + 0.105 * min(1.0, t / 0.55) - 0.030 * max(0.0, t - 0.7) / 0.3) * size
+        thick = (0.030 + 0.012 * math.sin(math.pi * t)) * size
+        bow = out * (0.022 * size * math.sin(math.pi * t))
         x, y = v.co.x, v.co.y
-        v.co = middle - axis * (v.co.z * half) + across * (x * wide) + out * (y * thick) + bow
+        wrap = out * (-(0.085 - 0.045 * t) * size * x * x)
+        # the ends hang uneven, strand by strand
+        ragged = axis * (0.030 * size * math.sin(x * 9.0) * max(0.0, t - 0.6) / 0.4)
+        v.co = middle - axis * (v.co.z * half) + across * (x * wide) + out * (y * thick) + bow + wrap + ragged
         on_back = min(1.0, max(0.0, (t - 0.25) / 0.6))
         head_w.append((v.index, 1 - on_back)); chest_w.append((v.index, on_back))
     bpy.ops.object.shade_smooth()
@@ -401,6 +406,35 @@ def build(key):
     sub.levels = 2
     bpy.ops.object.modifier_apply(modifier="Subsurf")
     bpy.ops.object.shade_smooth()
+
+    # Soft joints. So far every piece of skin belongs wholly to one bone, so a joint that bends folds the skin along
+    # a hard line: a kink, worst on thick limbs (the drummer's arms, the maintainer, 2026-11-16). Each point's weights
+    # are now averaged with its neighbours' a few times over, so the skin bends over a stretch round the joint.
+    mesh = body.data
+    near = [[] for _ in mesh.vertices]
+    for e in mesh.edges:
+        a_, b_ = e.vertices
+        near[a_].append(b_); near[b_].append(a_)
+    names_of = [g.name for g in body.vertex_groups]
+    weights = [{g.group: g.weight for g in v.groups} for v in mesh.vertices]
+    for _ in range(7):
+        mixed = []
+        for i, own_w in enumerate(weights):
+            total = dict(own_w)
+            for j in near[i]:
+                for g, w in weights[j].items():
+                    total[g] = total.get(g, 0.0) + w
+            share = 1.0 / (1 + len(near[i]))
+            mixed.append({g: w * share for g, w in total.items()})
+        weights = mixed
+    for g in body.vertex_groups:
+        g.remove(range(len(mesh.vertices)))
+    for i, w in enumerate(weights):
+        best = sorted(w.items(), key=lambda x: -x[1])[:4]
+        total = sum(x[1] for x in best)
+        for g, x in best:
+            if x / total > 0.01:
+                body.vertex_groups[g].add([i], x / total, 'REPLACE')
     body.data.materials.append(material(key + "_dark", (0.012, 0.012, 0.016)))
     body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
 
