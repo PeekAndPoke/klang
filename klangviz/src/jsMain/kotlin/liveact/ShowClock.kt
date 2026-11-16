@@ -5,53 +5,52 @@
 
 package io.peekandpoke.klang.viz.liveact
 
-import kotlinx.browser.document
 import kotlinx.browser.window
-import org.w3c.dom.HTMLAudioElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import kotlin.math.exp
-import kotlin.math.max
 import kotlin.math.min
 
-// The show's clock. With the recording, the audio's time is the stage's time, and before it runs the walk-in:
-// the page waits for a click, then counts INTRO seconds up to 0 and starts the audio.
+// The show's clock. With music that is listened to, its time is the stage's time, and before it runs the walk-in:
+// the page waits for a click, then counts INTRO seconds up to 0 and starts the music.
 
 /**
  * The show's clock for [show]. Make it once the band stands: a click starts the walk-in, [intro] seconds long.
  *
- * [audioUrl]: the audio of the same render as the events; null for none (the page's own clock then runs, as with
- * test notes). There is audio only where the show has a song and is not frozen. [notice]: the "click to start"
- * notice; it is filled and shown only where there is audio, and hidden otherwise.
+ * The music is the show's ([Show.music]): its transport is what is started, paused and asked for the time. It is
+ * taken only where the show has a song and is not frozen; without one the page's own clock runs, as with test
+ * notes. [notice]: the "click to start" notice; it is filled and shown only where there is a transport, and hidden
+ * otherwise.
  *
  * Keys, heard from the window until [dispose]: space starts the walk-in or pauses; the right arrow skips the
  * walk-in, or jumps ten seconds ahead; the left arrow ten seconds back.
  */
 class ShowClock(
     private val show: Show,
-    audioUrl: String?,
     private val notice: HTMLElement?,
     private val intro: Double,
 ) {
-    /** The audio of the same render as the events. */
-    private val audio: HTMLAudioElement? =
-        if (show.song != null && show.frozen == null && audioUrl != null) audioOf(audioUrl) else null
+    /**
+     * What plays the music, listened to from here until [dispose]: the stage's time is its time once it runs. A
+     * frozen show and one without a song do not listen at all.
+     */
+    private val transport: Transport? = if (show.song != null && show.frozen == null) show.music.listen() else null
 
     /** When the show was started, by the page's clock. */
     private var introAt: Double? = null
 
-    /** The walk-in is over and the audio runs. */
+    /** The walk-in is over and the music runs. */
     private var playing: Boolean = false
 
-    /** When the frames began (the clock of the page without a recording). */
+    /** When the frames began (the page's own clock, where there is no music to listen to). */
     private var started: Double = 0.0
 
-    private val clickListener: ((Event) -> Unit)? = audio?.let { { _: Event -> toggle() } }
-    private val keyListener: ((Event) -> Unit)? = audio?.let { { event: Event -> onKey(event) } }
+    private val clickListener: ((Event) -> Unit)? = transport?.let { { _: Event -> toggle() } }
+    private val keyListener: ((Event) -> Unit)? = transport?.let { { event: Event -> onKey(event) } }
 
     init {
-        if (audio == null) {
+        if (transport == null) {
             // the prototype makes no notice at all then
             notice?.let { it.style.display = "none" }
         } else {
@@ -71,16 +70,16 @@ class ShowClock(
     }
 
     /**
-     * The show's time, in seconds: negative during the walk-in, the song's time after. Starts the audio when the
+     * The show's time, in seconds: negative during the walk-in, the song's time after. Starts the music when the
      * walk-in runs out.
      */
     fun showTime(): Double {
         show.frozen?.let { return it }
 
-        val audio = audio ?: return (now() - started) / 1000 - intro
+        val transport = transport ?: return (now() - started) / 1000 - intro
 
         if (playing) {
-            return audio.currentTime
+            return transport.time
         }
 
         val since = introAt ?: return -intro
@@ -91,13 +90,13 @@ class ShowClock(
         }
 
         playing = true
-        audio.play()
+        transport.play()
 
         return 0.0
     }
 
-    /** Whether the show still waits for its click or walks in (the audio does not run yet). */
-    fun waiting(): Boolean = show.frozen == null && audio != null && !playing
+    /** Whether the show still waits for its click or walks in (the music does not run yet). */
+    fun waiting(): Boolean = show.frozen == null && transport != null && !playing
 
     /**
      * The house lights, 0 to 1: nearly dark while waiting for the click; from the click up within a second, a flash
@@ -113,33 +112,28 @@ class ShowClock(
         return if (since < 0) 0.07 else min(1.0, 0.07 + 0.93 * since / 0.9) + 0.5 * exp(-since / 0.12)
     }
 
-    /** Stops listening to the click and the keys, and stops the audio. */
+    /** Stops listening to the click and the keys, and says it is done with the music. Call it once. */
     fun dispose() {
         clickListener?.let { window.removeEventListener("click", it) }
         keyListener?.let { window.removeEventListener("keydown", it) }
-        // stopped and let go: without its source the browser stops fetching it too
-        audio?.let {
-            it.pause()
-            it.removeAttribute("src")
-            it.load()
-        }
+        transport?.release()
     }
 
     /**
-     * A click or space: the first starts the walk-in; once the audio runs, each pauses or plays it. The notice goes
+     * A click or space: the first starts the walk-in; once the music runs, each pauses or plays it. The notice goes
      * at once, also when the walk-in has started already.
      */
     private fun toggle() {
-        val audio = audio ?: return
+        val transport = transport ?: return
 
         if (!playing) {
             if (introAt == null) {
                 introAt = now()
             }
-        } else if (audio.paused) {
-            audio.play()
+        } else if (transport.paused) {
+            transport.play()
         } else {
-            audio.pause()
+            transport.pause()
         }
 
         notice?.let { it.style.opacity = "0" }
@@ -147,7 +141,7 @@ class ShowClock(
 
     private fun onKey(event: Event) {
         val e = event as? KeyboardEvent ?: return
-        val audio = audio ?: return
+        val transport = transport ?: return
 
         if (event.fromTyping()) {
             return
@@ -163,12 +157,12 @@ class ShowClock(
             "ArrowRight" -> if (!playing) {
                 playing = true
                 introAt = introAt ?: 0.0
-                audio.play()
+                transport.play()
             } else {
-                audio.currentTime += 10
+                transport.skip(10.0)
             }
 
-            "ArrowLeft" -> audio.currentTime = max(0.0, audio.currentTime - 10)
+            "ArrowLeft" -> transport.skip(-10.0)
 
             else -> Unit
         }
@@ -177,15 +171,5 @@ class ShowClock(
     private companion object {
         /** The page's clock, in milliseconds. */
         fun now(): Double = window.performance.now()
-
-        /** An audio element for [url], as `new Audio(url)` makes it: the whole file may be loaded ahead. */
-        fun audioOf(url: String): HTMLAudioElement {
-            val element = document.createElement("audio").unsafeCast<HTMLAudioElement>()
-
-            element.preload = "auto"
-            element.src = url
-
-            return element
-        }
     }
 }

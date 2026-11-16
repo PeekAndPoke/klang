@@ -71,15 +71,46 @@ class LiveActMathSpec : StringSpec({
     }
 
     "a show's chance is the same under the same seed and another under another" {
-        val a = Show(seed = 3, song = null, loudness = null)
-        val b = Show(seed = 3, song = null, loudness = null)
-        val c = Show(seed = 4, song = null, loudness = null)
+        val a = Show(seed = 3)
+        val b = Show(seed = 3)
+        val c = Show(seed = 4)
 
         a.own(5, 11.0) shouldBe b.own(5, 11.0)
         (a.own(5, 11.0) == c.own(5, 11.0)) shouldBe false
         a.own(5, 11.0) shouldBe a.own(5.0, 11.0)
         a.bpm shouldBe 120.0
         a.bar shouldBe 2.0
+    }
+
+    "a recording as music: its loudness where it was measured, an even level else, a transport of its own for every listener" {
+        val loudness = Loudness(
+            step = 1.0, offset = 0.0,
+            level = listOf(0.3), slow = listOf(0.25), low = listOf(0.1), mid = listOf(0.2), high = listOf(0.4),
+        )
+        var made = 0
+        val transport = object : Transport {
+            override val time = 12.5
+            override val paused = true
+            override fun play() = Unit
+            override fun pause() = Unit
+            override fun skip(seconds: Double) = Unit
+            override fun release() = Unit
+        }
+        val music = RecordedMusic(song = null, loudness = loudness) {
+            made++
+            transport
+        }
+
+        music.energyAt(0.0).slow shouldBe 0.25
+        RecordedMusic(song = null, loudness = null).energyAt(3.0) shouldBe Energy.even
+        // a show built on it does not listen yet
+        Show(seed = 1, music = music).energyAt(0.0).high shouldBe 0.4
+        made shouldBe 0
+        music.listen()?.time shouldBe 12.5
+        made shouldBe 1
+        music.listen()?.time shouldBe 12.5
+        made shouldBe 2
+        Music.none.listen() shouldBe null
     }
 
     "the loudness at a time: the nearest measured value, the ends held, the burst over the last six" {

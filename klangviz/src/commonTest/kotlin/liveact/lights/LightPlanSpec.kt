@@ -40,7 +40,7 @@ class LightPlanSpec : StringSpec({
 
     "a show opens in the first mood, and no mood follows itself" {
         for (seed in 0 until 60) {
-            val plan = LightPlan(Show(seed = seed, song = null, loudness = null))
+            val plan = LightPlan(Show(seed = seed))
 
             withClue("seed $seed") {
                 plan.moodOf(0) shouldBe LightPlan.MOODS[0]
@@ -53,7 +53,7 @@ class LightPlanSpec : StringSpec({
     }
 
     "a mood holds for its bars and goes over into the next in the bars after" {
-        val show = Show(seed = 0, song = null, loudness = null)
+        val show = Show(seed = 0)
         val plan = LightPlan(show)
         val round = (LightPlan.HOLD + LightPlan.TURN) * show.bar
 
@@ -67,7 +67,7 @@ class LightPlanSpec : StringSpec({
     }
 
     "the moods' order is the same under the same seed, and another under another" {
-        fun order(seed: Int) = LightPlan(Show(seed = seed, song = null, loudness = null)).let { plan -> List(20) { plan.moodOf(it) } }
+        fun order(seed: Int) = LightPlan(Show(seed = seed)).let { plan -> List(20) { plan.moodOf(it) } }
 
         order(5) shouldBe order(5)
         // twenty moods out of five each: two seeds do not give the same twenty

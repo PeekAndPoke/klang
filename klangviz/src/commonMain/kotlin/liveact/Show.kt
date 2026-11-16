@@ -39,8 +39,7 @@ data class Switches(private val values: Map<String, String> = emptyMap()) {
 }
 
 /**
- * What one performance is given: its [seed], the [song] with its [loudness] (both null where there is no
- * recording: the band then plays test notes), and the [switches].
+ * What one performance is given: its [seed], the [music] it plays to, and the [switches].
  *
  * Every chance in the choreography is drawn under the seed ([own]), so each seed is another performance (who nods
  * how at which moment, the wandering, the fits, the looks, the strolls, the lights' turns, the camera) and the same
@@ -48,10 +47,12 @@ data class Switches(private val values: Map<String, String> = emptyMap()) {
  */
 class Show(
     val seed: Int,
-    val song: Song?,
-    private val loudness: Loudness?,
+    val music: Music = Music.none,
     val switches: Switches = Switches(),
 ) {
+    /** The song, as far ahead as it is known; null where there is none (the band plays test notes). */
+    val song: Song? = music.song
+
     /** Beats a minute. */
     val bpm: Double = song?.bpm ?: 120.0
 
@@ -68,7 +69,7 @@ class Show(
     var energy: Energy = Energy.even
 
     /** The sound's energy at [t] seconds. */
-    fun energyAt(t: Double): Energy = loudness?.at(t) ?: Energy.even
+    fun energyAt(t: Double): Energy = music.energyAt(t)
 
     /** When the events with any of [tags] start, sorted; none without a song. */
     fun times(vararg tags: String): List<Double> = song?.times(tags.toList()).orEmpty()

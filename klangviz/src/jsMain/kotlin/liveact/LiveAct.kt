@@ -26,6 +26,7 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.browser.window
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -41,12 +42,12 @@ import kotlin.math.sqrt
 /**
  * The live act: the band Notstrom on its stage, playing [show]'s song.
  *
- * [models] is the address of the folder that holds the figures (ending in a slash); [audio] the address of the
- * song's audio, the same render the show's events were recorded from (null: no sound, the clock runs by itself).
+ * [models] is the address of the folder that holds the figures (ending in a slash). The music is the show's
+ * ([Show.music]).
  */
 @Suppress("FunctionName")
-fun Tag.LiveAct(show: Show, models: String, audio: String?) = comp(
-    LiveAct.Props(show = show, models = models, audio = audio)
+fun Tag.LiveAct(show: Show, models: String) = comp(
+    LiveAct.Props(show = show, models = models)
 ) {
     LiveAct(it)
 }
@@ -71,7 +72,6 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     data class Props(
         val show: Show,
         val models: String,
-        val audio: String?,
     )
 
     /** Everything a running show holds, once its figures are loaded. */
@@ -204,12 +204,24 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
 
         scope.launch {
-            val band = Notstrom.load(show = show, scene = ctx.scene, models = props.models, viewer = viewer)
-            val clock = ShowClock(show = show, audioUrl = props.audio, notice = element(NOTICE_ID), intro = Notstrom.INTRO)
+            val band = try {
+                Notstrom.load(show = show, scene = ctx.scene, models = props.models, viewer = viewer)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                // without its figures there is no show: the stage stays dark, and the reason is said where a
+                // developer looks
+                console.error("The live act's band could not be made (its figures are looked for in '${props.models}')", e)
+
+                return@launch
+            }
 
             stage.shade(band.drummer.kit)
 
             val view = View(show = show, scene = ctx.scene, camera = lens, rigs = band.rigs)
+            // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
+            // fail before it is kept (and with it given up on unmount)
+            val clock = ShowClock(show = show, notice = element(NOTICE_ID), intro = Notstrom.INTRO)
 
             clock.start()
 

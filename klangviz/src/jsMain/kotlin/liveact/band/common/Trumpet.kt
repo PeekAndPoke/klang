@@ -54,6 +54,9 @@ import kotlin.math.sin
 // trumpet to the lips before a phrase, fingers the valves on every note, points the bell higher for a high note and
 // lets it sink between phrases. The bell lights up at each note and fades. All places are in the figure's own measures.
 
+/** How far from the middle line each foot is set when she walks, in her own measure. */
+private const val NARROW = 0.045
+
 /**
  * The raised arm before a phrase: it starts to go up [FROM] s before the first note, takes [RISE] s to get there,
  * and is down again [UNTIL] s before the note, coming down over [FALL] s.
@@ -434,7 +437,10 @@ class TrumpetPlayer(
             val sign = side.sign
             val foot = rig.ankle.getValue(side).clone()
 
-            foot.x += 0.06 * sign * s * (1 - 0.5 * going)
+            // standing, the feet are a little apart; walking, they come close to one line, the more the faster she
+            // goes: a narrow, elegant step (the maintainer, 2026-11-16: "legs closer together ... more elegant",
+            // "standing in one place stays as is")
+            foot.x += (sign * NARROW * s - foot.x) * going + 0.06 * sign * s * (1 - going)
 
             // a step: on the floor the foot goes back under him, then it lifts and swings ahead
             val phase = ((stride + (if (side == Side.L) 0.0 else 0.5)) % 1.0 + 1) % 1.0

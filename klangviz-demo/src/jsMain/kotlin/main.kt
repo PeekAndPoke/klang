@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.viz.demo
 
+import io.peekandpoke.klang.viz.liveact.AudioFileTransport
 import io.peekandpoke.klang.viz.liveact.LiveAct
 import io.peekandpoke.klang.viz.liveact.Loudness
+import io.peekandpoke.klang.viz.liveact.RecordedMusic
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.song.Recording
@@ -62,10 +64,14 @@ fun main() {
             Json { ignoreUnknownKeys = true }.decodeFromString(Loudness.serializer(), it)
         }
 
-        val show = Show(seed = seed, song = song, loudness = loudness, switches = switches)
+        // the audio is the same render the events were recorded from: its time is the stage's time
+        val music = RecordedMusic(song = song, loudness = loudness) {
+            if (song != null) AudioFileTransport("$RECORDING.wav") else null
+        }
+        val show = Show(seed = seed, music = music, switches = switches)
 
         kraft.mount(selector = "#app", engine = PreactVDomEngine()) {
-            LiveAct(show = show, models = MODELS, audio = if (song != null) "$RECORDING.wav" else null)
+            LiveAct(show = show, models = MODELS)
         }
     }
 }
