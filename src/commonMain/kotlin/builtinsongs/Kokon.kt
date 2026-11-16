@@ -139,7 +139,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  4.20)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.6, db =  3.60)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  5.00)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  3.00)        // bark:  the upper-mid speaker peak
   )
@@ -452,10 +452,10 @@ export snare = pat => sound(pat)
   .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own cylinder for the dalay!
   .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
-export hats = pat => sound(pat).n(0)
+export hats = pat => sound(pat).n(1)
   .velocity("1.0 0.5 0.6 0.5")
   .hpf(800).lpf(freq = 15000, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
-  .gain(0.95).pan(0.40)                            
+  .gain(0.80).pan(0.40)                            
   .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035))
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
@@ -612,7 +612,7 @@ export song = stack(
     .apply(drumRoom)
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
-    .reverb(0.10, 8.5, 7500)     
+    .reverb(0.10, 7.5, 7500)     
     .mul(0.25)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)

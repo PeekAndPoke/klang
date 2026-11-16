@@ -128,7 +128,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  4.20)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.6, db =  3.60)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  5.00)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  3.00)        // bark:  the upper-mid speaker peak
   )
@@ -358,7 +358,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.125) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.12) // . mute()
     .ignp("sub", 0.92).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
@@ -562,7 +562,7 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 7500)
-    .mul(1.4)
+    .mul(1.35)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5000)
