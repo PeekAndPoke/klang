@@ -139,7 +139,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 1.0, db =  4.00)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.8, db =  4.20)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  5.00)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  3.00)        // bark:  the upper-mid speaker peak
   )
@@ -442,7 +442,7 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
-  .gain(0.90).pan(0.5)
+  .gain(0.85).pan(0.5)
   .cylinder(11).apply(drumRoom)
 
 export snare = pat => sound(pat)
@@ -461,9 +461,9 @@ export hats = pat => sound(pat).n(0)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
-  .ignp("sub", 0.95).ignp("harmonics", 1.00)
+  .ignp("sub", 0.92).ignp("harmonics", 1.00)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.75).cylinder(15)
+  .clip(0.90).gain(0.60).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -592,16 +592,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    [8, spinning],
-    [4, answering],
-    [4, quickening],
-    [4, stretching],
-    [4, holdingBreath],
+    // [8, spinning],
+    // [4, answering],
+    // [4, quickening],
+    // [4, stretching],
+    // [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    [12, flyingOff],
-    [4, lastChord],
-    [2, silence]
+    // [12, flyingOff],
+    // [4, lastChord],
+    // [2, silence]
   )
     .scale("c3:minor")
     .analog(feel)
