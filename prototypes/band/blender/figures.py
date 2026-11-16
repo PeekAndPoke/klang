@@ -105,10 +105,11 @@ FIGURES = {
                             ("hair5", "hair4", (0, 0.02, -0.14), 0.010, 1.0, True)]),
     # the rhythm guitar: the shorter, heavier one: a belly, a broad face, a flat cap
     "guitar2": dict(height=0.94, scale=dict(torso=1.25, waist=1.55, chest=1.18, shoulder=1.15, arm=1.2, hand=1.1,
-                                            thigh=1.25, leg=1.2, neck=1.3, head=1.08),
-                    # the shoulders hang: lower, sloping from the neck, and a real neck between them and the head
-                    move=dict(shoulderL=(0, 0, -0.045), shoulderR=(0, 0, -0.045)),
-                    hips=1.2, shoulders=1.06, neck=1.0, eye=(1.0, 0.6, 0.1),
+                                            thigh=1.25, leg=1.2, neck=1.4, head=1.08),
+                    # the shoulders a little lower than plain and a short neck: between pulled up (as first built) and
+                    # hanging (too much, the maintainer)
+                    move=dict(shoulderL=(0, 0, -0.020), shoulderR=(0, 0, -0.020)),
+                    hips=1.2, shoulders=1.06, neck=0.84, eye=(1.0, 0.6, 0.1),
                     extras=[("gut", "belly", (0, -0.09, -0.01), 0.165, 1.0, False),
                             ("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
                             ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
