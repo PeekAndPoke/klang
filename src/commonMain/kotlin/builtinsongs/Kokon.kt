@@ -59,7 +59,7 @@ let pickupHumbucker = Ign.fn(x => x
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
 let pickupNeck = Ign.fn(x => x
   .lowpass(3500, 1.4)
-  .notch(freq = Ign.freq().mul(4), q = 2.0)        // the neck sits a quarter along the string
+  .notch(freq = Ign.freq().mul(7), q = 2.0)        // the neck sits a quarter along the string
   .mul(1.2))
 
 // Pedals: a box in front of the amp. What it filters BEFORE clipping is the tell, not the clipping itself. The last
@@ -103,7 +103,7 @@ let preampClean = Ign.fn(x => x
 let preampCrunch = Ign.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
-  .distort(0.18, "asym").highpass(100)
+  .distort(0.18, "asym")//.highpass(100)
   .lowpass(5800)
   .mul(0.62))                                       // volume
 
@@ -313,7 +313,7 @@ let bass = (() => {
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
     .mul(0.2)
-    .distort(0.2, "soft")
+    .distort(0.1, "soft")
     .classic()
 })()
 
@@ -347,7 +347,7 @@ export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-
 
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
-  .sound(clean).adsrOff().unison(voices = 11, spread = 0.05).pregain(0.7)
+  .sound(clean).adsrOff().unison(voices = 11, spread = 0.08).pregain(0.7)
   .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
   .gain(0.20).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.07))  
@@ -395,9 +395,9 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[2.0 1.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.90 0.85 0.90 0.93".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.48).late(perlin(0.0005, 0.0010).seed(2)).apply(
-    x => x.pan(0.75),
-    x => x.pan(1.0),
+  .gain(0.45).late(perlin(0.0005, 0.0010).seed(2)).apply(
+    x => x.pan(0.80),
+    x => x.pan(0.20),
   ).cylinder(4)
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
@@ -406,9 +406,9 @@ export wings = chords => n(chords).ply(16)
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[2.0 1.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.92 0.85 0.90 0.94".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.42).late(perlin(0.0010, 0.0015).seed(3)).apply(
-    x => x.pan(0.00),
-    x => x.pan(0.25),
+  .gain(0.45).late(perlin(0.0010, 0.0015).seed(3)).apply(
+    x => x.pan(0.50),
+    // x => x.pan(0.10),
   ).cylinder(4)
 
 // Strike: one heavy chord, let ring. It shares the wings' cylinder and room.
@@ -463,7 +463,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.92).ignp("harmonics", 1.00)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.60).cylinder(15)
+  .clip(0.90).gain(0.50).cylinder(15)
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
@@ -521,7 +521,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.65).pan(0.25).superimpose(pan(0.75)),
+  spin(cocoonArp.add(7)).ply(2).gain(0.45).pan(0.25).superimpose(pan(0.75)),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -613,13 +613,13 @@ export song = stack(
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 8.5, 7500)     
-    .mul(0.80)
+    .mul(0.25)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.001, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(1.15)
+    .mul(4.4)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   )))
 )

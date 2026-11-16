@@ -552,7 +552,7 @@ export song_body = stack(
     hats.apply(hats_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
   ).analog(feel).reverb(wet = 0.25, size = 4.0) //. solo() //  .mute()
-).seed(Random.nextInt()).shuffle("<1!80 2!48 1!112 2!32>")
+).seed(sineOfDay.mul(60 * 24).round()).shuffle("<1!80 2!48 1!112 2!32>")
 
 export song = stack(
   // Count-in: four open hats at half the song's hat speed
