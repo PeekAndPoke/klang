@@ -62,10 +62,9 @@ FIGURES = {
                     stoop=0.07, eye=(1.0, 0.15, 0.1),
                     # a plain round back of the head: the hair alone left it flat
                     skull=dict(long=1.0, high=0.094, back=0.034, rise=0.022, tilt=8.0, wide=0.086),
-                    # a mane down the back of the neck, one strand of three points (side strands broke the hull)
-                    extras=[("hair1", "crown", (0, 0.085, -0.05), 0.070, 1.0, False),
-                            ("hair2", "hair1", (0, 0.045, -0.15), 0.058, 1.0, True),
-                            ("hair3", "hair2", (0, 0.020, -0.14), 0.034, 1.0, True)]),
+                    # his hair is no shape but a pattern in the light, combed straight back (`pattern.js`, the page);
+                    # hanging locks were tried (hair(), kept) and not wanted
+                    ),
     # the bass: the tall thin one, a long neck, stooped
     "bass": dict(height=1.10, scale=dict(torso=0.80, waist=0.78, chest=0.82, shoulder=0.85, arm=0.78, thigh=0.76,
                                          leg=0.80, neck=0.85, head=0.94),
@@ -224,6 +223,43 @@ def shell(head, size, mat):
     return obj
 
 
+def hair(head, size, mat, strands=11, length=0.30, spread=2.1):
+    """
+    Long shaggy hair: strands that start high on the back of the head and hang down round the back and the sides to
+    the shoulders, each a tapering lock, a little uneven in length and thickness. Separate pieces joined to the body
+    and moved by the head (points with thickness, as the body is made of, broke the head's hull here).
+    """
+    import math
+    made = []
+    for i in range(strands):
+        a = (i / (strands - 1) - 0.5) * 2 * spread            # 0 is straight back; the ends reach past the ears
+        own = math.sin(i * 12.9898) * 43758.5453
+        own = own - math.floor(own)
+        top = head + Vector((math.sin(a) * 0.060, math.cos(a) * 0.060 + 0.012, 0.070)) * size
+        long = length * (0.80 + 0.35 * own) * size
+        out = Vector((math.sin(a) * 0.085, math.cos(a) * 0.075 + 0.020, 0)) * size
+        bottom = head + out + Vector((0, 0, 0.070 * size - long))
+        axis = (bottom - top).normalized()
+        side = axis.cross(Vector((0, 0, 1))).normalized()
+        front = axis.cross(side)
+        thick = (0.034 + 0.012 * own) * size
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=10, ring_count=10, location=(0, 0, 0))
+        obj = bpy.context.object
+        half = (bottom - top).length / 2
+        middle = (top + bottom) / 2
+        for v in obj.data.vertices:
+            t = (v.co.z + 1) / 2                               # 0 at the lock's end, 1 at its root
+            r = thick * (0.45 + 0.55 * t)
+            # the lock bows outward a little on its way down
+            bow = out.normalized() * (0.018 * size * math.sin(math.pi * t))
+            v.co = middle - axis * (v.co.z * half) + side * (v.co.x * r) + front * (v.co.y * r) + bow
+        bpy.ops.object.shade_smooth()
+        obj.data.materials.append(mat)
+        obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
+        made.append(obj)
+    return made
+
+
 def skull(head, size, mat, long=1.30, high=0.107, back=0.030, rise=0.056, tilt=30.0, wide=0.082):
     """
     The long back of a head: an egg, its narrow end in the forehead, its long axis rising toward the back at 30
@@ -350,6 +386,14 @@ def build(key):
         back = skull(head.pos, head.radius / 0.092, body.data.materials[0], **shape)
         bpy.ops.object.select_all(action='DESELECT')
         back.select_set(True); body.select_set(True)
+        bpy.context.view_layer.objects.active = body
+        bpy.ops.object.join()
+
+    if p.get("hair"):
+        locks = hair(head.pos, head.radius / 0.092, body.data.materials[0], **p["hair"])
+        bpy.ops.object.select_all(action='DESELECT')
+        for lock in locks: lock.select_set(True)
+        body.select_set(True)
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.join()
 

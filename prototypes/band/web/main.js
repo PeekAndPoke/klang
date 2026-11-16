@@ -105,6 +105,14 @@ riser.receiveShadow = true;
 scene.add(riser);
 // Each player's pattern, seen only in how the body throws back the light
 const SKINS = { drums: 'tiger', bass: 'pinstripe', guitar1: 'spiral', guitar2: 'spots', marimba: 'diamonds', eimer: 'braid' };
+// Who wears hair as a pattern in the light, combed straight back
+const HAIR = { guitar1: true };
+// the head's middle and size, in the body's rest space: a little above and behind where the head's bone starts
+function hairOf(rig) {
+  const neck = rig.root.worldToLocal(rig.rest.head.world.clone());
+  const size = rig.height / 1.60;
+  return { centre: new THREE.Vector3(neck.x, neck.y + 0.115 * size, neck.z - 0.012 * size), radius: 0.104 * size };
+}
 const rigs = {};
 const loader = new GLTFLoader();
 await Promise.all(Object.entries(PLACES).map(async ([name, [x, z, turn, y = 0]]) => {
@@ -115,7 +123,9 @@ await Promise.all(Object.entries(PLACES).map(async ([name, [x, z, turn, y = 0]])
   rigs[name] = new Rig(gltf.scene);
   gltf.scene.traverse((o) => {
     if (o.isSkinnedMesh) {
-      for (const m of Array.isArray(o.material) ? o.material : [o.material]) { if (m.name.endsWith('_dark')) { pattern(m, SKINS[name]); } }
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (m.name.endsWith('_dark')) { pattern(m, SKINS[name], 0.12, 0.85, HAIR[name] ? hairOf(rigs[name]) : null); }
+      }
     }
   });
 }));
@@ -255,17 +265,22 @@ function contactAt(t) {
   const pair = roll(4) < 0.5 ? drawn : [drawn[1], drawn[0]];
   const late = 1.0 + 2.0 * roll(5);
   const start = slot * CONTACT.every + 0.2 + roll(2) * 1.2;
-  const hold = 1.6 + 1.4 * roll(3);                 // how long they hold each other's eyes
-  const away = late + 1.3 + hold;                   // when the first one looks away again
+  const hold = 0.7 + 0.9 * roll(3);                 // how long they really look at each other: short
+  const meet = late + 1.3;                          // when both look
+  const away = meet + hold;                         // when the first one looks away again
   // she does not look away while she plays: the trumpet is at her lips
   herNotes = herNotes || times(['trommel']);
   if (pair.includes('eimer') && herNotes.some((x) => x > start - 3 && x < start + away + 3)) { return null; }
   const x = t - start;
-  // the first head comes round slowly, over a second and a half; the second a little quicker, having been looked at;
-  // the first looks away first, the second a moment after
-  const first = smooth01(x / 1.5) * smooth01((away + 1.1 - x) / 1.1);
-  const second = smooth01((x - late) / 1.3) * smooth01((away + 0.4 + 1.1 - x) / 1.1);
-  return { pair, w: [first, second] };
+  // No staring. The first one glances over, a second or so, and is half back at the playing when the other
+  // notices and looks; then the first looks again and they share it briefly. A head never turns all the way: a
+  // good half, as people look with their eyes; the beat's nod goes on underneath.
+  const glance = 0.50 * smooth01(x / 1.2) * smooth01((2.0 - x) / 0.9);
+  const again = 0.62 * smooth01((x - late - 0.4) / 0.9) * smooth01((away + 0.9 - x) / 0.9);
+  const second = 0.58 * smooth01((x - late) / 1.1) * smooth01((away + 0.35 + 0.9 - x) / 0.9);
+  // as their eyes meet, a small nod to each other, the second a moment after the first
+  const greet = (at) => { const d = (x - at) / 0.28; return Math.exp(-d * d); };
+  return { pair, w: [Math.max(glance, again), second], nod: [greet(meet + 0.25), greet(meet + 0.45)] };
 }
 function eyeContact(t) {
   const contact = contactAt(t);
@@ -274,8 +289,10 @@ function eyeContact(t) {
   a.update(); b.update();
   const eyes = (rig) => rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.08, 0));
   const ea = eyes(a), eb = eyes(b);
-  a.faceTo(eb, 0.9 * contact.w[0]);
-  b.faceTo(ea, 0.9 * contact.w[1]);
+  a.faceTo(eb, contact.w[0]);
+  b.faceTo(ea, contact.w[1]);
+  a.turn('head', X, 0.09 * contact.nod[0]);
+  b.turn('head', X, 0.09 * contact.nod[1]);
 }
 
 const smooth01 = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };

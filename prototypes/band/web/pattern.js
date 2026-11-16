@@ -25,17 +25,30 @@ const PATTERNS = {
   hoops: 'smoothstep(0.42, 0.58, fract(p.y * 10.0))',
 };
 
-/** Gives [material] (a body's) the pattern [kind]; [gloss] and [matt] are the two roughnesses. */
-export function pattern(material, kind, gloss = 0.12, matt = 0.85) {
+/**
+ * Gives [material] (a body's) the pattern [kind]; [gloss] and [matt] are the two roughnesses.
+ * [hair]: { centre (the head's middle, in the body's rest space), radius }: on the head, behind a hairline that
+ * runs from the brow back over the ears, the pattern is hair combed straight back: fine glossy strands that run
+ * from the front over the skull to the nape, a little uneven, as wet or oiled hair catches the light.
+ */
+export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null) {
   material.metalness = 0;
+  const combed = hair ? `
+    { vec3 h = (vRest - vec3(${hair.centre.x.toFixed(4)}, ${hair.centre.y.toFixed(4)}, ${hair.centre.z.toFixed(4)})) / ${hair.radius.toFixed(4)};
+      float line = h.z - 0.50 - 0.75 * h.y;                              // the hairline: further forward the higher up
+      float in_hair = (1.0 - smoothstep(-0.06, 0.06, line)) * smoothstep(-0.95, -0.75, h.y) * (1.0 - smoothstep(1.25, 1.45, length(h)));
+      float around = atan(h.x, h.y + 0.25);                              // which strand: round the axis from front to back
+      float strand = fract(around * 9.5 + 0.35 * sin(h.z * 5.0 + around * 3.0));
+      float shine = smoothstep(0.25, 0.5, strand) * (1.0 - smoothstep(0.62, 0.9, strand));
+      roughnessFactor = mix(roughnessFactor, mix(0.62, 0.07, shine), in_hair); }` : '';
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRest = position;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
-      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n{ vec3 p = vRest; float on = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, on); }`);
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\n{ vec3 p = vRest; float on = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, on); }${combed}`);
   };
-  material.customProgramCacheKey = () => 'pattern-' + kind;
+  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '');
   material.needsUpdate = true;
 }
