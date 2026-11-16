@@ -68,7 +68,7 @@ export function buildStage() {
   spot(0, 6, 8, 0xfff0e0, 25, 0, 0, false);
   // the lamp at the front: on the floor before the stage, looking up at the band and the wall, wide
   {
-    const low = new THREE.SpotLight(0xffb070, 95, 40, 0.62, 0.5, 1.0);
+    const low = new THREE.SpotLight(0xff8420, 95, 40, 0.62, 0.5, 1.0);
     low.position.set(0.6, 0.25, 8.6);
     low.target.position.set(0, 2.6, -8);
     low.castShadow = true;
@@ -91,12 +91,14 @@ export function buildStage() {
    * for eight bars in every forty the lamps behind go down and the one lamp low at the front comes up, so the band
    * throws big shadows up the wall; a second each way. Where in the song, the seed decides.
    */
-  // The front lamp's colours: each time it comes up it has one of them, the seed's choice (the stroboscope keeps
-  // the first, the plain warm one). ?fcolor=ff1408 sets one.
-  const FRONT = [0xffb070, 0xff1408, 0x8fb8ff, 0xff1408, 0xffb070, 0xc428ff];
+  // The front lamp's colours: each time it comes up it has one of them, the seed's choice; the stroboscope is
+  // always the cold blue. The amber is a deep one (a paler one looked like a building site's lamp, the maintainer,
+  // 2026-11-16). ?fcolor=ff1408 sets one.
+  const AMBER = 0xff8420, RED = 0xff1408, BLUE = 0x8fb8ff, VIOLET = 0xc428ff;
+  const FRONT = [AMBER, RED, BLUE, RED, AMBER, VIOLET];
   // By hand, to try the colours: the key f turns the front lamp on in the first of them, f again in the next, and
   // after the last gives the lamp back to the show.
-  const TRY = [0xffb070, 0xff1408, 0x8fb8ff, 0xc428ff];
+  const TRY = [AMBER, RED, BLUE, VIOLET];
   let tried = -1;
   addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) { tried = tried + 1 < TRY.length ? tried + 1 : -1; }
@@ -190,7 +192,7 @@ export function buildStage() {
     dress.value = Math.min(1, front);
     for (const lamp of lamps) {
       const { light, base, group } = lamp;
-      if (group === 'front') { light.color.setHex(strobing ? FRONT[0] : frontColor(t)); }
+      if (group === 'front') { light.color.setHex(strobing ? BLUE : frontColor(t)); }
       const own = lamp.seed + (seed % 97) * 0.37;
       const wander = 0.060 * Math.sin(t * 0.23 + own) + 0.040 * Math.sin(t * 0.61 + own * 2.3) + 0.025 * Math.sin(t * 1.37 + own * 0.7);
       const shiver = 0.012 * Math.sin(t * 9.1 + own * 3.1) + 0.008 * Math.sin(t * 14.7 + own * 1.9);
