@@ -238,6 +238,40 @@ function placeBlobs() {
   }
 }
 
+// Eye contact: every now and then two of them look at each other for a few seconds, then back to their playing.
+// Chance picks the moment and the pair, the same at the same place in the song. Pairs that have something to say
+// to each other: the rhythm section, neighbours, the frontwoman and whoever she passes.
+const PAIRS = [['bass', 'drums'], ['guitar1', 'bass'], ['eimer', 'guitar1'], ['marimba', 'guitar2'], ['drums', 'marimba'],
+  ['eimer', 'marimba'], ['eimer', 'drums'], ['bass', 'eimer'], ['guitar2', 'drums'], ['guitar1', 'guitar2']];
+const CONTACT = { every: 9, chance: 0.6 };
+let herNotes = null;
+function contactAt(t) {
+  if (t < 1) { return null; }
+  const slot = Math.floor(t / CONTACT.every);
+  const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  if (roll(0) > CONTACT.chance) { return null; }
+  const pair = PAIRS[Math.floor(roll(1) * PAIRS.length) % PAIRS.length];
+  const start = slot * CONTACT.every + 0.5 + roll(2) * (CONTACT.every - 5);
+  const hold = 1.8 + 1.6 * roll(3);
+  // she does not look away while she plays: the trumpet is at her lips
+  herNotes = herNotes || times(['trommel']);
+  if (pair.includes('eimer') && herNotes.some((x) => x > start - 3 && x < start + hold + 2)) { return null; }
+  const x = t - start;
+  // the second one answers the look a moment later
+  const amount = (late) => smooth01((x - late) / 0.6) * smooth01((hold + 0.6 - x) / 0.8);
+  return { pair, w: [amount(0), amount(0.35)] };
+}
+function eyeContact(t) {
+  const contact = contactAt(t);
+  if (!contact || (contact.w[0] <= 0 && contact.w[1] <= 0)) { return; }
+  const [a, b] = contact.pair.map((name) => rigs[name]);
+  a.update(); b.update();
+  const eyes = (rig) => rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.08, 0));
+  const ea = eyes(a), eb = eyes(b);
+  a.faceTo(eb, 0.9 * contact.w[0]);
+  b.faceTo(ea, 0.9 * contact.w[1]);
+}
+
 const smooth01 = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 
@@ -345,6 +379,7 @@ function frame() {
       stick.quaternion.setFromUnitVectors(stickUp, d);
     }
   }
+  eyeContact(t);
   // waiting for the click: nearly dark. From the click: up within a second, a flash first, like lamps switched on
   if (frozen === null && audio && !playing) {
     const since = introAt === null ? -1 : (performance.now() - introAt) / 1000;

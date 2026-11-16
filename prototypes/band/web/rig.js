@@ -37,6 +37,8 @@ export class Rig {
     this.armLength = local('elbowL').distanceTo(local('wristL')) + local('wristL').distanceTo(local('handL'));
     this.ankle = { L: local('toeL'), R: local('toeR') };              // the bone to the toe starts at the ankle
     this.height = local('head').y;
+    // which way the face looks, in the head bone's own space
+    this.faceAhead = this.dir(0, 0, 1).applyQuaternion(this.bones.head.getWorldQuaternion(new THREE.Quaternion()).invert());
   }
 
   /** Where the bone [name] ends at rest, in the figure's space: its first child's start. */
@@ -103,6 +105,25 @@ export class Rig {
     const b2 = this.bones[lower].getWorldPosition(new THREE.Vector3());
     const c2 = this.bones[end].getWorldPosition(new THREE.Vector3());
     this.turnWorld(lower, new THREE.Quaternion().setFromUnitVectors(c2.sub(b2).normalize(), reached.sub(b2).normalize()));
+  }
+
+  /**
+   * Turns the face toward [target] (world), [w] of the way (0 to 1): the neck a little, the head the rest. Never
+   * further than a head can go: about 70 degrees to a side, 30 up or down from straight ahead.
+   */
+  faceTo(target, w) {
+    if (w <= 0) { return; }
+    const head = this.bones.head;
+    const from = head.getWorldPosition(new THREE.Vector3());
+    const local = this.root.worldToLocal(target.clone()).sub(this.root.worldToLocal(from.clone()));
+    const yaw = Math.max(-1.25, Math.min(1.25, Math.atan2(local.x, local.z)));
+    const pitch = Math.max(-0.5, Math.min(0.5, Math.atan2(local.y, Math.hypot(local.x, local.z))));
+    const want = this.dir(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+    for (const [bone, share] of [['neck', 0.3 * w], ['head', w]]) {
+      const now = this.faceAhead.clone().applyQuaternion(head.getWorldQuaternion(new THREE.Quaternion()));
+      const turn = new THREE.Quaternion().setFromUnitVectors(now, want);
+      this.turnWorld(bone, new THREE.Quaternion().slerp(turn, share));
+    }
   }
 
   /** A point of the figure's space in the world. */
