@@ -44,6 +44,7 @@ fun FlowContent.VisualPreview(visual: VisualsScreen.Visual) {
                     VisualsScreen.Visual.Klangamp -> KLANGAMP
                     VisualsScreen.Visual.KlangampTiles -> KLANGAMP_TILES
                     VisualsScreen.Visual.KlangampRain -> KLANGAMP_RAIN
+                    VisualsScreen.Visual.LiveAct -> LIVE_ACT
                 },
             )
         }
@@ -171,6 +172,19 @@ private val KLANGAMP_TILES = """
     <path d="M10 29 L64 29" stroke-width="0.6"/><text x="10" y="26" font-size="8" fill="$INK" stroke="none">gauges</text>
     <path d="M178 47 L230 47" stroke-width="0.6"/><text x="180" y="44" font-size="8" fill="$INK" stroke="none">scope+spectrum</text>
     <path d="M178 75 L230 75" stroke-width="0.6"/><text x="180" y="72" font-size="8" fill="$INK" stroke="none">playlist</text>
+""".trimIndent()
+
+/** The live act: a stage, six players on it, the lamps' cones from above. */
+private val LIVE_ACT = """
+    <path d="M12 78 L128 78 L118 62 L22 62 Z" style="$MARKER" stroke="none"/>
+    <path d="M12 78 L128 78 L118 62 L22 62 Z"/>
+    <path d="M40 6 L26 62 M40 6 L58 62 M100 6 L82 62 M100 6 L114 62"/>
+    <circle cx="30" cy="42" r="3"/><path d="M30 45 L30 60"/>
+    <circle cx="48" cy="38" r="3"/><path d="M48 41 L48 58"/>
+    <circle cx="70" cy="30" r="3"/><path d="M70 33 L70 46 M62 46 L78 46 L78 54 L62 54 Z"/>
+    <circle cx="70" cy="50" r="3"/><path d="M70 53 L70 70"/>
+    <circle cx="92" cy="38" r="3"/><path d="M92 41 L92 58"/>
+    <circle cx="110" cy="42" r="3"/><path d="M110 45 L110 60"/>
 """.trimIndent()
 
 /** Klang Amp's column of tiles on the left; on the right a tall display, the voices falling down it as letters. */

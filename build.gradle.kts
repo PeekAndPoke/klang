@@ -122,6 +122,8 @@ kotlin {
 
                 api(project(":klangui"))
                 api(project(":klangscript-ui"))
+                // The visualizations: the live act (KLANG-00447)
+                api(project(":klangviz"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
                 api(Deps.KotlinLibs.Kraft.addons_browserdetect)
@@ -155,6 +157,11 @@ kotlin {
             }
         }
     }
+}
+
+// The live act's figures are klangviz's resources: the page fetches them, so they are laid beside it (KLANG-00449).
+tasks.named<Copy>("jsProcessResources") {
+    from(project(":klangviz").file("src/jsMain/resources"))
 }
 
 tasks {

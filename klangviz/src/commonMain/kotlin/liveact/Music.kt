@@ -17,6 +17,9 @@ import io.peekandpoke.klang.viz.liveact.song.Song
  * asked for its events in any stretch of time).
  */
 interface Music {
+    /** Where the music comes from, in a word or two, for the line at the top: "recording", "live". */
+    val source: String
+
     /** The song's events, as far ahead as they are known; null where there is no song (the band plays test notes). */
     val song: Song?
 
@@ -37,7 +40,7 @@ interface Music {
     }
 }
 
-/** What moves the music: where it is, and going on, stopping and jumping. */
+/** Where the music is, for one listener; and, where the listener may move it, the [controls] to do so. */
 interface Transport {
     /** Where the music is, in seconds of the song. */
     val time: Double
@@ -45,6 +48,22 @@ interface Transport {
     /** Whether it stands still. */
     val paused: Boolean
 
+    /**
+     * Going on, stopping and jumping, where the music is this listener's to move (a recording played for it alone).
+     * Null where the music is someone else's (the app plays a song): the listener then only follows it. It takes
+     * the music's time as it is, starts and stops nothing, and makes no show of a start.
+     */
+    val controls: TransportControls?
+
+    /**
+     * This listener is done: it is not used after. What that means for the music is the music's own: a recording
+     * played for this listener alone stops and is let go; music the app plays goes on.
+     */
+    fun release()
+}
+
+/** What moves music that is the listener's own. */
+interface TransportControls {
     /** Goes on from where it is. */
     fun play()
 
@@ -53,12 +72,6 @@ interface Transport {
 
     /** Jumps by [seconds], back or ahead; never before the song's start. */
     fun skip(seconds: Double)
-
-    /**
-     * This listener is done: it is not used after. What that means for the music is the music's own: a recording
-     * played for this listener alone stops and is let go; music the app plays goes on.
-     */
-    fun release()
 }
 
 /**
@@ -70,6 +83,8 @@ class RecordedMusic(
     private val loudness: Loudness?,
     private val makeTransport: () -> Transport? = { null },
 ) : Music {
+    override val source: String = if (song != null) "recording" else "test notes"
+
     override fun listen(): Transport? = makeTransport()
 
     override fun energyAt(t: Double): Energy = loudness?.at(t) ?: Energy.even

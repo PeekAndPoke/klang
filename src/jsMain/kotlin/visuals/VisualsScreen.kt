@@ -86,6 +86,13 @@ class VisualsScreen(ctx: NoProps) : PureComponent(ctx) {
             description = "Klang Amp's tiles, and the voices falling down a big display beside them",
             composition = { VisualsCompositions.klangampRain },
         ),
+
+        /** The band on its stage, playing what plays (KLANG-00449). It fills the window; its plate is not shown. */
+        LiveAct(
+            title = "Live act",
+            description = "The band Notstrom on stage, playing the song that plays",
+            composition = { VisualsCompositions.motorBoard },
+        ),
     }
 
     companion object {
@@ -291,9 +298,14 @@ private class VisualsModal(ctx: Ctx<Props>) : FadingModal<VisualsModal.Props, Bo
 
             onMouseMove { e -> mouseMoved(clientY = (e.asDynamic().clientY as Number).toDouble()) }
 
-            MotorBackground(ref = background, composition = composition)
+            if (props.visual == VisualsScreen.Visual.LiveAct) {
+                // the stage fills the window: no plate, no tiles
+                LiveActVisual()
+            } else {
+                MotorBackground(ref = background, composition = composition)
+            }
 
-            VisualsBoard(
+            if (props.visual != VisualsScreen.Visual.LiveAct) VisualsBoard(
                 composition = composition,
                 onLeave = { close() },
                 // Klang Amp tiles: the Motor button steps through its tiles, its title alone, nothing (the maintainer,

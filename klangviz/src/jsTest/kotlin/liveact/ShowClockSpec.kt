@@ -10,19 +10,22 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.song.RecordedEvent
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
+import kotlinx.browser.document
 import kotlinx.browser.window
+import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 
 /** A transport that writes down what is asked of it. */
-private class Asked : Transport {
+private class Asked(private val own: Boolean = true) : Transport, TransportControls {
     val calls = mutableListOf<String>()
     val skips = mutableListOf<Double>()
     var standing = true
 
     override var time: Double = 0.0
     override val paused: Boolean get() = standing
+    override val controls: TransportControls? get() = if (own) this else null
 
     override fun play() {
         calls.add("play")
@@ -49,6 +52,8 @@ private val oneKick = Song(Recording(rpm = 30.0, events = listOf(RecordedEvent(t
 /** Music that counts who listens; with a song unless [song] is null. */
 private class Counted(val asked: Asked, override val song: Song? = oneKick) : Music {
     var listeners = 0
+
+    override val source = "counted"
 
     override fun energyAt(t: Double) = Energy.even
 
@@ -120,10 +125,12 @@ class ShowClockSpec : StringSpec({
     "the keys: the right arrow skips the walk-in and then jumps ahead, the left one back, space pauses and plays" {
         val asked = Asked()
         val music = Counted(asked)
-        val clock = ShowClock(show = Show(seed = 1, music = music), notice = null, intro = 15.0)
+        val notice = document.createElement("div").unsafeCast<HTMLElement>()
+        val clock = ShowClock(show = Show(seed = 1, music = music), notice = notice, intro = 15.0)
 
         try {
             music.listeners shouldBe 1
+            notice.textContent shouldBe "click to start"
             clock.waiting() shouldBe true
             clock.showTime() shouldBe -15.0
             clock.houseAt() shouldBe 0.07
@@ -162,6 +169,33 @@ class ShowClockSpec : StringSpec({
         asked.calls shouldBe listOf("release")
         // the click started no walk-in: the house is as dark as before it
         clock.houseAt() shouldBe 0.07
+    }
+
+    "music that is someone else's is followed: its time at once, no walk-in, no key, no click, nothing started" {
+        val asked = Asked(own = false)
+        val notice = document.createElement("div").unsafeCast<HTMLElement>()
+        val clock = ShowClock(show = Show(seed = 1, music = Counted(asked)), notice = notice, intro = 15.0)
+
+        try {
+            clock.waiting() shouldBe false
+            clock.houseAt() shouldBe 1.0
+            // no "click to start": there is nothing to start
+            notice.style.display shouldBe "none"
+            notice.textContent shouldBe ""
+
+            asked.time = 41.25
+            clock.showTime() shouldBe 41.25
+
+            press("ArrowRight")
+            press("Space")
+            window.dispatchEvent(Event("click"))
+            asked.calls shouldBe emptyList()
+            clock.showTime() shouldBe 41.25
+        } finally {
+            clock.dispose()
+        }
+
+        asked.calls shouldBe listOf("release")
     }
 
     "every clock listens for itself" {

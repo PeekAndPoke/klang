@@ -42,7 +42,8 @@ import kotlin.math.min
  * Places [camera] for each frame ([look]): a fixed look where the show's switches ask for one, else the
  * choreography (when the song is there; `?still`: the wide view only), else the total.
  *
- * The camera by hand: a key takes it over from the choreography, until 0 or Escape gives it back.
+ * The camera by hand: a key takes it over from the choreography, until 0 or Escape gives it back (where Esc
+ * also closes what the live act is shown in, as in the app, only 0 is of use).
  * ```
  *   q the total    w the stadium shot    e from the left    r from above    t from the right    y (or z) from the floor
  *   1 to 6 a player (drums, lead guitar, frontwoman, bass, rhythm guitar, marimba); the same key again: their next look

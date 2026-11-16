@@ -1,6 +1,6 @@
 # KLANG-00449: Live act: the music and its events from the engine, live
 
-> **Status (2026-11-16): IN PROGRESS.** Step 1 (the small interface, the recording moved onto it) is built and in review.
+> **Status (2026-11-16): IN PROGRESS.** The band plays live in the app, a first version (steps 1 to 4). Waiting for KLANG-00450 (the same cycles asked twice give the same events); open: a song that grows and changes, which instruments a song has.
 >
 > **Part of:** KLANG-00447 (Live act: a band on a stage, played by the song)
 
@@ -71,9 +71,18 @@ also while its code is edited.
 1. Done (in review): the `Music` seam, the recording moved onto it, the same picture as before.
 2. Point 1 above is measured and decided: asking the same cycles twice is to give the same events. Open: find
    where the song's askings differ (part by part), and fix it in the pattern language.
-3. The clock beside music it does not own (points 2 and 3).
-4. The app's side: a `Music` over the playing song (events asked ahead, the playback's clock, the analyser's
-   loudness), and a visual in the app's `visuals/` that mounts the live act.
+3. Done: the clock beside music it does not own (points 2 and 3). A `Transport` without `controls` is followed:
+   the music's time at once, no walk-in, no notice, no click, no key.
+4. Done, a first version: the app's side. `LiveActVisual` (the visual "Live act" in the Visuals tab) compiles the
+   playing code once more, reads its events for 512 cycles ahead, and mounts the live act on the playback's clock
+   and the analyser's loudness (`LiveLoudness`). Seen running in the built app. Its limits:
+   - the band appears only once the whole stretch is read (seconds; the page counts meanwhile);
+   - the marimba is not played note for note until KLANG-00450 lands;
+   - the stage tells the editor's code, not the code that plays (`KlangCodePlaybackCtrl.publishNowPlaying`): a
+     song edited and not played again is read as edited;
+   - a change of the code or the tempo makes the whole band anew; a tempo change shifts heard seconds against
+     the song's cycles;
+   - in the app Esc closes the visual, so only 0 gives the camera back to the choreography.
 5. Plans that follow a changing song (point 5).
 
 ## Acceptance

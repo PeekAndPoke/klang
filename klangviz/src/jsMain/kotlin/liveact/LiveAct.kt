@@ -264,6 +264,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
 
         element(HUD_ID)?.textContent = listOf(
+            "music: ${show.music.source}",
             "camera: ${now.view.what()}",
             "seed ${show.seed}",
             "oversampling ${SAMPLES[over]}x (key o)",

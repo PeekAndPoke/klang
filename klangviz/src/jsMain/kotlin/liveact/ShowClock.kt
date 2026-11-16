@@ -37,6 +37,13 @@ class ShowClock(
      */
     private val transport: Transport? = if (show.song != null && show.frozen == null) show.music.listen() else null
 
+    /**
+     * What moves the music, where it is this clock's to move. Null with a transport means the music is someone
+     * else's: the clock follows it. There is no walk-in then and no notice, no click and no key: the stage's time is
+     * the music's, from the moment the show is there.
+     */
+    private val controls: TransportControls? = transport?.controls
+
     /** When the show was started, by the page's clock. */
     private var introAt: Double? = null
 
@@ -46,11 +53,11 @@ class ShowClock(
     /** When the frames began (the page's own clock, where there is no music to listen to). */
     private var started: Double = 0.0
 
-    private val clickListener: ((Event) -> Unit)? = transport?.let { { _: Event -> toggle() } }
-    private val keyListener: ((Event) -> Unit)? = transport?.let { { event: Event -> onKey(event) } }
+    private val clickListener: ((Event) -> Unit)? = controls?.let { { _: Event -> toggle() } }
+    private val keyListener: ((Event) -> Unit)? = controls?.let { { event: Event -> onKey(event) } }
 
     init {
-        if (transport == null) {
+        if (controls == null) {
             // the prototype makes no notice at all then
             notice?.let { it.style.display = "none" }
         } else {
@@ -78,7 +85,9 @@ class ShowClock(
 
         val transport = transport ?: return (now() - started) / 1000 - intro
 
-        if (playing) {
+        val controls = controls
+
+        if (playing || controls == null) {
             return transport.time
         }
 
@@ -90,13 +99,13 @@ class ShowClock(
         }
 
         playing = true
-        transport.play()
+        controls.play()
 
         return 0.0
     }
 
     /** Whether the show still waits for its click or walks in (the music does not run yet). */
-    fun waiting(): Boolean = show.frozen == null && transport != null && !playing
+    fun waiting(): Boolean = show.frozen == null && controls != null && !playing
 
     /**
      * The house lights, 0 to 1: nearly dark while waiting for the click; from the click up within a second, a flash
@@ -125,15 +134,16 @@ class ShowClock(
      */
     private fun toggle() {
         val transport = transport ?: return
+        val controls = controls ?: return
 
         if (!playing) {
             if (introAt == null) {
                 introAt = now()
             }
         } else if (transport.paused) {
-            transport.play()
+            controls.play()
         } else {
-            transport.pause()
+            controls.pause()
         }
 
         notice?.let { it.style.opacity = "0" }
@@ -141,7 +151,7 @@ class ShowClock(
 
     private fun onKey(event: Event) {
         val e = event as? KeyboardEvent ?: return
-        val transport = transport ?: return
+        val controls = controls ?: return
 
         if (event.fromTyping()) {
             return
@@ -157,12 +167,12 @@ class ShowClock(
             "ArrowRight" -> if (!playing) {
                 playing = true
                 introAt = introAt ?: 0.0
-                transport.play()
+                controls.play()
             } else {
-                transport.skip(10.0)
+                controls.skip(10.0)
             }
 
-            "ArrowLeft" -> transport.skip(-10.0)
+            "ArrowLeft" -> controls.skip(-10.0)
 
             else -> Unit
         }

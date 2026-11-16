@@ -16,7 +16,7 @@ import kotlin.math.max
  *
  * The element is made as `new Audio(url)` makes it: the whole file may be loaded ahead.
  */
-class AudioFileTransport(url: String) : Transport {
+class AudioFileTransport(url: String) : Transport, TransportControls {
     private val audio: HTMLAudioElement = document.createElement("audio").unsafeCast<HTMLAudioElement>().also {
         it.preload = "auto"
         it.src = url
@@ -25,6 +25,9 @@ class AudioFileTransport(url: String) : Transport {
     override val time: Double get() = audio.currentTime
 
     override val paused: Boolean get() = audio.paused
+
+    /** The file is played for this listener alone: it is the listener's to move. */
+    override val controls: TransportControls get() = this
 
     override fun play() {
         audio.play()
