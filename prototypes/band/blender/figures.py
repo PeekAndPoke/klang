@@ -24,7 +24,7 @@ CENTRE = [
     ("neck",  "chest", (0, -0.01, 1.535), 0.055, 1.0, True,  "neck"),
     ("head",  "neck",  (0, -0.025, 1.645), 0.092, 1.08, True, "head"),
     ("crown", "head",  (0, -0.015, 1.715), 0.082, 1.12, False, "head"),
-    # only the underside of the head; the chin that shows is a shape of its own (jaw()). Pushed forward to show,
+    # only the underside of the head; the chin that shows is drawn out of the skin (draw_chin()). Pushed forward to show,
     # this point grew a stalk under the face that read as a neck bending down (the drummer, 2026-11-16)
     ("chin",  "head",  (0, -0.060, 1.588), 0.045, 1.0, False, "head"),
 ]
@@ -58,14 +58,14 @@ BASE = dict(
 )
 
 FIGURES = {
-    # the lead guitar: slim, a little stooped, long shaggy hair
+    # the lead guitar: slim, a little stooped, long hair worn open
     "guitar1": dict(height=1.02, scale=dict(torso=0.90, waist=0.88, chest=0.92, arm=0.88, thigh=0.86, leg=0.88),
                     stoop=0.07, eye=(1.0, 0.15, 0.1),
                     # a plain round back of the head: the hair alone left it flat
                     skull=dict(long=1.0, high=0.094, back=0.034, rise=0.022, tilt=8.0, wide=0.086),
                     # long hair: combed straight back over the skull as a pattern in the light (`pattern.js`, the page),
-                    # and from there one smooth mane down his back, see mane(). Hanging locks were tried (hair(), kept)
-                    # and not wanted.
+                    # and from there one smooth mane down his back, see mane(). (Hanging locks were tried and not
+                    # wanted: hair() in the history, last in 8d3690800.)
                     mane=dict(length=0.46)),
     # the bass: the tall thin one, a long neck, stooped
     "bass": dict(height=1.10, scale=dict(torso=0.80, waist=0.78, chest=0.82, shoulder=0.85, arm=0.78, thigh=0.76,
@@ -79,13 +79,14 @@ FIGURES = {
                   # into the shoulders he had none, the maintainer, 2026-11-16)
                   move=dict(crown=(0, 0, 0.004)),
                   radius=dict(bicep=1.25, ribs=1.18), shoulders=1.30, hips=1.05, neck=1.25, stoop=0.03,
-                  eye=(1.0, 0.25, 0.02), jaw=1.5, eye_deep=0.84),
+                  eye=(1.0, 0.25, 0.02), jaw=1.5),
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
                   shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
-                  # see skull(). A long neck, carried forward; the shell hat (shell()) is kept but not worn.
+                  # see skull(). A long neck, carried forward. (A sea shell for a hat was tried and taken off:
+                  # shell() in the history, last in 8d3690800.)
                   radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06), skull=True,
                   move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.022, -0.004),
                             # proud shoulders: level, not sloping, and held back a little
@@ -156,6 +157,10 @@ def points(p):
     return out
 
 
+# The skin's colour, and the hair's: near black. (Two materials of one colour: the page tells them apart by name.)
+DARK = (0.012, 0.012, 0.016)
+
+
 def material(name, color, rough=0.45, emission=None, strength=0.0):
     m = bpy.data.materials.new(name)
     m.use_nodes = True
@@ -185,128 +190,12 @@ def merge_group(body, src, dst):
     body.vertex_groups.remove(sg)
 
 
-def shell(head, size, mat):
-    """
-    A snail's shell worn as a hat: a tube wound in a spiral that grows by the golden ratio squared with every turn
-    (by the golden ratio every half turn), each whorl lying against the one before. The spiral lies in the plane of
-    her profile, so from the side one sees it whole; its mouth opens downward over the top of her head, the whorls
-    rise over the head and coil behind it, and its tip stands out a little to her left.
-    """
-    import math
-    PHI = (1 + 5 ** 0.5) / 2
-    grow = math.log(PHI * PHI) / (2 * math.pi)
-    r_end = 0.070 * size                       # the mouth: a cap on the top of the head
-    R_end = r_end / 0.60                       # the tube is 0.6 of its distance from the spiral's middle
-    mouth = head + Vector((0, 0.005 * size, 0.078 * size))
-    middle = mouth + Vector((0, R_end, 0))     # behind the head (the figure looks along -y)
-    turns, steps, around = 2.7, 120, 16
-    verts, faces = [], []
-    for i in range(steps + 1):
-        a = -turns * 2 * math.pi * (1 - i / steps)
-        R = R_end * math.exp(grow * a)
-        r = 0.60 * R
-        radial = Vector((0, -math.cos(a), -math.sin(a)))
-        centre = middle + radial * R + Vector((0.052 * size * (1 - R / R_end), 0, 0))
-        for j in range(around):
-            b = 2 * math.pi * j / around
-            verts.append(centre + (radial * math.cos(b) + Vector((1, 0, 0)) * math.sin(b)) * r)
-    for i in range(steps):
-        for j in range(around):
-            a0, a1 = i * around + j, i * around + (j + 1) % around
-            faces.append((a0, a1, a1 + around, a0 + around))
-    faces.append(tuple(range(around)))                                             # the tip, closed
-    faces.append(tuple(reversed(range(steps * around, (steps + 1) * around))))    # the mouth, closed (the head is in it)
-    mesh = bpy.data.meshes.new("shell")
-    mesh.from_pydata(verts, [], faces)
-    obj = bpy.data.objects.new("shell", mesh)
-    bpy.context.collection.objects.link(obj)
-    activate(obj)
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.normals_make_consistent(inside=False)
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.shade_smooth()
-    obj.data.materials.append(mat)
-    obj.vertex_groups.new(name="head").add(range(len(verts)), 1.0, 'REPLACE')
-    return obj
-
-
-def hair(head, size, mat, strands=11, length=0.30, spread=2.1):
-    """
-    Long shaggy hair: strands that start high on the back of the head and hang down round the back and the sides to
-    the shoulders, each a tapering lock, a little uneven in length and thickness. Separate pieces joined to the body
-    and moved by the head (points with thickness, as the body is made of, broke the head's hull here).
-    """
-    import math
-    made = []
-    for i in range(strands):
-        a = (i / (strands - 1) - 0.5) * 2 * spread            # 0 is straight back; the ends reach past the ears
-        own = math.sin(i * 12.9898) * 43758.5453
-        own = own - math.floor(own)
-        top = head + Vector((math.sin(a) * 0.060, math.cos(a) * 0.060 + 0.012, 0.070)) * size
-        long = length * (0.80 + 0.35 * own) * size
-        out = Vector((math.sin(a) * 0.085, math.cos(a) * 0.075 + 0.020, 0)) * size
-        bottom = head + out + Vector((0, 0, 0.070 * size - long))
-        axis = (bottom - top).normalized()
-        side = axis.cross(Vector((0, 0, 1))).normalized()
-        front = axis.cross(side)
-        thick = (0.034 + 0.012 * own) * size
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=10, ring_count=10, location=(0, 0, 0))
-        obj = bpy.context.object
-        half = (bottom - top).length / 2
-        middle = (top + bottom) / 2
-        for v in obj.data.vertices:
-            t = (v.co.z + 1) / 2                               # 0 at the lock's end, 1 at its root
-            r = thick * (0.45 + 0.55 * t)
-            # the lock bows outward a little on its way down
-            bow = out.normalized() * (0.018 * size * math.sin(math.pi * t))
-            v.co = middle - axis * (v.co.z * half) + side * (v.co.x * r) + front * (v.co.y * r) + bow
-        bpy.ops.object.shade_smooth()
-        obj.data.materials.append(mat)
-        obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
-        made.append(obj)
-    return made
-
-
-def jaw(head, size, mat, strength=1.0):
-    """
-    NOT USED any more: the chin is the head's own skin drawn out (build()). Kept for the record.
-
-    A chin that shows: a small rounded shape of its own under the front of the face, a little ahead of it, moved by
-    the head (as a point with a thickness the chin was smoothed away with the rest of the head).
-    """
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=16, ring_count=12, location=(0, 0, 0))
-    obj = bpy.context.object
-    # As on a skull: a narrow chin at the front, not ahead of the face, and from it the jaw widening and rising
-    # back toward the ears, so the head's underside is a jawline and no ball. Small: it only gives the face its end.
-    k = size * (0.90 + 0.10 * strength)
-    centre = head + Vector((0, -0.030 - 0.006 * strength, -0.080 - 0.004 * strength)) * size
-    for v in obj.data.vertices:
-        back = (v.co.y + 1) / 2                              # 0 at the chin's tip, 1 where the jaw meets the head
-        # pointed: the tip is narrow and thin and a little lower; the jaw is a V from it back to the ears
-        wide = (0.005 + 0.050 * back * back) * k
-        deep = 0.044 * k
-        high = (0.010 + 0.016 * back) * k
-        # upward the shape is no thin piece but the face itself: it rises from the chin into the head and widens
-        # to the cheeks, so nothing is hollow between chin and face (the maintainer, 2026-11-16: "the head must go up
-        # from there")
-        up = max(0.0, v.co.z)
-        rise = high if v.co.z < 0 else 0.062 * k
-        broad = wide + 0.040 * k * up
-        v.co = centre + Vector((v.co.x * broad, v.co.y * deep * (1 - 0.15 * up), v.co.z * rise - 0.010 * k * (1 - back) + 0.024 * k * back * back * (1 - up)))
-    bpy.ops.object.shade_smooth()
-    obj.data.materials.append(mat)
-    obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
-    return obj
-
-
 def mane(head, size, mat, length=0.46):
     """
     Long hair worn open, as one smooth mane: from the back of the skull down over the shoulders and the back to
     between the shoulder blades, widening as it falls and wrapping round the head and the neck. Its top moves with the head, its end lies on the back (the chest),
     and it stretches between the two, so it does not swing like a board when the head nods.
     """
-    import math
     root = head + Vector((0, 0.055, 0.085)) * size
     end = head + Vector((0, 0.150, 0.075 - length)) * size
     axis = (end - root).normalized()
@@ -343,11 +232,11 @@ def mane(head, size, mat, length=0.46):
 
 def skull(head, size, mat, long=1.30, high=0.107, back=0.030, rise=0.056, tilt=30.0, wide=0.082):
     """
-    The long back of a head: an egg, its narrow end in the forehead, its long axis rising toward the back at 30
-    degrees, so the skull sweeps up and back from the brow in one smooth line. It is 1.3 times as long as it is high
-    (the golden ratio's 1.618 was too long for the maintainer's eye), and widest two thirds of the way back.
+    The long back of a head: an egg, its long axis rising toward the back (by [tilt] degrees), so the skull sweeps
+    up and back from the brow in one smooth line. With the defaults (the frontwoman's) it is about 1.2 times as long
+    as it is high; it is widest from its middle back and only a little narrower at the forehead. The lead guitarist
+    passes his own measures: a plain round back of the head.
     """
-    import math
     high = high * size
     long = 0.098 * size * long
     wide = wide * size
@@ -368,10 +257,17 @@ def skull(head, size, mat, long=1.30, high=0.107, back=0.030, rise=0.056, tilt=3
     return obj
 
 
-def build(key):
-    p = dict(BASE); p.update(FIGURES[key])
-    P = points(p)
-    names = list(P.keys())
+def join_into(body, part):
+    """Makes [part] a part of [body]'s mesh. One part at a time, in the order the parts are made: the order of the
+    joins is the order of the materials and of the vertices."""
+    bpy.ops.object.select_all(action='DESELECT')
+    part.select_set(True); body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
+
+
+def skin_body(key, P, names):
+    """The body as the skeleton's skin: a point each with its thickness, the Skin modifier round them."""
     mesh = bpy.data.meshes.new(key)
     mesh.from_pydata([P[n].pos for n in names],
                      [(names.index(P[n].parent), names.index(n)) for n in names if P[n].parent], [])
@@ -384,7 +280,11 @@ def build(key):
         v = mesh.skin_vertices[0].data[i]
         v.radius = (P[n].radius, P[n].radius)
         v.use_root = (n == "hips")
+    return body
 
+
+def name_pieces(body, P, names):
+    """Names every piece of the skin `seg_<the point it ends at>`, and makes the skin real geometry."""
     # Blender's armature for the skeleton gives every piece of the skin its group, named here after the point the
     # piece ends at; the armature itself is not kept
     bpy.ops.object.skin_armature_create(modifier="Skin")
@@ -392,7 +292,7 @@ def build(key):
     for bone in list(gen.data.bones):
         tail = gen.matrix_world @ bone.tail_local
         near = min(names, key=lambda n: (P[n].pos - tail).length)
-        new = near if (P[near].pos - tail).length < 1e-4 and near != "hips" else "hips"
+        new = near if (P[near].pos - tail).length < 1e-4 else "hips"
         vg = body.vertex_groups.get(bone.name)
         if vg:
             vg.name = "seg_" + new
@@ -402,6 +302,10 @@ def build(key):
         body.modifiers.remove(m)
     bpy.data.objects.remove(gen, do_unlink=True)
 
+
+def flatten(body, P):
+    """Reads the `seg_` names, so it comes after name_pieces() and before bind_to_joints(); and it shapes the coarse
+    mesh, so before subdivide()."""
     # Flatter front to back: each piece by its two ends' depths
     groups = {g.index: g.name[4:] for g in body.vertex_groups}
     for v in body.data.vertices:
@@ -415,6 +319,9 @@ def build(key):
         cy = a.pos.y + ab.y * t
         v.co.y = cy + (v.co.y - cy) * (a.depth + (b.depth - a.depth) * t)
 
+
+def bind_to_joints(body, P, names, extras):
+    """Turns the pieces' groups into the joints' (the bones' names), before subdivide() spreads them."""
     # A piece moves with the joint its limb ends at; a piece that only shapes (a chin, a belly) with the joint it grows from
     def owner(n):
         if P[n].joint:
@@ -424,7 +331,7 @@ def build(key):
         while len(kids) == 1 and not P[kids[0]].joint:
             chain = kids[0]
             kids = [c for c in names if P[c].parent == chain]
-        if len(kids) == 1 and n not in ("crown",) and all(e[0] != n for e in p["extras"]):
+        if len(kids) == 1 and n not in ("crown",) and all(e[0] != n for e in extras):
             return kids[0]
         up = P[n].parent
         while not P[up].joint:
@@ -436,11 +343,17 @@ def build(key):
     for g in body.vertex_groups:
         g.name = g.name[4:]
 
+
+def subdivide(body):
     sub = body.modifiers.new("Subsurf", "SUBSURF")
     sub.levels = 2
     bpy.ops.object.modifier_apply(modifier="Subsurf")
     bpy.ops.object.shade_smooth()
 
+
+def soften_weights(body):
+    """After subdivide() (how far it spreads goes by the mesh's fineness), before any part is joined on (eyes, skull
+    and mane keep their own plain weights)."""
     # Soft joints. So far every piece of skin belongs wholly to one bone, so a joint that bends folds the skin along
     # a hard line: a kink, worst on thick limbs (the drummer's arms, the maintainer, 2026-11-16). Each point's weights
     # are now averaged with its neighbours' a few times over, so the skin bends over a stretch round the joint.
@@ -449,7 +362,6 @@ def build(key):
     for e in mesh.edges:
         a_, b_ = e.vertices
         near[a_].append(b_); near[b_].append(a_)
-    names_of = [g.name for g in body.vertex_groups]
     weights = [{g.group: g.weight for g in v.groups} for v in mesh.vertices]
     for _ in range(7):
         mixed = []
@@ -469,19 +381,15 @@ def build(key):
         for g, x in best:
             if x / total > 0.01:
                 body.vertex_groups[g].add([i], x / total, 'REPLACE')
-    body.data.materials.append(material(key + "_dark", (0.012, 0.012, 0.016)))
-    body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
 
-    head = P["head"]
-    hs = head.radius / 0.092
 
+def draw_chin(body, head, hs, strength):
     # The chin is no added piece but the head's own skin, drawn out: the point of the real surface under the front of
     # the face is found, and the skin round it is pulled forward and down, most at that point and fading smoothly
     # round it, narrower across than along, so it comes to a soft point and runs back into the jaw without an edge.
     near = [v for v in body.data.vertices if (v.co - head.pos).length < 1.05 * head.radius and v.co.z < head.pos.z]
     if near:
         tip = max(near, key=lambda v: -0.62 * (v.co.y - head.pos.y) - 0.78 * (v.co.z - head.pos.z) - 6.0 * abs(v.co.x)).co.copy()
-        strength = p.get("jaw", 1.0)
         pull = Vector((0, -0.80, -0.60)) * (0.050 * hs * strength)
         for v in body.data.vertices:
             d = v.co - tip
@@ -489,15 +397,9 @@ def build(key):
                 w = math.exp(-((d.x / (0.028 * hs)) ** 2 + (d.y / (0.042 * hs)) ** 2 + (d.z / (0.034 * hs)) ** 2) / 2)
                 v.co += pull * w
 
-    # A long skull, where one is worn, before the eyes: they have to find the forehead it makes
-    back = None
-    if p.get("skull"):
-        shape = p["skull"] if isinstance(p["skull"], dict) else {}
-        back = skull(head.pos, hs, body.data.materials[0], **shape)
-    surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
-    if back:
-        surface += [v.co.copy() for v in back.data.vertices]
 
+def add_eyes(body, p, head, hs, surface):
+    """[surface]: the points of the head's real surface (skin and skull), taken before the first eye is joined."""
     # The eyes: narrow, in the face, part of the body, moved by the head. Each is set on the real surface: the skin
     # (and the skull) is looked up in front of the eye's place, and the eye sits half sunk into it, from every side
     size = p["eye_size"] * hs
@@ -512,41 +414,10 @@ def build(key):
         bpy.ops.object.transform_apply(scale=True)
         eye.data.materials.append(body.data.materials[1])
         eye.vertex_groups.new(name="head").add(range(len(eye.data.vertices)), 1.0, 'REPLACE')
-        bpy.ops.object.select_all(action='DESELECT')
-        eye.select_set(True); body.select_set(True)
-        bpy.context.view_layer.objects.active = body
-        bpy.ops.object.join()
+        join_into(body, eye)
 
-    if back:
-        bpy.ops.object.select_all(action='DESELECT')
-        back.select_set(True); body.select_set(True)
-        bpy.context.view_layer.objects.active = body
-        bpy.ops.object.join()
 
-    if p.get("mane"):
-        hair_mat = material(key + "_hair", (0.012, 0.012, 0.016))
-        body.data.materials.append(hair_mat)
-        long_hair = mane(head.pos, head.radius / 0.092, hair_mat, **p["mane"])
-        bpy.ops.object.select_all(action='DESELECT')
-        long_hair.select_set(True); body.select_set(True)
-        bpy.context.view_layer.objects.active = body
-        bpy.ops.object.join()
-
-    if p.get("hair"):
-        locks = hair(head.pos, head.radius / 0.092, body.data.materials[0], **p["hair"])
-        bpy.ops.object.select_all(action='DESELECT')
-        for lock in locks: lock.select_set(True)
-        body.select_set(True)
-        bpy.context.view_layer.objects.active = body
-        bpy.ops.object.join()
-
-    if p.get("shell"):
-        hat = shell(head.pos, head.radius / 0.092, material(key + "_shell", (0.030, 0.027, 0.024), rough=0.22))
-        bpy.ops.object.select_all(action='DESELECT')
-        hat.select_set(True); body.select_set(True)
-        bpy.context.view_layer.objects.active = body
-        bpy.ops.object.join()
-
+def make_rig(key, P, names, body):
     # The armature: a bone for each joint, from the joint before it; named after the joint it ends at
     arm = bpy.data.armatures.new(key + "_rig")
     rig = bpy.data.objects.new(key + "_rig", arm)
@@ -567,8 +438,46 @@ def build(key):
     bpy.ops.object.mode_set(mode='OBJECT')
     body.modifiers.new("Armature", "ARMATURE").object = rig
     body.parent = rig
-    missing = [g.name for g in body.vertex_groups if g.name not in arm.bones]
-    print("BUILT", key, "bones", len(arm.bones), "verts", len(body.data.vertices), "groups without a bone", missing)
+    return rig
+
+
+def build(key):
+    """One figure: its body and its rig. The steps' order matters; each step says what it needs."""
+    p = dict(BASE); p.update(FIGURES[key])
+    P = points(p)
+    names = list(P.keys())
+    body = skin_body(key, P, names)
+    name_pieces(body, P, names)
+    flatten(body, P)
+    bind_to_joints(body, P, names, p["extras"])
+    subdivide(body)
+    soften_weights(body)
+    # the materials, in the order the page knows them by: the dark skin, the eyes (and the hair, where there is some)
+    body.data.materials.append(material(key + "_dark", DARK))
+    body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
+
+    head = P["head"]
+    hs = head.radius / 0.092
+    draw_chin(body, head, hs, p.get("jaw", 1.0))
+    # a long skull, where one is worn, before the eyes: they have to find the forehead it makes
+    back = None
+    if p.get("skull"):
+        shape = p["skull"] if isinstance(p["skull"], dict) else {}
+        back = skull(head.pos, hs, body.data.materials[0], **shape)
+    surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
+    if back:
+        surface += [v.co.copy() for v in back.data.vertices]
+    add_eyes(body, p, head, hs, surface)
+    if back:
+        join_into(body, back)
+    if p.get("mane"):
+        hair_mat = material(key + "_hair", DARK)
+        body.data.materials.append(hair_mat)
+        join_into(body, mane(head.pos, hs, hair_mat, **p["mane"]))
+
+    rig = make_rig(key, P, names, body)
+    missing = [g.name for g in body.vertex_groups if g.name not in rig.data.bones]
+    print("BUILT", key, "bones", len(rig.data.bones), "verts", len(body.data.vertices), "groups without a bone", missing)
     return body, rig
 
 
