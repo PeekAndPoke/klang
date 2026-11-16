@@ -56,7 +56,7 @@ floor.receiveShadow = true;
 scene.add(floor);
 // A wall behind the stage: it takes the light and the shadows. Dark and matt, so the back lamps (which shine away
 // from it) leave it nearly black and a lamp from the front paints the band on it.
-const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshStandardMaterial({ color: 0x8a8f9c, roughness: 0.95, emissive: 0x03050a }));
+const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95 }));
 back.position.set(0, 6, -5);
 back.receiveShadow = true;
 scene.add(back);
@@ -80,6 +80,8 @@ function frontAt(t) {
 }
 function analog(t) {
   front = frontAt(t);
+  // the wall is black unless the front lamp is on: it takes no light from the other lamps at all
+  back.material.color.setHex(0x8a8f9c).multiplyScalar(front);
   for (const { light, base, seed, group } of lamps) {
     const wander = 0.060 * Math.sin(t * 0.23 + seed) + 0.040 * Math.sin(t * 0.61 + seed * 2.3) + 0.025 * Math.sin(t * 1.37 + seed * 0.7);
     const shiver = 0.012 * Math.sin(t * 9.1 + seed * 3.1) + 0.008 * Math.sin(t * 14.7 + seed * 1.9);
