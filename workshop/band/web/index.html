@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>The band on stage (KLANG-00446)</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    canvas { display: block; }
+    #hud { position: fixed; left: 12px; top: 10px; color: #789; font: 12px monospace; }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "../ignored/three/build/three.module.js", "three/addons/": "../ignored/three/examples/jsm/" } }
+  </script>
+</head>
+<body>
+<div id="hud"></div>
+<script>
+  // a failure is shown on the page, not only in the console
+  const fail = (m) => { const e = document.createElement('pre'); e.textContent = m; e.style.cssText = 'position:fixed;left:12px;top:40px;color:#f66;font:12px monospace;white-space:pre-wrap;max-width:90vw'; document.body.appendChild(e); };
+  addEventListener('error', (e) => fail((e.message || 'error') + '\n' + (e.filename || '') + ':' + (e.lineno || '') + '\n' + (e.error && e.error.stack || '')));
+  addEventListener('unhandledrejection', (e) => fail('rejected: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)));
+</script>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

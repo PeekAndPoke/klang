@@ -1,0 +1,364 @@
+// The band on stage, standalone (KLANG-00446). Step 1: the figures on a dark stage, all moving by the same motion
+// code: a groove written in each figure's own measures.
+//   ?t=1.25      freeze the time at 1.25 s (for stills)
+//   ?view=side   front (default), side, or a figure's name for a close look
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Rig } from './rig.js';
+import { Drummer, testBeat } from './drummer.js';
+import { Marimba } from './marimba.js';
+import { Trumpet } from './trumpet.js';
+import { StringPlayer } from './strings.js';
+import { loadSong, drumHits, notesOf, strumsOf } from './song.js';
+import { setEnergy } from './strike.js';
+import { pattern } from './pattern.js';
+import { enter, stepLegs, walkPose, capture, blend } from './entrance.js';
+import { Choreography, HOME } from './camera.js';
+
+const params = new URLSearchParams(location.search);
+window.__debug = params.has('debug');
+const frozen = params.has('t') ? parseFloat(params.get('t')) : null;
+const view = params.get('view') || 'front';
+// The song as recorded, when it is there (?test: the test beat instead)
+const song = params.has('test') ? null : await loadSong('../ignored/schmetterling-events.json').catch(() => null);
+const BPM = song ? song.bpm : 120;
+// The recording's loudness over time (a value every 20 ms), measured once from the audio
+const loudness = song ? await fetch('../ignored/schmetterling-energy.json').then((r) => (r.ok ? r.json() : null)).catch(() => null) : null;
+function energyAt(t) {
+  if (!loudness) { return { slow: 0.7, burst: 0, level: 0.7, low: 0.5, mid: 0.5, high: 0.5 }; }
+  const i = Math.max(0, Math.min(loudness.level.length - 1, Math.round((t - loudness.offset) / loudness.step)));
+  let burst = 0;
+  for (let k = 0; k < 6; k++) { const j = Math.max(0, i - k); burst += Math.max(0, loudness.level[j] - loudness.slow[j]) / 6; }
+  return { slow: loudness.slow[i], burst, level: loudness.level[i], low: loudness.low[i], mid: loudness.mid[i], high: loudness.high[i] };
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020308);
+scene.fog = new THREE.Fog(0x020308, 9, 22);
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 60);
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x0b0c10, roughness: 0.35, metalness: 0.2 }));
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshBasicMaterial({ color: 0x0a1630 }));
+back.position.set(0, 6, -5);
+scene.add(back);
+scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
+
+// The lamps are analog: old stage lamps on a tired supply. Each one's brightness wanders slowly on its own, breathes
+// a little, shivers faintly, and now and then sags for a moment as if something else drew current; none is ever
+// quite steady and no two do the same.
+const lamps = [];
+// the house: before the click the stage lies nearly dark; on the click the lamps come up at once
+let house = 1;
+function analog(t) {
+  for (const { light, base, seed } of lamps) {
+    const wander = 0.060 * Math.sin(t * 0.23 + seed) + 0.040 * Math.sin(t * 0.61 + seed * 2.3) + 0.025 * Math.sin(t * 1.37 + seed * 0.7);
+    const shiver = 0.012 * Math.sin(t * 9.1 + seed * 3.1) + 0.008 * Math.sin(t * 14.7 + seed * 1.9);
+    // a sag: a dip of a sixth, about every twenty seconds, at its own moment per lamp
+    const phase = ((t + seed * 5.3) % 19.7 + 19.7) % 19.7;
+    const sag = phase < 1.2 ? 0.16 * Math.sin(Math.PI * phase / 1.2) ** 2 : 0;
+    light.intensity = base * (1 + wander + shiver - sag) * house;
+  }
+}
+function spot(x, y, z, color, intensity, tx, tz, shadow) {
+  const light = new THREE.SpotLight(color, intensity, 30, 0.5, 0.7, 1.2);
+  light.position.set(x, y, z);
+  light.target.position.set(tx, 1.0, tz);
+  light.castShadow = !!shadow;
+  light.shadow.mapSize.set(2048, 2048);
+  light.shadow.bias = -0.0005;
+  scene.add(light, light.target);
+  lamps.push({ light, base: intensity, seed: lamps.length * 7.31 + 1.7 });
+  return light;
+}
+spot(-4.5, 5.0, -4.0, 0x3070ff, 260, -2.0, 0, true);
+spot(4.5, 5.0, -4.0, 0xff3070, 260, 2.0, 0, true);
+spot(0, 5.5, -4.5, 0x70a0ff, 180, 0, -1, true);
+spot(0, 6, 8, 0xfff0e0, 25, 0, 0, false);
+
+// Where each player stands: x to the audience's right, z toward the audience
+// The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others
+const RISER = 0.40;
+const PLACES = {
+  drums: [0.1, -2.1, 0, RISER], bass: [-2.15, 0.4, 0.15], guitar1: [-3.0, 1.7, 0.3],
+  eimer: [-0.7, 2.2, 0.1], marimba: [1.7, 0.4, -0.15], guitar2: [3.0, 1.7, -0.3],
+};
+const riser = new THREE.Mesh(new THREE.BoxGeometry(2.9, RISER, 2.2), new THREE.MeshStandardMaterial({ color: 0x08090c, roughness: 0.5, metalness: 0.2 }));
+riser.position.set(0.0, RISER / 2, -1.75);
+riser.castShadow = true;
+riser.receiveShadow = true;
+scene.add(riser);
+// Each player's pattern, seen only in how the body throws back the light
+const SKINS = { drums: 'tiger', bass: 'pinstripe', guitar1: 'spiral', guitar2: 'spots', marimba: 'diamonds', eimer: 'braid' };
+const rigs = {};
+const loader = new GLTFLoader();
+await Promise.all(Object.entries(PLACES).map(async ([name, [x, z, turn, y = 0]]) => {
+  const gltf = await loader.loadAsync(`../models/${name}.glb`);
+  gltf.scene.position.set(x, y, z);
+  gltf.scene.rotation.y = turn;
+  scene.add(gltf.scene);
+  rigs[name] = new Rig(gltf.scene);
+  gltf.scene.traverse((o) => {
+    if (o.isSkinnedMesh) {
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) { if (m.name.endsWith('_dark')) { pattern(m, SKINS[name]); } }
+    }
+  });
+}));
+
+// Each player's character: how they move with the music apart from playing (see Mover in strike.js)
+const CHARACTERS = {
+  // the engine of the band: on every beat, steady, a touch ahead
+  drums: { seed: 11, depth: 1.0, beats: [1, 0.7, 0.9, 0.7], lag: -0.02, soft: 0.10, chance: 0.15, look: 0.05, tilt: 0.03, lean: 0.01,
+    parts: { head: 1.0, trunk: 1.3, knees: 0.8 } },                 // from the trunk: his whole upper body goes
+  // the steady one: late, mostly on one and three, always the same whatever the band does; looks about slowly
+  bass: { seed: 23, steady: 0.9, depth: 0.9, beats: [1, 0.2, 0.7, 0.2], lag: 0.07, soft: 0.18, chance: 0.12, skip: 0, look: 0.22, tilt: 0.06, lean: 0.02,
+    parts: { head: 0.6, trunk: 0.8, knees: 1.0, sway: 1.3 } },      // from the knees and hips, the head hardly
+  // loose and restless: uneven, looks round a lot, skips nods
+  guitar1: { seed: 37, depth: 0.8, beats: [0.9, 0.55, 0.9, 0.55], lag: 0.02, soft: 0.13, chance: 0.6, skip: 0.18, look: 0.30, tilt: 0.10, lean: 0.03,
+    parts: { head: 0.9, trunk: 1.5, knees: 0.7, sway: 1.2 } },      // leans his whole trunk into it
+  // the headbanger, but only in fits: about a quarter of the time he goes all the way, else he nods like the others
+  guitar2: { seed: 41, fits: { every: 12, share: 0.22, calm: 0.30 }, depth: 0.85, beats: [1, 0.85, 1, 0.85], lag: -0.03, soft: 0.11, chance: 0.25, look: 0.08, tilt: 0.05, lean: 0.02,
+    parts: { head: 1.15, trunk: 0.9, knees: 0.8, sway: 0.6 } },      // all head, planted feet
+  // composed: small nods, her head tilting from side to side
+  marimba: { seed: 53, depth: 0.5, beats: [1, 0.25, 0.6, 0.25], lag: 0.03, soft: 0.18, chance: 0.35, look: 0.10, tilt: 0.12, lean: 0.015,
+    parts: { head: 0.8, trunk: 0.6, knees: 0.5 } },                 // upright, quiet below the neck
+  // the frontman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
+  eimer: { seed: 67, depth: 0.9, beats: [1, 0.5, 0.8, 0.5], lag: 0.0, soft: 0.13, chance: 0.2, skip: 0, look: 0.14, tilt: 0.04, lean: 0.02,
+    parts: { head: 1.0, trunk: 1.0, knees: 1.0, sway: 1.0 } },
+};
+const drummer = new Drummer(rigs.drums, song ? drumHits(song) : testBeat(64, BPM), BPM, CHARACTERS.drums);
+const testTune = () => Array.from({ length: 256 }, (_, i) => ({ t: i * 0.25, midi: 64 + [0, 3, 7, 10, 12, 10, 7, 3][i % 8] + (i % 32 >= 16 ? 5 : 0), v: i % 4 === 0 ? 1 : 0.6 }));
+const marimba = new Marimba(rigs.marimba, song ? notesOf(song, 'lead') : testTune(), BPM, CHARACTERS.marimba);
+const testCall = () => Array.from({ length: 128 }, (_, i) => ({ t: 1 + i * 0.75 + (i % 8 >= 6 ? 3 : 0), d: 0.6, midi: 65 + [0, 2, 3, 7, 5, 3, 10, 12][i % 8], v: 1 })).sort((a, b) => a.t - b.t);
+const eimer = new Trumpet(rigs.eimer, song ? notesOf(song, 'trommel') : testCall(), BPM, CHARACTERS.eimer);
+const testRiff = (step, low) => Array.from({ length: 512 }, (_, i) => ({ t: i * step, midi: low + [0, 0, 3, 0, 5, 0, 7, 3][Math.floor(i * step * 2) % 8], v: i % 2 === 0 ? 1 : 0.7 }));
+// where the camera is: who looks at the viewer looks there
+const viewer = HOME.pos.clone();
+const players = [
+  ['bass', new StringPlayer(rigs.bass, song ? strumsOf(song, ['bass']) : testRiff(0.5, 28), BPM, { kind: 'bass', lean: 0.10, bang: 0.16, bounce: 0.045, character: CHARACTERS.bass })],
+  ['guitar1', new StringPlayer(rigs.guitar1, song ? strumsOf(song, ['guitar1']) : testRiff(0.25, 52), BPM, { kind: 'guitar', lean: -0.05, bang: 0.14, bounce: 0.025, character: CHARACTERS.guitar1 })],
+  ['guitar2', new StringPlayer(rigs.guitar2, song ? strumsOf(song, ['guitar2', 'guitar3']) : testRiff(0.125, 40), BPM, { kind: 'guitar', lean: 0.10, bang: 0.24, bounce: 0.028, character: CHARACTERS.guitar2,
+    glance: { at: viewer, every: 11, chance: 0.5 } })],
+];
+
+// The walk-in: the stage's clock starts INTRO seconds before the song. Each player comes from off the stage (x, z)
+// between two times; the drummer first, from the back and up onto the riser, the frontwoman last.
+const INTRO = 15;
+const ENTRANCES = {
+  drums: { from: [0.1, -7.5], t: [-15, -9] },
+  bass: { from: [-8.5, 0.9], t: [-13.5, -7.5] },
+  guitar2: { from: [8.5, 2.0], t: [-12.5, -6.5] },
+  guitar1: { from: [-8.5, 2.1], t: [-11.5, -5.5] },
+  marimba: { from: [8.5, 0.9], t: [-10.5, -4.8] },
+  eimer: { from: [-8.5, 2.9], t: [-8.5, -2.4] },
+};
+let introAt = null;       // when the show was started, by the page's clock
+let playing = false;      // the walk-in is over and the audio runs
+function showTime() {
+  if (frozen !== null) { return frozen; }
+  if (!audio) { return (performance.now() - started) / 1000 - INTRO; }
+  if (playing) { return audio.currentTime; }
+  if (introAt === null) { return -INTRO; }
+  const t = (performance.now() - introAt) / 1000 - INTRO;
+  if (t < 0) { return t; }
+  playing = true;
+  audio.play();
+  return 0;
+}
+const stickUp = new THREE.Vector3(0, 1, 0);
+
+// The audio of the same render: its time is the stage's time
+const audio = song && frozen === null ? new Audio('../ignored/schmetterling.wav') : null;
+if (audio) {
+  const hint = document.createElement('div');
+  hint.textContent = 'click to start';
+  hint.style.transition = 'opacity 0.4s';
+  hint.style.font = '18px monospace';
+  hint.style.cssText = 'position:fixed;left:0;right:0;bottom:18px;text-align:center;color:#9ab;font:14px monospace';
+  document.body.appendChild(hint);
+  const toggle = () => {
+    if (!playing) { if (introAt === null) { introAt = performance.now(); } } else if (audio.paused) { audio.play(); } else { audio.pause(); }
+    hint.style.opacity = 0;
+  };
+  addEventListener('click', toggle);
+  addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { toggle(); e.preventDefault(); }
+    // right, during the walk-in: skip it
+    if (e.code === 'ArrowRight') { if (!playing) { playing = true; introAt = introAt ?? 0; audio.play(); } else { audio.currentTime += 10; } }
+    if (e.code === 'ArrowLeft') { audio.currentTime = Math.max(0, audio.currentTime - 10); }
+  });
+}
+
+// What stands on the floor darkens it right below itself, whatever the lamps do: nobody floats
+const blobTexture = (() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const fill = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+  fill.addColorStop(0, 'rgba(0,0,0,0.85)');
+  fill.addColorStop(0.5, 'rgba(0,0,0,0.5)');
+  fill.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = fill;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+const blobs = [];
+function blob(follow, width, depth, forward = 0, floor = 0) {
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: blobTexture, transparent: true, depthWrite: false, opacity: 0.38 }));
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.scale.set(width, depth, 1);
+  mesh.position.y = floor + 0.004 + blobs.length * 0.0004;
+  scene.add(mesh);
+  blobs.push({ mesh, follow, forward });
+}
+// none under the players' feet (the maintainer, 2026-11-15): the lamps' own shadows hold them on the floor
+blob(drummer.kit, 2.2, 1.9, 0.5, RISER); blob(riser, 3.6, 2.9);
+const blobAt = new THREE.Vector3();
+function placeBlobs() {
+  for (const b of blobs) {
+    b.follow.getWorldPosition(blobAt);
+    const turn = b.forward ? rigs.drums.root.rotation.y * 0 : 0;
+    b.mesh.position.x = blobAt.x + turn;
+    b.mesh.position.z = blobAt.z + b.forward;
+  }
+}
+
+const smooth01 = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+
+/** A stroke's height over its beat: up slowly, down fast; 0 at the hit, at both ends. */
+const stroke = (p) => Math.sin(Math.PI * p * p);
+
+/**
+ * The groove: one motion for every figure, in the figure's own measures (its hip height, its shoulders, its arm's
+ * length). The knees give on the beat, the trunk leans, the head nods, the hands strike in turn at two places in
+ * front; the feet stay where they stand.
+ */
+function groove(rig, beat, phase) {
+  const b = beat + phase;
+  const pulse = 0.5 - 0.5 * Math.cos(2 * Math.PI * b);              // 0 on the beat, 1 between
+  const sway = Math.sin(Math.PI * b);                               // left, right, a beat each
+  const leg = rig.pelvis.y;
+
+  rig.reset();
+  rig.update();
+  rig.moveHips(new THREE.Vector3(sway * 0.035 * leg, -(0.05 + 0.045 * (1 - pulse)) * leg, 0.02 * leg));
+  rig.turn('belly', X, 0.10 + 0.05 * (1 - pulse));
+  rig.turn('chest', Z, -sway * 0.06);
+  rig.turn('head', X, 0.10 + 0.16 * Math.pow(1 - pulse, 2));
+
+  for (const side of ['L', 'R']) {
+    const s = side === 'L' ? 1 : -1;
+    rig.foot(side, rig.root.localToWorld(rig.ankle[side].clone()), rig.dir(0.15 * s, 0, 1));
+
+    // the hand: strikes every second beat, the two in turn
+    const mine = (b / 2 + (side === 'L' ? 0.5 : 0)) % 1;
+    const sh = rig.shoulder[side];
+    const reach = rig.armLength;
+    const target = rig.world(sh.x + 0.10 * s * reach, sh.y - 0.78 * reach + 0.50 * reach * stroke(mine), sh.z + 0.62 * reach);
+    rig.hand(side, target, rig.dir(0.5 * s, -1.0, -0.5));
+  }
+
+  // the eyes: bright at the hit, fading after
+  if (rig.eyes) { rig.eyes.emissiveIntensity = 3 + 22 * Math.pow(1 - (b % 1), 3); }
+}
+
+// The camera's choreography, when the song is there (?still: the wide view only)
+const times = (tags) => (song ? tags.flatMap((tag) => (song.byTag[tag] || []).map((e) => e.t)).sort((a, b) => a - b) : []);
+const choreography = song && !params.has('still') ? new Choreography(rigs, {
+  drums: times(['kick', 'snare']), bass: times(['bass']), guitar1: times(['guitar1']), guitar2: times(['guitar2', 'guitar3']),
+  marimba: times(['lead']), eimer: times(['trommel']),
+}, 240 / BPM) : null;
+let showT = 0;
+function look() {
+  if (params.has('cam')) {
+    const c = params.get('cam').split(',').map(Number), a = (params.get('at') || '0,1,0').split(',').map(Number);
+    camera.position.set(c[0], c[1], c[2]); camera.lookAt(a[0], a[1], a[2]); return;
+  }
+  if (view === 'side') { camera.position.set(8.5, 2.2, 5.5); camera.lookAt(0, 1.0, -0.4); return; }
+  if (rigs[view]) {
+    const p = rigs[view].root.position;
+    camera.position.set(p.x + 1.6, 1.5, p.z + 4.2); camera.lookAt(p.x, 1.0, p.z); return;
+  }
+  if (choreography) {
+    const shot = choreography.at(showT);
+    camera.position.copy(shot.pos);
+    camera.lookAt(shot.at);
+    if (Math.abs(camera.fov - shot.fov) > 1e-3) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }
+    return;
+  }
+  camera.position.set(0, 1.85, 9.4); camera.lookAt(0, 1.0, 0.0);
+}
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+const hud = document.getElementById('hud');
+const started = performance.now();
+// frames a second, counted over each half second, and the longest single frame in it (a stutter shows there)
+let fps = 0, worst = 0, counted = 0, since = performance.now(), before = performance.now();
+let frames = 0;
+function frame() {
+  const t = showTime();
+  const beat = t * BPM / 60;
+  setEnergy(energyAt(t));
+  const walks = {};
+  for (const name of Object.keys(ENTRANCES)) { walks[name] = enter(rigs[name], ENTRANCES[name], PLACES[name], t); }
+  // the string players and the marimba player walk as they stand, the legs stepping
+  for (const [name, player] of players) { player.update(t); stepLegs(rigs[name], walks[name]); }
+  marimba.update(t);
+  stepLegs(rigs.marimba, walks.marimba);
+  // the frontwoman: put where her walk-in has her; once there she is her own (her place, her strolls)
+  const her = walks.eimer.since < 0 ? { at: rigs.eimer.root.position.clone(), turn: rigs.eimer.root.rotation.y, going: 0, speed: 0, far: 0 } : null;
+  eimer.update(t, her);
+  stepLegs(rigs.eimer, walks.eimer);
+  // the drummer walks in with the sticks in his hands, and sits down once he is at the stool
+  drummer.update(t);
+  const sit = smooth01(walks.drums.since / 1.6);
+  if (sit < 1) {
+    const seated = capture(rigs.drums);
+    walkPose(rigs.drums, walks.drums);
+    blend(rigs.drums, capture(rigs.drums), seated, sit);
+    for (const side of ['L', 'R']) {
+      const hand = rigs.drums.bones['hand' + side];
+      const d = new THREE.Vector3(0, 1, 0).applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()));
+      const stick = drummer.sticks[side];
+      stick.position.copy(hand.getWorldPosition(new THREE.Vector3())).addScaledVector(d, drummer.stickLength * 0.22);
+      stick.quaternion.setFromUnitVectors(stickUp, d);
+    }
+  }
+  // waiting for the click: nearly dark. From the click: up within a second, a flash first, like lamps switched on
+  if (frozen === null && audio && !playing) {
+    const since = introAt === null ? -1 : (performance.now() - introAt) / 1000;
+    house = since < 0 ? 0.07 : Math.min(1, 0.07 + 0.93 * since / 0.9) + 0.5 * Math.exp(-since / 0.12);
+  } else { house = 1; }
+  analog(t);
+  placeBlobs();
+  showT = t;
+  look();
+  viewer.copy(camera.position);
+  renderer.render(scene, camera);
+  const nowMs = performance.now();
+  worst = Math.max(worst, nowMs - before);
+  before = nowMs;
+  counted++;
+  if (nowMs - since >= 500) { fps = counted * 1000 / (nowMs - since); hud.dataset.worst = worst.toFixed(0); counted = 0; worst = 0; since = nowMs; }
+  hud.textContent = `${fps.toFixed(0)} fps  (slowest frame ${hud.dataset.worst || '-'} ms)   t ${t.toFixed(2)} s  beat ${beat.toFixed(2)}  ${window.__dbg || ''}`;
+  frames++;
+  if (frames > 2) { window.__ready = true; }
+  requestAnimationFrame(frame);
+}
+frame();

@@ -1,0 +1,121 @@
+// The camera's choreography. Mostly the total: the wide view from the audience, the start position. The song is cut
+// into rounds of 48 cycles (bars, about 79 s): 36 on the total, then three looks in a row, three bars each, with a
+// cut between them (close on one player, or the stage from another angle), then back to the total: by a plain cut
+// in two rounds of three, and in the third by a slow dolly zoom over three bars (the camera travels back while its
+// lens opens, so the player keeps their size for the first half of the way as the stage grows round them).
+// Calm on purpose (the maintainer, 2026-11-16: fast moves "make dizzy"; "do not cut too often to the people, but
+// maybe multiple in a row"; "the camera must mostly show the total"; "cut back to the total without camera
+// movement, not always though").
+// Everything follows from the time alone, so the same moment always has the same picture.
+import * as THREE from 'three';
+
+const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+export const HOME = { pos: new THREE.Vector3(0, 1.85, 9.4), at: new THREE.Vector3(0, 1.0, 0), fov: 35 };
+
+// Looks at a player, in the player's own space (x to their left, y up, z ahead of them): where the camera is, what
+// it looks at, the lens
+const LOOKS = {
+  standing: [
+    { pos: [0.7, 0.75, 2.4], at: [0, 1.20, 0.1], fov: 42 },       // from below, in front
+    { pos: [2.0, 1.45, 0.9], at: [0, 1.15, 0.2], fov: 38 },       // from their left
+    { pos: [-0.9, 1.55, 1.7], at: [0, 1.30, 0.1], fov: 30 },      // close on head and hands
+    { pos: [-1.9, 1.1, 1.3], at: [0, 1.10, 0.2], fov: 40 },       // from their right, low
+  ],
+  drums: [
+    { pos: [1.2, 1.0, 3.1], at: [0, 0.95, 0.4], fov: 40 },        // over the kick drum
+    { pos: [-1.1, 2.2, -1.5], at: [0, 0.85, 0.7], fov: 55 },      // over his shoulder, down on the kit
+    { pos: [2.4, 1.25, 0.7], at: [0, 0.95, 0.4], fov: 38 },       // from his left
+  ],
+  marimba: [
+    { pos: [0.2, 2.2, 2.3], at: [0, 0.90, 0.5], fov: 42 },        // down on the bars
+    { pos: [1.9, 1.15, 1.5], at: [0, 1.05, 0.5], fov: 38 },       // along the bars
+    { pos: [-0.8, 1.5, 2.2], at: [0, 1.25, 0.2], fov: 32 },
+  ],
+};
+// The stage from elsewhere
+const ANGLES = [
+  { pos: [-7.2, 1.1, 5.6], at: [0.0, 1.0, 0.6], fov: 40 },        // from the left, low
+  { pos: [0.0, 5.6, 7.4], at: [0.0, 0.6, 0.6], fov: 38 },         // from above
+  { pos: [7.0, 1.4, 5.2], at: [0.0, 1.0, 0.6], fov: 40 },         // from the right
+  { pos: [0.0, 0.45, 6.6], at: [0.0, 1.5, 0.0], fov: 44 },        // from the floor
+];
+const ORDER = ['drums', 'guitar1', 'eimer', 'bass', 'guitar2', 'marimba'];
+
+export class Choreography {
+  /** [rigs] by name; [activity]: name -> the times its player plays a note, sorted; [cycle]: a bar, in seconds. */
+  constructor(rigs, activity, cycle) {
+    this.rigs = rigs;
+    this.activity = activity;
+    this.cycle = cycle;
+    this.round = 48 * cycle;
+    this.start = 2 * cycle;                 // the song starts after the count-in
+  }
+
+  /** How many notes [name] plays between [a] and [b]. */
+  plays(name, a, b) {
+    const list = this.activity[name] || [];
+    let n = 0;
+    for (const t of list) { if (t >= a && t < b) { n++; } else if (t >= b) { break; } }
+    return n;
+  }
+
+  /** What the look number [i] (0, 1, 2) of round [n] shows: a player who plays then, or the stage from another angle. */
+  subject(n, i) {
+    const a = this.start + n * this.round + (36 + 3 * i) * this.cycle, b = a + 3 * this.cycle;
+    const index = n * 3 + i;
+    if (i === 1 && n % 2 === 1) { return { angle: ANGLES[Math.floor(n / 2) % ANGLES.length] }; }
+    // the marimba and the trumpet play seldom: when one of them does, the round's first look is theirs
+    const rare = ['marimba', 'eimer'].filter((name) => this.plays(name, a, b) > 2);
+    let name = rare.length && i === 0 ? rare[0] : null;
+    for (let k = 0; k < ORDER.length && !name; k++) {
+      const candidate = ORDER[(index * 5 + k) % ORDER.length];
+      if (this.plays(candidate, a, b) > 3) { name = candidate; }
+    }
+    if (!name) { return { angle: ANGLES[index % ANGLES.length] }; }
+    const looks = LOOKS[name] || LOOKS.standing;
+    return { name, look: looks[index % looks.length] };
+  }
+
+  /** A look as the camera's place, target and lens, in the world. */
+  shot(subject) {
+    if (subject.angle) {
+      return { pos: new THREE.Vector3(...subject.angle.pos), at: new THREE.Vector3(...subject.angle.at), fov: subject.angle.fov };
+    }
+    const root = this.rigs[subject.name].root;
+    root.updateWorldMatrix(true, false);
+    return {
+      pos: root.localToWorld(new THREE.Vector3(...subject.look.pos)),
+      at: root.localToWorld(new THREE.Vector3(...subject.look.at)),
+      fov: subject.look.fov,
+    };
+  }
+
+  /** The camera at [t]: { pos, at, fov }. */
+  at(t) {
+    // the wide view breathes: a slow drift, never still
+    const home = {
+      pos: HOME.pos.clone().add(new THREE.Vector3(0.15 * Math.sin(t * 0.07), 0.04 * Math.sin(t * 0.05 + 1), 0.12 * Math.sin(t * 0.04))),
+      at: HOME.at.clone(), fov: HOME.fov,
+    };
+    if (t < this.start) { return home; }
+    const n = Math.floor((t - this.start) / this.round);
+    const x = (t - this.start - n * this.round) / this.cycle;           // 0 to 48, in bars
+    const dolly = n % 3 === 2;
+    if (x < 36 || (x >= 45 && !dolly)) { return home; }
+    const i = Math.min(2, Math.floor((x - 36) / 3));
+    const shot = this.shot(this.subject(n, i));
+    if (x < 45) {
+      // the look itself, nearly still: a very slow push in
+      shot.pos.lerp(shot.at, 0.03 * (x - 36 - 3 * i) / 3);
+      return shot;
+    }
+    // back by a dolly zoom over three bars: the camera travels to the start; the lens keeps the subject's size for
+    // the first half of the way, then opens to the wide view, and the look turns from the subject to the stage
+    shot.pos.lerp(shot.at, 0.03);
+    const u = smooth((x - 45) / 3);
+    const pos = shot.pos.clone().lerp(home.pos, u);
+    const held = 2 * Math.atan(shot.pos.distanceTo(shot.at) * Math.tan(shot.fov * Math.PI / 360) / pos.distanceTo(shot.at)) * 180 / Math.PI;
+    const open = smooth((u - 0.45) / 0.55);
+    return { pos, at: shot.at.clone().lerp(home.at, smooth((u - 0.2) / 0.8)), fov: held + (home.fov - held) * open };
+  }
+}

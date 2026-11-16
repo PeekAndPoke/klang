@@ -1,0 +1,98 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang
+
+import io.kotest.core.spec.style.StringSpec
+import io.peekandpoke.klang.audio_bridge.KlangPattern
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
+import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
+import io.peekandpoke.klang.audio_engine.cli.WavFileWriter
+import io.peekandpoke.klang.audio_fe.create
+import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
+import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.toObjectOrNull
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import java.io.File
+
+/**
+ * SCRATCH for KLANG-00446 (the band on stage), never committed: renders Der Schmetterling to a WAV and writes the
+ * events of that very render beside it, for the standalone stage in `workshop/band/`. Runs only while `workshop/band/ignored/RECORD`
+ * exists, so nobody else's test run does it.
+ */
+class BandRecordingScratch : StringSpec({
+
+    "record Der Schmetterling with its events" {
+        val dir = generateSequence(File("").absoluteFile) { it.parentFile }.first { File(it, "workshop/band").isDirectory }
+            .let { File(it, "workshop/band/ignored") }
+
+        if (File(dir, "RECORD").exists()) {
+            val song = BuiltInSongs.songs.first { it.id.endsWith("der-schmetterling") }
+            val cps = song.rpm / 60.0
+            val cycles = File(dir, "RECORD").readText().trim().toIntOrNull() ?: 164
+
+            val engine = klangScript {
+                registerLibrary(sprudelLib)
+                registerBuiltInSongsAsModules()
+            }
+            val pattern = engine.execute(song.code + "\n").toObjectOrNull<KlangPattern>()!!
+
+            val seen = LinkedHashMap<String, String>()
+            val recording = object : KlangPattern {
+                override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+                    val events = pattern.queryEvents(fromCycles = fromCycles, toCycles = toCycles, cps = cps)
+
+                    for (event in events) {
+                        val data = event.toVoiceData()
+                        val tags = data.tags?.sorted().orEmpty()
+
+                        if (tags.isEmpty() || data.control == true) {
+                            continue
+                        }
+
+                        val start = event.startCycles / cps
+                        val duration = event.durationCycles / cps
+                        val key = "${event.startCycles}|${event.durationCycles}|$tags|${data.note}|${data.freqHz}|${data.sound}|${data.soundIndex}|${data.pan}"
+
+                        seen.getOrPut(key) {
+                            fun text(value: String?) = value?.let { "\"" + it.replace("\\", "\\\\").replace("\"", "\\\"") + "\"" } ?: "null"
+                            fun number(value: Double?) = value?.takeIf { it.isFinite() }?.toString() ?: "null"
+
+                            "{\"t\":$start,\"d\":$duration,\"c\":${event.startCycles},\"tags\":[${tags.joinToString(",") { text(it) }}]," +
+                                "\"note\":${text(data.note)},\"freq\":${number(data.freqHz)},\"gain\":${number(data.gain)}," +
+                                "\"sound\":${text(data.sound)},\"index\":${data.soundIndex ?: "null"},\"pan\":${number(data.pan)}}"
+                        }
+                    }
+
+                    return events
+                }
+            }
+
+            val samples = Samples.create(catalogue = SampleCatalogue.default)
+            val wav = WavFileWriter(File(dir, "schmetterling.wav").path, 48_000)
+            wav.open()
+
+            val result = try {
+                KlangOfflineRenderer(sampleRate = 48_000).render(
+                    pattern = recording,
+                    cycles = cycles,
+                    cyclesPerSecond = cps,
+                    tailSec = 4.0,
+                    samples = samples,
+                    onBlock = { out, frames -> wav.writeBlock(out, frames) },
+                )
+            } finally {
+                wav.close()
+            }
+
+            File(dir, "schmetterling-events.json").writeText(
+                "{\"rpm\":${song.rpm},\"cps\":$cps,\"cycles\":$cycles,\"seconds\":${result.durationSec},\"events\":[\n" +
+                    seen.values.joinToString(",\n") + "\n]}\n"
+            )
+            println("BAND RECORDED ${seen.size} events, ${result.durationSec} s")
+        }
+    }
+})
