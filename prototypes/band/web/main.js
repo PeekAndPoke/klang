@@ -60,9 +60,8 @@ scene.add(floor);
 const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.95 }));
 back.position.set(0, 6, -5);
 back.receiveShadow = true;
-// the wall wears the frontwoman's pattern, the braid, laid flat and large: a little darker in its lines and glossier,
-// so it shows when the front lamp is on
-later.push(() => pattern(back.material, 'braidWall', 0.35, 0.95, null, 0, 0.5));
+// the wall wears the frontwoman's pattern, the braid, laid flat and large: darker in its lines, matt all over
+later.push(() => pattern(back.material, 'braidWall', 0.95, 0.95, null, 0, 0.5, { amount: 0.017, width: 5.5, color: [0.55, 0.62, 1.0] }));
 scene.add(back);
 scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
 
@@ -98,8 +97,8 @@ function analog(t) {
   front = frontAt(t);
   // the wall is black unless the front lamp is on: it takes no light from the other lamps at all
   back.material.color.setHex(0x8a8f9c).multiplyScalar(front);
-  // black means gone: the glossy lines of its pattern still caught the other lamps (the maintainer's picture)
-  back.visible = front > 0.002;
+  // without the front lamp it is ever so slightly there by itself (its own faint glow, see pattern()): over the full
+  // width, darker to the sides; it catches no other lamp
   for (const { light, base, seed, group } of lamps) {
     const wander = 0.060 * Math.sin(t * 0.23 + seed) + 0.040 * Math.sin(t * 0.61 + seed * 2.3) + 0.025 * Math.sin(t * 1.37 + seed * 0.7);
     const shiver = 0.012 * Math.sin(t * 9.1 + seed * 3.1) + 0.008 * Math.sin(t * 14.7 + seed * 1.9);

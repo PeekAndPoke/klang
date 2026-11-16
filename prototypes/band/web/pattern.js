@@ -32,12 +32,14 @@ const PATTERNS = {
 /**
  * Gives [material] (a body's) the pattern [kind]; [gloss] and [matt] are the two roughnesses.
  * [shade]: how much darker the pattern also is in colour (0: in the reflections only, as on the bodies).
+ * [glow]: { amount, width, color }: the surface shows faintly by itself, without any lamp, its pattern darker in it,
+ *   fading to the sides (x) over [width] metres.
  * [glitter]: the share of the skin's grains that are spangles (see below).
  * [hair]: { centre (the head's middle, in the body's rest space), radius }: on the head, behind a hairline that
  * runs from the brow back over the ears, the pattern is hair combed straight back: fine glossy strands that run
  * from the front over the skull to the nape, a little uneven, as wet or oiled hair catches the light.
  */
-export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, glitter = 0.14, shade = 0) {
+export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, glitter = 0.14, shade = 0, glow = null) {
   material.metalness = 0;
   const combed = hair ? `
     { vec3 h = (vRest - vec3(${hair.centre.x.toFixed(4)}, ${hair.centre.y.toFixed(4)}, ${hair.centre.z.toFixed(4)})) / ${hair.radius.toFixed(4)};
@@ -62,8 +64,9 @@ export function pattern(material, kind, gloss = 0.12, matt = 0.85, hair = null, 
       .replace('#include <common>', '#include <common>\nvarying vec3 vRest;')
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\nfloat klOn; { vec3 p = vRest; klOn = ${PATTERNS[kind]}; roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, klOn); }${sparkle}${combed}`)
       .replace('#include <color_fragment>', `#include <color_fragment>\n{ vec3 p = vRest; diffuseColor.rgb *= 1.0 - ${shade.toFixed(3)} * (${PATTERNS[kind]}); }`)
+      .replace('#include <emissivemap_fragment>', glow ? `#include <emissivemap_fragment>\n{ vec3 p = vRest; totalEmissiveRadiance += vec3(${glow.color.join(', ')}) * ${glow.amount.toFixed(4)} * (1.0 - 0.6 * (${PATTERNS[kind]})) * exp(-(p.x * p.x) / ${(glow.width * glow.width).toFixed(2)}); }` : '#include <emissivemap_fragment>')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n{ ${GRAIN} normal = normalize(normal + (vec3(grain, fract(grain * 17.3), fract(grain * 113.7)) - 0.5) * (0.12 + 0.50 * spangle)); }`);
   };
-  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-ground-glitter' + glitter + '-shade' + shade;
+  material.customProgramCacheKey = () => 'pattern-' + kind + (hair ? '-hair' : '') + '-ground-glitter' + glitter + '-shade' + shade + (glow ? '-glow' + glow.amount + '-' + glow.width : '');
   material.needsUpdate = true;
 }
