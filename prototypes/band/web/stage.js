@@ -94,7 +94,15 @@ export function buildStage() {
   // The front lamp's colours: each time it comes up it has one of them, the seed's choice (the stroboscope keeps
   // the first, the plain warm one). ?fcolor=ff1408 sets one.
   const FRONT = [0xffb070, 0xff1408, 0x8fb8ff, 0xff1408, 0xffb070, 0xc428ff];
+  // By hand, to try the colours: the key f turns the front lamp on in the first of them, f again in the next, and
+  // after the last gives the lamp back to the show.
+  const TRY = [0xffb070, 0xff1408, 0x8fb8ff, 0xc428ff];
+  let tried = -1;
+  addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) { tried = tried + 1 < TRY.length ? tried + 1 : -1; }
+  });
   function frontColor(t) {
+    if (tried >= 0) { return TRY[tried]; }
     if (params.has('fcolor')) { return parseInt(params.get('fcolor'), 16); }
     const turn = Math.floor((t / (240 / BPM) + (seed * 7) % 40) / 40);
     return FRONT[Math.floor(hash01(turn * 9.7 + seed * 1.3 + 0.4) * FRONT.length) % FRONT.length];
@@ -102,6 +110,7 @@ export function buildStage() {
 
   // Where the bass drum runs: eight hits or more in a row, each less than a quarter of a second after the one
   // before (a double sounding at once counts once). The stroboscope is on for just these stretches.
+  const STROBE_LOW = 0.22, STROBE_REST = 0.35;
   const RUNS = [];
   {
     const kicks = times(['kick']).filter((k, i, all) => i === 0 || k - all[i - 1] > 0.03);
@@ -118,15 +127,17 @@ export function buildStage() {
     if (waiting) { return { front: 0, strobing: false }; }
     const bar = 240 / BPM;
     const x = ((t / bar + (seed * 7) % 40) % 40 + 40) % 40;
+    if (tried >= 0) { return { front: 1, strobing: false }; }
     if (params.has('front')) { return { front: parseFloat(params.get('front')), strobing: false }; }
     if (t < 0) { return { front: 0, strobing: false }; }
     // and as a stroboscope, while the bass drum runs fast (see RUNS): it flashes on the sixteenths (about ten a
-    // second, the maintainer's choice, 2026-11-16: the eighths were too slow), all other lamps off, the band frozen
-    // on the wall in each flash. Flashing this fast over the whole picture can trigger seizures in people with
+    // second, the maintainer's choice, 2026-11-16: the eighths were too slow). Not from black to full: between the
+    // flashes the front lamp stays on a little and the other lamps stay at STROBE_REST of their light (all off and
+    // full on was too hard, the maintainer, 2026-11-16). Flashing this fast over the whole picture can trigger seizures in people with
     // photosensitive epilepsy: a public showing needs a warning before it. ?nostrobe switches it off.
     if (!params.has('nostrobe') && RUNS.some(([from, to]) => t >= from - 0.02 && t < to + 0.08)) {
       const sixteenth = (t * BPM / 60 * 4) % 1;
-      return { front: sixteenth < 0.28 ? 1 : 0, strobing: true };
+      return { front: sixteenth < 0.28 ? 1 : STROBE_LOW, strobing: true };
     }
     return { front: smooth((x - 26) * bar / 1.0) * smooth((34 - x) * bar / 1.0), strobing: false };
   }
@@ -186,7 +197,7 @@ export function buildStage() {
       // a sag: a dip of a sixth, about every twenty seconds, at its own moment per lamp
       const phase = ((t + own * 5.3) % 19.7 + 19.7) % 19.7;
       const sag = phase < 1.2 ? 0.16 * Math.sin(Math.PI * phase / 1.2) ** 2 : 0;
-      light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : strobing ? 0 : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
+      light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : strobing ? STROBE_REST : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
     }
     if (fog) { fog(t, lamps, camera); }
     // the crowd moves with the music: still while it waits, and by how loud it is once it plays
