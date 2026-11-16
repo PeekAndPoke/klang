@@ -91,6 +91,15 @@ export function buildStage() {
    * for eight bars in every forty the lamps behind go down and the one lamp low at the front comes up, so the band
    * throws big shadows up the wall; a second each way. Where in the song, the seed decides.
    */
+  // The front lamp's colours: each time it comes up it has one of them, the seed's choice (the stroboscope keeps
+  // the first, the plain warm one). ?fcolor=ff1408 sets one.
+  const FRONT = [0xffb070, 0xff1408, 0x8fb8ff, 0xff1408, 0xffb070, 0xc428ff];
+  function frontColor(t) {
+    if (params.has('fcolor')) { return parseInt(params.get('fcolor'), 16); }
+    const turn = Math.floor((t / (240 / BPM) + (seed * 7) % 40) / 40);
+    return FRONT[Math.floor(hash01(turn * 9.7 + seed * 1.3 + 0.4) * FRONT.length) % FRONT.length];
+  }
+
   function frontAt(t, waiting) {
     if (waiting) { return { front: 0, strobing: false }; }
     const bar = 240 / BPM;
@@ -156,6 +165,7 @@ export function buildStage() {
     dress.value = Math.min(1, front);
     for (const lamp of lamps) {
       const { light, base, group } = lamp;
+      if (group === 'front') { light.color.setHex(strobing ? FRONT[0] : frontColor(t)); }
       const own = lamp.seed + (seed % 97) * 0.37;
       const wander = 0.060 * Math.sin(t * 0.23 + own) + 0.040 * Math.sin(t * 0.61 + own * 2.3) + 0.025 * Math.sin(t * 1.37 + own * 0.7);
       const shiver = 0.012 * Math.sin(t * 9.1 + own * 3.1) + 0.008 * Math.sin(t * 14.7 + own * 1.9);

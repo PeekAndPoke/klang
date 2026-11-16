@@ -11,7 +11,7 @@
 //   ?view=side   or stadium, or a player's name: a fixed camera     ?cam=x,y,z&at=x,y,z  any camera
 //   ?head=eimer&from=side   a close look at one head in plain light (&outline: its bare shape, black on white)
 //   ?move=circle  every camera round is that kind: circle, arc or looks (to see one; else the seed decides)
-//   ?front=1     the front lamp on (0: off)     ?nostrobe  no stroboscope     ?nofog  no fog on the floor     ?test  test notes, no recording
+//   ?front=1     the front lamp on (0: off; &fcolor=ff1408: in that colour)     ?nostrobe  no stroboscope     ?nofog  no fog on the floor     ?test  test notes, no recording
 import { loadSong } from './song.js';
 import { setShow } from './strike.js';
 
