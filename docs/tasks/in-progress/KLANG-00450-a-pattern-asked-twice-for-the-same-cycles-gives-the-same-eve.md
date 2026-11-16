@@ -42,12 +42,14 @@ Measured with a throwaway JVM test on Der Schmetterling, cycles 64 to 96, all ta
 
 - `timeOfDay` and its siblings still read the clock at every asking; a song that seeds from them is not
   idempotent. Der Schmetterling's seed line is the maintainer's to change.
-- The scheduler itself asks other windows than one cycle: a cycle cut at a tempo change (voices that are played),
-  the catch-up to "now", the sample preload, and the re-emit of voice signals, which asks several cycles at once
-  and so can show other signals than the voices scheduled where a `late` by a noise is in play. Not changed.
+- DONE 2026-11-16 (below): the scheduler asked other windows than one cycle (a cycle cut at a tempo change, the
+  catch-up, the sample preload, the re-emit of voice signals).
+- The live act compiles the playing code a second time and asks that pattern itself (Klang-Research, 2026-11-16):
+  it gets nothing from the scheduler's answers, and with `seed(Random.nextInt())` its compile draws another seed
+  than the one that sounds. A way for it to read the playback's cycles is the maintainer's to decide.
 - The noise engines kept per seed (Found, point 3).
-- `Random` is not yet named in `klangscript-libs/CLAUDE.md`, `klangscript/CLAUDE.md` and the song writers'
-  reference of the music writing skill: the maintainer's OK is asked.
+- `Random` is not yet named in the song writers' reference of the music writing skill: the maintainer's OK is
+  asked (the two CLAUDE.md files are done).
 
 ## The work
 
@@ -75,3 +77,25 @@ The maintainer changed Der Schmetterling's last line to `.seed(Random.nextInt())
 with a throwaway JVM test (removed): the song compiled once, cycles 64 to 96 asked one cycle at a time, twice, 1.5
 seconds apart: the same events both times. `Random` is now named in `klangscript-libs/CLAUDE.md` and
 `klangscript/CLAUDE.md` (maintainer's OK, 2026-11-16).
+
+## 2026-11-16: the playback asks whole cycles and keeps the answers
+
+The maintainer: "we always query one full cycle at a time internally"; an edge that is not on a cycle is filtered
+after the asking; the answers are kept in the playback. Built as `PatternCycles`
+(`klang/src/commonMain/kotlin/PatternCycles.kt`), which every query of `KlangPatternScheduler` goes through:
+
+- Whatever the window, the pattern is asked one whole cycle at a time; a cut edge keeps events by their start.
+- A tempo change inside a cycle asks that cycle whole once per tempo; each event comes once, at its tempo.
+- The last 32 answers are kept, each for its pattern, cycle and tempo. A new pattern and a stop empty the store; a
+  tempo change does not (the answers at the old tempo stay right for the part that still plays at it).
+
+What changes in behaviour:
+
+- The fetch plays the answer the sample look-ahead got about 8 cycles earlier, so a pattern that reads the wall
+  clock (`timeOfDay`) reads it about 8 cycles before it is heard (it was about 2).
+- The diagnostics' pattern work figure drops (most fetches find their answer), so old and new numbers do not compare.
+- A catch-up asks up to 64 single cycles in place of one wide window. Not measured.
+
+Checks: `:klang:jvmTest` 105, 0 failed (`PatternCyclesSpec` 12, and one scheduler test that every asking is a whole
+cycle across a tempo change); 17 mutants killed; review round 1 (`reviewer-opus-high`) CLEAN, 3 MINOR and 2 NIT
+applied. Not mutation-checked: the guard against an infinite window's start (its mutant would not end).

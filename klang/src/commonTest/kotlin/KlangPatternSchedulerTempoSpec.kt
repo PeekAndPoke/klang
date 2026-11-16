@@ -27,6 +27,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeout
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -69,6 +70,27 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
             scheduled(cycle = 12).playbackStartTime shouldBe start
             scheduled(cycle = 12).startTime shouldBe (22.1 plusOrMinus eps)
             scheduled(cycle = 12).data.freqHz shouldBe 1.0
+        }
+    }
+
+    "every asking of the pattern is one whole cycle, also across a tempo change inside a cycle (KLANG-00450)" {
+        val asked = mutableListOf<Pair<Double, Double>>()
+        val recording = object : KlangPattern {
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+                asked += fromCycles to toCycles
+
+                return everyCycle.queryEvents(fromCycles = fromCycles, toCycles = toCycles, cps = cps)
+            }
+        }
+
+        withScheduler(options = rpm30, pattern = recording) {
+            round(atSec = 20.0)
+            // The switch is at cycle 10.1: the resync asks cycle 10 at both tempos
+            scheduler.updateRpm(60.0)
+            round(atSec = 21.0)
+
+            asked.count { (from, _) -> from == 10.0 } shouldBe 2
+            asked.all { (from, to) -> from == floor(from) && to == from + 1.0 } shouldBe true
         }
     }
 
@@ -185,6 +207,7 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
          */
         private suspend fun withScheduler(
             options: KlangCyclicPlayback.Options,
+            pattern: KlangPattern = everyCycle,
             backendReady: CompletableDeferred<Unit> = CompletableDeferred(Unit),
             beforeFirstRound: suspend Rig.() -> Unit = {},
             test: suspend Rig.() -> Unit,
@@ -233,7 +256,7 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
 
             rig.scheduler = KlangPatternScheduler(
                 playbackId = "tempo",
-                pattern = everyCycle,
+                pattern = pattern,
                 context = context,
                 signals = signals,
                 registrar = context.registrarFor("tempo"),

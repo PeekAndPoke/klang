@@ -125,6 +125,9 @@ internal class KlangPatternScheduler(
     private var queryCursorCycles = 0.0
     private val fetchChunk = 1.0
 
+    /** The pattern's answers, cycle by cycle: every query of this playback goes through it. */
+    private val cycles = PatternCycles()
+
     // ===== Autonomous Progression =====
     /**
      * The playback's second 0 on the backend's timeline (KLANG-00399): asked for at the start (the clock's now, sent as
@@ -208,6 +211,8 @@ internal class KlangPatternScheduler(
         signals(KlangPlaybackSignal.PatternUpdated)
         // Update pattern
         this.pattern = pattern
+        // The old pattern's answers are of no use any more
+        cycles.clear()
         // Re-request current cycle to repopulate backend
         resyncCurrentCycle()
         // Pre-fetch the new pattern's samples over the whole look-ahead the old one was fetched for (audit N-R4: through
@@ -324,6 +329,9 @@ internal class KlangPatternScheduler(
         }
 
         begun = false
+
+        // The next start asks its cycles anew
+        cycles.clear()
 
         // The pattern's work metric is this playback's: closed with it
         runtime?.close()
@@ -736,17 +744,8 @@ internal class KlangPatternScheduler(
     private fun queryEventsUntimed(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
         val map = tempo
 
-        // A part per tempo: the pattern reads the tempo it is queried at (sprudel's `cps`, `beats`)
-        val events = buildList {
-            var at = from
-
-            while (at < to) {
-                val until = minOf(to, map.nextChangeAfter(at) ?: to)
-
-                addAll(pattern.queryEvents(fromCycles = at, toCycles = until, cps = map.cyclesPerSecondAt(at)))
-                at = until
-            }
-        }
+        // One whole cycle at a time, whatever the window (KLANG-00450); a part per tempo
+        val events = cycles.events(pattern = pattern, tempo = map, from = from, to = to)
 
         // Announce every inline DSL these events reference BEFORE they are scheduled, so the
         // synthetic names resolve on the backend by the time voices referencing them arrive.
