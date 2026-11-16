@@ -82,4 +82,16 @@ The maintainer watches Der Schmetterling played by the band and says it is good 
   chance, which body parts take the beat, steady, fits), the trumpet player as frontman the balanced one, the bass
   player steady, the rhythm guitarist headbanging only in rare fits. The recording is 328 cycles now (9 min); the
   song's parts come and go on schedules of their own and the recording is a cut, not an ending.
+- 2026-11-16: more settled in the standalone show (still only in `tmp/band/`, not in git). The frontwoman: the
+  trumpet player is a woman, a little athletic, level shoulders, a long neck, a long rounded skull after ancient
+  Egyptian sculpture (a sea shell hat was tried and is kept in the script, unworn); she holds the trumpet loosely at
+  her side between phrases and strolls the front of the stage in rounds, a slow dance-walk in time, back to her place
+  with a wait; upright, little nodding. The drummer: both feet on the kick, a second, open hat for `oh`. The marimba
+  player: relaxed arms between phrases, into position three cycles ahead, arms before body. The string players: the
+  hands go to the played string (pitches shared over the strings by how often they are played), the fretting hand
+  stays in one position, guitarists strum from the wrist; the rhythm guitarist looks at the viewer now and then.
+  A body pattern per player, seen only in the reflections (`pattern.js`). Eyes set into the faces, a chin for all.
+  A walk-in of 15 s before the song: dark stage until the click, the lamps up at once on it, the players in one
+  after another, the marimba in place from the start. The camera (`camera.js`): mostly the total, three looks in a
+  row about every 80 s, back by a cut or now and then a slow dolly zoom. Lamps with an analog wander, shiver and sag.
 
