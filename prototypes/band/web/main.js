@@ -152,7 +152,7 @@ const viewer = HOME.pos.clone();
 const players = [
   ['bass', new StringPlayer(rigs.bass, song ? strumsOf(song, ['bass']) : testRiff(0.5, 28), BPM, { kind: 'bass', lean: 0.10, bang: 0.16, bounce: 0.045, character: CHARACTERS.bass })],
   ['guitar1', new StringPlayer(rigs.guitar1, song ? strumsOf(song, ['guitar1']) : testRiff(0.25, 52), BPM, { kind: 'guitar', lean: -0.05, bang: 0.14, bounce: 0.025, character: CHARACTERS.guitar1 })],
-  ['guitar2', new StringPlayer(rigs.guitar2, song ? strumsOf(song, ['guitar2', 'guitar3']) : testRiff(0.125, 40), BPM, { kind: 'guitar', lean: 0.10, bang: 0.24, bounce: 0.028, character: CHARACTERS.guitar2,
+  ['guitar2', new StringPlayer(rigs.guitar2, song ? strumsOf(song, ['guitar2', 'guitar3']) : testRiff(0.125, 40), BPM, { kind: 'guitar', outline: 'single', lean: 0.10, bang: 0.24, bounce: 0.028, character: CHARACTERS.guitar2,
     glance: { at: viewer, every: 11, chance: 0.5 } })],
 ];
 
@@ -251,14 +251,15 @@ function contactAt(t) {
   const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + 311.7) * 43758.5453; return x - Math.floor(x); };
   if (roll(0) > CONTACT.chance) { return null; }
   const pair = PAIRS[Math.floor(roll(1) * PAIRS.length) % PAIRS.length];
-  const start = slot * CONTACT.every + 0.5 + roll(2) * (CONTACT.every - 5);
+  const start = slot * CONTACT.every + 0.3 + roll(2) * (CONTACT.every - 6.5);
   const hold = 1.8 + 1.6 * roll(3);
   // she does not look away while she plays: the trumpet is at her lips
   herNotes = herNotes || times(['trommel']);
   if (pair.includes('eimer') && herNotes.some((x) => x > start - 3 && x < start + hold + 2)) { return null; }
   const x = t - start;
   // the second one answers the look a moment later
-  const amount = (late) => smooth01((x - late) / 0.6) * smooth01((hold + 0.6 - x) / 0.8);
+  // the head comes round slowly, over a second and a half, and goes back a little quicker
+  const amount = (late) => smooth01((x - late) / 1.5) * smooth01((hold + 1.5 - x) / 1.1);
   return { pair, w: [amount(0), amount(0.35)] };
 }
 function eyeContact(t) {

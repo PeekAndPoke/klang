@@ -13,11 +13,38 @@ const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3
 const lacquer = new THREE.MeshStandardMaterial({ color: 0x0a0a0d, roughness: 0.25, metalness: 0.3 });
 const neckWood = new THREE.MeshStandardMaterial({ color: 0x1c140e, roughness: 0.5 });
 
+// Body outlines, seen from the front with the neck to the right (x along the neck, y across, in the figure's
+// measure): from the neck pocket's lower corner round the body to its upper corner, as points a smooth curve goes
+// through. None is a maker's model: a double cutaway with two horns, a single cutaway, a long-horned bass.
+const OUTLINES = {
+  double: [[0.12, -0.045], [0.15, -0.09], [0.185, -0.125], [0.14, -0.15], [0.06, -0.14], [-0.02, -0.12], [-0.13, -0.175],
+    [-0.225, -0.105], [-0.24, 0.0], [-0.225, 0.10], [-0.13, 0.17], [-0.02, 0.125], [0.07, 0.145], [0.16, 0.15],
+    [0.215, 0.115], [0.17, 0.085], [0.12, 0.045]],
+  single: [[0.12, -0.045], [0.165, -0.075], [0.19, -0.115], [0.14, -0.148], [0.05, -0.135], [-0.02, -0.118], [-0.13, -0.172],
+    [-0.22, -0.108], [-0.235, 0.0], [-0.22, 0.108], [-0.13, 0.170], [-0.02, 0.122], [0.07, 0.140], [0.13, 0.112], [0.145, 0.07],
+    [0.12, 0.045]],
+  bass: [[0.15, -0.05], [0.18, -0.09], [0.22, -0.12], [0.16, -0.15], [0.05, -0.135], [-0.03, -0.115], [-0.16, -0.18],
+    [-0.255, -0.11], [-0.275, 0.0], [-0.255, 0.11], [-0.15, 0.172], [-0.02, 0.125], [0.08, 0.14], [0.20, 0.137],
+    [0.295, 0.10], [0.225, 0.075], [0.15, 0.05]],
+};
+const HEADS = {
+  guitar: [[0, -0.022], [0.035, -0.032], [0.16, -0.038], [0.19, -0.012], [0.172, 0.026], [0.04, 0.03], [0, 0.022]],
+  bass: [[0, -0.025], [0.04, -0.04], [0.19, -0.048], [0.23, -0.015], [0.20, 0.034], [0.05, 0.036], [0, 0.025]],
+};
+function outline(points, s) {
+  const shape = new THREE.Shape();
+  shape.moveTo(points[0][0] * s, points[0][1] * s);
+  shape.splineThru(points.slice(1).map(([x, y]) => new THREE.Vector2(x * s, y * s)));
+  shape.closePath();
+  return shape;
+}
+const metal = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.25, metalness: 0.95 });
+
 const KINDS = {
   //        scale: nut to bridge; body: half length, half width; strings; tilt of the neck; how the right hand plays
   //        (swing: how far it goes through the strings; arm: the share of that the arm does, the rest is the wrist)
-  guitar: { scale: 0.64, body: [0.22, 0.165], strings: 6, neck: 0.044, tilt: 0.50, swing: 0.075, tau: 0.028, hang: -0.09, arm: 0.2 },
-  bass: { scale: 0.84, body: [0.25, 0.17], strings: 4, neck: 0.05, tilt: 0.62, swing: 0.022, tau: 0.02, hang: -0.13, arm: 1 },
+  guitar: { scale: 0.64, body: [0.22, 0.165], strings: 6, neck: 0.044, tilt: 0.50, swing: 0.075, tau: 0.028, hang: -0.09, arm: 0.2, outline: 'double', pickups: [0.01, 0.075] },
+  bass: { scale: 0.84, body: [0.25, 0.17], strings: 4, neck: 0.05, tilt: 0.62, swing: 0.022, tau: 0.02, hang: -0.13, arm: 1, outline: 'bass', pickups: [0.0, 0.07] },
 };
 
 export class StringPlayer {
@@ -38,22 +65,40 @@ export class StringPlayer {
 
     // the instrument, in its own space: x along the neck toward the head, y across the strings (up), z out of its face
     const g = new THREE.Group();
-    const shape = new THREE.Shape();
-    shape.absellipse(-0.03 * s, 0, k.body[0] * s, k.body[1] * s, 0, Math.PI * 2);
-    const body = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.04 * s, bevelEnabled: true, bevelSize: 0.008 * s, bevelThickness: 0.008 * s, bevelSegments: 2, curveSegments: 20 }), lacquer);
-    body.position.z = -0.04 * s;
-    const horn = new THREE.Mesh(new THREE.SphereGeometry(0.09 * s, 12, 8), lacquer);
-    horn.scale.set(1.3, 0.75, 0.25);
-    horn.position.set((k.body[0] - 0.05) * s, (k.body[1] - 0.04) * s, -0.02 * s);
+    // the body: its outline cut from a slab, the edges rounded; pickups, a bridge and two knobs on its face
+    const body = new THREE.Mesh(new THREE.ExtrudeGeometry(outline(OUTLINES[this.style.outline || k.outline], s),
+      { depth: 0.036 * s, bevelEnabled: true, bevelSize: 0.010 * s, bevelThickness: 0.010 * s, bevelSegments: 3, curveSegments: 14 }), lacquer);
+    body.position.z = -0.040 * s;
     this.bridge = -0.10 * s;
     this.nut = this.bridge + k.scale * s;
     const neckFrom = (k.body[0] - 0.10) * s;
     const neck = new THREE.Mesh(new THREE.BoxGeometry(this.nut - neckFrom, k.neck * s, 0.022 * s), neckWood);
     neck.position.set((this.nut + neckFrom) / 2, 0, 0.006 * s);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.17 * s, k.neck * 1.5 * s, 0.016 * s), lacquer);
-    head.position.set(this.nut + 0.085 * s, 0, 0.0);
-    head.rotation.y = 0.12;
-    g.add(body, horn, neck, head);
+    const head = new THREE.Mesh(new THREE.ExtrudeGeometry(outline(HEADS[this.style.kind], s),
+      { depth: 0.014 * s, bevelEnabled: true, bevelSize: 0.003 * s, bevelThickness: 0.003 * s, bevelSegments: 2, curveSegments: 10 }), lacquer);
+    head.position.set(this.nut, 0, -0.012 * s);
+    head.rotation.y = 0.10;
+    g.add(body, neck, head);
+    for (const x of k.pickups) {
+      const pickup = new THREE.Mesh(new THREE.BoxGeometry(0.022 * s, k.neck * 1.25 * s, 0.008 * s), metal);
+      pickup.position.set(x * s, 0, 0.012 * s);
+      g.add(pickup);
+    }
+    const saddle = new THREE.Mesh(new THREE.BoxGeometry(0.018 * s, k.neck * 1.3 * s, 0.014 * s), metal);
+    saddle.position.set(this.bridge, 0, 0.014 * s);
+    g.add(saddle);
+    for (const [x, y] of [[-0.15, -0.085], [-0.19, -0.05]]) {
+      const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.011 * s, 0.013 * s, 0.014 * s, 12), metal);
+      knob.rotation.x = Math.PI / 2;
+      knob.position.set(x * s, y * s, 0.014 * s);
+      g.add(knob);
+    }
+    for (let i = 0; i < k.strings; i++) {
+      const tuner = new THREE.Mesh(new THREE.CylinderGeometry(0.006 * s, 0.006 * s, 0.03 * s, 8), metal);
+      const along = (i + 0.7) / (k.strings + 0.6);
+      tuner.position.set(this.nut + (0.03 + 0.14 * along) * s, -0.036 * s, -0.004 * s);
+      g.add(tuner);
+    }
     const glow = rig.eyes ? rig.eyes.emissive.clone() : new THREE.Color(0xffffff);
     // a string each, the lowest first, lit on its own when it is the one played
     this.strings = [];

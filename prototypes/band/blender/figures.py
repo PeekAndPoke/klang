@@ -60,11 +60,12 @@ FIGURES = {
     # the lead guitar: slim, a little stooped, long shaggy hair
     "guitar1": dict(height=1.02, scale=dict(torso=0.90, waist=0.88, chest=0.92, arm=0.88, thigh=0.86, leg=0.88),
                     stoop=0.07, eye=(1.0, 0.15, 0.1),
-                    extras=[("hairB", "crown", (0, 0.07, -0.03), 0.085, 1.0, False),
-                            ("hairL", "hairB", (0.075, 0.02, -0.15), 0.05, 1.0, True),
-                            ("hairR", "hairB", (-0.075, 0.02, -0.15), 0.05, 1.0, True),
-                            ("hairL2", "hairL", (0.02, 0.0, -0.13), 0.028, 1.0, True),
-                            ("hairR2", "hairR", (-0.02, 0.0, -0.13), 0.028, 1.0, True)]),
+                    # a plain round back of the head: the hair alone left it flat
+                    skull=dict(long=1.0, high=0.094, back=0.034, rise=0.022, tilt=8.0, wide=0.086),
+                    # a mane down the back of the neck, one strand of three points (side strands broke the hull)
+                    extras=[("hair1", "crown", (0, 0.085, -0.05), 0.070, 1.0, False),
+                            ("hair2", "hair1", (0, 0.045, -0.15), 0.058, 1.0, True),
+                            ("hair3", "hair2", (0, 0.020, -0.14), 0.034, 1.0, True)]),
     # the bass: the tall thin one, a long neck, stooped
     "bass": dict(height=1.10, scale=dict(torso=0.80, waist=0.78, chest=0.82, shoulder=0.85, arm=0.78, thigh=0.76,
                                          leg=0.80, neck=0.85, head=0.94),
@@ -223,22 +224,22 @@ def shell(head, size, mat):
     return obj
 
 
-def skull(head, size, mat):
+def skull(head, size, mat, long=1.30, high=0.107, back=0.030, rise=0.056, tilt=30.0, wide=0.082):
     """
     The long back of a head: an egg, its narrow end in the forehead, its long axis rising toward the back at 30
     degrees, so the skull sweeps up and back from the brow in one smooth line. It is 1.3 times as long as it is high
     (the golden ratio's 1.618 was too long for the maintainer's eye), and widest two thirds of the way back.
     """
     import math
-    high = 0.107 * size
-    long = 0.098 * size * 1.30
-    wide = 0.082 * size
+    high = high * size
+    long = 0.098 * size * long
+    wide = wide * size
     bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=28, ring_count=18, location=(0, 0, 0))
     obj = bpy.context.object
-    tilt = math.radians(30)
+    tilt = math.radians(tilt)
     axis = Vector((0, math.cos(tilt), math.sin(tilt)))
     up = Vector((0, -math.sin(tilt), math.cos(tilt)))
-    centre = head + Vector((0, 0.030 * size, 0.056 * size))
+    centre = head + Vector((0, back * size, rise * size))
     for v in obj.data.vertices:
         along = v.co.y                                   # -1 at the forehead, 1 at the back
         egg = 0.97 + 0.03 * math.sin((along + 1.0) / 2.0 * math.pi * 0.83) / math.sin(math.pi * 0.83 / 2) if along < 0.33 else 1.0
@@ -331,7 +332,7 @@ def build(key):
     for s in (1.0, -1.0):
         # set into the face, not on it: the smoothed skin lies inside the points' radius
         # under a long skull's forehead the eyes sit a little lower and further out, or it covers them
-        deep, low = (0.90, 0.002) if p.get("skull") else (0.80, 0.012)
+        deep, low = (0.90, 0.002) if p.get("skull") is True else (0.80, 0.012)
         at = head.pos + Vector((0.034 * s * size, -head.radius * deep, (low - p.get("eye_drop", 0.0)) * size))
         bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=at)
         eye = bpy.context.object
@@ -345,7 +346,8 @@ def build(key):
         bpy.ops.object.join()
 
     if p.get("skull"):
-        back = skull(head.pos, head.radius / 0.092, body.data.materials[0])
+        shape = p["skull"] if isinstance(p["skull"], dict) else {}
+        back = skull(head.pos, head.radius / 0.092, body.data.materials[0], **shape)
         bpy.ops.object.select_all(action='DESELECT')
         back.select_set(True); body.select_set(True)
         bpy.context.view_layer.objects.active = body
