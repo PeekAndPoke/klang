@@ -24,8 +24,9 @@ CENTRE = [
     ("neck",  "chest", (0, -0.01, 1.535), 0.055, 1.0, True,  "neck"),
     ("head",  "neck",  (0, -0.025, 1.645), 0.092, 1.08, True, "head"),
     ("crown", "head",  (0, -0.015, 1.715), 0.082, 1.12, False, "head"),
-    # a chin that shows in profile: well ahead of the neck and below the face
-    ("chin",  "head",  (0, -0.104, 1.566), 0.034, 1.0, False, "head"),
+    # only the underside of the head; the chin that shows is a shape of its own (jaw()). Pushed forward to show,
+    # this point grew a stalk under the face that read as a neck bending down (the drummer, 2026-11-16)
+    ("chin",  "head",  (0, -0.060, 1.588), 0.045, 1.0, False, "head"),
 ]
 SIDE = [
     ("shoulder", "chest",    (0.190, 0.00, 1.445), 0.068, 0.95, True,  "shoulder"),
@@ -75,17 +76,17 @@ FIGURES = {
     "drums": dict(height=1.04, scale=dict(torso=1.08, waist=1.02, chest=1.30, shoulder=1.55, arm=1.55, hand=1.25,
                                           thigh=1.25, leg=1.25, neck=1.9, head=1.24),
                   # a head to match the frame: a quarter bigger, set down into a bull neck (carried higher it floated)
-                  move=dict(head=(0, 0, -0.012), crown=(0, 0, 0.004), chin=(0, -0.014, -0.012), neck=(0, 0, -0.006)),
-                  radius=dict(bicep=1.25, ribs=1.18, chin=1.35), shoulders=1.30, hips=1.05, neck=0.75, stoop=0.03,
-                  eye=(1.0, 0.25, 0.02), jaw=1.5, eye_deep=0.90),
+                  move=dict(head=(0, 0, -0.012), crown=(0, 0, 0.004), neck=(0, 0, -0.006)),
+                  radius=dict(bicep=1.25, ribs=1.18), shoulders=1.30, hips=1.05, neck=0.75, stoop=0.03,
+                  eye=(1.0, 0.25, 0.02), jaw=1.5, eye_deep=0.84),
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
-                  shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.15,
+                  shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.15, eye_shape=(1.35, 0.6, 0.76),
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
                   # see skull(). A long neck, carried forward; the shell hat (shell()) is kept but not worn.
                   radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06), skull=True,
-                  move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.012, -0.004),
+                  move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.022, -0.004),
                             # proud shoulders: level, not sloping, and held back a little
                             shoulderL=(0, 0.014, 0.026), shoulderR=(0, 0.014, 0.026)),
                   extras=[("bustL", "chest", (0.058, -0.084, -0.035), 0.058, 1.0, False),
@@ -473,7 +474,7 @@ def build(key):
         at = head.pos + Vector((0.034 * s * size, -head.radius * deep, (low - p.get("eye_drop", 0.0)) * size))
         bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=at)
         eye = bpy.context.object
-        eye.scale = (1.5, 0.6, 0.55)
+        eye.scale = p.get("eye_shape", (1.5, 0.6, 0.55))        # wide, flat, low: a slit; rounder where set
         bpy.ops.object.transform_apply(scale=True)
         eye.data.materials.append(body.data.materials[1])
         eye.vertex_groups.new(name="head").add(range(len(eye.data.vertices)), 1.0, 'REPLACE')
