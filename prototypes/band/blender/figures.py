@@ -57,6 +57,26 @@ BASE = dict(
     eye=(1.0, 0.35, 0.05), eye_size=1.0,
 )
 
+# The right hand of who plays with a plectrum: half closed. The hand ends at its knuckles (its tip is moved up),
+# the fingers come back from there toward the palm, the thumb lies against them, and the plectrum's point stands
+# out between the two. All of it moves with the hand's one bone. (x: toward the body.)
+def picking_hand(size=1.0):
+    return dict(
+        move=dict(handR=(0, 0, 0.045)),
+        extras=[("fingersR", "handR", (0.026 * size, -0.012 * size, 0.030 * size), 0.019 * size, 1.0, False),
+                ("thumbR", "handR", (0.030 * size, -0.034 * size, 0.046 * size), 0.014 * size, 1.0, False),
+                ("pickR", "fingersR", (0.010 * size, -0.020 * size, -0.014 * size), 0.005 * size, 1.0, False)])
+
+
+def with_pick(figure, size=1.0):
+    """[figure] with the half closed right hand added to what it moves and adds itself."""
+    hand = picking_hand(size)
+    out = dict(figure)
+    out["move"] = {**figure.get("move", {}), **hand["move"]}
+    out["extras"] = list(figure.get("extras", [])) + hand["extras"]
+    return out
+
+
 FIGURES = {
     # the lead guitar: slim, a little stooped, long hair worn open
     "guitar1": dict(height=1.02, scale=dict(torso=0.90, waist=0.88, chest=0.92, arm=0.88, thigh=0.86, leg=0.88),
@@ -119,6 +139,8 @@ FIGURES = {
                             ("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
                             ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
 }
+for _key, _size in (("guitar1", 0.88), ("bass", 0.78), ("guitar2", 1.1)):
+    FIGURES[_key] = with_pick(FIGURES[_key], _size)
 ORDER = ["guitar1", "bass", "drums", "eimer", "marimba", "guitar2"]
 
 
