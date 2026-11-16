@@ -1,6 +1,8 @@
 # KLANG-00446: The band on stage: a 3d concert for Der Schmetterling
 
 > **Status (2026-11-15): IN PROGRESS.** Standalone in `tmp/band/` (git-ignored): six figures, a stage, and the drummer playing a test beat; the maintainer: "we keep it like this for now". Next: the other instruments, then the song's real events.
+>
+> **Part of:** KLANG-00447 (Live act: a band on a stage, played by the song)
 
 ## Why this exists
 
