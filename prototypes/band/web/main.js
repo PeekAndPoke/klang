@@ -243,24 +243,29 @@ function placeBlobs() {
 // to each other: the rhythm section, neighbours, the frontwoman and whoever she passes.
 const PAIRS = [['bass', 'drums'], ['guitar1', 'bass'], ['eimer', 'guitar1'], ['marimba', 'guitar2'], ['drums', 'marimba'],
   ['eimer', 'marimba'], ['eimer', 'drums'], ['bass', 'eimer'], ['guitar2', 'drums'], ['guitar1', 'guitar2']];
-const CONTACT = { every: 9, chance: 0.6 };
+const CONTACT = { every: 10, chance: 0.65 };
 let herNotes = null;
 function contactAt(t) {
   if (t < 1) { return null; }
   const slot = Math.floor(t / CONTACT.every);
   const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + 311.7) * 43758.5453; return x - Math.floor(x); };
   if (roll(0) > CONTACT.chance) { return null; }
-  const pair = PAIRS[Math.floor(roll(1) * PAIRS.length) % PAIRS.length];
-  const start = slot * CONTACT.every + 0.3 + roll(2) * (CONTACT.every - 6.5);
-  const hold = 1.8 + 1.6 * roll(3);
+  // one of the two starts it; the other notices and answers one to two seconds later
+  const drawn = PAIRS[Math.floor(roll(1) * PAIRS.length) % PAIRS.length];
+  const pair = roll(4) < 0.5 ? drawn : [drawn[1], drawn[0]];
+  const late = 1.0 + roll(5);
+  const start = slot * CONTACT.every + 0.2 + roll(2) * 1.2;
+  const hold = 1.6 + 1.4 * roll(3);                 // how long they hold each other's eyes
+  const away = late + 1.3 + hold;                   // when the first one looks away again
   // she does not look away while she plays: the trumpet is at her lips
   herNotes = herNotes || times(['trommel']);
-  if (pair.includes('eimer') && herNotes.some((x) => x > start - 3 && x < start + hold + 2)) { return null; }
+  if (pair.includes('eimer') && herNotes.some((x) => x > start - 3 && x < start + away + 3)) { return null; }
   const x = t - start;
-  // the second one answers the look a moment later
-  // the head comes round slowly, over a second and a half, and goes back a little quicker
-  const amount = (late) => smooth01((x - late) / 1.5) * smooth01((hold + 1.5 - x) / 1.1);
-  return { pair, w: [amount(0), amount(0.35)] };
+  // the first head comes round slowly, over a second and a half; the second a little quicker, having been looked at;
+  // the first looks away first, the second a moment after
+  const first = smooth01(x / 1.5) * smooth01((away + 1.1 - x) / 1.1);
+  const second = smooth01((x - late) / 1.3) * smooth01((away + 0.4 + 1.1 - x) / 1.1);
+  return { pair, w: [first, second] };
 }
 function eyeContact(t) {
   const contact = contactAt(t);
