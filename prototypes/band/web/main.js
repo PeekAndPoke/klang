@@ -177,8 +177,11 @@ function hairOf(rig) {
 }
 const rigs = {};
 const loader = new GLTFLoader();
-await Promise.all(Object.entries(PLACES).map(async ([name, [x, z, turn, y = 0]]) => {
-  const gltf = await loader.loadAsync(`../models/${name}.glb`);
+// loaded together, but taken into the scene in one fixed order (the order of PLACES): whatever goes by a player's
+// number (the breath's and the eyes' own pace) must not depend on which file arrives first
+const loaded = await Promise.all(Object.keys(PLACES).map((name) => loader.loadAsync(`../models/${name}.glb`)));
+Object.entries(PLACES).forEach(([name, [x, z, turn, y = 0]], index) => {
+  const gltf = loaded[index];
   gltf.scene.position.set(x, y, z);
   gltf.scene.rotation.y = turn;
   scene.add(gltf.scene);
@@ -191,7 +194,7 @@ await Promise.all(Object.entries(PLACES).map(async ([name, [x, z, turn, y = 0]])
       }
     }
   });
-}));
+});
 
 // Each player's character: how they move with the music apart from playing (see Mover in strike.js)
 const CHARACTERS = {
@@ -452,6 +455,7 @@ addEventListener('resize', () => {
 });
 
 const hud = document.getElementById('hud');
+if (params.has('nohud')) { hud.style.display = 'none'; }      // for stills that are compared with each other
 const started = performance.now();
 // frames a second, counted over each half second, and the longest single frame in it (a stutter shows there)
 let fps = 0, worst = 0, counted = 0, since = performance.now(), before = performance.now();
