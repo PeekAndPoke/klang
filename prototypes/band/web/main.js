@@ -466,6 +466,18 @@ function frame() {
     }
   }
   eyeContact(t);
+  // the eyes: a third less bright, and never steady. Their glow wanders by smooth noise, each pair on its own (two
+  // layers: a slow drift and a quicker waver), by about a third up and down
+  Object.values(rigs).forEach((rig, i) => {
+    if (!rig.eyes) { return; }
+    const noise = (x, seed) => {
+      const n = Math.floor(x), u = x - n, e = u * u * (3 - 2 * u);
+      const at = (k) => { const v = Math.sin((k + seed * 57.3) * 12.9898) * 43758.5453; return v - Math.floor(v); };
+      return at(n) + (at(n + 1) - at(n)) * e;
+    };
+    const waver = 0.62 * noise(t * 0.7, i + 1) + 0.38 * noise(t * 2.9, i + 11);
+    rig.eyes.emissiveIntensity *= 0.66 * (0.68 + 0.64 * waver);
+  });
   // everyone breathes: at their own pace (14 to 19 breaths a minute), in a little faster than out, and deeper when
   // the band is loud
   Object.values(rigs).forEach((rig, i) => {
