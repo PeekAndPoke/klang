@@ -243,17 +243,17 @@ function placeBlobs() {
 // to each other: the rhythm section, neighbours, the frontwoman and whoever she passes.
 const PAIRS = [['bass', 'drums'], ['guitar1', 'bass'], ['eimer', 'guitar1'], ['marimba', 'guitar2'], ['drums', 'marimba'],
   ['eimer', 'marimba'], ['eimer', 'drums'], ['bass', 'eimer'], ['guitar2', 'drums'], ['guitar1', 'guitar2']];
-const CONTACT = { every: 10, chance: 0.65 };
+const CONTACT = { every: 11, chance: 0.7 };
 let herNotes = null;
 function contactAt(t) {
   if (t < 1) { return null; }
   const slot = Math.floor(t / CONTACT.every);
   const roll = (n) => { const x = Math.sin((slot + n) * 12.9898 + 311.7) * 43758.5453; return x - Math.floor(x); };
   if (roll(0) > CONTACT.chance) { return null; }
-  // one of the two starts it; the other notices and answers one to two seconds later
+  // one of the two starts it; the other notices and answers one to three seconds later
   const drawn = PAIRS[Math.floor(roll(1) * PAIRS.length) % PAIRS.length];
   const pair = roll(4) < 0.5 ? drawn : [drawn[1], drawn[0]];
-  const late = 1.0 + roll(5);
+  const late = 1.0 + 2.0 * roll(5);
   const start = slot * CONTACT.every + 0.2 + roll(2) * 1.2;
   const hold = 1.6 + 1.4 * roll(3);                 // how long they hold each other's eyes
   const away = late + 1.3 + hold;                   // when the first one looks away again
