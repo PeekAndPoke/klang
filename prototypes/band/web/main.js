@@ -5,7 +5,7 @@
 
 // The band on stage, standalone (KLANG-00446): this file puts the pieces together and runs the frames.
 // What each piece is: README.md. The page's switches: show.js.
-import { params, seed, BPM, energyAt, times } from './show.js';
+import { params, seed, song, BPM, energyAt, times } from './show.js';
 import { buildStage } from './stage.js';
 import { loadBand, castBand, playBand } from './band.js';
 import { eyeContact, eyesWaver, breathing } from './life.js';
@@ -74,7 +74,7 @@ function frame() {
   before = nowMs;
   counted++;
   if (nowMs - since >= 500) { fps = counted * 1000 / (nowMs - since); hud.dataset.worst = worst.toFixed(0); counted = 0; worst = 0; since = nowMs; }
-  hud.textContent = `camera: ${look.what()}  |  seed ${seed}  |  oversampling ${SAMPLES[over]}x (key o)  |  ${fps.toFixed(0)} fps  |  slowest frame ${hud.dataset.worst || '-'} ms  |  t ${t.toFixed(2)} s  |  beat ${(t * BPM / 60).toFixed(2)}`;
+  hud.textContent = `music: ${song ? 'recording' : 'test notes'}  |  camera: ${look.what()}  |  seed ${seed}  |  oversampling ${SAMPLES[over]}x (key o)  |  ${fps.toFixed(0)} fps  |  slowest frame ${hud.dataset.worst || '-'} ms  |  t ${t.toFixed(2)} s  |  beat ${(t * BPM / 60).toFixed(2)}`;
   frames++;
   if (frames > 2) { window.__ready = true; }
   requestAnimationFrame(frame);
