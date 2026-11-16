@@ -77,7 +77,7 @@ FIGURES = {
                   # a head to match the frame: a quarter bigger, and carried a little higher
                   move=dict(head=(0, 0, 0.018), crown=(0, 0, 0.030), chin=(0, -0.014, -0.012)),   # a square jaw, well forward
                   radius=dict(bicep=1.25, ribs=1.18, chin=1.35), shoulders=1.30, hips=1.05, neck=0.75, stoop=0.03,
-                  eye=(1.0, 0.25, 0.02), jaw=1.6),
+                  eye=(1.0, 0.25, 0.02), jaw=1.5),
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
@@ -273,12 +273,16 @@ def jaw(head, size, mat, strength=1.0):
     """
     bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=16, ring_count=12, location=(0, 0, 0))
     obj = bpy.context.object
-    k = size * (0.85 + 0.15 * strength)
-    centre = head + Vector((0, -0.066 - 0.010 * strength, -0.074 - 0.006 * strength)) * size
+    # As on a skull: a narrow chin at the front, not ahead of the face, and from it the jaw widening and rising
+    # back toward the ears, so the head's underside is a jawline and no ball. Small: it only gives the face its end.
+    k = size * (0.90 + 0.10 * strength)
+    centre = head + Vector((0, -0.046 - 0.006 * strength, -0.072 - 0.004 * strength)) * size
     for v in obj.data.vertices:
-        # wide across, rounded forward, flat below; it runs back into the head as a jaw
-        back = max(0.0, v.co.y)
-        v.co = centre + Vector((v.co.x * 0.050 * k * (1 + 0.5 * back), v.co.y * (0.036 + 0.030 * back) * k, v.co.z * 0.030 * k))
+        back = (v.co.y + 1) / 2                              # 0 at the chin's tip, 1 where the jaw meets the head
+        wide = (0.020 + 0.036 * back) * k                    # narrow at the chin, wider toward the ears
+        deep = 0.040 * k
+        high = (0.022 + 0.006 * back) * k
+        v.co = centre + Vector((v.co.x * wide, v.co.y * deep, v.co.z * high + 0.022 * k * back * back))
     bpy.ops.object.shade_smooth()
     obj.data.materials.append(mat)
     obj.vertex_groups.new(name="head").add(range(len(obj.data.vertices)), 1.0, 'REPLACE')
