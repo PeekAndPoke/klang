@@ -427,8 +427,15 @@ def shape_face(body, head, hs, taper=0.0, throat=0.0):
         v.co.y += throat * hs * front * under
 
 
-def add_eyes(body, p, head, hs, surface):
-    """[surface]: the points of the head's real surface (skin and skull), taken before the first eye is joined."""
+# How deep an eye's socket is, in metres at a head of normal size
+SOCKET = 0.010
+
+
+def add_eyes(body, p, head, hs, surface, skins):
+    """
+    [surface]: the points of the head's real surface (skin and skull), taken before the first eye is joined.
+    [skins]: the meshes that make that surface; each eye gets a shallow socket pressed into them.
+    """
     # The eyes: narrow, in the face, part of the body, moved by the head. Each is set on the real surface: the skin
     # (and the skull) is looked up in front of the eye's place, and the eye sits half sunk into it, from every side
     size = p["eye_size"] * hs
@@ -437,6 +444,14 @@ def add_eyes(body, p, head, hs, surface):
         x, z = head.pos.x + 0.034 * s * size, head.pos.z + low * size
         front = [c.y for c in surface if abs(c.x - x) < 0.020 * hs and abs(c.z - z) < 0.016 * hs]
         y = (min(front) if front else head.pos.y - head.radius * 0.7) + 0.003 * hs
+        # the socket: the skin round the eye's place goes back a little, most at its middle, a little wider and
+        # higher than the eye; the eye sits that much deeper, so it lies in the skull and not on it
+        deep = SOCKET * hs
+        for skin in skins:
+            for v in skin.data.vertices:
+                if v.co.y < y + 0.030 * hs and abs(v.co.x - x) < 0.07 * hs and abs(v.co.z - z) < 0.05 * hs:
+                    v.co.y += deep * math.exp(-(((v.co.x - x) / (0.024 * size)) ** 2 + ((v.co.z - z) / (0.015 * size)) ** 2) / 2)
+        y += 0.8 * deep
         bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=(x, y, z))
         eye = bpy.context.object
         eye.scale = p.get("eye_shape", (1.5, 0.6, 0.55))        # wide, flat, low: a slit; rounder where set
@@ -498,7 +513,7 @@ def build(key):
     surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
     if back:
         surface += [v.co.copy() for v in back.data.vertices]
-    add_eyes(body, p, head, hs, surface)
+    add_eyes(body, p, head, hs, surface, [body] + ([back] if back else []))
     if back:
         join_into(body, back)
     if p.get("mane"):
