@@ -76,9 +76,9 @@ const CHARACTERS = {
   // the headbanger, but only in fits: about a quarter of the time he goes all the way, else he nods like the others
   guitar2: { seed: 41, fits: { every: 12, share: 0.22, calm: 0.30 }, depth: 0.85, beats: [1, 0.85, 1, 0.85], lag: -0.03, soft: 0.11, chance: 0.25, look: 0.08, tilt: 0.05, lean: 0.02,
     parts: { head: 1.15, trunk: 0.9, knees: 0.8, sway: 0.6 } },      // all head, planted feet
-  // composed: small nods, her head tilting from side to side
-  marimba: { seed: 53, depth: 0.5, beats: [1, 0.25, 0.6, 0.25], lag: 0.03, soft: 0.18, chance: 0.35, look: 0.10, tilt: 0.12, lean: 0.015,
-    parts: { head: 0.8, trunk: 0.6, knees: 0.5 } },                 // upright, quiet below the neck
+  // composed: modest nods (a little more than at first: the maintainer, 2026-11-16), her head tilting from side to side
+  marimba: { seed: 53, depth: 0.68, beats: [1, 0.25, 0.6, 0.25], lag: 0.03, soft: 0.18, chance: 0.35, look: 0.10, tilt: 0.12, lean: 0.015,
+    parts: { head: 1.0, trunk: 0.6, knees: 0.5 } },                 // upright, quiet below the neck
   // the frontman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
   eimer: { seed: 67, depth: 0.9, beats: [1, 0.5, 0.8, 0.5], lag: 0.0, soft: 0.13, chance: 0.2, skip: 0, look: 0.14, tilt: 0.04, lean: 0.02,
     parts: { head: 1.0, trunk: 1.0, knees: 1.0, sway: 1.0 } },

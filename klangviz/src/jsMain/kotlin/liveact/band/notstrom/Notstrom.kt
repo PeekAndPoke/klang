@@ -148,14 +148,15 @@ class Notstrom private constructor(
                     parts = Traits.Parts(head = 1.15, trunk = 0.9, knees = 0.8, sway = 0.6),
                 ),
             ),
-            // composed: small nods, her head tilting from side to side
+            // composed: modest nods (a little more than at first: the maintainer, 2026-11-16), her head tilting from
+            // side to side
             Player.Marimba to Character(
                 seed = 53.0,
                 traits = Traits(
-                    depth = 0.5, beats = listOf(1.0, 0.25, 0.6, 0.25), lag = 0.03, soft = 0.18, chance = 0.35,
+                    depth = 0.68, beats = listOf(1.0, 0.25, 0.6, 0.25), lag = 0.03, soft = 0.18, chance = 0.35,
                     look = 0.10, tilt = 0.12, lean = 0.015,
                     // upright, quiet below the neck
-                    parts = Traits.Parts(head = 0.8, trunk = 0.6, knees = 0.5),
+                    parts = Traits.Parts(head = 1.0, trunk = 0.6, knees = 0.5),
                 ),
             ),
             // the frontman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
