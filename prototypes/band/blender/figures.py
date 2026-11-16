@@ -6,7 +6,7 @@
 # One skeleton, six characters by their build.
 #
 #   blender -b --factory-startup -P figures.py -- <previews dir> [preview] [export]
-import bpy, os, sys
+import bpy, math, os, sys
 from mathutils import Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
@@ -270,6 +270,8 @@ def hair(head, size, mat, strands=11, length=0.30, spread=2.1):
 
 def jaw(head, size, mat, strength=1.0):
     """
+    NOT USED any more: the chin is the head's own skin drawn out (build()). Kept for the record.
+
     A chin that shows: a small rounded shape of its own under the front of the face, a little ahead of it, moved by
     the head (as a point with a thickness the chin was smoothed away with the rest of the head).
     """
@@ -470,17 +472,41 @@ def build(key):
     body.data.materials.append(material(key + "_dark", (0.012, 0.012, 0.016)))
     body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
 
-    # The eyes: narrow, on the face, part of the body, moved by the head
     head = P["head"]
-    size = p["eye_size"] * head.radius / 0.092
+    hs = head.radius / 0.092
+
+    # The chin is no added piece but the head's own skin, drawn out: the point of the real surface under the front of
+    # the face is found, and the skin round it is pulled forward and down, most at that point and fading smoothly
+    # round it, narrower across than along, so it comes to a soft point and runs back into the jaw without an edge.
+    near = [v for v in body.data.vertices if (v.co - head.pos).length < 1.05 * head.radius and v.co.z < head.pos.z]
+    if near:
+        tip = max(near, key=lambda v: -0.62 * (v.co.y - head.pos.y) - 0.78 * (v.co.z - head.pos.z) - 6.0 * abs(v.co.x)).co.copy()
+        strength = p.get("jaw", 1.0)
+        pull = Vector((0, -0.74, -0.67)) * (0.024 * hs * strength)
+        for v in body.data.vertices:
+            d = v.co - tip
+            if d.length < 0.12 * hs:
+                w = math.exp(-((d.x / (0.019 * hs)) ** 2 + (d.y / (0.034 * hs)) ** 2 + (d.z / (0.030 * hs)) ** 2) / 2)
+                v.co += pull * w
+
+    # A long skull, where one is worn, before the eyes: they have to find the forehead it makes
+    back = None
+    if p.get("skull"):
+        shape = p["skull"] if isinstance(p["skull"], dict) else {}
+        back = skull(head.pos, hs, body.data.materials[0], **shape)
+    surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
+    if back:
+        surface += [v.co.copy() for v in back.data.vertices]
+
+    # The eyes: narrow, in the face, part of the body, moved by the head. Each is set on the real surface: the skin
+    # (and the skull) is looked up in front of the eye's place, and the eye sits half sunk into it, from every side
+    size = p["eye_size"] * hs
+    low = (-0.008 if p.get("skull") is True else 0.012) - p.get("eye_drop", 0.0)
     for s in (1.0, -1.0):
-        # set into the face, not on it: the smoothed skin lies inside the points' radius
-        # under a long skull's forehead the eyes sit a little lower and further out, or it covers them
-        # (her skull has since grown a higher, fuller forehead, which swallowed them: further out and lower again)
-        deep, low = (1.03, -0.008) if p.get("skull") is True else (0.80, 0.012)
-        deep = p.get("eye_deep", deep)
-        at = head.pos + Vector((0.034 * s * size, -head.radius * deep, (low - p.get("eye_drop", 0.0)) * size))
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=at)
+        x, z = head.pos.x + 0.034 * s * size, head.pos.z + low * size
+        front = [c.y for c in surface if abs(c.x - x) < 0.020 * hs and abs(c.z - z) < 0.016 * hs]
+        y = (min(front) if front else head.pos.y - head.radius * 0.7) + 0.003 * hs
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=(x, y, z))
         eye = bpy.context.object
         eye.scale = p.get("eye_shape", (1.5, 0.6, 0.55))        # wide, flat, low: a slit; rounder where set
         bpy.ops.object.transform_apply(scale=True)
@@ -491,19 +517,11 @@ def build(key):
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.join()
 
-    if p.get("skull"):
-        shape = p["skull"] if isinstance(p["skull"], dict) else {}
-        back = skull(head.pos, head.radius / 0.092, body.data.materials[0], **shape)
+    if back:
         bpy.ops.object.select_all(action='DESELECT')
         back.select_set(True); body.select_set(True)
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.join()
-
-    chin = jaw(head.pos, head.radius / 0.092, body.data.materials[0], p.get("jaw", 1.0))
-    bpy.ops.object.select_all(action='DESELECT')
-    chin.select_set(True); body.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.join()
 
     if p.get("mane"):
         hair_mat = material(key + "_hair", (0.012, 0.012, 0.016))
