@@ -15,7 +15,7 @@ const skin = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.6 })
 // kick's head is a big face, so a little is a lot; the eye reads light steeply, so the falls are short.
 const HIT = {
   kick: { color: 0xffa050, peak: 0.03, fade: 0.09 },
-  snare: { color: 0xffe8c8, peak: 0.10, fade: 0.07 },
+  snare: { color: 0xffe8c8, peak: 0.04, fade: 0.07 },
 };
 const lit = (material, drum) => { const m = material.clone(); m.emissive = new THREE.Color(HIT[drum].color); m.emissiveIntensity = 0; return m; };
 const brass = new THREE.MeshStandardMaterial({ color: 0x4a3a18, roughness: 0.25, metalness: 0.95, side: THREE.DoubleSide });
