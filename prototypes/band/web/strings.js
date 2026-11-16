@@ -269,6 +269,20 @@ export class StringPlayer {
       rig.turnWorld(bone, new THREE.Quaternion().setFromUnitVectors(now, d.clone().normalize()));
     };
 
+    // a hand points toward what it plays, but a wrist only bends so far: never more than [most] radians off the
+    // line of its forearm (bent further it looked broken, the maintainer, 2026-11-16)
+    const aim = (side, toward, most) => {
+      const hand = rig.bones['hand' + side].getWorldPosition(new THREE.Vector3());
+      const forearm = hand.sub(rig.bones['wrist' + side].getWorldPosition(new THREE.Vector3())).normalize();
+      const want = toward.clone().normalize();
+      const angle = forearm.angleTo(want);
+      if (angle > most) {
+        const axis = new THREE.Vector3().crossVectors(forearm, want).normalize();
+        want.copy(forearm).applyAxisAngle(axis, most);
+      }
+      point('hand' + side, want);
+    };
+
     // the left hand: under the neck at the note's place, the fingers coming up over the strings
     const fret = this.fretAt(t);
     // for an upper (lower-sounding) string the fingers reach further round the neck: the wrist comes up and out
@@ -278,7 +292,7 @@ export class StringPlayer {
     const onNeck = place(this.nut - fret.along, cross, 0.02 * s);
     const wristL = onNeck.clone().addScaledVector(Y, -0.07 * s + 0.10 * cross).addScaledVector(Z, -0.03 * s + 0.15 * cross);
     rig.hand('L', wristL, rig.dir(0.4, -1.0, -0.3));
-    point('handL', onNeck.clone().sub(wristL));
+    aim('L', onNeck.clone().sub(wristL), 0.75);
 
     // the right hand: over the strings between the bridge and the neck, through them on every note
     const strum = this.strumAt(t);
@@ -287,7 +301,7 @@ export class StringPlayer {
     const wristR = place(this.bridge + 0.13 * s, fret.pick - strum * k.swing * fret.wide * k.arm * s, 0.03 * s)
       .addScaledVector(X, -0.07 * s).addScaledVector(Y, 0.05 * s).addScaledVector(Z, 0.05 * s);
     rig.hand('R', wristR, rig.dir(-0.9, -0.1, -0.7));
-    point('handR', onStrings.clone().sub(wristR));
+    aim('R', onStrings.clone().sub(wristR), 0.55);
 
     if (rig.eyes) { rig.eyes.emissiveIntensity = 2 + 13 * Math.min(1.6, energy); }
   }
