@@ -135,7 +135,7 @@ about 7 % of the song in five fits.
 | Cymbals | Swing after a hit and settle |
 | Kick drum | A small jolt on a kick |
 | Marimba | Floats without legs and hovers slowly; a struck bar dips and glows in her eye colour |
-| Strings | The played string alone lights: a flash, a hold at 30 % while the note sounds, a quick fade |
+| Strings | The played string alone lights, and fades as its sound does: an exponential fall from the pluck, a quicker one once the note ends |
 | Trumpet | Its bell glows while a note sounds |
 | Eyes | Glow with how much their player plays right now |
 

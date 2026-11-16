@@ -12,6 +12,9 @@ import { smooth } from './util.js';
 
 const lacquer = new THREE.MeshStandardMaterial({ color: 0x0a0a0d, roughness: 0.25, metalness: 0.3 });
 const neckWood = new THREE.MeshStandardMaterial({ color: 0x1c140e, roughness: 0.5 });
+// how a played string's light falls, in seconds to 1/e: while the note rings, and once it has ended
+const RING = 0.25;
+const DAMP = 0.06;
 
 // Body outlines, seen from the front with the neck to the right (x along the neck, y across, in the figure's
 // measure): from the neck pocket's lower corner round the body to its upper corner, as points a smooth curve goes
@@ -202,15 +205,15 @@ export class StringPlayer {
 
     let energy = 0;
     const [last] = around(this.notes, t);
-    // a string's light: bright at the pluck, quickly down to 30 %, held there while the note sounds (until the
-    // next one at the latest), then fading out
+    // a string's light fades as a plucked string's sound does: one exponential fall from the pluck (RING), and a
+    // quicker one from where the note ends (the next one at the latest), as the hand damps it (DAMP)
     const lit = this.strings.map(() => 0);
     for (let i = this.notes.indexOf(last); i >= 0 && this.notes[i].t > t - 4.0; i--) {
       const n = this.notes[i];
       const age = t - n.t;
       const next = this.notes[i + 1];
       const held = Math.min(n.d ?? 0.3, next ? next.t - n.t : 9);
-      const level = age < held ? 0.3 + 0.7 * Math.exp(-age / 0.045) : (0.3 + 0.7 * Math.exp(-held / 0.045)) * Math.exp(-(age - held) / 0.125);
+      const level = Math.exp(-age / RING - Math.max(0, age - held) / DAMP);
       energy += n.v * Math.exp(-age / 0.25);
       for (const string of n.strings) { lit[string] = Math.max(lit[string], n.v * level); }
     }
