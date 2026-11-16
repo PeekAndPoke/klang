@@ -6,7 +6,8 @@
 // Where the camera is: a fixed look where the page asks for one, else the choreography, else the total.
 import * as THREE from 'three';
 import { params, view, song, seed, BPM, times } from './show.js';
-import { Choreography, HOME, STADIUM } from './camera.js';
+import { Choreography, HOME, STADIUM, LOOKS, ANGLES, ORDER } from './camera.js';
+import { smoother } from './util.js';
 
 /** Returns look(t), which places [camera] for this frame. Call it after everything that moves a figure. */
 export function initView(scene, camera, rigs) {
@@ -26,7 +27,47 @@ export function initView(scene, camera, rigs) {
     if (params.has('outline')) { scene.background = new THREE.Color(0xffffff); scene.fog = null; }
   }
 
+  // The camera by hand: a key takes it over from the choreography, until 0 or Escape gives it back.
+  //   q the total    w the stadium shot    e from the left    r from above    t from the right    y (or z) from the floor
+  //   1 to 6 a player (drums, lead guitar, frontwoman, bass, rhythm guitar, marimba); the same key again: their next look
+  //   a a flight round the whole band (again: the other way round)    s a slow way round the last player chosen
+  //   d a dolly zoom back to the total from wherever the camera is
+  const bar = 240 / BPM;
+  let hand = null, shown = null, clock = 0, player = 'guitar1', lookOf = {}, way = 1;
+  const ANGLE_KEYS = { e: ANGLES[0], r: ANGLES[1], t: ANGLES[2], y: ANGLES[3], z: ANGLES[3], w: STADIUM };
+  if (choreography) {
+    addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) { return; }
+      const k = e.key.toLowerCase();
+      if (k === '0' || k === 'escape') { hand = null; }
+      else if (k === 'q') { hand = { kind: 'home' }; }
+      else if (ANGLE_KEYS[k]) { hand = { kind: 'shot', subject: { angle: ANGLE_KEYS[k] } }; }
+      else if (k >= '1' && k <= '6') {
+        const name = ORDER[parseInt(k, 10) - 1], looks = LOOKS[name] || LOOKS.standing;
+        lookOf[name] = name === player && hand && hand.kind === 'shot' ? ((lookOf[name] ?? 0) + 1) % looks.length : (lookOf[name] ?? 0);
+        player = name;
+        hand = { kind: 'shot', subject: { name, look: looks[lookOf[name]] } };
+      }
+      else if (k === 'a') { way = -way; hand = { kind: 'circle', from: clock, way }; }
+      else if (k === 's') { way = -way; hand = { kind: 'arc', from: clock, way, name: player }; }
+      else if (k === 'd' && shown) { hand = { kind: 'back', from: clock, shot: { pos: shown.pos.clone(), at: shown.at.clone(), fov: shown.fov } }; }
+    });
+  }
+  /** The camera by hand at [t], or null when the choreography has it. A flight that is over leaves the total. */
+  function byHand(t) {
+    if (!hand) { return null; }
+    const home = choreography.home(t);
+    const u = hand.from === undefined ? 0 : Math.max(0, t - hand.from);
+    if (hand.kind === 'shot') { return choreography.shot(hand.subject); }
+    if (hand.kind === 'circle' && u < 16 * bar) { return choreography.circleBy(hand.way, smoother(u / (16 * bar)), home); }
+    if (hand.kind === 'arc') { return choreography.arcBy(hand.name, hand.way, Math.min(1, u / (9 * bar))); }
+    if (hand.kind === 'back' && u < 5 * bar) { return choreography.back(hand.shot, home, smoother(u / (5 * bar))); }
+    hand = { kind: 'home' };
+    return home;
+  }
+
   function place(t) {
+    clock = t;
     if (params.has('head') && rigs[params.get('head')]) {
       const rig = rigs[params.get('head')];
       const at = rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.07 * rig.height / 1.6, 0));
@@ -62,7 +103,8 @@ export function initView(scene, camera, rigs) {
       camera.position.set(p.x + 1.6, 1.5, p.z + 4.2); camera.lookAt(p.x, 1.0, p.z); return;
     }
     if (choreography) {
-      const shot = choreography.at(t);
+      const shot = byHand(t) || choreography.at(t);
+      shown = shot;
       camera.position.copy(shot.pos);
       camera.lookAt(shot.at);
       if (Math.abs(camera.fov - shot.fov) > 1e-3) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }

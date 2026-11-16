@@ -24,7 +24,7 @@ export const HOME = { pos: new THREE.Vector3(0, 1.85, 9.4), at: new THREE.Vector
 
 // Looks at a player, in the player's own space (x to their left, y up, z ahead of them): where the camera is, what
 // it looks at, the lens
-const LOOKS = {
+export const LOOKS = {
   standing: [
     { pos: [0.7, 0.75, 2.4], at: [0, 1.20, 0.1], fov: 42 },       // from below, in front
     { pos: [2.0, 1.45, 0.9], at: [0, 1.15, 0.2], fov: 38 },       // from their left
@@ -45,7 +45,7 @@ const LOOKS = {
 // The stadium shot: from far back and high in the audience, the whole stage small above a field of held-up lights
 export const STADIUM = { pos: [5.0, 9.0, 34.0], at: [0.0, 2.2, 3.0], fov: 30 };
 // The stage from elsewhere
-const ANGLES = [
+export const ANGLES = [
   { pos: [-7.2, 1.1, 5.6], at: [0.0, 1.0, 0.6], fov: 40 },        // from the left, low
   { pos: [0.0, 5.6, 7.4], at: [0.0, 0.6, 0.6], fov: 38 },         // from above
   { pos: [7.0, 1.4, 5.2], at: [0.0, 1.0, 0.6], fov: 40 },         // from the right
@@ -60,7 +60,7 @@ const ARCS = {
 };
 // A round in bars: where the looks begin, where the way back begins, where the circle begins
 const FIRST = 34, BACK = 43, CIRCLE = 24, ROUND = 48;
-const ORDER = ['drums', 'guitar1', 'eimer', 'bass', 'guitar2', 'marimba'];
+export const ORDER = ['drums', 'guitar1', 'eimer', 'bass', 'guitar2', 'marimba'];
 
 export class Choreography {
   /** [rigs] by name; [activity]: name -> the times its player plays a note, sorted; [cycle]: a bar, in seconds. */
@@ -124,18 +124,23 @@ export class Choreography {
    * The flight round the whole band, [u] of the way (0 to 1): once round, from the start position and back to it.
    * Behind the band it comes closer (the wall is there) and a little higher. [home]: the total as it drifts now.
    */
-  circle(n, u, home) {
-    const angle = (this.chance(n, 0, 8) < 0.5 ? 1 : -1) * 2 * Math.PI * u;
+  circle(n, u, home) { return this.circleBy(this.chance(n, 0, 8) < 0.5 ? 1 : -1, u, home); }
+
+  /** The flight round the band, [u] of the way, to the left ([way] 1) or to the right (-1). */
+  circleBy(way, u, home) {
+    const angle = way * 2 * Math.PI * u;
     const far = 8.1 + 1.6 * Math.cos(angle);
     const pos = new THREE.Vector3(8.5 * Math.sin(angle), HOME.pos.y + 0.45 * (1 - Math.cos(angle)), -0.3 + far * Math.cos(angle));
     return { pos: pos.add(home.pos).sub(HOME.pos), at: home.at, fov: home.fov };
   }
 
   /** The slow way round the player of round [n], [u] of it (0 to 1): across their front, 43 degrees to each side. */
-  arc(n, u) {
-    const name = this.subject(n, 0).name;
+  arc(n, u) { return this.arcBy(this.subject(n, 0).name, this.chance(n, 0, 8) < 0.5 ? 1 : -1, u); }
+
+  /** The way round the player [name], [u] of it, from one side ([way] 1) or the other (-1). */
+  arcBy(name, way, u) {
     const a = ARCS[name] || ARCS.standing;
-    const angle = (this.chance(n, 0, 8) < 0.5 ? 1 : -1) * 1.5 * (u - 0.5);
+    const angle = way * 1.5 * (u - 0.5);
     const root = this.rigs[name].root;
     root.updateWorldMatrix(true, false);
     return {
@@ -171,13 +176,29 @@ export class Choreography {
     return far;
   }
 
-  /** The camera at [t]: { pos, at, fov }. */
-  at(t) {
-    // the wide view breathes: a slow drift, never still
-    const home = {
+  /** The total at [t]. It breathes: a slow drift, never still. */
+  home(t) {
+    return {
       pos: HOME.pos.clone().add(new THREE.Vector3(0.15 * Math.sin(t * 0.07), 0.04 * Math.sin(t * 0.05 + 1), 0.12 * Math.sin(t * 0.04))),
       at: HOME.at.clone(), fov: HOME.fov,
     };
+  }
+
+  /**
+   * The way back from [shot] to the total [home] by a dolly zoom, [u] of it (0 to 1, the pace already in it): the
+   * camera travels to the start; the look turns from the subject to the stage and the lens opens to the wide view,
+   * both slowly at first, so the subject keeps much of its size while the stage grows round it. One pace drives
+   * all three: nothing surges.
+   */
+  back(shot, home, u) {
+    const pos = shot.pos.clone().lerp(home.pos, u);
+    const held = 2 * Math.atan(shot.pos.distanceTo(shot.at) * Math.tan(shot.fov * Math.PI / 360) / pos.distanceTo(shot.at)) * 180 / Math.PI;
+    return { pos, at: shot.at.clone().lerp(home.at, u * u), fov: held + (home.fov - held) * u * u };
+  }
+
+  /** The camera at [t]: { pos, at, fov }. */
+  at(t) {
+    const home = this.home(t);
     if (t < this.start) { return home; }
     const n = Math.floor((t - this.start) / this.round);
     const x = (t - this.start - n * this.round) / this.cycle;           // 0 to 48, in bars
@@ -202,12 +223,7 @@ export class Choreography {
       // the way back starts where the last look's slide ended
       this.slide(shot, i, 1);
     }
-    // back by a dolly zoom over five bars: the camera travels to the start, leaving and arriving very softly; the
-    // look turns from the subject to the stage and the lens opens to the wide view, both slowly at first, so the
-    // subject keeps much of its size while the stage grows round it. One pace drives all three: nothing surges.
-    const u = smoother((x - BACK) / (ROUND - BACK));
-    const pos = shot.pos.clone().lerp(home.pos, u);
-    const held = 2 * Math.atan(shot.pos.distanceTo(shot.at) * Math.tan(shot.fov * Math.PI / 360) / pos.distanceTo(shot.at)) * 180 / Math.PI;
-    return { pos, at: shot.at.clone().lerp(home.at, u * u), fov: held + (home.fov - held) * u * u };
+    // back by a dolly zoom over five bars, leaving and arriving very softly
+    return this.back(shot, home, smoother((x - BACK) / (ROUND - BACK)));
   }
 }
