@@ -8,7 +8,6 @@
 import * as THREE from 'three';
 import { around, strokeAt, holdStick, Mover } from './strike.js';
 
-
 const shell = new THREE.MeshStandardMaterial({ color: 0x08080b, roughness: 0.3, metalness: 0.4 });
 const skin = new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.6 });
 const brass = new THREE.MeshStandardMaterial({ color: 0x4a3a18, roughness: 0.25, metalness: 0.95, side: THREE.DoubleSide });

@@ -65,7 +65,7 @@ FIGURES = {
                     skull=dict(long=1.0, high=0.094, back=0.034, rise=0.022, tilt=8.0, wide=0.086),
                     # long hair: combed straight back over the skull as a pattern in the light (`pattern.js`, the page),
                     # and from there one smooth mane down his back, see mane(). (Hanging locks were tried and not
-                    # wanted: hair() in the history, last in 8d3690800.)
+                    # wanted: hair() in the history, see 0eb7378ad^.)
                     mane=dict(length=0.46)),
     # the bass: the tall thin one, a long neck, stooped
     "bass": dict(height=1.10, scale=dict(torso=0.80, waist=0.78, chest=0.82, shoulder=0.85, arm=0.78, thigh=0.76,
@@ -86,7 +86,7 @@ FIGURES = {
                   shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
                   # see skull(). A long neck, carried forward. (A sea shell for a hat was tried and taken off:
-                  # shell() in the history, last in 8d3690800.)
+                  # shell() in the history, see 0eb7378ad^.)
                   radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06), skull=True,
                   move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.022, -0.004),
                             # proud shoulders: level, not sloping, and held back a little

@@ -9,7 +9,6 @@
 import * as THREE from 'three';
 import { smooth } from './util.js';
 
-
 /**
  * Puts [rig] where its entrance has it at [t]: from `from` (x, z, off the stage) to its place `home` (x, z, turn, y)
  * between the times `t[0]` and `t[1]`; a place above the floor (the riser) is stepped up to near the end. Returns how

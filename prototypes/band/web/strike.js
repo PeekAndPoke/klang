@@ -90,7 +90,7 @@ export function holdStick(rig, side, tip, bend, { length, grip = 0.72, pole, mes
   mesh.quaternion.setFromUnitVectors(UP, d);
 }
 
-// How much energy the sound has right now: the stage sets it every frame from the recording's measured loudness
+// How much energy the sound has right now: the page sets it every frame (main.js) from the recording's measured loudness
 // (`slow`: the last second and a half, 0 to about 1; `burst`: how far this moment is above that). The nod is as
 // strong as the sound: nearly none in a quiet passage, deep when the band is loud, with an extra dip on a burst.
 let energy = { slow: 0.7, burst: 0 };
