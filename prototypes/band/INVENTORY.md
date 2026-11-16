@@ -195,7 +195,7 @@ frontwoman the balanced one (every part alike, on time, little chance).
 | The wall | Six metres behind the riser. Under the back light an ornament (medallions) in its own faint glow, darker to the sides; under the front lamp a woven wire mesh (the frontwoman's braid, laid flat), with the band's shadows on it |
 | Back light | Four spots: blue from back left, red from back right, a cool one from the back centre, a weak warm one from the front; three cast shadows |
 | The front lamp | One warm lamp on the floor before the stage, looking up: for 8 bars in every 40 it takes over and throws the band's shadows big onto the wall |
-| The stroboscope | The front lamp, for 2 bars in every 40: on the sixteenths (about ten flashes a second), all other lamps off. A public showing needs a warning (photosensitive epilepsy); `?nostrobe` |
+| The stroboscope | The front lamp, while the bass drum runs fast (eight hits or more in a row, each under a quarter second apart; six stretches in the recording, the long ones 6.6 s): on the sixteenths (about ten flashes a second), all other lamps off. A public showing needs a warning (photosensitive epilepsy); `?nostrobe` |
 | Analog lamps | Each lamp wanders by about a tenth, shivers faintly and sags by a sixth about every 20 s. The lamps do not follow the music yet |
 | Camera | Mostly the total. Rounds of 48 bars (79 s): 36 on the total, three looks of three bars with cuts between (a player who plays then, or another angle; never still, a very slight slide), back by a cut, in about a third of the rounds by a slow dolly zoom. The seed picks who, from where and when |
 | Intro | The stage nearly dark until the click; on it the lamps come up at once and the players walk in over 15 s; the marimba and the kit are in place |

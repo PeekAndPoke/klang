@@ -5,7 +5,7 @@
 
 // The stage: floor, the wall behind it, the lamps, the drummer's riser. Nothing here knows the band.
 import * as THREE from 'three';
-import { params, seed, BPM, energyAt } from './show.js';
+import { params, seed, BPM, energyAt, times } from './show.js';
 import { smooth, hash01 } from './util.js';
 import { wall, dress } from './pattern.js';
 import { groundFog } from './fog.js';
@@ -100,17 +100,31 @@ export function buildStage() {
     return FRONT[Math.floor(hash01(turn * 9.7 + seed * 1.3 + 0.4) * FRONT.length) % FRONT.length];
   }
 
+  // Where the bass drum runs: eight hits or more in a row, each less than a quarter of a second after the one
+  // before (a double sounding at once counts once). The stroboscope is on for just these stretches.
+  const RUNS = [];
+  {
+    const kicks = times(['kick']).filter((k, i, all) => i === 0 || k - all[i - 1] > 0.03);
+    let first = 0;
+    for (let i = 1; i <= kicks.length; i++) {
+      if (i === kicks.length || kicks[i] - kicks[i - 1] >= 0.25) {
+        if (i - first >= 8) { RUNS.push([kicks[first], kicks[i - 1]]); }
+        first = i;
+      }
+    }
+  }
+
   function frontAt(t, waiting) {
     if (waiting) { return { front: 0, strobing: false }; }
     const bar = 240 / BPM;
     const x = ((t / bar + (seed * 7) % 40) % 40 + 40) % 40;
     if (params.has('front')) { return { front: parseFloat(params.get('front')), strobing: false }; }
     if (t < 0) { return { front: 0, strobing: false }; }
-    // and as a stroboscope: for two bars in every forty it flashes on the sixteenths (about ten a second, the
-    // maintainer's choice, 2026-11-16: the eighths were too slow), all other lamps off, the band frozen on the wall
-    // in each flash. Flashing this fast over the whole picture can trigger seizures in people with photosensitive
-    // epilepsy: a public showing needs a warning before it. ?nostrobe switches it off.
-    if (x >= 12 && x < 14 && !params.has('nostrobe')) {
+    // and as a stroboscope, while the bass drum runs fast (see RUNS): it flashes on the sixteenths (about ten a
+    // second, the maintainer's choice, 2026-11-16: the eighths were too slow), all other lamps off, the band frozen
+    // on the wall in each flash. Flashing this fast over the whole picture can trigger seizures in people with
+    // photosensitive epilepsy: a public showing needs a warning before it. ?nostrobe switches it off.
+    if (!params.has('nostrobe') && RUNS.some(([from, to]) => t >= from - 0.02 && t < to + 0.08)) {
       const sixteenth = (t * BPM / 60 * 4) % 1;
       return { front: sixteenth < 0.28 ? 1 : 0, strobing: true };
     }
