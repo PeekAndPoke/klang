@@ -54,8 +54,11 @@ const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStan
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
-const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshBasicMaterial({ color: 0x0a1630 }));
+// A wall behind the stage: it takes the light and the shadows. Dark and matt, so the back lamps (which shine away
+// from it) leave it nearly black and a lamp from the front paints the band on it.
+const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 12), new THREE.MeshStandardMaterial({ color: 0x8a8f9c, roughness: 0.95, emissive: 0x03050a }));
 back.position.set(0, 6, -5);
+back.receiveShadow = true;
 scene.add(back);
 scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
 
@@ -65,14 +68,25 @@ scene.add(new THREE.AmbientLight(0x8090ff, 0.05));
 const lamps = [];
 // the house: before the click the stage lies nearly dark; on the click the lamps come up at once
 let house = 1;
+// The light changes sides now and then: for eight bars in every forty the lamps behind go down and one lamp low at the
+// front comes up, so the band throws big shadows up the wall. A second each way.
+let front = 0;
+function frontAt(t) {
+  if (frozen === null && audio && !playing) { return 0; }
+  const bar = 240 / BPM;
+  const x = ((t / bar) % 40 + 40) % 40;
+  if (params.has('front')) { return parseFloat(params.get('front')); }
+  return t < 0 ? 0 : smooth01((x - 26) * bar / 1.0) * smooth01((34 - x) * bar / 1.0);
+}
 function analog(t) {
-  for (const { light, base, seed } of lamps) {
+  front = frontAt(t);
+  for (const { light, base, seed, group } of lamps) {
     const wander = 0.060 * Math.sin(t * 0.23 + seed) + 0.040 * Math.sin(t * 0.61 + seed * 2.3) + 0.025 * Math.sin(t * 1.37 + seed * 0.7);
     const shiver = 0.012 * Math.sin(t * 9.1 + seed * 3.1) + 0.008 * Math.sin(t * 14.7 + seed * 1.9);
     // a sag: a dip of a sixth, about every twenty seconds, at its own moment per lamp
     const phase = ((t + seed * 5.3) % 19.7 + 19.7) % 19.7;
     const sag = phase < 1.2 ? 0.16 * Math.sin(Math.PI * phase / 1.2) ** 2 : 0;
-    light.intensity = base * (1 + wander + shiver - sag) * house;
+    light.intensity = base * (1 + wander + shiver - sag) * house * (group === 'front' ? front : group === 'back' ? 1 - 0.9 * front : 1 - 0.6 * front);
   }
 }
 function spot(x, y, z, color, intensity, tx, tz, shadow) {
@@ -83,13 +97,26 @@ function spot(x, y, z, color, intensity, tx, tz, shadow) {
   light.shadow.mapSize.set(2048, 2048);
   light.shadow.bias = -0.0005;
   scene.add(light, light.target);
-  lamps.push({ light, base: intensity, seed: lamps.length * 7.31 + 1.7 });
+  lamps.push({ light, base: intensity, seed: lamps.length * 7.31 + 1.7, group: z < 0 ? 'back' : 'fill' });
   return light;
 }
 spot(-4.5, 5.0, -4.0, 0x3070ff, 260, -2.0, 0, true);
 spot(4.5, 5.0, -4.0, 0xff3070, 260, 2.0, 0, true);
 spot(0, 5.5, -4.5, 0x70a0ff, 180, 0, -1, true);
 spot(0, 6, 8, 0xfff0e0, 25, 0, 0, false);
+// the lamp at the front: on the floor before the stage, looking up at the band and the wall, wide
+{
+  const low = new THREE.SpotLight(0xffb070, 95, 40, 0.62, 0.5, 1.0);
+  low.position.set(0.6, 0.25, 8.6);
+  low.target.position.set(0, 2.2, -5);
+  low.castShadow = true;
+  low.shadow.mapSize.set(2048, 2048);
+  low.shadow.bias = -0.0006;
+  low.shadow.camera.near = 1;
+  low.shadow.camera.far = 30;
+  scene.add(low, low.target);
+  lamps.push({ light: low, base: 95, seed: 31.7, group: 'front' });
+}
 
 // Where each player stands: x to the audience's right, z toward the audience
 // The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others
