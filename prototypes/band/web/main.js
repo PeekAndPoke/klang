@@ -24,6 +24,20 @@ initClock();
 stage.shade(band.drummer.kit);
 const look = initView(stage.scene, stage.camera, rigs);
 
+// Oversampling: the picture is drawn with more pixels than the screen shows and scaled down, which smooths edges
+// and the glitter. 2x and 4x are the number of pixels drawn (so 1.41 and 2 times as many each way); the cost in
+// frames grows about as much. The key o steps through them; ?oversample=2 starts with one.
+const SAMPLES = [1, 2, 4];
+let over = Math.max(0, SAMPLES.indexOf(parseInt(params.get('oversample') || '1', 10)));
+const sample = () => {
+  stage.renderer.setPixelRatio(Math.min(devicePixelRatio, 2) * Math.sqrt(SAMPLES[over]));
+  stage.renderer.setSize(innerWidth, innerHeight);
+};
+if (over > 0) { sample(); }
+addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'o' && !e.ctrlKey && !e.metaKey && !e.altKey) { over = (over + 1) % SAMPLES.length; sample(); }
+});
+
 addEventListener('resize', () => {
   stage.renderer.setSize(innerWidth, innerHeight);
   stage.camera.aspect = innerWidth / innerHeight;
@@ -60,7 +74,7 @@ function frame() {
   before = nowMs;
   counted++;
   if (nowMs - since >= 500) { fps = counted * 1000 / (nowMs - since); hud.dataset.worst = worst.toFixed(0); counted = 0; worst = 0; since = nowMs; }
-  hud.textContent = `camera: ${look.what()}   seed ${seed}  ${fps.toFixed(0)} fps  (slowest frame ${hud.dataset.worst || '-'} ms)   t ${t.toFixed(2)} s  beat ${(t * BPM / 60).toFixed(2)}`;
+  hud.textContent = `camera: ${look.what()}   seed ${seed}  ${SAMPLES[over]}x  ${fps.toFixed(0)} fps  (slowest frame ${hud.dataset.worst || '-'} ms)   t ${t.toFixed(2)} s  beat ${(t * BPM / 60).toFixed(2)}`;
   frames++;
   if (frames > 2) { window.__ready = true; }
   requestAnimationFrame(frame);

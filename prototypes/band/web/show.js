@@ -6,6 +6,7 @@
 // What the show is given: the page's switches, the seed of this performance, the recorded song and its loudness.
 // Keys: space pauses, the arrows jump ten seconds; the camera by hand: see view.js (q w e r t y, 1 to 6, a s d, 0);
 // f tries the front lamp's colours, one after the other (stage.js).
+// o steps the oversampling: 1x, 2x, 4x the pixels (?oversample=2 starts with one; main.js).
 //   ?seed=7      this performance again (else another one each time the page opens)
 //   ?t=1.25      freeze the time at 1.25 s (for stills; without a seed it takes seed 0, so stills stay comparable)
 //   ?still       the camera stays on the total     ?nohud  no fps line (for stills that are compared)

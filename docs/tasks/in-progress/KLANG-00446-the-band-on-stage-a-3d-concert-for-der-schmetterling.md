@@ -53,6 +53,7 @@ ported to Kotlin once the show is right.
 5. The lights from the music: kick, snare, the song's parts, the level.
 6. Later: the throwing and the audible mistake.
 7. Later, asked for by the maintainer (2026-11-16): a camera movement that very slowly zooms out from the total.
+8. Later, from the maintainer (2026-11-16): the stroboscope "is still a bit too bright ... hurts the eyes".
 
 ## Acceptance
 
