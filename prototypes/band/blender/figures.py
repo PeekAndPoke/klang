@@ -62,9 +62,10 @@ FIGURES = {
                     stoop=0.07, eye=(1.0, 0.15, 0.1),
                     # a plain round back of the head: the hair alone left it flat
                     skull=dict(long=1.0, high=0.094, back=0.034, rise=0.022, tilt=8.0, wide=0.086),
-                    # his hair is no shape but a pattern in the light, combed straight back (`pattern.js`, the page);
-                    # hanging locks were tried (hair(), kept) and not wanted
-                    ),
+                    # long hair: combed straight back over the skull as a pattern in the light (`pattern.js`, the page),
+                    # and from there one smooth mane down his back, see mane(). Hanging locks were tried (hair(), kept)
+                    # and not wanted.
+                    mane=dict(length=0.46)),
     # the bass: the tall thin one, a long neck, stooped
     "bass": dict(height=1.10, scale=dict(torso=0.80, waist=0.78, chest=0.82, shoulder=0.85, arm=0.78, thigh=0.76,
                                          leg=0.80, neck=0.85, head=0.94),
@@ -260,6 +261,42 @@ def hair(head, size, mat, strands=11, length=0.30, spread=2.1):
     return made
 
 
+def mane(head, size, mat, length=0.46):
+    """
+    Long hair as one smooth mane: from the back of the skull down the back to between the shoulder blades, wide and
+    flat, a little fuller in the middle of its way. Its top moves with the head, its end lies on the back (the chest),
+    and it stretches between the two, so it does not swing like a board when the head nods.
+    """
+    import math
+    root = head + Vector((0, 0.070, 0.075)) * size
+    end = head + Vector((0, 0.150, 0.075 - length)) * size
+    axis = (end - root).normalized()
+    across = Vector((1, 0, 0))
+    out = axis.cross(across).normalized()
+    if out.y < 0: out = -out
+    half = (end - root).length / 2
+    middle = (root + end) / 2
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=24, ring_count=20, location=(0, 0, 0))
+    obj = bpy.context.object
+    head_w, chest_w = [], []
+    for v in obj.data.vertices:
+        t = (1 - v.co.z) / 2                                # 0 at the root, 1 at the end
+        wide = (0.098 - 0.028 * t + 0.020 * math.sin(math.pi * t)) * size
+        thick = (0.030 + 0.016 * math.sin(math.pi * t)) * size
+        bow = out * (0.030 * size * math.sin(math.pi * t))
+        x, y = v.co.x, v.co.y
+        v.co = middle - axis * (v.co.z * half) + across * (x * wide) + out * (y * thick) + bow
+        on_back = min(1.0, max(0.0, (t - 0.25) / 0.6))
+        head_w.append((v.index, 1 - on_back)); chest_w.append((v.index, on_back))
+    bpy.ops.object.shade_smooth()
+    obj.data.materials.append(mat)
+    for name, weights in (("head", head_w), ("chest", chest_w)):
+        group = obj.vertex_groups.new(name=name)
+        for index, weight in weights:
+            if weight > 0: group.add([index], weight, 'REPLACE')
+    return obj
+
+
 def skull(head, size, mat, long=1.30, high=0.107, back=0.030, rise=0.056, tilt=30.0, wide=0.082):
     """
     The long back of a head: an egg, its narrow end in the forehead, its long axis rising toward the back at 30
@@ -386,6 +423,15 @@ def build(key):
         back = skull(head.pos, head.radius / 0.092, body.data.materials[0], **shape)
         bpy.ops.object.select_all(action='DESELECT')
         back.select_set(True); body.select_set(True)
+        bpy.context.view_layer.objects.active = body
+        bpy.ops.object.join()
+
+    if p.get("mane"):
+        hair_mat = material(key + "_hair", (0.012, 0.012, 0.016))
+        body.data.materials.append(hair_mat)
+        long_hair = mane(head.pos, head.radius / 0.092, hair_mat, **p["mane"])
+        bpy.ops.object.select_all(action='DESELECT')
+        long_hair.select_set(True); body.select_set(True)
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.join()
 

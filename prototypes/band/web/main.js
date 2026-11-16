@@ -126,6 +126,7 @@ await Promise.all(Object.entries(PLACES).map(async ([name, [x, z, turn, y = 0]])
   gltf.scene.traverse((o) => {
     if (o.isSkinnedMesh) {
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (m.name.endsWith('_hair')) { pattern(m, 'strands', 0.07, 0.62, null, 0.05); }
         if (m.name.endsWith('_dark')) { pattern(m, SKINS[name], 0.12, 0.85, HAIR[name] ? hairOf(rigs[name]) : null, GLITTER[name] ?? 0.14); }
       }
     }

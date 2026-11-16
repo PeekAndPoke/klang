@@ -21,6 +21,8 @@ const PATTERNS = {
   // fine lines woven round the body, crossing each other in a braid between thin hoops: the engraving on a
   // banknote or a watch's dial
   braid: '1.0 - smoothstep(0.10, 0.24, min(min(abs(sin(atan(p.z, p.x) * 5.0 + 1.6 * sin(p.y * 14.0))), abs(sin(atan(p.z, p.x) * 5.0 - 1.6 * sin(p.y * 14.0)))), 1.6 * abs(sin(p.y * 7.0))))',
+  // long hair hanging: fine strands down its length, a little wavy
+  strands: 'smoothstep(0.25, 0.5, fract(p.x * 75.0 + 0.5 * sin(p.y * 11.0))) * (1.0 - smoothstep(0.62, 0.9, fract(p.x * 75.0 + 0.5 * sin(p.y * 11.0))))',
   // even hoops
   hoops: 'smoothstep(0.42, 0.58, fract(p.y * 10.0))',
 };
