@@ -81,7 +81,7 @@ FIGURES = {
     # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
     "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
                                           thigh=1.07, leg=0.91, neck=0.76, head=0.98),
-                  shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2),
+                  shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.15,
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
                   # see skull(). A long neck, carried forward; the shell hat (shell()) is kept but not worn.
                   radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06), skull=True,
@@ -467,7 +467,8 @@ def build(key):
     for s in (1.0, -1.0):
         # set into the face, not on it: the smoothed skin lies inside the points' radius
         # under a long skull's forehead the eyes sit a little lower and further out, or it covers them
-        deep, low = (0.90, 0.002) if p.get("skull") is True else (0.80, 0.012)
+        # (her skull has since grown a higher, fuller forehead, which swallowed them: further out and lower again)
+        deep, low = (1.03, -0.008) if p.get("skull") is True else (0.80, 0.012)
         at = head.pos + Vector((0.034 * s * size, -head.radius * deep, (low - p.get("eye_drop", 0.0)) * size))
         bpy.ops.mesh.primitive_uv_sphere_add(radius=0.015 * size, segments=12, ring_count=8, location=at)
         eye = bpy.context.object
