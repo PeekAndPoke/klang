@@ -12,6 +12,8 @@ import { smooth } from './util.js';
 
 // The raised arm before a phrase: it starts to go up [from] s before the first note, takes [rise] s to get there,
 // and is down again [until] s before the note, coming down over [fall] s
+// How far from the middle line each foot is set when she walks, in her own measure
+const NARROW = 0.045;
 const RAISE = { from: 4.2, rise: 0.8, until: 1.1, fall: 0.8 };
 const brass = new THREE.MeshStandardMaterial({ color: 0x3a2c12, roughness: 0.28, metalness: 0.95, side: THREE.DoubleSide });
 /** Which of the three valves are down, by the note: not a real fingering, but it changes as one does. */
@@ -226,7 +228,10 @@ export class Trumpet {
     for (const side of ['L', 'R']) {
       const sign = side === 'L' ? 1 : -1;
       const foot = rig.ankle[side].clone();
-      foot.x += 0.06 * sign * s * (1 - 0.5 * going);
+      // standing, the feet are a little apart; walking, they come close to one line, the more the faster she goes:
+      // a narrow, elegant step (the maintainer, 2026-11-16: "legs closer together ... more elegant", "standing in
+      // one place stays as is")
+      foot.x += (sign * NARROW * s - foot.x) * going + 0.06 * sign * s * (1 - going);
       // a step: on the floor the foot goes back under him, then it lifts and swings ahead
       const phase = ((stride + (side === 'L' ? 0 : 0.5)) % 1 + 1) % 1;
       const air = phase < 0.6 ? null : (phase - 0.6) / 0.4;
