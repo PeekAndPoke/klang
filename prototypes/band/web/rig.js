@@ -7,6 +7,7 @@
 // Nothing here knows a figure's shape: every length is read from the bones, so a reshaped figure moves the same.
 import * as THREE from 'three';
 
+const EYES_OPACITY = 0.95;
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
 const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), q3 = new THREE.Quaternion();
 
@@ -21,7 +22,14 @@ export class Rig {
         o.frustumCulled = false;
         o.castShadow = true;
         const mats = Array.isArray(o.material) ? o.material : [o.material];
-        for (const m of mats) { if (m.name.endsWith('_eyes')) { this.eyes = m; } }
+        for (const m of mats) {
+          if (m.name.endsWith('_eyes')) {
+            this.eyes = m;
+            // the eyes are a little see-through (the maintainer, 2026-11-16: "say 95% opacity")
+            m.transparent = true;
+            m.opacity = EYES_OPACITY;
+          }
+        }
       }
     });
     root.updateWorldMatrix(true, true);
