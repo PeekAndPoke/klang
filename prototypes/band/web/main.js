@@ -345,7 +345,26 @@ const choreography = song && !params.has('still') ? new Choreography(rigs, {
   marimba: times(['lead']), eimer: times(['trommel']),
 }, 240 / BPM) : null;
 let showT = 0;
+// ?head=<player>[&from=side|front|back|threequarter]: a close look at one head, with a plain inspection light, to
+// judge a head's shape (a still for the maintainer; no part of the show)
+if (params.has('head')) {
+  scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+  const lamp = new THREE.DirectionalLight(0xffffff, 2.2);
+  scene.add(lamp, lamp.target);
+  window.__inspect = lamp;
+}
 function look() {
+  if (params.has('head') && rigs[params.get('head')]) {
+    const rig = rigs[params.get('head')];
+    const at = rig.bones.head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.07 * rig.height / 1.6, 0));
+    const from = { side: [1, 0.05, 0], front: [0, 0.05, 1], back: [0, 0.1, -1], threequarter: [0.7, 0.1, 0.7] }[params.get('from') || 'side'];
+    camera.position.copy(at).addScaledVector(rig.dir(...from).normalize(), 1.15);
+    camera.lookAt(at);
+    if (camera.fov !== 24) { camera.fov = 24; camera.updateProjectionMatrix(); }
+    window.__inspect.position.copy(camera.position).add(new THREE.Vector3(0.4, 0.8, 0));
+    window.__inspect.target.position.copy(at);
+    return;
+  }
   if (params.has('cam')) {
     const c = params.get('cam').split(',').map(Number), a = (params.get('at') || '0,1,0').split(',').map(Number);
     camera.position.set(c[0], c[1], c[2]); camera.lookAt(a[0], a[1], a[2]); return;
