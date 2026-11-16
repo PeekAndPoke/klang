@@ -106,7 +106,10 @@ export class Trumpet {
     return new THREE.Vector3(
       out * (0.60 * Math.sin(0.15 * tau + z * 1.7) + 0.18 * Math.sin(0.34 * tau + 1.0 + z * 2.3) + 0.30) * s,
       0,
-      out * (0.18 * Math.sin(0.21 * tau + 2.0 + z * 0.9) + 0.30) * s,
+      // toward the audience: a little about, and in some rounds (about two in five, by the seed) she comes right
+      // up to the camera in the round's middle, stays a moment and goes back
+      out * (0.18 * Math.sin(0.21 * tau + 2.0 + z * 0.9) + 0.30) * s
+        + (((round * 7 + z * 3) % 5) < 2 ? 3.4 * s * ease((x - 0.22 * length) / (0.2 * length)) * ease((0.72 * length - x) / (0.2 * length)) * ease((k.to - t) / 9) : 0),
     );
   }
 
