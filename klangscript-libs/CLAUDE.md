@@ -1,7 +1,7 @@
 # KlangScript Libs — Dispatcher
 
 The KlangScript **standard library**: everything a script sees under `import * from "stdlib"`.
-`Ignitor`, `Katalyst`, `Ignitor.slot`, `Math`, `Object`, `console`, and the
+`Ignitor`, `Katalyst`, `Ignitor.slot`, `Math`, `Random`, `Object`, `console`, and the
 String/Array/Number/Boolean extensions. Kotlin Multiplatform (JVM + JS).
 
 The language itself lives in `:klangscript` and knows nothing about this module. This module is

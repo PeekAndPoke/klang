@@ -68,3 +68,10 @@ Measured with a throwaway JVM test on Der Schmetterling, cycles 64 to 96, all ta
 ## History
 
 - 2026-11-16: created.
+
+## 2026-11-16: the song's seed line, measured
+
+The maintainer changed Der Schmetterling's last line to `.seed(Random.nextInt())` (in their working tree). Measured
+with a throwaway JVM test (removed): the song compiled once, cycles 64 to 96 asked one cycle at a time, twice, 1.5
+seconds apart: the same events both times. `Random` is now named in `klangscript-libs/CLAUDE.md` and
+`klangscript/CLAUDE.md` (maintainer's OK, 2026-11-16).
