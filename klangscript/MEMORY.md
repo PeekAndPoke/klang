@@ -18,7 +18,7 @@ record), and put the narrative in the task record, which gets archived. The full
   (`range(from = 1, to = 2)`, guard `ContextualImportKeywordsTest`). The status per
   feature is `ref/feature-catalog.md` and `language-features/NN-*.md`.
 - **Module split**: this module is the language and runtime (`klangScriptEngine()` builds a bare engine);
-  the stdlib (`Ignitor` / `Ign`, `Katalyst` / `Kat`, `Math`, `Object`, `console`, the value-type extensions) and `klangScript()`
+  the stdlib (`Ignitor` / `Ign`, `Katalyst` / `Kat`, `Math`, `Random`, `Object`, `console`, the value-type extensions) and `klangScript()`
   live in `:klangscript-libs` (`klangscript-libs/CLAUDE.md`), which depends on this module, never the
   reverse. Tests that need the real stdlib live there too.
 - **Configure lambdas**: `runtime/ArgAlignment` holds the trailing-lambda rule for the interpreter and the

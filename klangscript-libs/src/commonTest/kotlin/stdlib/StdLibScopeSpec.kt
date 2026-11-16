@@ -21,7 +21,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptReferenceError
  */
 class StdLibScopeSpec : StringSpec({
 
-    val names = listOf("Math", "Object", "console", "Ignitor", "Ign", "Katalyst", "Kat")
+    val names = listOf("Math", "Random", "Object", "console", "Ignitor", "Ign", "Katalyst", "Kat")
 
     "import * from stdlib loads every stdlib name" {
         val engine = klangScript()

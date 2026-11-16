@@ -121,7 +121,7 @@ class CompletionProviderTest : StringSpec({
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.topLevelCompletions("").map { it.name }
         names shouldContainExactlyInAnyOrder listOf(
-            "Ignitor", "Ign", "Math", "Object", "PI", "E", "Katalyst", "Kat",
+            "Ignitor", "Ign", "Math", "Random", "Object", "PI", "E", "Katalyst", "Kat",
         )
     }
 

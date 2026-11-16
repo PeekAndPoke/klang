@@ -28,17 +28,42 @@ Measured with a throwaway JVM test on Der Schmetterling, cycles 64 to 96, all ta
 3. Beside it: `perlin` and `berlin` keep one noise engine per seed in a map that is never emptied, so a seed that
    changes all the time makes it grow for as long as the pattern lives.
 
-## Decide before implementing
+## Decided (the maintainer, 2026-11-16)
 
-- **How a song says "another seed for every playback".** The maintainer's proposal (2026-11-16):
-  `seed(Random.nextInt())`, read once when the code is run. KlangScript's stdlib has no random function yet.
-- **Whether `timeOfDay` and its siblings stay as they are** (read at every query, so a pattern that uses them is
-  not idempotent), or are frozen per playback.
-- **The sub-cycle windows (point 2):** trace and fix, or record that a pattern is asked in whole cycles.
+- **Another seed for every run of the code is `seed(Random.nextInt())`**, read once when the code runs. The stdlib
+  had no random function: "it should have the same functions as the Kotlin Random, f.e. nextInt(0, 100) and
+  similar".
+- **"pattern is asked in full cycles":** the sub-cycle windows are not traced further. The review showed the rule
+  that holds is narrower: one whole cycle at a time. Several cycles in one asking can differ too, where no
+  top-level `seed` splits the query (a continuous amount in `late` is read once per asking, from the window's
+  start); Der Schmetterling hid that, its `seed` asks cycle by cycle.
+
+## Open
+
+- `timeOfDay` and its siblings still read the clock at every asking; a song that seeds from them is not
+  idempotent. Der Schmetterling's seed line is the maintainer's to change.
+- The scheduler itself asks other windows than one cycle: a cycle cut at a tempo change (voices that are played),
+  the catch-up to "now", the sample preload, and the re-emit of voice signals, which asks several cycles at once
+  and so can show other signals than the voices scheduled where a `late` by a noise is in play. Not changed.
+- The noise engines kept per seed (Found, point 3).
+- `Random` is not yet named in `klangscript-libs/CLAUDE.md`, `klangscript/CLAUDE.md` and the song writers'
+  reference of the music writing skill: the maintainer's OK is asked.
 
 ## The work
 
+- `Random` in KlangScript's stdlib (`KlangScriptRandom.kt`): `nextInt`, `nextDouble`, each without arguments, with
+  an end, or with a start and an end (a named `until` alone is the form with an end), and `nextBoolean`. Left out:
+  `nextLong`, `nextFloat`, `nextBits`, `nextBytes`, a seeded `Random(seed)`.
+- The contract of `KlangPattern.queryEvents` says how to ask for the events that are heard.
+
 ## Acceptance
+
+- `StdLibRandomSpec`, 10 tests, on the JVM and in the browser; `:klangscript-libs:jvmTest` 1140 and
+  `:klangscript-libs:jsBrowserTest` 915, 0 failed. 9 mutants killed.
+- Review: round 1 (reviewer-opus-high) NOT CLEAN, 2 MAJOR (a named `until` alone returned any number; the contract
+  sentence promised any whole-cycle window), fixed. Round 2 (reviewer-fable-medium) CLEAN, 1 MINOR and 2 NIT applied.
+- Not shown yet: Der Schmetterling with its seed line changed. With a plain number in that line it was idempotent
+  (Found, point 1).
 
 ## History
 

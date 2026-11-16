@@ -7,7 +7,7 @@ package io.peekandpoke.klang.script
 
 import io.peekandpoke.klang.script.stdlib.KlangStdLib
 
-/** The KlangScript standard library (`import * from "stdlib"`): Ignitor, Katalyst, Math, Object, console, value-type extensions. */
+/** The KlangScript standard library (`import * from "stdlib"`): Ignitor, Katalyst, Math, Random, Object, console, value-type extensions. */
 val stdlibLib: KlangScriptLibrary = KlangStdLib.create()
 
 /**

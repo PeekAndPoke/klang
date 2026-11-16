@@ -296,8 +296,8 @@ class GeneratedRegistrationTest : StringSpec({
 
     // ── Docs: Object-level symbols ──────────────────────────────────────
 
-    "generated docs contain object-level symbols for Ignitor, Katalyst, Math, Object" {
-        for (name in listOf("Ignitor", "Katalyst", "Math", "Object")) {
+    "generated docs contain object-level symbols for Ignitor, Katalyst, Math, Random, Object" {
+        for (name in listOf("Ignitor", "Katalyst", "Math", "Random", "Object")) {
             generatedStdlibDocs[name] shouldNotBe null
         }
     }

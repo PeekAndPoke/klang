@@ -47,7 +47,7 @@ object KlangStdLib {
             // or namespace import of "stdlib" has no exports to bind (StdLibScopeSpec).
 
             // Register all annotation-generated symbols:
-            // Math, Object, String/Array/Number/Boolean extensions
+            // Math, Random, Object, String/Array/Number/Boolean extensions
             registerStdlibGenerated()
 
             // Console object -- registered manually because output goes through the injected outputHandler.

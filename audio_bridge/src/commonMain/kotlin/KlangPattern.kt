@@ -23,6 +23,13 @@ interface KlangPattern {
      * - Events outside [fromCycles, toCycles) may be excluded
      * - [cps] (cycles per second) is provided for implementations that need tempo context
      * - Events should be returned in start-time order
+     * - Any window may be asked, and an implementation answers any. To get the events that are heard, ask one
+     *   whole cycle at a time (the maintainer, 2026-11-16, KLANG-00450): the live scheduler fetches the voices it
+     *   plays that way, cut only where the tempo changes inside a cycle. Asked so, the same cycle gives the same
+     *   events every time, as long as the pattern reads nothing that moves between two askings (the wall clock:
+     *   sprudel's `timeOfDay` and its siblings). Another window, one that cuts a cycle or spans several, may give
+     *   other events for the same cycle: a continuous amount (a `late` by a noise) is read once per asking, from
+     *   the window's start. The scheduler's sample preload, catch-up and signal re-emit ask wider windows.
      */
     fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent>
 }
