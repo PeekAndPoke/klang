@@ -126,10 +126,10 @@ class Stage(
         scene.add(riser)
 
         crowd = Crowd(scene)
-        // fog on the floor (?nofog: none; ?fullfog: drawn at the picture's own size, to compare)
+        // fog on the floor (?nofog: none; ?fullfog: every pixel works it out for itself, to compare)
         groundFog = when {
             show.switches.has("nofog") -> null
-            else -> GroundFog(scene = scene, renderer = renderer, half = !show.switches.has("fullfog"))
+            else -> GroundFog(scene = scene, renderer = renderer, mapped = !show.switches.has("fullfog"))
         }
     }
 

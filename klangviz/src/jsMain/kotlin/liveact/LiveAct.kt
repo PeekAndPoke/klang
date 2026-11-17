@@ -214,7 +214,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         renderer = ctx.renderer
         camera = lens
-        // a frame is drawn in several goes (the fog has its own): what was drawn is counted over all of them, and
+        // a frame is drawn in several goes (the fog's maps have their own): what was drawn is counted over all of them, and
         // set back to nothing in frame(), with every frame that is counted (after loading or a hidden page the
         // line's first number is too high, for a tenth of a second)
         ctx.renderer.asDynamic().info.autoReset = false

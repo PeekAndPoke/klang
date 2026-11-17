@@ -103,6 +103,27 @@ redrawn). The fog hooks into the scene (`onAfterRender`), since Kraft's componen
 
 Not measured: the gain on a real graphics card. The maintainer's MacBook is the judge again.
 
+## Round 3 (2026-11-17): the fog as maps of the stage
+
+Round 2's half-size fog showed on the maintainer's screen as steps along the legs ("pretty heavy aliasing on the
+legs"): the fog behind a leg was cut out at half the picture's fineness, and bright fog behind a dark leg shows
+that. Taken out again, with its depth pass and its hook into the scene.
+
+In its place: what the fog is at a place on the stage does not depend on the camera, so it is worked out once a
+frame as a map of the stage for each of the twelve sheets (384 by 324 points, 7 cm; all twelve side by side in one
+half-float picture, one draw call), and the sheets are drawn in the scene reading their maps. What stands in the
+fog cuts it exactly. `?fullfog` still lets every pixel work the fog out, to compare.
+
+- The picture against the exact fog: largest difference 6 of 255, mean 0.1 (the half-size fog: 112 along edges).
+- The cost: about 1.5 million points a frame, whatever the screen's size; then one reading a pixel and sheet.
+  Software renderer, 720 by 450 at 2x: the fog costs about 185 ms a frame (exact: about 400; maps of 5 cm: 255).
+  The half-size fog was cheaper there (about 80 ms), since that picture is small; on a screen of four times the
+  pixels the half-size fog works out four times as many points, and the maps the same 1.5 million.
+- Not measured: a real graphics card. Twelve see-through sheets still cover the picture at full size (cheap
+  readings, but twelve layers of them); if that shows on the MacBook, the next step is fewer points drawn, not
+  a coarser fog.
+- Where the graphics card cannot be drawn into in half-float numbers, the fog falls back to the exact way.
+
 ## Decide before implementing
 
 - Measure first, on the maintainer's machine: with and without the fog, with and without shadows, at 1x, 2x, 4x.
@@ -113,7 +134,7 @@ Not measured: the gain on a real graphics card. The maintainer's MacBook is the 
 Ideas, in the order they look worth trying:
 
 1. Draw the fog at half or quarter size and lay it over the picture: it is soft by nature and needs no
-   oversampling.
+   oversampling. (Tried in round 2: it stepped along the legs. Replaced by the maps of round 3.)
 2. Cheaper fog: its noise read from a small prepared texture (done, round 1). Fewer sheets: dropped, twelve stay.
 3. Fix the flicker where it arises: glitter and patterns that soften with distance, strings never thinner than a
    pixel. Then 1x or 2x may look as 4x does now.
@@ -133,3 +154,4 @@ maintainer's machine.
 - 2026-11-16: round 2: the fog at half size, laid over the picture (the maintainer: "Try the half size fog first").
 - 2026-11-16: the maintainer: the shadows stay as they are. Both shadow candidates dropped.
 - 2026-11-16: the maintainer: the fog keeps its twelve sheets.
+- 2026-11-17: round 3: the half-size fog stepped along the legs (the maintainer); the fog is now worked out as maps of the stage and drawn in the scene at full size.

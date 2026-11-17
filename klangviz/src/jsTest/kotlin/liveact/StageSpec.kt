@@ -134,8 +134,8 @@ class StageSpec : StringSpec({
 
                 // the ambient light, four lamps above and the one low at the front
                 lamps shouldBe 6
-                // floor, wall, riser, the lamps with their targets, the crowd; the fog's sheets are not among them
-                scene.children.size shouldBe 15
+                // floor, wall, riser, the lamps with their targets, the crowd; and the fog's twelve sheets
+                scene.children.size shouldBe 15 + 12
 
                 // a frame's light step runs on it, before the song and in it
                 stage.light(t = -5.0, house = 0.07, waiting = true)
@@ -146,31 +146,75 @@ class StageSpec : StringSpec({
         }
     }
 
-    "the fog draws apart, after the scene, until the stage is given up; with ?fullfog its sheets are in the scene" {
+    "the fog is worked out as maps once with every light step, where the card can hold them; not with ?fullfog" {
         withThree { three ->
             Three.addon = three
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
-            val plain: dynamic = three.createScene().asDynamic().onAfterRender
+
+            // a renderer that says it can hold the maps, and notes what it is asked to draw into
+            val renderer = standInRenderer()
+            val r: dynamic = renderer
+            val drawnInto = mutableListOf<dynamic>()
+            var target: dynamic = "the screen"
+
+            r.extensions = js("({ has: function (name) { return name === 'EXT_color_buffer_float' } })")
+            r.getRenderTarget = { target }
+            r.setRenderTarget = { to: dynamic -> target = to }
+            r.render = { _: dynamic, _: dynamic -> drawnInto.add(target) }
 
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
-
-            (scene.asDynamic().onAfterRender !== plain) shouldBe true
-            stage.dispose()
-            // given up: nothing of the stage is called after the scene is drawn
-            (scene.asDynamic().onAfterRender === plain) shouldBe true
-
-            val full = three.createScene()
-            val show = Show(seed = 1, switches = Switches.parse("?fullfog"))
-            val other = Stage(show = show, scene = full, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer)
+            var freed = 0
 
             try {
-                (full.asDynamic().onAfterRender === plain) shouldBe true
-                // the twelve sheets
-                full.children.size shouldBe 15 + 12
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+
+                // one drawing, into a picture of its own, and the renderer draws to where it drew before
+                drawnInto.size shouldBe 1
+                (drawnInto[0] !== "the screen") shouldBe true
+                (target === "the screen") shouldBe true
+
+                stage.light(t = 62.1, house = 1.0, waiting = false)
+                drawnInto.size shouldBe 2
+
+                // the picture the sheets read is the one drawn into; it is freed when the stage is given up
+                val sheets = scene.children.filter { it.asDynamic().material?.uniforms?.uMaps != null }
+                val picture: dynamic = sheets.first().asDynamic().material.uniforms.uMaps.value.renderTarget
+
+                sheets.size shouldBe 12
+                (picture === drawnInto[0]) shouldBe true
+                picture.addEventListener("dispose") { _: dynamic -> freed++ }
+            } finally {
+                stage.dispose()
+            }
+
+            freed shouldBe 1
+
+            drawnInto.clear()
+
+            val show = Show(seed = 1, switches = Switches.parse("?fullfog"))
+            val other = Stage(show = show, scene = three.createScene(), camera = camera, renderer = renderer)
+
+            try {
+                other.light(t = 62.0, house = 1.0, waiting = false)
+                drawnInto.size shouldBe 0
             } finally {
                 other.dispose()
+            }
+
+            // a card that cannot hold the maps: every sheet works the fog out for itself, and all twelve are there
+            r.extensions = js("({ has: function () { return false } })")
+
+            val plain = three.createScene()
+            val third = Stage(show = Show(seed = 1), scene = plain, camera = camera, renderer = renderer)
+
+            try {
+                third.light(t = 62.0, house = 1.0, waiting = false)
+                drawnInto.size shouldBe 0
+                plain.children.count { it.asDynamic().material?.uniforms?.uHeight != null } shouldBe 12
+            } finally {
+                third.dispose()
             }
         }
     }

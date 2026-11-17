@@ -12,7 +12,6 @@ import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.BlendFactor
 import io.peekandpoke.klang.workshop.threejs.Blending
 import io.peekandpoke.klang.workshop.threejs.ShaderMaterialParameters
-import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.createShaderMaterial
 import io.peekandpoke.klang.workshop.threejs.frustumCulled
 import io.peekandpoke.klang.workshop.threejs.uniform
@@ -28,7 +27,6 @@ import org.khronos.webgl.set
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -42,28 +40,29 @@ import kotlin.random.Random
 // graphics card blends between its points. Five readings a pixel and sheet stand in place of forty computed random
 // numbers, which made the fog cost more than everything else on the stage together (measured 2026-11-16).
 //
-// The sheets cover much of the picture twelve times over, so the fog's cost goes with the number of pixels. It is
-// therefore drawn apart, into a picture of half the width and half the height (a quarter of the pixels), and that
-// picture is laid over the finished one. Fog has no fine detail to lose. What stands in front of it must still hide
-// it, so the small picture first takes the scene's depths (everything solid, drawn without colour), and the sheets
-// are tested against them. Each sheet adds its light and veils what is behind by its share; twelve of these in a row
-// are again one light and one share, so laying the small picture over the large one gives what the sheets gave one
-// by one. The price: around a leg or a stand in front of the fog, the fog's edge is half as fine as the leg's.
+// The sheets cover much of the picture twelve times over, so working the fog out for every pixel of every sheet
+// costs with the number of pixels. But what the fog is at a place on the stage does not depend on the camera. So it
+// is worked out once a frame as a map of the stage for each sheet (a point every seven centimetres, all twelve maps
+// side by side in one picture), and the sheets are drawn into the scene reading their maps: one reading a pixel.
+// The cost of the maps is the same whatever the screen's size, and what stands in the fog cuts it exactly, at the
+// picture's own fineness.
+// (A first try drew the fog into a picture of half the screen's size and laid that over the finished one. Where
+// bright fog lay behind a dark leg, the leg's edge showed in steps: the maintainer, 2026-11-17, "pretty heavy
+// aliasing on the legs".)
 
 /**
- * The fog on the floor of [scene], drawn by [renderer]. Each frame, after the lamps are set: [update]. When the
- * stage goes: [dispose].
+ * The fog on the floor of [scene], drawn by [renderer]. Each frame, after the lamps are set and before the scene is
+ * drawn: [update]. When the stage goes: [dispose].
  *
- * [half]: drawn at half size and laid over the picture (see the top of the file); it hooks into the scene for that
- * (`onAfterRender`), so whoever draws the scene draws the fog with it. Otherwise the sheets are part of the scene
- * and drawn at its size (`?fullfog`, to compare).
+ * [mapped]: the fog is worked out as maps of the stage (see the top of the file), where the graphics card can hold
+ * such a picture; else, and with `?fullfog` (to compare), every pixel of every sheet works it out for itself.
  */
-class GroundFog(private val scene: Scene, private val renderer: WebGLRenderer, half: Boolean) {
+class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boolean) {
 
     /** One sheet of the stack, with its own see-through share. */
     private class Layer(val mesh: Mesh, val alpha: dynamic)
 
-    // What all the sheets share: the time, and the lamps (place, direction, colour times intensity, the cone's cosine)
+    // What the fog is made from: the time, and the lamps (place, direction, colour times intensity, the cone's cosine)
     private val time = uniform(0.0)
     private val positions = Array(LAMPS) { vec() }
     private val directions = Array(LAMPS) { vec(0.0, -1.0, 0.0) }
@@ -77,33 +76,36 @@ class GroundFog(private val scene: Scene, private val renderer: WebGLRenderer, h
     /** The random numbers the noise is read from (see the top of the file). */
     private val noise: dynamic = noiseBlock()
 
+    /** The maps of the stage, where the fog is worked out as maps; null where every pixel works it out. */
+    private val maps: Maps? = if (mapped && canHoldMaps()) Maps() else null
+
     private val layers: List<Layer>
     private val target = vec()
 
-    /** What draws the fog at half size; null where the sheets are part of the scene. */
-    private val small: Small? = if (half) Small() else null
-
     init {
-        val sheet = Three.addon.createPlaneGeometry(26.0, 22.0)
-        val into = small?.sheets ?: scene
+        // every sheet has its map in the picture, and the picture no map to spare
+        require(COLS * ROWS == LAYERS) { "$LAYERS sheets do not fill $COLS by $ROWS maps" }
+
+        val sheet = Three.addon.createPlaneGeometry(WIDE, DEEP)
 
         layers = (0 until LAYERS).map { i ->
             val share = i.toDouble() / (LAYERS - 1)
             val alpha = uniform(0.0)
             val uniforms: dynamic = jsObject()
-            uniforms.uTime = time
-            uniforms.uNoise = uniform(noise)
-            uniforms.uPos = positionsUniform
-            uniforms.uDir = directionsUniform
-            uniforms.uCol = colorsUniform
-            uniforms.uCos = cosinesUniform
-            uniforms.uHeight = uniform(share)
             uniforms.uAlpha = alpha
+
+            if (maps != null) {
+                uniforms.uMaps = uniform(maps.picture.texture)
+                uniforms.uCell = uniform(Three.addon.createVector2(x = (i % COLS).toDouble(), y = (i / COLS).toDouble()))
+            } else {
+                fogUniforms(uniforms)
+                uniforms.uHeight = uniform(share)
+            }
 
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
                 this.uniforms = uniforms
-                vertexShader = VERTEX
-                fragmentShader = FRAGMENT
+                vertexShader = if (maps != null) MAP_VERTEX else VERTEX
+                fragmentShader = if (maps != null) SHEET_FRAGMENT else FRAGMENT
                 transparent = true
                 depthWrite = false
                 side = MaterialSide.DoubleSide
@@ -111,22 +113,30 @@ class GroundFog(private val scene: Scene, private val renderer: WebGLRenderer, h
                 blendSrc = BlendFactor.OneFactor
                 blendDst = BlendFactor.OneMinusSrcAlphaFactor
             })
-            // the shader maps its light to the screen itself (see its end)
-            material.asDynamic().toneMapped = false
             // a level sheet shows the camera one side only: drawn once, where three.js draws what is see-through
             // and two-sided twice
             material.asDynamic().forceSinglePass = true
             val mesh = Three.addon.createMesh(sheet, material)
             mesh.rotation.x = -PI / 2
-            mesh.position.y = 0.03 + (TOP - 0.03) * share
+            mesh.position.y = BOTTOM + (TOP - BOTTOM) * share
             mesh.renderOrder = 10 + i
-            into.add(mesh)
+            scene.add(mesh)
 
             Layer(mesh = mesh, alpha = alpha)
         }
     }
 
-    /** Sets the fog for [t], lit by the first of [lamps], seen by [camera]. */
+    /** Puts what the fog is made from into [uniforms]. */
+    private fun fogUniforms(uniforms: dynamic) {
+        uniforms.uTime = time
+        uniforms.uNoise = uniform(noise)
+        uniforms.uPos = positionsUniform
+        uniforms.uDir = directionsUniform
+        uniforms.uCol = colorsUniform
+        uniforms.uCos = cosinesUniform
+    }
+
+    /** Sets the fog for [t], lit by the first of [lamps], seen by [camera]; and works out its maps. */
     fun update(t: Double, lamps: List<Lamp>, camera: Camera) {
         time.value = t
 
@@ -146,182 +156,76 @@ class GroundFog(private val scene: Scene, private val renderer: WebGLRenderer, h
             // drawn from the far side toward the camera: from the floor up when it looks from above
             layer.mesh.drawOrder = 10 + (if (camera.position.y > y) 1 else -1) * y * 10
         }
+
+        maps?.draw(camera)
     }
 
     /**
-     * Frees the noise's picture on the graphics card, and what draws the fog at half size. Sheets that are part of
-     * the scene go with the scene.
+     * Frees the noise's picture on the graphics card, and the maps with what draws them. The sheets go with the
+     * scene.
      */
     fun dispose() {
         noise.dispose()
-        small?.dispose()
+        maps?.dispose()
     }
 
     /**
-     * The fog at half size: the [sheets] in a scene of their own, the small picture they are drawn into, and the
-     * sheet that lays it over the finished picture. It draws whenever the stage's scene was drawn.
+     * Whether the graphics card can be drawn into in half-float numbers, which the maps need: the light they hold
+     * is not capped at 1.
      */
-    private inner class Small {
-        val sheets: Scene = Three.addon.createScene()
+    private fun canHoldMaps(): Boolean {
+        val extensions: dynamic = renderer.asDynamic().extensions ?: return false
 
+        return extensions.has("EXT_color_buffer_float") == true || extensions.has("EXT_color_buffer_half_float") == true
+    }
+
+    /**
+     * The fog as maps of the stage: one [picture] with a map for each sheet, side by side, and the one sheet that
+     * fills it each frame.
+     */
+    private inner class Maps {
         private val three: dynamic = Three.addon.raw
-        private val picture: dynamic = js(
-            "(function (three) { return new three.WebGLRenderTarget(1, 1, { depthBuffer: true, stencilBuffer: false }) })"
-        )(three)
 
-        /** Everything solid is drawn with this into the small picture: its depth only, from both sides. */
-        private val depthOnly: dynamic = Three.addon.createMeshBasicMaterial(jsObject {}).also {
-            it.asDynamic().colorWrite = false
-            it.asDynamic().side = MaterialSide.DoubleSide
-        }
+        val picture: dynamic = js(
+            "(function (three, w, h) { return new three.WebGLRenderTarget(w, h, " +
+                "{ type: three.HalfFloatType, depthBuffer: false, stencilBuffer: false }) })"
+        )(three, COLS * MAP_WIDE, ROWS * MAP_DEEP)
 
-        private val overlay: Scene = Three.addon.createScene()
-
-        /** What hides nothing (see [unsolid]), looked up once the scene is first seen; and whether each was seen. */
-        private var unsolid: Array<dynamic>? = null
-        private var seen: Array<Boolean> = emptyArray()
-
-        private val clearColor = Three.addon.createColor(0x000000)
-
-        /** True while the fog draws: its own drawing of the scene must not start it again. */
-        private var drawing = false
+        private val filler: Scene = Three.addon.createScene()
 
         init {
             val uniforms: dynamic = jsObject()
-            uniforms.uFog = uniform(picture.texture)
+            fogUniforms(uniforms)
 
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
                 this.uniforms = uniforms
-                vertexShader = OVER_VERTEX
-                fragmentShader = OVER_FRAGMENT
-                transparent = true
+                vertexShader = FILL_VERTEX
+                fragmentShader = FILL_FRAGMENT
                 depthWrite = false
                 depthTest = false
-                blending = Blending.CustomBlending
-                blendSrc = BlendFactor.OneFactor
-                blendDst = BlendFactor.OneMinusSrcAlphaFactor
             })
-            // the small picture holds colours as the screen takes them
-            material.asDynamic().toneMapped = false
             val mesh = Three.addon.createMesh(Three.addon.createPlaneGeometry(2.0, 2.0), material)
             mesh.frustumCulled = false
-            overlay.add(mesh)
-
-            scene.asDynamic().onAfterRender = { _: dynamic, _: dynamic, camera: Camera -> draw(camera) }
+            filler.add(mesh)
         }
 
-        /** Draws the fog into the small picture and lays it over what was just drawn, as seen by [camera]. */
-        private fun draw(camera: Camera) {
-            if (drawing || !scene.visible) {
-                return
-            }
-
+        /** Works the maps out for this frame. [camera]: any; the sheet fills the picture whatever it sees. */
+        fun draw(camera: Camera) {
             val r: dynamic = renderer
-            val width = max(1, renderer.domElement.width / 2)
-            val height = max(1, renderer.domElement.height / 2)
-
-            if (picture.width != width || picture.height != height) {
-                picture.setSize(width, height)
-            }
-
-            // what does not hide the fog: looked up once, as the scene is complete when it is first shown
-            val out = unsolid ?: unsolid().also {
-                unsolid = it
-                seen = Array(it.size) { true }
-            }
-
-            // what is changed on the renderer here is put back below
-            val autoClear: Boolean = r.autoClear
-            val shadows: Boolean = r.shadowMap.autoUpdate
-            val shadowsDue: Boolean = r.shadowMap.needsUpdate
-            val clearAlpha: Double = r.getClearAlpha()
-            val background: dynamic = scene.asDynamic().background
-            // where the scene was drawn to: the screen, or a picture of someone's own
+            // where the renderer draws to: the screen, or a picture of someone's own
             val drawnTo: dynamic = r.getRenderTarget()
-            val moves: Boolean = scene.asDynamic().matrixWorldAutoUpdate
-            var hidden = false
-
-            r.getClearColor(clearColor)
-            drawing = true
 
             try {
-                r.autoClear = false
-                // the shadows are this frame's already
-                r.shadowMap.autoUpdate = false
-                r.shadowMap.needsUpdate = false
                 r.setRenderTarget(picture)
-                r.setClearColor(0x000000, 0.0)
-                // colour and depth, no stencil
-                r.clear(true, true, false)
-
-                // the depths of everything solid
-                for (i in out.indices) {
-                    seen[i] = out[i].visible
-                    out[i].visible = false
-                }
-
-                hidden = true
-                // nothing has moved since the scene was drawn: its places are not worked out again
-                scene.asDynamic().matrixWorldAutoUpdate = false
-
-                // without its background: three.js clears to a scene's background colour, fully opaque, whatever
-                // autoClear says, and the small picture must stay see-through where there is no fog
-                scene.asDynamic().background = null
-                scene.asDynamic().overrideMaterial = depthOnly
-                r.render(scene, camera)
-                scene.asDynamic().overrideMaterial = null
-                scene.asDynamic().background = background
-
-                // the fog, behind them; then all of it over the picture
-                r.render(sheets, camera)
-                r.setRenderTarget(drawnTo)
-                r.render(overlay, camera)
+                r.render(filler, camera)
             } finally {
-                if (hidden) {
-                    for (i in out.indices) {
-                        out[i].visible = seen[i]
-                    }
-                }
-
-                scene.asDynamic().matrixWorldAutoUpdate = moves
-                scene.asDynamic().overrideMaterial = null
-                scene.asDynamic().background = background
                 r.setRenderTarget(drawnTo)
-                r.setClearColor(clearColor, clearAlpha)
-                r.shadowMap.autoUpdate = shadows
-                r.shadowMap.needsUpdate = shadowsDue
-                r.autoClear = autoClear
-                drawing = false
             }
-        }
-
-        /**
-         * What in the scene hides nothing behind it: points (the crowd's lights), and what does not write its depth
-         * (the dark laid under the kit and the riser).
-         */
-        private fun unsolid(): Array<dynamic> {
-            val found = mutableListOf<dynamic>()
-
-            scene.traverse { node ->
-                val o: dynamic = node
-                val material: dynamic = o.material
-
-                if (o.isPoints == true || (material != null && material.depthWrite == false)) {
-                    found.add(o)
-                }
-            }
-
-            return found.toTypedArray()
         }
 
         fun dispose() {
-            // the scene's own again, which does nothing: ours lay over it
-            val hooked: dynamic = scene
-            js("delete hooked.onAfterRender")
             picture.dispose()
-            depthOnly.dispose()
-            sheets.disposeTree()
-            overlay.disposeTree()
+            filler.disposeTree()
         }
     }
 
@@ -358,39 +262,29 @@ class GroundFog(private val scene: Scene, private val renderer: WebGLRenderer, h
         }
 
         const val LAYERS = 12
-        const val TOP = 0.50
         const val LAMPS = 5
 
-        val VERTEX = """
-  varying vec3 vWorld;
-  void main() {
-    vec4 world = modelMatrix * vec4(position, 1.0);
-    vWorld = world.xyz;
-    gl_Position = projectionMatrix * viewMatrix * world;
-  }"""
+        /** The lowest and the highest sheet's height, in metres. */
+        const val BOTTOM = 0.03
+        const val TOP = 0.50
 
-        val OVER_VERTEX = """
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = vec4(position.xy, 0.0, 1.0);
-  }"""
+        /** A sheet's size on the floor, in metres. */
+        const val WIDE = 26.0
+        const val DEEP = 22.0
 
-        val OVER_FRAGMENT = """
-  varying vec2 vUv;
-  uniform sampler2D uFog;
-  void main() {
-    gl_FragColor = texture2D(uFog, vUv);
-  }"""
+        /** The maps lie in the picture in this many columns and rows; a map has this many points each way (7 cm). */
+        const val COLS = 4
+        const val ROWS = 3
+        const val MAP_WIDE = 384
+        const val MAP_DEEP = 324
 
-        // The light is mapped to the screen here, by the renderer's own functions called by name (the ACES mapping
-        // the stage sets, then sRGB), where a shader usually leaves that to the renderer: the renderer does it only
-        // for what is drawn onto the screen, and the sheets are drawn into the small picture. Each sheet is mapped
-        // by itself, as it was when the sheets were drawn onto the screen, so the fog is as bright as before.
-        val FRAGMENT = """
-  #include <tonemapping_pars_fragment>
-  varying vec3 vWorld;
-  uniform float uTime, uHeight, uAlpha;
+        /**
+         * The fog at a place on the stage, for both ways of drawing it: `fogAt(world, height)` gives the light it
+         * sends (as the sheet adds it) and how much it veils, for a sheet at `height` (0 the lowest, 1 the highest)
+         * that lets all of it through; the sheet's own share is multiplied in by whoever draws it.
+         */
+        private val FOG_AT = """
+  uniform float uTime;
   uniform vec3 uPos[${LAMPS}], uDir[${LAMPS}], uCol[${LAMPS}];
   uniform float uCos[${LAMPS}];
   uniform highp sampler3D uNoise;
@@ -402,35 +296,105 @@ class GroundFog(private val scene: Scene, private val renderer: WebGLRenderer, h
     return texture(uNoise, (i + f + 0.5) / ${NOISE}.0).r;
   }
 
-  void main() {
+  vec4 fogAt(vec3 world, float height) {
     // the wind: everything drifts slowly across the stage and a little toward the audience
-    vec3 p = vec3(vWorld.x + 0.11 * uTime, vWorld.y * 5.0 + 0.02 * uTime, vWorld.z + 0.05 * uTime);
+    vec3 p = vec3(world.x + 0.11 * uTime, world.y * 5.0 + 0.02 * uTime, world.z + 0.05 * uTime);
     // the turbulence: a slower, larger noise pushes the fog about, so it curls instead of sliding as one sheet
     vec3 stir = vec3(noise(p * 0.45 + vec3(0.0, 0.03 * uTime, 0.0)), 0.0, noise(p * 0.45 + vec3(17.0, -0.025 * uTime, 5.0))) - 0.5;
     vec3 q = p * 1.05 + 1.7 * stir;
     float d = 0.55 * noise(q) + 0.30 * noise(q * 2.1 + 3.0) + 0.15 * noise(q * 4.3 + 7.0);
     // the machines stand behind the band, left and right: thick there, thinner toward the audience, breathing slowly
-    vec2 at = vWorld.xz;
+    vec2 at = world.xz;
     float near = max(exp(-dot(at - vec2(-4.5, -3.2), at - vec2(-4.5, -3.2)) / 30.0), exp(-dot(at - vec2(4.5, -3.2), at - vec2(4.5, -3.2)) / 30.0));
     float amount = (0.30 + 0.70 * near) * (0.85 + 0.15 * sin(0.05 * uTime + at.x * 0.2));
     // it settles: at the floor nearly everywhere, higher up only where it billows
-    float density = smoothstep(0.36 + 0.42 * uHeight, 0.74 + 0.16 * uHeight, d + 0.40 * amount);
+    float density = smoothstep(0.36 + 0.42 * height, 0.74 + 0.16 * height, d + 0.40 * amount);
     density *= 1.0 - smoothstep(8.0, 11.0, length(at * vec2(0.8, 1.0)));
     // the lamps: each lights the fog inside its cone, weaker with the square of the distance
     vec3 light = vec3(0.004, 0.005, 0.008);
     for (int i = 0; i < ${LAMPS}; i++) {
-      vec3 to = uPos[i] - vWorld;
+      vec3 to = uPos[i] - world;
       float far2 = dot(to, to);
       float cone = smoothstep(uCos[i], uCos[i] + 0.12, dot(-normalize(to), uDir[i]));
       light += uCol[i] * cone / far2;
     }
-    float a = density * uAlpha;
-    gl_FragColor = vec4(0.035 * light * a, 0.5 * a);       // it glows where lit, and veils a little what is behind
-    gl_FragColor.rgb = ACESFilmicToneMapping(gl_FragColor.rgb);
-    gl_FragColor = sRGBTransferOETF(gl_FragColor);
+    return vec4(0.035 * light * density, 0.5 * density);     // it glows where lit, and veils a little what is behind
+  }"""
+
+        // A sheet that works the fog out for each of its pixels
+
+        val VERTEX = """
+  varying vec3 vWorld;
+  void main() {
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vWorld = world.xyz;
+    gl_Position = projectionMatrix * viewMatrix * world;
+  }"""
+
+        val FRAGMENT = """
+  varying vec3 vWorld;
+  uniform float uHeight, uAlpha;
+  $FOG_AT
+
+  void main() {
+    gl_FragColor = fogAt(vWorld, uHeight) * uAlpha;
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }"""
+
+        // The maps: one sheet fills the whole picture, and each of its points finds its map, and its place on the stage
+
+        val FILL_VERTEX = """
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }"""
+
+        val FILL_FRAGMENT = """
+  varying vec2 vUv;
+  $FOG_AT
+
+  void main() {
+    vec2 map = vUv * vec2(${COLS}.0, ${ROWS}.0);
+    vec2 cell = floor(map);
+    vec2 here = fract(map);
+    float height = (cell.y * ${COLS}.0 + cell.x) / ${LAYERS - 1}.0;
+    // a sheet lies flat: its upper edge is the far one, toward the wall
+    vec3 world = vec3(
+      (here.x - 0.5) * ${WIDE.glsl()}, ${BOTTOM.glsl()} + ${(TOP - BOTTOM).glsl()} * height, (0.5 - here.y) * ${DEEP.glsl()}
+    );
+    gl_FragColor = fogAt(world, height);
+  }"""
+
+        // A sheet that reads its map
+
+        val MAP_VERTEX = """
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }"""
+
+        val SHEET_FRAGMENT = """
+  varying vec2 vUv;
+  uniform sampler2D uMaps;
+  uniform vec2 uCell;
+  uniform float uAlpha;
+
+  void main() {
+    // not from the map's outermost half points: there the card would blend in the map next to it
+    vec2 edge = vec2(0.5 / ${MAP_WIDE}.0, 0.5 / ${MAP_DEEP}.0);
+    vec2 here = clamp(vUv, edge, 1.0 - edge);
+    gl_FragColor = texture2D(uMaps, (uCell + here) / vec2(${COLS}.0, ${ROWS}.0)) * uAlpha;
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
   }"""
     }
 }
+
+/** The number as a shader takes it: always with its decimals (26.0 would else be written 26, a whole number). */
+private fun Double.glsl(): String = asDynamic().toFixed(4).unsafeCast<String>()
 
 // TYPING: belongs in the workshop
 /**
