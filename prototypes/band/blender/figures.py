@@ -96,6 +96,9 @@ FIGURES = {
                   shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
                   # a face that comes to a small chin, the throat set back under it (see shape_face())
                   face=dict(taper=0.24, throat=0.030), jaw=0.7, eye_drop=-0.012,
+                  # the chin sits low: drawn down more than forward, as large as it was (it pointed up, the maintainer,
+                  # 2026-11-17)
+                  chin=dict(drop=1.6, fore=0.6),
                   # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
                   # see skull(). A long neck, carried forward. (A sea shell for a hat was tried and taken off:
                   # shell() in the history, see 0eb7378ad^.)
@@ -121,15 +124,19 @@ FIGURES = {
                                             thigh=1.25, leg=1.2, neck=0.95, head=1.08),
                     # the shoulders a little lower than plain: between pulled up (as first built) and hanging (too much,
                     # the maintainer)
-                    move=dict(shoulderL=(0, 0, -0.020), shoulderR=(0, 0, -0.020)),
+                    # the belly is the trunk's own, carried forward and full: a piece of its own set before the trunk left
+                    # a hard edge across the chest and corners at its sides, a box on the upper body (the maintainer,
+                    # 2026-11-17: "this rectangular thing needs to go away")
+                    move=dict(shoulderL=(0, 0, -0.020), shoulderR=(0, 0, -0.020), belly=(0, -0.050, -0.010),
+                              ribs=(0, -0.022, 0), hips=(0, -0.012, 0)),
+                    radius=dict(belly=1.22),
                     # a bit of a neck, not as thick as it was, and a chin seen from the side: the throat is set back
                     # under it, so the chest no longer runs straight up into the face (the maintainer, 2026-11-17: "we
                     # need a little Kinn when seen from the side"). Nothing is drawn out of the face for it: a chin pulled
                     # forward left a hollow above it that read as a mouth wide open, and the face is to stay flat
                     hips=1.2, shoulders=1.06, neck=1.06, eye=(1.0, 0.6, 0.1), face=dict(taper=0.0, throat=0.040),
                     jaw=0.0, flat_face=True,
-                    extras=[("gut", "belly", (0, -0.09, -0.01), 0.165, 1.0, False),
-                            ("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
+                    extras=[("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
                             ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
 }
 for _key in ("guitar1", "bass", "guitar2"):
@@ -400,17 +407,18 @@ def soften_weights(body):
                 body.vertex_groups[g].add([i], x / total, 'REPLACE')
 
 
-def draw_chin(body, head, hs, strength, wide=1.0, square=False, drop=1.0):
+def draw_chin(body, head, hs, strength, wide=1.0, square=False, drop=1.0, fore=1.0):
     # The chin is no added piece but the head's own skin, drawn out: the point of the real surface under the front of
     # the face is found, and the skin round it is pulled forward and down, most at that point and fading smoothly
     # round it, narrower across than along, so it comes to a soft point and runs back into the jaw without an edge.
     # [wide]: how many times as broad the chin is. [square]: across, it stays full nearly to its sides and falls off
     # quickly there, so it reads as a broad flat chin with corners and not as a point. [drop]: how much of the usual
-    # way down the skin is pulled (less: the chin juts forward and the face is no longer).
+    # way down the skin is pulled (less: the chin juts forward and the face is no longer), [fore]: how much of the
+    # usual way forward.
     near = [v for v in body.data.vertices if (v.co - head.pos).length < 1.05 * head.radius and v.co.z < head.pos.z]
     if near:
         tip = max(near, key=lambda v: -0.62 * (v.co.y - head.pos.y) - 0.78 * (v.co.z - head.pos.z) - 6.0 * abs(v.co.x)).co.copy()
-        pull = Vector((0, -0.80, -0.60 * drop)) * (0.050 * hs * strength)
+        pull = Vector((0, -0.80 * fore, -0.60 * drop)) * (0.050 * hs * strength)
         for v in body.data.vertices:
             d = v.co - tip
             if d.length < 0.16 * hs:
