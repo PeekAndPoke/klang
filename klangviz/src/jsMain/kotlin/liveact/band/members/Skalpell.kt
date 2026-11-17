@@ -10,8 +10,7 @@ import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 
 /** Skalpell's sheet: slim, long hair, the virtuoso. */
-object Skalpell : Member(
-    name = "Skalpell",
+val SKALPELL: Member = Member(
     player = Player.Skalpell,
     dress = Dress(cloth = ClothPattern.Spiral, glitter = 0.14, combedBack = true),
     // loose and restless: uneven, looks round a lot, skips nods

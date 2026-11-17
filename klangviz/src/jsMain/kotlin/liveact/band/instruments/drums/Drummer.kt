@@ -22,14 +22,12 @@ import io.peekandpoke.klang.viz.liveact.song.DrumHit
 import io.peekandpoke.klang.viz.liveact.song.Limb
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.vec
-import io.peekandpoke.klang.workshop.threejs.clone
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sign
 import kotlin.math.sin
 
 // The drummer: sits on the kit's stool and plays a list of hits. Every place is in the figure's own measures (its

@@ -7,8 +7,6 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
-import io.peekandpoke.klang.viz.liveact.band.instruments.Equipment
-import io.peekandpoke.klang.viz.liveact.band.instruments.Instrument
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.workshop.threejs.createCircleGeometry
 import io.peekandpoke.klang.workshop.threejs.createColor
@@ -38,10 +36,8 @@ private val FINGERS: List<List<Int>> = listOf(
  * The trumpet, built for the figure [rig] and standing in its scene: in its own space x runs from the mouthpiece to
  * the bell, y up. Its valves go down with a note's fingering ([press]), its bell glows ([glow]).
  */
-class Trumpet(private val rig: Rig) : Instrument {
+class Trumpet(private val rig: Rig) {
     private val s: Double = rig.s
-
-    override val equipment: Equipment = EQUIPMENT
 
     private val brass: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(
         jsObject<MaterialParameters> {
@@ -146,10 +142,5 @@ class Trumpet(private val rig: Rig) : Instrument {
     /** The bell's light, [bell] 0 (dark) to 1 (a note just begun, blown full). */
     fun glow(bell: Double) {
         mouth.emissiveIntensity = 1.6 * bell
-    }
-
-    companion object {
-        /** What the trumpet player holds: the trumpet itself. */
-        val EQUIPMENT: Equipment = Equipment.InHands
     }
 }

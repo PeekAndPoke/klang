@@ -8,8 +8,6 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.marimba
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
-import io.peekandpoke.klang.viz.liveact.band.instruments.Equipment
-import io.peekandpoke.klang.viz.liveact.band.instruments.Instrument
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
@@ -20,7 +18,6 @@ import io.peekandpoke.klang.workshop.threejs.createInstancedMesh
 import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.isMesh
-import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
@@ -61,7 +58,7 @@ private object MarimbaMaterials {
 private val NATURAL = listOf(true, false, true, false, true, true, false, true, false, true, false, true)
 
 /** One bar of the marimba: its mesh, its glowing material, its height at rest, and where a mallet lands on it. */
-class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val restY: Double, val at: Vector3) {
+internal class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val restY: Double, val at: Vector3) {
     /** When it was last hit, within the last moments; -9 where it was not. */
     var hitT: Double = -9.0
 
@@ -74,13 +71,11 @@ class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val restY: D
  * (sorted by time, as far as the song is known; widened for a song that [grows]), the tubes below them, the frame,
  * and the four mallets. A bar lights up and dips when it is hit (see [answer]); the whole of it hovers.
  */
-class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) : Instrument {
+class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
     private val s: Double = rig.s
 
     /** The marimba. */
     val group: Group = Three.addon.createGroup()
-
-    override val equipment: Equipment = EQUIPMENT
 
     /** The stage's floor where she stands: the marimba hovers above it. */
     private val floor: Double
@@ -98,8 +93,8 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) : Instrument {
     private val highest: Int
     val width: Double
 
-    /** The mallets' length. */
-    val malletLength: Double = 0.40 * s
+    /** The mallets' length, as the marimba player's equipment says ([MARIMBA_EQUIPMENT]). */
+    val malletLength: Double = MARIMBA_EQUIPMENT.length * s
 
     /**
      * The mallets, two in each hand, the outer one first: they stand on the stage beside the figure, not in its
@@ -269,7 +264,7 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) : Instrument {
     }
 
     /** The bar of the note [midi]: its own, or the same note as many octaves nearer as it takes where it lies beyond the bars. */
-    fun barOf(midi: Int): MarimbaBar {
+    internal fun barOf(midi: Int): MarimbaBar {
         var m = midi
 
         while (m < lowest) {
@@ -318,9 +313,6 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) : Instrument {
     }
 
     companion object {
-        /** What the marimba player holds: four mallets, two in each hand. */
-        val EQUIPMENT: Equipment = Equipment.Sticks(perHand = 2)
-
         /** The highest bar of a marimba whose song still grows: the c three octaves above the middle one. */
         private const val GROWING_TOP = 96
 

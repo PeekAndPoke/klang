@@ -10,8 +10,7 @@ import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 
 /** Rune's sheet: the riddle of the band. */
-object Rune : Member(
-    name = "Rune",
+val RUNE: Member = Member(
     player = Player.Rune,
     dress = Dress(cloth = ClothPattern.Diamonds, glitter = 0.21),
     // composed: modest nods (a little more than at first: the maintainer, 2026-11-16), her head tilting from

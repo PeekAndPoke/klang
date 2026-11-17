@@ -5,8 +5,6 @@
 
 package io.peekandpoke.klang.viz.liveact.band.instruments.strings
 
-import io.peekandpoke.klang.viz.liveact.band.instruments.Equipment
-
 // What a strung instrument says of itself: its shape, its strings and tuning, how it is played and how it hangs. The
 // guitar and the bass each give their own (see Guitar, Bass).
 
@@ -24,7 +22,7 @@ class BodyOutline(val points: List<Pair<Double, Double>>)
  * seconds), [arm] the share of the swing the arm does (the rest is the wrist); [hang]: how low it hangs from the
  * trunk; [outline]: the body's outline unless the player has another; [pickups]: where the pickups sit along it;
  * [head]: the head's outline, as the body's is drawn; [tuning]: its strings' notes, by which the left hand finds
- * each note's string and fret; [equipment]: what its musician holds for it.
+ * each note's string and fret.
  */
 class StringDesign(
     val scale: Double,
@@ -41,5 +39,4 @@ class StringDesign(
     val pickups: List<Double>,
     val head: List<Pair<Double, Double>>,
     val tuning: Tuning,
-    val equipment: Equipment,
 )

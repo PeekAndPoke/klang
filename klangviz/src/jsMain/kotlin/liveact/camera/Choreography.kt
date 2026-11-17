@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.hash01
+import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smoother
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
@@ -308,7 +309,8 @@ class Choreography(
         }
 
         // the marimba and the trumpet play seldom: when one of them does, the round's first look is theirs
-        val rare = listOf(Player.Rune, Player.Sirene).filter { plays(it, a, b) > 2 }
+        // (into refactorme: that they play seldom is the song's arrangement, who plays them is its cast)
+        val rare = listOf(SchmetterlingCast.MARIMBA, SchmetterlingCast.TRUMPET).filter { plays(it, a, b) > 2 }
         var player: Player? = if (rare.isNotEmpty() && i == 0) pick(rare, 3) else null
         // else someone who plays just then, and not the one the look before showed
         val before = if (!leads) subject(n, i - 1).player else null
@@ -348,7 +350,8 @@ class Choreography(
         }
         val player = subject(n, 0).player
 
-        return if (kind == RoundKind.Arc && (player == null || player == Player.Sirene)) RoundKind.Looks else kind
+        // (into refactorme: the one who strolls is the trumpet player, and who that is, the cast says)
+        return if (kind == RoundKind.Arc && (player == null || player == SchmetterlingCast.TRUMPET)) RoundKind.Looks else kind
     }
 
     /**
@@ -587,7 +590,8 @@ class Choreography(
         // a look that looks away from the total (over the drummer's shoulder): the dolly would swing the camera right
         // round, so it cuts. And from the frontwoman, who may stroll off and turn while the camera travels: the way
         // back hangs on her place, and would jump
-        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == Player.Sirene
+        // (into refactorme: the one who strolls is the trumpet player, and who that is, the cast says)
+        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == SchmetterlingCast.TRUMPET
 
         if (away(shot) || strolls) {
             label = "total"

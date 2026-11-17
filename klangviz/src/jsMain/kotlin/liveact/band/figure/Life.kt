@@ -9,6 +9,7 @@ import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.hash01
+import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.valueNoise
 import io.peekandpoke.klang.viz.liveact.vec
@@ -86,7 +87,8 @@ private fun contactAt(show: Show, t: Double, herNotes: List<Double>): Contact? {
     val away = meet + hold                         // when the first one looks away again
 
     // she does not look away while she plays: the trumpet is at her lips
-    val hers = pair.first == Player.Sirene || pair.second == Player.Sirene
+    // (into refactorme: who holds the trumpet, the cast says)
+    val hers = pair.first == SchmetterlingCast.TRUMPET || pair.second == SchmetterlingCast.TRUMPET
 
     if (hers && herNotes.any { x -> x > start - 3 && x < start + away + 3 }) {
         return null

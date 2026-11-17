@@ -365,7 +365,6 @@ class MarimbaPlayer(
         }
     }
 
-
     private companion object {
         /** Notes that begin within this many seconds of each other sound together: one blow. */
         const val TOGETHER = 0.03

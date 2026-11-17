@@ -10,8 +10,7 @@ import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 
 /** Beben's sheet: tall and thin. */
-object Beben : Member(
-    name = "Beben",
+val BEBEN: Member = Member(
     player = Player.Beben,
     dress = Dress(cloth = ClothPattern.Pinstripe, glitter = 0.14),
     // the steady one: late, mostly on one and three, always the same whatever the band does; looks about slowly

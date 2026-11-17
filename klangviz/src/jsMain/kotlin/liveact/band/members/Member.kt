@@ -16,19 +16,20 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Traits
  * extras ... so basically only things intrinsic to the character"). Which instrument a member plays and which part
  * of a song is the cast's; where they stand and how they walk in is the stage plot's.
  *
- * [name]: as the band calls them. [player]: who it is in the band (the camera, the eyes and the page's switches go by
- * it). [dress]: what the figure wears. [character]: how they move with the music. [bearing]: how they carry
- * themselves over an instrument on a strap; null where they have no bearing of their own. [extras]: what only this
- * member has.
+ * [player]: who it is in the band (the camera, the eyes and the page's switches go by it). [dress]: what the figure
+ * wears. [character]: how they move with the music. [bearing]: how they carry themselves over an instrument on a
+ * strap; null where they have no bearing of their own. [extras]: what only this member has.
  */
-abstract class Member(
-    val name: String,
+data class Member(
     val player: Player,
     val dress: Dress,
     val character: Character,
     val bearing: Bearing?,
     val extras: List<Extra> = emptyList(),
 ) {
+    /** Their name, as the band calls them: the player's. */
+    val name: String get() = player.name
+
     /** The figure's file, as the figure script (`klangviz/figures/`) writes it: `<key>.glb`. */
     val figure: String get() = "${player.key}.glb"
 }

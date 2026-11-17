@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.viz.liveact.band.instruments.bass
 
-import io.peekandpoke.klang.viz.liveact.band.instruments.Equipment
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.BodyOutline
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringDesign
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Tuning
@@ -15,9 +14,6 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Tuning
  * how its right hand plucks (more from the arm, narrower) and how it hangs, lower. Played by a string player (see `StringPlayer`).
  */
 object Bass {
-    /** What its musician holds: the bass itself, on a strap. */
-    val EQUIPMENT: Equipment = Equipment.OnStrap
-
     /** Long horns: the bass's own body. */
     val LONG_HORN: BodyOutline = BodyOutline(
         listOf(
@@ -34,6 +30,5 @@ object Bass {
         pickups = listOf(0.0, 0.07),
         head = listOf(0.0 to -0.025, 0.04 to -0.04, 0.19 to -0.048, 0.23 to -0.015, 0.20 to 0.034, 0.05 to 0.036, 0.0 to 0.025),
         tuning = Tuning.BASS,
-        equipment = EQUIPMENT,
     )
 }

@@ -16,22 +16,22 @@ package io.peekandpoke.klang.viz.liveact.band
  * is on their sheet (`Members`).
  */
 enum class Player(val key: String) {
-    /** The drummer: the muscular one. */
+    /** The muscular one. */
     Wucht("wucht"),
 
-    /** The bass player: tall and thin. */
+    /** Tall and thin. */
     Beben("beben"),
 
-    /** The lead guitarist: slim, long hair, the virtuoso. */
+    /** Slim, long hair, the virtuoso. */
     Skalpell("skalpell"),
 
-    /** The frontwoman: she plays the song's "trommel" on a trumpet. */
+    /** The frontwoman: the balanced one. */
     Sirene("sirene"),
 
-    /** The marimba player: the riddle of the band. */
+    /** The riddle of the band. */
     Rune("rune"),
 
-    /** The rhythm guitarist: the heavier one with the cap, less fine than [Skalpell] and with the power. */
+    /** The heavier one with the cap, less fine than [Skalpell] and with the power. */
     Klaue("klaue");
 
     companion object {

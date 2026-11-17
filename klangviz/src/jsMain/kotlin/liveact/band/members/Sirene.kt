@@ -10,11 +10,10 @@ import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 
 /** Sirene's sheet: the frontwoman. */
-object Sirene : Member(
-    name = "Sirene",
+val SIRENE: Member = Member(
     player = Player.Sirene,
     dress = Dress(cloth = ClothPattern.Braid, glitter = 0.21),
-    // the frontman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
+    // the frontwoman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
     character = Character(
         seed = 67.0,
         traits = Traits(

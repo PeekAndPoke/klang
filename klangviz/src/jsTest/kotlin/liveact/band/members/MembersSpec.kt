@@ -21,6 +21,11 @@ class MembersSpec : StringSpec({
         }
     }
 
+    "a sheet's name is the member's own, as the band calls them" {
+        Members.of(Player.Sirene).name shouldBe "Sirene"
+        Members.of(Player.Wucht).name shouldBe "Wucht"
+    }
+
     "a sheet's figure is the file the figure script writes for its player" {
         Members.of(Player.Sirene).figure shouldBe "sirene.glb"
     }

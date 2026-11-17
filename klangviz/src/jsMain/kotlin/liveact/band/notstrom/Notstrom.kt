@@ -144,8 +144,8 @@ class Notstrom private constructor(
 
     /**
      * Medusa's snakes, in the shadow of whoever's sheet names them (see [Extra.ShadowSnakes]). They are made here,
-     * after the drummer and before the marimba, as when the marimba player made them: three.js numbers what is made
-     * in order, and the picture depends on it.
+     * after the drummer and before the marimba's materials: three.js numbers what is made in order, and the picture
+     * depends on it.
      */
     private val snakes: List<ShadowHair> = when {
         show.switches.has(Switch.NoSnakes) -> emptyList()

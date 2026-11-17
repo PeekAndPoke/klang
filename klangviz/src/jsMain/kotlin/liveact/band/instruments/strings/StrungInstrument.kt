@@ -7,8 +7,6 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.strings
 
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
-import io.peekandpoke.klang.viz.liveact.band.instruments.Equipment
-import io.peekandpoke.klang.viz.liveact.band.instruments.Instrument
 import io.peekandpoke.klang.workshop.threejs.ExtrudeGeometryOptions
 import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
@@ -60,7 +58,7 @@ private object StringMaterials {
  * A strung instrument of the [design], built for the figure [rig] and standing in its scene, with the body [outline]
  * (the design's own unless the player has another). Its strings light up as they are played ([light]).
  */
-class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline) : Instrument {
+class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline) {
     private val s = rig.s
 
     /** Where the strings end at the bridge, along the neck from the instrument's middle, and where at the nut. */
@@ -72,8 +70,6 @@ class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline) : I
 
     /** A string each, the lowest first, lit on its own when it is the one played. */
     private val strings: List<MeshStandardMaterial>
-
-    override val equipment: Equipment = design.equipment
 
     init {
         val addon = Three.addon

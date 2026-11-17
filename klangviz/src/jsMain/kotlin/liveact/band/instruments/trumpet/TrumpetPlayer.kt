@@ -41,7 +41,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-// The trumpet player (the song's `trommel` part, the "Gummieimer", which sounds like a held melody): raises the
+// The trumpet player, who plays a tune of held notes (which of a song's parts that is, the cast says): raises the
 // trumpet to the lips before a phrase, fingers the valves on every note, points the bell higher for a high note and
 // lets it sink between phrases. The bell lights up at each note and fades. All places are in the figure's own measures.
 

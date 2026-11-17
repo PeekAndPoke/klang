@@ -5,7 +5,6 @@
 
 package io.peekandpoke.klang.viz.liveact.band.instruments.guitar
 
-import io.peekandpoke.klang.viz.liveact.band.instruments.Equipment
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.BodyOutline
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringDesign
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Tuning
@@ -15,9 +14,6 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Tuning
  * its right hand strums (from the wrist, wide and quick) and how it hangs. Played by a string player (see `StringPlayer`).
  */
 object Guitar {
-    /** What its musician holds: the guitar itself, on a strap. */
-    val EQUIPMENT: Equipment = Equipment.OnStrap
-
     /** Two horns: the guitar's own body. */
     val DOUBLE_CUTAWAY: BodyOutline = BodyOutline(
         listOf(
@@ -43,6 +39,5 @@ object Guitar {
         pickups = listOf(0.01, 0.075),
         head = listOf(0.0 to -0.022, 0.035 to -0.032, 0.16 to -0.038, 0.19 to -0.012, 0.172 to 0.026, 0.04 to 0.03, 0.0 to 0.022),
         tuning = Tuning.GUITAR,
-        equipment = EQUIPMENT,
     )
 }

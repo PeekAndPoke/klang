@@ -16,12 +16,32 @@ import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.song.Strum
 
-// The package `refactorme` holds everything that ties the live act to one song, "Der Schmetterling": who plays which
-// instrument, which of the song's parts each one plays and by which of its tags (SchmetterlingTags), and the test
-// notes in their place (_test_notes.kt). It is to be emptied, not grown (the maintainer, 2026-11-17: "Things that are
-// currently hardcoded against Schmetterling need to be moved into a refactorme or similar place. This would then be
-// a good starting point for thinking about how to decouple the whole live act from songs and how to bridge the
-// gap."). Each thing here says what a real bridge between a song and the stage would have to supply in its place.
+// The package `refactorme` ties the live act to one song, "Der Schmetterling". It holds who plays which instrument
+// and which of the song's parts (SchmetterlingCast), the song's tags (SchmetterlingTags) and the test notes in their
+// place (_test_notes.kt). It is to be emptied, not grown (the maintainer, 2026-11-17: "Things that are currently
+// hardcoded against Schmetterling need to be moved into a refactorme or similar place. This would then be a good
+// starting point for thinking about how to decouple the whole live act from songs and how to bridge the gap."). Each
+// thing here says what a real bridge between a song and the stage would have to supply in its place.
+//
+// Who reads it: whoever imports this package (the band in Notstrom, the camera's choreography, eye contact in
+// figure/Life.kt, LiveAct; the song's drum hits in song/Song.kt and the light plan's kicks read SchmetterlingTags).
+//
+// Places outside it that still know the song or the cast, and why they stay for now:
+// - camera/Choreography.kt, LOOKS and ARCS: keyed by player, how a seated drummer (Wucht) and a marimba player
+//   (Rune) are looked at and gone round; everyone else is looked at as one who stands. A bridge would key them by
+//   instrument.
+// - camera/Choreography.kt, ORDER, and camera/View.kt: the keys 1 to 6 by player, the key help names each by what
+//   they play (drums, lead guitar, ...), and the hand camera starts on Skalpell.
+// - band/figure/Life.kt, PAIRS: who has eye contact with whom, chosen by who plays what (the rhythm section, the
+//   neighbours on this stage, the frontwoman and whoever she passes).
+// - camera/Choreography.kt, the rounds in bars (FIRST, BACK, CIRCLE, ROUND, REVERSE_FROM, REVERSE_TO, EARLY) and
+//   the two bars of count-in before the first round (`start`); lights/LightPlan.kt, its bars (HOLD, TURN, RIG_HOLD,
+//   RIG_TURN, the eight bars in forty of the low front lamp): tuned on this song, but speaking of bars, so any song
+//   can use them as they are.
+// - band/instruments/trumpet/TrumpetPlayer.kt: the phrase timings (Raise: the arm goes up seconds before a phrase)
+//   and the strolls (twelve seconds after the last note, where thirty are free): tuned on this song's held melody.
+// - The demo (klangviz-demo, main.kt): the recording's name, `recording/schmetterling`; the app's
+//   visuals/LiveActVisual.kt says in its KDoc that the band plays by Der Schmetterling's tags.
 
 /**
  * Der Schmetterling's cast: which member plays which instrument, which of the song's parts, and which variant of

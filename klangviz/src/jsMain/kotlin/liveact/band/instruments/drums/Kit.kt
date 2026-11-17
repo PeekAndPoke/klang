@@ -8,8 +8,6 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.drums
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
-import io.peekandpoke.klang.viz.liveact.band.instruments.Equipment
-import io.peekandpoke.klang.viz.liveact.band.instruments.Instrument
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.song.Drum
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
@@ -204,15 +202,13 @@ private class KitPiece(
  * [name] (the band's) on its front head, and the two sticks. A drum lights up when it is hit, a cymbal swings, the
  * kick is pushed (see [answer]).
  */
-class Kit(rig: Rig, name: String) : Instrument {
+class Kit(rig: Rig, name: String) {
     private val s: Double = rig.s
 
     /** The kit: the stage shades it. */
     val group: Group = Three.addon.createGroup()
 
     private val pieces = mutableMapOf<Drum, KitPiece>()
-
-    override val equipment: Equipment = EQUIPMENT
 
     /** The stool's height. */
     val seat: Double = 0.50 * s
@@ -226,8 +222,8 @@ class Kit(rig: Rig, name: String) : Instrument {
         Side.L to vec(0.20 * s, 0.10 * s, 0.56 * s),
     )
 
-    /** The sticks' length. */
-    val stickLength: Double = 0.40 * s
+    /** The sticks' length, as the drummer's equipment says ([DRUMS_EQUIPMENT]). */
+    val stickLength: Double = DRUMS_EQUIPMENT.length * s
 
     /** The sticks, one in each hand: they stand on the stage beside the figure, not in its skeleton. */
     val sticks: Map<Side, Mesh>
@@ -444,9 +440,6 @@ class Kit(rig: Rig, name: String) : Instrument {
     }
 
     companion object {
-        /** What the drummer holds: a stick in each hand. */
-        val EQUIPMENT: Equipment = Equipment.Sticks(perHand = 1)
-
         private fun cylinder(radiusTop: Double, radiusBottom: Double, height: Double, segments: Int): BufferGeometry =
             Three.addon.createCylinderGeometry(
                 radiusTop = radiusTop, radiusBottom = radiusBottom, height = height, radialSegments = segments,

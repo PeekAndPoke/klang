@@ -9,9 +9,8 @@ import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 
-/** Klaue's sheet: the heavier one with the cap, less fine than [Skalpell] and with the power. */
-object Klaue : Member(
-    name = "Klaue",
+/** Klaue's sheet: the heavier one with the cap, less fine than [Player.Skalpell] and with the power. */
+val KLAUE: Member = Member(
     player = Player.Klaue,
     dress = Dress(cloth = ClothPattern.Claws, glitter = 0.14),
     // the headbanger, but only in fits: about a quarter of the time he goes all the way, else he nods like the

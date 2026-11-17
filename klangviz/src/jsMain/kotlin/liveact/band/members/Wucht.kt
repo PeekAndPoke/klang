@@ -10,8 +10,7 @@ import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 
 /** Wucht's sheet: the muscular one. */
-object Wucht : Member(
-    name = "Wucht",
+val WUCHT: Member = Member(
     player = Player.Wucht,
     dress = Dress(cloth = ClothPattern.Tiger, glitter = 0.14),
     // the engine of the band: on every beat, steady, a touch ahead
