@@ -128,9 +128,9 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  3.60)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.5, db =  5.00)        // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  3.00)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.6, db =  3.10)        // thump: closed-back box resonance
+    .band(freq =  800, q = 0.5, db =  4.90)        // roar:  low mids
+    .band(freq = 2700, q = 1.8, db =  2.60)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(105, 0.707, x => x.passes(2)))
@@ -283,7 +283,7 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).ad
   .clip(0.80)
 
 export lead_arrange = x => x.cylinder(0) //  .mute()
-  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.25))
+  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.26))
   .velocity()
   .shuffle("<1!80 1!1 4/8!14 1!33>")
   .mute("<1!64 0!32 1!32 0!32 1!64>")
