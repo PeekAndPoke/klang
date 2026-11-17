@@ -69,7 +69,7 @@ stack( // Gitarre! -------------------------------------------------------------
     .cylinder(2).fast(4).scale("C4:chromatic").hpf(freq = 800).clip(0.96)
     .late(perlin(0.001, 0.002).seed(2))  // . solo()
     .s(guitar).adsrOff().ignp("drive", drive * 0.9).ignp("brightness", 6200).ignp("spread", 0.04).gain(0.120).body(material = "oak", wet = 0.5)
-    .transpose(tp).pan(0.10).superimpose(pan(0.90)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
+    .transpose(tp).pan(0.05).superimpose(pan(0.95)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,5|10|10,17|17|22|22]*8]>`).repeat(2),

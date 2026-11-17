@@ -42,7 +42,7 @@ internal val soundOfTheSeaSong = Song(
     .gain(waves).hpf(60).lpf(freq = 400, env = perlin(30, 35), attack = 2.0, decay = 3.0, sustain = 0.4, release = 20.0)
     .bpf(freq = perlin.range(80, 400).slow(3), q = rand.range(0.5, 1.5))
      .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
-      .superimpose(x => x.sound("white").adsr(1.2, perlin(5.0, 15.0), 0.1, perlin(10.0, 20.0)).velocity(0.2).hpf(1000).lpf(12500))
+      .superimpose(x => x.sound("white").adsr(1.2, perlin(5.0, 10.0), 0.1, perlin(10.0, 20.0)).velocity(0.2).hpf(1000).lpf(12500))
 
          , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~~~~
            n(randrun(16)).cylinder(2).fast(4).degradeBy(0.995).sound("glockenspiel").scale("f2:pentatonic").body(material = "glass")
