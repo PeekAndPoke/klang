@@ -40,19 +40,19 @@ private class ThreeCatcher(ctx: NoProps) : PureComponent(ctx) {
 }
 
 /** Runs [block] with the loaded addon. No WebGL: these rows touch only what three.js builds without a renderer. */
-private suspend fun withThree(block: suspend (ThreeJsAddon) -> Unit) {
+internal suspend fun withThree(block: suspend (ThreeJsAddon) -> Unit) {
     TestBed.preact(appSetup = { addons { threeJs() } }, view = { ThreeCatcher() }) {
         block(eventually(timeout = 5.seconds) { loaded.shouldNotBeNull() })
     }
 }
 
-private fun isInstance(obj: Any?, ctor: dynamic): Boolean = js("obj instanceof ctor").unsafeCast<Boolean>()
+internal fun isInstance(obj: Any?, ctor: dynamic): Boolean = js("obj instanceof ctor").unsafeCast<Boolean>()
 
 /**
  * An untyped JavaScript value as a typed one. An assertion written straight on an untyped value would be taken for a
  * call of a method of that value.
  */
-private fun <T> typed(value: dynamic): T = value.unsafeCast<T>()
+internal fun <T> typed(value: dynamic): T = value.unsafeCast<T>()
 
 private const val EPS = 1e-9
 
@@ -123,8 +123,11 @@ class ThreeMoreSpec : StringSpec({
     "a shader material keeps the uniforms it was given, each an object with a value" {
         withThree { three ->
             val time = uniform(2.5)
-            val uniforms: dynamic = js("({})")
-            uniforms.uTime = time
+            val glow = uniform(0.5)
+            val uniforms = uniformsOf("uTime" to time)
+
+            // one more is put in by its name
+            uniforms["uGlow"] = glow
 
             val material = three.createShaderMaterial(jsObject {
                 this.uniforms = uniforms
@@ -135,9 +138,14 @@ class ThreeMoreSpec : StringSpec({
                 blending = Blending.AdditiveBlending
             })
 
-            typed<Any?>(material.uniforms.uTime.value) shouldBe 2.5
+            typed<Any?>(material.uniforms["uTime"]?.value) shouldBe 2.5
             time.value = 4.0
-            typed<Any?>(material.uniforms.uTime.value) shouldBe 4.0
+            typed<Any?>(material.uniforms["uTime"]?.value) shouldBe 4.0
+            typed<Any?>(material.uniforms["uGlow"]?.value) shouldBe 0.5
+            // the very objects that were given, not copies: setting one later reaches the shader
+            (material.uniforms["uTime"] === time) shouldBe true
+            // a name that was never given: none
+            material.uniforms["uNone"] shouldBe null
             material.transparent shouldBe true
             material.depthWrite shouldBe false
             typed<Any?>(material.asDynamic().blending) shouldBe three.raw.AdditiveBlending

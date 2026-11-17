@@ -22,17 +22,19 @@ import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.song.Strum
 import io.peekandpoke.klang.viz.liveact.vec
+import io.peekandpoke.klang.workshop.threejs.ExtrudeGeometryOptions
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.angleTo
 import io.peekandpoke.klang.workshop.threejs.applyAxisAngle
 import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
+import io.peekandpoke.klang.workshop.threejs.createExtrudeGeometry
+import io.peekandpoke.klang.workshop.threejs.createShape
 import io.peekandpoke.klang.workshop.threejs.crossVectors
 import io.peekandpoke.klang.workshop.threejs.dot
 import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
-import io.peekandpoke.klang.workshop.threejs.isMesh
 import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.klang.workshop.threejs.worldToLocal
 import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
@@ -335,8 +337,8 @@ class StringPlayer(
                     color = 0x303038
                     roughness = 0.3
                     metalness = 0.9
-                    asDynamic().emissive = glow
-                    asDynamic().emissiveIntensity = 0
+                    emissive = glow
+                    emissiveIntensity = 0.0
                 },
             )
             val y = (0.5 - i.toDouble() / (k.strings - 1)) * k.neck * 0.8 * s         // the lowest string is the upper one
@@ -348,10 +350,11 @@ class StringPlayer(
             lit
         }
 
-        g.traverse { o ->
-            if (o.isMesh) {
-                o.castShadow = true
-            }
+        // only the body, the neck and the head throw a shadow: the shadows of the pickups, the saddle and the knobs
+        // fall inside theirs, a tuner's all but a centimetre of it, and a string's is thinner than a point of the
+        // shadow's map
+        for (part in listOf(body, neck, head)) {
+            part.castShadow = true
         }
 
         (rig.root.parent ?: error("The figure stands in no scene")).add(g)
@@ -664,7 +667,6 @@ class StringPlayer(
  * An outline through [points] (scaled by [s]) cut from a slab [depth] deep, its edges rounded: a smooth curve from
  * the first point through the others, closed.
  */
-// TYPING: belongs in the workshop (three.js's Shape with moveTo, splineThru and closePath, and ExtrudeGeometry)
 private fun extruded(
     points: List<Pair<Double, Double>>,
     s: Double,
@@ -675,21 +677,21 @@ private fun extruded(
     curveSegments: Int,
 ): BufferGeometry {
     val addon = Three.addon
-    val shape: dynamic = addon.create<Any>("Shape")
+    val shape = addon.createShape()
     val (x0, y0) = points[0]
 
     shape.moveTo(x0 * s, y0 * s)
     shape.splineThru(points.drop(1).map { (x, y) -> addon.createVector2(x * s, y * s) }.toTypedArray())
     shape.closePath()
 
-    val options: dynamic = jsObject()
+    val options = jsObject<ExtrudeGeometryOptions> {
+        this.depth = depth
+        bevelEnabled = true
+        this.bevelSize = bevelSize
+        this.bevelThickness = bevelThickness
+        this.bevelSegments = bevelSegments
+        this.curveSegments = curveSegments
+    }
 
-    options.depth = depth
-    options.bevelEnabled = true
-    options.bevelSize = bevelSize
-    options.bevelThickness = bevelThickness
-    options.bevelSegments = bevelSegments
-    options.curveSegments = curveSegments
-
-    return addon.create("ExtrudeGeometry", shape, options)
+    return addon.createExtrudeGeometry(shape = shape, options = options)
 }

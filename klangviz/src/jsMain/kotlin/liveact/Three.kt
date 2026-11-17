@@ -31,6 +31,9 @@ internal fun quat(): Quaternion = Three.addon.createQuaternion()
 
 internal fun mat4(): Matrix4 = Three.addon.createMatrix4()
 
+/** The number with [digits] digits after the point, exactly as JavaScript's `toFixed` writes it. */
+internal fun Double.toFixed(digits: Int): String = asDynamic().toFixed(digits).unsafeCast<String>()
+
 /**
  * Whether a key was pressed while the user types somewhere (a field, a text area, an editor): the live act's keys
  * are single letters and the space bar, and must not take them away from a text.

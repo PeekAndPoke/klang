@@ -14,18 +14,22 @@ import io.peekandpoke.klang.viz.liveact.around
 import io.peekandpoke.klang.viz.liveact.band.malletShare
 import io.peekandpoke.klang.viz.liveact.beyond
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
+import io.peekandpoke.klang.viz.liveact.mat4
+import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.createColor
+import io.peekandpoke.klang.workshop.threejs.createInstancedMesh
+import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.isMesh
 import io.peekandpoke.klang.workshop.threejs.lengthSq
 import io.peekandpoke.klang.workshop.threejs.lerp
+import io.peekandpoke.klang.workshop.threejs.lerpVectors
 import io.peekandpoke.klang.workshop.threejs.quaternion
-import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
@@ -69,24 +73,6 @@ private object MarimbaMaterials {
 
 /** Which of the twelve notes of an octave are naturals (the bars of the near row), from C. */
 private val NATURAL = listOf(true, false, true, false, true, true, false, true, false, true, false, true)
-
-// TYPING: belongs in the workshop
-private var MaterialParameters.emissive: Color
-    get() = asDynamic().emissive.unsafeCast<Color>()
-    set(value) {
-        asDynamic().emissive = value
-    }
-
-// TYPING: belongs in the workshop
-private var MaterialParameters.emissiveIntensity: Double
-    get() = asDynamic().emissiveIntensity.unsafeCast<Double>()
-    set(value) {
-        asDynamic().emissiveIntensity = value
-    }
-
-// TYPING: belongs in the workshop
-private fun Vector3.lerpVectors(from: Vector3, to: Vector3, share: Double): Vector3 =
-    also { asDynamic().lerpVectors(from, to, share) }
 
 /** One bar of the marimba: its mesh, its glowing material, its height at rest, and where a mallet lands on it. */
 private class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val restY: Double, val at: Vector3) {
@@ -237,6 +223,8 @@ class MarimbaPlayer(
         // a hit bar glows purple, the two rows in slightly different tones: the near row bluer, the far row redder
         val nearGlow = Three.addon.createColor(0x8a3cff)
         val farGlow = Three.addon.createColor(0xc23cf0)
+        // the tubes below the bars: where each one's middle is, and how long it is
+        val tubes = mutableListOf<Pair<Vector3, Double>>()
 
         for (m in lo..hi) {
             val natural = isNatural(m)
@@ -261,18 +249,9 @@ class MarimbaPlayer(
             group.add(bar)
 
             // the tube below it: longer for a low note
-            val tube = Three.addon.createMesh(
-                Three.addon.createCylinderGeometry(
-                    radiusTop = width * 0.36,
-                    radiusBottom = width * 0.36,
-                    height = (0.55 - 0.38 * share) * s,
-                    radialSegments = 10,
-                ),
-                materials.steel,
-            )
+            val tubeLength = (0.55 - 0.38 * share) * s
 
-            tube.position.set(x, y - 0.03 * s - (0.55 - 0.38 * share) * s / 2, z)
-            group.add(tube)
+            tubes.add(vec(x, y - 0.03 * s - tubeLength / 2, z) to tubeLength)
 
             // a mallet lands near the bar's end that is toward the player
             bars[m] = MarimbaBar(
@@ -282,6 +261,25 @@ class MarimbaPlayer(
                 at = vec(x, y + 0.012 * s, z - length * (if (natural) 0.15 else 0.30)),
             )
         }
+
+        // the tubes: one cylinder, one long, drawn once for each tube and stretched to its length (one draw for all)
+        val tubeMesh = Three.addon.createInstancedMesh(
+            geometry = Three.addon.createCylinderGeometry(
+                radiusTop = width * 0.36,
+                radiusBottom = width * 0.36,
+                height = 1.0,
+                radialSegments = 10,
+            ),
+            material = materials.steel,
+            count = tubes.size,
+        )
+        val upright = quat()
+
+        tubes.forEachIndexed { index, (middle, tubeLength) ->
+            tubeMesh.setMatrixAt(index, mat4().compose(position = middle, quaternion = upright, scale = vec(1.0, tubeLength, 1.0)))
+        }
+
+        group.add(tubeMesh)
 
         // the frame
         val far = near + 0.50 * s

@@ -14,15 +14,18 @@ import io.peekandpoke.klang.viz.liveact.band.sinceLast
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.vec
+import io.peekandpoke.klang.workshop.threejs.InstancedMesh
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.applyQuaternion
+import io.peekandpoke.klang.workshop.threejs.colorWrite
+import io.peekandpoke.klang.workshop.threejs.createInstancedMesh
 import io.peekandpoke.klang.workshop.threejs.depthWrite
 import io.peekandpoke.klang.workshop.threejs.distanceTo
 import io.peekandpoke.klang.workshop.threejs.frustumCulled
 import io.peekandpoke.klang.workshop.threejs.getWorldQuaternion
 import io.peekandpoke.klang.workshop.threejs.lerp
+import io.peekandpoke.klang.workshop.threejs.translate
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
-import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.utils.jsObject
 
@@ -47,8 +50,7 @@ class ShadowHair(private val rig: Rig, shown: Boolean) {
     /** The pieces of one snake: a piece of its body between each two joints, and its head at the tip. */
     private val pieces = hair.joints
 
-    // TYPING: belongs in the workshop (three.js's InstancedMesh)
-    private val mesh: dynamic
+    private val mesh: InstancedMesh
 
     /** How long the head's bone is and how large the head, in the world. */
     private val bone: Double
@@ -75,20 +77,20 @@ class ShadowHair(private val rig: Rig, shown: Boolean) {
 
         if (!shown) {
             // nothing of it reaches the picture; the lamps' shadows are drawn from its shape alone
-            material.asDynamic().colorWrite = false
+            material.colorWrite = false
             material.depthWrite = false
         }
 
         // one piece: a round stick one long and one thick, standing on its foot
         val stick = Three.addon.createCylinderGeometry(radiusTop = 0.5, radiusBottom = 0.5, height = 1.0, radialSegments = 6)
 
-        stick.asDynamic().translate(0.0, 0.5, 0.0)
+        stick.translate(x = 0.0, y = 0.5, z = 0.0)
 
-        mesh = Three.addon.create<Any>("InstancedMesh", stick, material, hair.snakes * pieces)
+        mesh = Three.addon.createInstancedMesh(geometry = stick, material = material, count = hair.snakes * pieces)
         mesh.castShadow = true
         mesh.receiveShadow = false
-        mesh.unsafeCast<Object3D>().frustumCulled = false
-        stage.add(mesh.unsafeCast<Object3D>())
+        mesh.frustumCulled = false
+        stage.add(mesh)
 
         val grown = rig.root.scale.y
 
@@ -172,7 +174,7 @@ class ShadowHair(private val rig: Rig, shown: Boolean) {
         val long = way.length()
         val q = quat().setFromUnitVectors(Y_AXIS, way.normalize())
 
-        place.asDynamic().compose(from, q, size.set(thick, long, thick))
+        place.compose(position = from, quaternion = q, scale = size.set(thick, long, thick))
         mesh.setMatrixAt(index, place)
     }
 

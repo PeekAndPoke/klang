@@ -15,6 +15,8 @@ import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
 import io.peekandpoke.klang.viz.liveact.stage.Stage
+import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
+import io.peekandpoke.klang.workshop.threejs.info
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.addons.threejs.ThreeJs
 import io.peekandpoke.kraft.addons.threejs.ThreeJsAddon
@@ -215,14 +217,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     /** Builds the stage at once, and the rest once the figures are there. */
     private fun build(ctx: ThreeJsContext) {
         val show = props.show
-        val lens = ctx.camera.unsafeCast<PerspectiveCamera>()
+        val lens = ctx.camera.asPerspectiveCamera ?: error("The live act's camera is not a perspective camera")
 
         renderer = ctx.renderer
         camera = lens
         // a frame is drawn in several goes (the fog's maps have their own): what was drawn is counted over all of them, and
         // set back to nothing in frame(), with every frame that is counted (after loading or a hidden page the
         // line's first number is too high, for a tenth of a second)
-        ctx.renderer.asDynamic().info.autoReset = false
+        ctx.renderer.info.autoReset = false
 
         val stage = Stage(show = show, scene = ctx.scene, camera = lens, renderer = ctx.renderer)
 
@@ -315,7 +317,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         if (nowMs - since >= 500) {
             fps = counted * 1000 / (nowMs - since)
-            worstShown = worst.asDynamic().toFixed(0).unsafeCast<String>()
+            worstShown = worst.toFixed(0)
             counted = 0
             worst = 0.0
             since = nowMs
@@ -330,24 +332,24 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             hudAt = nowMs
 
             val line = hud ?: element(HUD_ID).also { hud = it }
-            val drawn: dynamic = renderer?.asDynamic()?.info?.render
+            val drawn = renderer?.info?.render
 
             line?.textContent = listOf(
                 "music: ${show.music.source}",
                 "camera: ${now.view.what()}",
                 "seed ${show.seed}",
                 "oversampling ${SAMPLES[over]}x (key o)",
-                "${fixed(fps, 0)} fps",
+                "${fps.toFixed(0)} fps",
                 "slowest frame $worstShown ms",
-                "pixels ${fixed(sharpness.ratio, 2)}x",
+                "pixels ${sharpness.ratio.toFixed(2)}x",
                 "${drawn?.calls ?: "-"} draws, ${drawn?.triangles ?: "-"} triangles",
-                "t ${fixed(t, 2)} s",
-                "beat ${fixed(t * show.bpm / 60, 2)}",
+                "t ${t.toFixed(2)} s",
+                "beat ${(t * show.bpm / 60).toFixed(2)}",
             ).joinToString("  |  ")
         }
 
         // what the next drawing counts is this frame's alone (see build())
-        renderer?.asDynamic()?.info?.reset()
+        renderer?.info?.reset()
 
         frames++
 
@@ -390,8 +392,6 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             it.updateProjectionMatrix()
         }
     }
-
-    private fun fixed(value: Double, digits: Int): String = value.asDynamic().toFixed(digits).unsafeCast<String>()
 
     private companion object {
         const val NOTICE_ID = "liveact-notice"

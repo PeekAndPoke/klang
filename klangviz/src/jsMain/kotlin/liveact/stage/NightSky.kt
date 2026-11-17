@@ -10,6 +10,7 @@ import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Blending
 import io.peekandpoke.klang.workshop.threejs.ShaderMaterialParameters
+import io.peekandpoke.klang.workshop.threejs.Uniforms
 import io.peekandpoke.klang.workshop.threejs.createBufferGeometry
 import io.peekandpoke.klang.workshop.threejs.createFloat32Attribute
 import io.peekandpoke.klang.workshop.threejs.createPoints
@@ -21,6 +22,7 @@ import io.peekandpoke.klang.workshop.threejs.negate
 import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.klang.workshop.threejs.setAttribute
 import io.peekandpoke.klang.workshop.threejs.uniform
+import io.peekandpoke.klang.workshop.threejs.uniformsOf
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.PerspectiveCamera
@@ -62,10 +64,7 @@ class NightSky(scene: Scene) {
 
         val points = Three.addon.createPoints(
             geometry,
-            material(vertex = STAR_VERTEX, fragment = STAR_FRAGMENT, uniforms = jsObject<dynamic> {
-                uTime = time
-                uSize = size
-            }),
+            material(vertex = STAR_VERTEX, fragment = STAR_FRAGMENT, uniforms = uniformsOf("uTime" to time, "uSize" to size)),
         )
 
         points.frustumCulled = false
@@ -75,20 +74,18 @@ class NightSky(scene: Scene) {
         val patch = 2 * FAR * tan(PATCH)
         val moon = Three.addon.createMesh(
             Three.addon.createPlaneGeometry(patch, patch),
-            material(vertex = PATCH_VERTEX, fragment = MOON_FRAGMENT, uniforms = jsObject<dynamic> { uTime = time }),
+            material(vertex = PATCH_VERTEX, fragment = MOON_FRAGMENT, uniforms = uniformsOf("uTime" to time)),
         )
 
         moon.position.set(Sky.MOON.x * FAR, Sky.MOON.y * FAR, Sky.MOON.z * FAR)
         moon.lookAt(0.0, 0.0, 0.0)
-        moon.frustumCulled = false
         sky.add(moon)
 
         // the shooting star: a thin streak, set where it is whenever one falls
         streak = Three.addon.createMesh(
             Three.addon.createPlaneGeometry(1.0, 1.0),
-            material(vertex = PATCH_VERTEX, fragment = STREAK_FRAGMENT, uniforms = jsObject<dynamic> { uGlow = glow }),
+            material(vertex = PATCH_VERTEX, fragment = STREAK_FRAGMENT, uniforms = uniformsOf("uGlow" to glow)),
         )
-        streak.frustumCulled = false
         streak.visible = false
         sky.add(streak)
     }
@@ -130,7 +127,7 @@ class NightSky(scene: Scene) {
         }
     }
 
-    private fun material(vertex: String, fragment: String, uniforms: dynamic) =
+    private fun material(vertex: String, fragment: String, uniforms: Uniforms) =
         Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
             this.uniforms = uniforms
             vertexShader = vertex

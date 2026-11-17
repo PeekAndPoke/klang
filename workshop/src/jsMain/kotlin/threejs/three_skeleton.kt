@@ -20,6 +20,14 @@ external class Bone : Object3D
 external class SkinnedMesh : Object3D {
     /** One material, or an array of them. */
     var material: dynamic
+
+    /**
+     * The sphere its skinned points lie in, in its own space, or null. three.js works it out from the pose of the
+     * moment when it is first needed and only then (while it is null): a figure that moves needs a sphere of its
+     * own, large enough for every pose, or it is left out where it still shows. Not the geometry's sphere, which a
+     * skinned mesh does not use.
+     */
+    var boundingSphere: Sphere?
 }
 
 /** The node as a bone, or null. */

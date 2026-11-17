@@ -51,11 +51,12 @@ private suspend fun withThree(block: suspend (ThreeJsAddon) -> Unit) {
 
 /**
  * A renderer that draws nothing: the test browser has no graphics card to draw on, and a stage only sets a few
- * things on its renderer.
+ * things on its renderer. Its card offers no extensions, so the fog is worked out for every pixel.
  */
 private fun standInRenderer(): WebGLRenderer {
     val renderer: dynamic = js(
-        "({ shadowMap: {}, domElement: { height: 520 }, setPixelRatio: function () {}, getPixelRatio: function () { return 1; } })",
+        "({ shadowMap: {}, domElement: { height: 520 }, setPixelRatio: function () {}, getPixelRatio: function () { return 1; }, " +
+            "extensions: { has: function () { return false; } } })",
     )
 
     return renderer.unsafeCast<WebGLRenderer>()

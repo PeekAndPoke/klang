@@ -8,18 +8,36 @@ package io.peekandpoke.klang.viz.liveact.stage
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.lights.Lamp
+import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.BlendFactor
 import io.peekandpoke.klang.workshop.threejs.Blending
+import io.peekandpoke.klang.workshop.threejs.Data3DTexture
+import io.peekandpoke.klang.workshop.threejs.RenderTargetOptions
 import io.peekandpoke.klang.workshop.threejs.ShaderMaterialParameters
+import io.peekandpoke.klang.workshop.threejs.TextureDataType
+import io.peekandpoke.klang.workshop.threejs.TextureFormat
+import io.peekandpoke.klang.workshop.threejs.Uniform
+import io.peekandpoke.klang.workshop.threejs.Uniforms
+import io.peekandpoke.klang.workshop.threejs.WebGLRenderTarget
+import io.peekandpoke.klang.workshop.threejs.createData3DTexture
 import io.peekandpoke.klang.workshop.threejs.createShaderMaterial
+import io.peekandpoke.klang.workshop.threejs.createWebGLRenderTarget
+import io.peekandpoke.klang.workshop.threejs.drawOrder
+import io.peekandpoke.klang.workshop.threejs.extensions
+import io.peekandpoke.klang.workshop.threejs.forceSinglePass
 import io.peekandpoke.klang.workshop.threejs.frustumCulled
+import io.peekandpoke.klang.workshop.threejs.getRenderTarget
+import io.peekandpoke.klang.workshop.threejs.set
+import io.peekandpoke.klang.workshop.threejs.setRenderTarget
 import io.peekandpoke.klang.workshop.threejs.uniform
+import io.peekandpoke.klang.workshop.threejs.uniformsOf
 import io.peekandpoke.kraft.addons.threejs.js.Camera
 import io.peekandpoke.kraft.addons.threejs.js.MaterialSide
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
-import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.Scene
+import io.peekandpoke.kraft.addons.threejs.js.TextureFilter
+import io.peekandpoke.kraft.addons.threejs.js.TextureWrapping
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
 import org.khronos.webgl.Uint8Array
@@ -60,7 +78,7 @@ import kotlin.random.Random
 class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boolean) {
 
     /** One sheet of the stack, with its own see-through share. */
-    private class Layer(val mesh: Mesh, val alpha: dynamic)
+    private class Layer(val mesh: Mesh, val alpha: Uniform<Double>)
 
     // What the fog is made from: the time, and the lamps (place, direction, colour times intensity, the cone's cosine)
     private val time = uniform(0.0)
@@ -74,7 +92,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
     private val cosinesUniform = uniform(cosines)
 
     /** The random numbers the noise is read from (see the top of the file). */
-    private val noise: dynamic = noiseBlock()
+    private val noise: Data3DTexture = noiseBlock()
 
     /** The maps of the stage, where the fog is worked out as maps; null where every pixel works it out. */
     private val maps: Maps? = if (mapped && canHoldMaps()) Maps() else null
@@ -91,15 +109,14 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
         layers = (0 until LAYERS).map { i ->
             val share = i.toDouble() / (LAYERS - 1)
             val alpha = uniform(0.0)
-            val uniforms: dynamic = jsObject()
-            uniforms.uAlpha = alpha
+            val uniforms = uniformsOf("uAlpha" to alpha)
 
             if (maps != null) {
-                uniforms.uMaps = uniform(maps.picture.texture)
-                uniforms.uCell = uniform(Three.addon.createVector2(x = (i % COLS).toDouble(), y = (i / COLS).toDouble()))
+                uniforms["uMaps"] = uniform(maps.picture.texture)
+                uniforms["uCell"] = uniform(Three.addon.createVector2(x = (i % COLS).toDouble(), y = (i / COLS).toDouble()))
             } else {
                 fogUniforms(uniforms)
-                uniforms.uHeight = uniform(share)
+                uniforms["uHeight"] = uniform(share)
             }
 
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
@@ -115,7 +132,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
             })
             // a level sheet shows the camera one side only: drawn once, where three.js draws what is see-through
             // and two-sided twice
-            material.asDynamic().forceSinglePass = true
+            material.forceSinglePass = true
             val mesh = Three.addon.createMesh(sheet, material)
             mesh.rotation.x = -PI / 2
             mesh.position.y = BOTTOM + (TOP - BOTTOM) * share
@@ -127,13 +144,13 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
     }
 
     /** Puts what the fog is made from into [uniforms]. */
-    private fun fogUniforms(uniforms: dynamic) {
-        uniforms.uTime = time
-        uniforms.uNoise = uniform(noise)
-        uniforms.uPos = positionsUniform
-        uniforms.uDir = directionsUniform
-        uniforms.uCol = colorsUniform
-        uniforms.uCos = cosinesUniform
+    private fun fogUniforms(uniforms: Uniforms) {
+        uniforms["uTime"] = time
+        uniforms["uNoise"] = uniform(noise)
+        uniforms["uPos"] = positionsUniform
+        uniforms["uDir"] = directionsUniform
+        uniforms["uCol"] = colorsUniform
+        uniforms["uCos"] = cosinesUniform
     }
 
     /** Sets the fog for [t], lit by the first of [lamps], seen by [camera]; and works out its maps. */
@@ -174,9 +191,9 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
      * is not capped at 1.
      */
     private fun canHoldMaps(): Boolean {
-        val extensions: dynamic = renderer.asDynamic().extensions ?: return false
+        val extensions = renderer.extensions
 
-        return extensions.has("EXT_color_buffer_float") == true || extensions.has("EXT_color_buffer_half_float") == true
+        return extensions.has("EXT_color_buffer_float") || extensions.has("EXT_color_buffer_half_float")
     }
 
     /**
@@ -184,17 +201,20 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
      * fills it each frame.
      */
     private inner class Maps {
-        private val three: dynamic = Three.addon.raw
-
-        val picture: dynamic = js(
-            "(function (three, w, h) { return new three.WebGLRenderTarget(w, h, " +
-                "{ type: three.HalfFloatType, depthBuffer: false, stencilBuffer: false }) })"
-        )(three, COLS * MAP_WIDE, ROWS * MAP_DEEP)
+        val picture: WebGLRenderTarget = Three.addon.createWebGLRenderTarget(
+            width = COLS * MAP_WIDE,
+            height = ROWS * MAP_DEEP,
+            options = jsObject<RenderTargetOptions> {
+                type = TextureDataType.HalfFloatType
+                depthBuffer = false
+                stencilBuffer = false
+            },
+        )
 
         private val filler: Scene = Three.addon.createScene()
 
         init {
-            val uniforms: dynamic = jsObject()
+            val uniforms = uniformsOf()
             fogUniforms(uniforms)
 
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
@@ -211,15 +231,14 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
 
         /** Works the maps out for this frame. [camera]: any; the sheet fills the picture whatever it sees. */
         fun draw(camera: Camera) {
-            val r: dynamic = renderer
             // where the renderer draws to: the screen, or a picture of someone's own
-            val drawnTo: dynamic = r.getRenderTarget()
+            val drawnTo = renderer.getRenderTarget()
 
             try {
-                r.setRenderTarget(picture)
-                r.render(filler, camera)
+                renderer.setRenderTarget(picture)
+                renderer.render(filler, camera)
             } finally {
-                r.setRenderTarget(drawnTo)
+                renderer.setRenderTarget(drawnTo)
             }
         }
 
@@ -237,7 +256,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
          * A block of [NOISE] cubed random numbers as a picture in three directions, repeating in each. The numbers
          * are the same on every run, so a still shows the same fog.
          */
-        fun noiseBlock(): dynamic {
+        fun noiseBlock(): Data3DTexture {
             val random = Random(seed = 20261116)
             val values = Uint8Array(NOISE * NOISE * NOISE)
 
@@ -245,16 +264,14 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
                 values[i] = random.nextInt(256).toByte()
             }
 
-            val three: dynamic = Three.addon.raw
-            val create = js("(function (three, values, n) { return new three.Data3DTexture(values, n, n, n) })")
-            val block: dynamic = create(three, values, NOISE)
+            val block = Three.addon.createData3DTexture(data = values, width = NOISE, height = NOISE, depth = NOISE)
 
-            block.format = three.RedFormat
-            block.minFilter = three.LinearFilter
-            block.magFilter = three.LinearFilter
-            block.wrapS = three.RepeatWrapping
-            block.wrapT = three.RepeatWrapping
-            block.wrapR = three.RepeatWrapping
+            block.format = TextureFormat.RedFormat
+            block.minFilter = TextureFilter.LinearFilter
+            block.magFilter = TextureFilter.LinearFilter
+            block.wrapS = TextureWrapping.RepeatWrapping
+            block.wrapT = TextureWrapping.RepeatWrapping
+            block.wrapR = TextureWrapping.RepeatWrapping
             block.unpackAlignment = 1
             block.needsUpdate = true
 
@@ -394,15 +411,4 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
 }
 
 /** The number as a shader takes it: always with its decimals (26.0 would else be written 26, a whole number). */
-private fun Double.glsl(): String = asDynamic().toFixed(4).unsafeCast<String>()
-
-// TYPING: belongs in the workshop
-/**
- * The draw order as three.js takes it: any number, not only a whole one (the addon's [Object3D.renderOrder] is an
- * Int). The fog's sheets are ordered by their height.
- */
-private var Object3D.drawOrder: Double
-    get() = asDynamic().renderOrder.unsafeCast<Double>()
-    set(value) {
-        asDynamic().renderOrder = value
-    }
+private fun Double.glsl(): String = toFixed(4)

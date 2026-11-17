@@ -9,6 +9,7 @@ import io.peekandpoke.klang.viz.liveact.fromTyping
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.vec
+import io.peekandpoke.klang.workshop.threejs.autoUpdate
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.lerp
 import io.peekandpoke.klang.workshop.threejs.tuneShadow
@@ -182,7 +183,7 @@ class Lights(show: Show, scene: Scene) {
             lamp.light.intensity = lamp.base * lampFlicker(t, own) * house * lamp.group.share(front.level, front.strobing) * lit
             // the front lamp is dark most of the show, and so is a lamp behind that its rig leaves out: a dark lamp's
             // shadow is not drawn (see shadowDrawn)
-            val shadow: dynamic = lamp.light.asDynamic().shadow
+            val shadow = lamp.light.shadow
 
             shadow.autoUpdate = shadowDrawn(intensity = lamp.light.intensity, made = shadow.map != null)
         }

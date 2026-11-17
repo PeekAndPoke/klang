@@ -11,17 +11,20 @@ import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Bone
 import io.peekandpoke.klang.workshop.threejs.Quaternion
+import io.peekandpoke.klang.workshop.threejs.SkinnedMesh
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.applyQuaternion
 import io.peekandpoke.klang.workshop.threejs.asBone
+import io.peekandpoke.klang.workshop.threejs.asMeshStandardMaterial
 import io.peekandpoke.klang.workshop.threejs.asSkinnedMesh
 import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
+import io.peekandpoke.klang.workshop.threejs.createSphere
 import io.peekandpoke.klang.workshop.threejs.distanceTo
 import io.peekandpoke.klang.workshop.threejs.dot
 import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
-import io.peekandpoke.klang.workshop.threejs.frustumCulled
+import io.peekandpoke.klang.workshop.threejs.forceSinglePass
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.getWorldQuaternion
 import io.peekandpoke.klang.workshop.threejs.lerp
@@ -31,6 +34,7 @@ import io.peekandpoke.klang.workshop.threejs.matrixWorld
 import io.peekandpoke.klang.workshop.threejs.name
 import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.klang.workshop.threejs.setTo
+import io.peekandpoke.klang.workshop.threejs.toneMapped
 import io.peekandpoke.klang.workshop.threejs.transformDirection
 import io.peekandpoke.klang.workshop.threejs.worldToLocal
 import io.peekandpoke.kraft.addons.threejs.js.Color
@@ -100,27 +104,40 @@ class Rig(val root: Object3D) {
 
     private companion object {
         const val EYES_OPACITY = 0.95
+
+        /** The figure from its feet to the top of its head, against how high its head's bone starts. */
+        const val TALL = 1.2
+
+        /** The sphere a figure's skin is kept within for every pose: so many times the figure's height from its middle. */
+        const val REACH = 1.5
     }
 
     init {
         val found = mutableMapOf<String, Bone>()
         var eyesFound: MeshStandardMaterial? = null
+        val skins = mutableListOf<SkinnedMesh>()
 
         root.traverse { o ->
             o.asBone?.let { found[it.name] = it }
 
             o.asSkinnedMesh?.let { mesh ->
-                mesh.frustumCulled = false
-                mesh.castShadow = true
+                val eyes = mesh.materials.filter { it.name.endsWith("_eyes") }
 
-                for (material in mesh.materials.filter { it.name.endsWith("_eyes") }) {
-                    eyesFound = material.unsafeCast<MeshStandardMaterial>()
+                skins.add(mesh)
+                // the eyes throw no shadow: it would fall inside the head's
+                // (a figure's eyes are a mesh of their own, as the figures are made: one material to a mesh)
+                mesh.castShadow = eyes.isEmpty()
+
+                for (material in eyes) {
+                    eyesFound = material.asMeshStandardMaterial
                     // the eyes are a little see-through (the maintainer, 2026-11-16: "say 95% opacity")
                     material.transparent = true
                     material.opacity = EYES_OPACITY
+                    // drawn in one go: three.js draws a see-through material that shows both its sides twice
+                    material.forceSinglePass = true
                     // the eyes' light goes to the screen as it is: the film's curve, which the rest of the picture
                     // goes through, turns a bright colour pale, and their colour is what they are there for
-                    material.asDynamic().toneMapped = false
+                    material.toneMapped = false
                 }
             }
         }
@@ -153,6 +170,34 @@ class Rig(val root: Object3D) {
         ankle = mapOf(Side.L to local("toeL"), Side.R to local("toeR"))
         height = local("head").y
         faceAhead = dir(0.0, 0.0, 1.0).applyQuaternion(bone("head").getWorldQuaternion(quat()).invert())
+
+        keepInSight(skins)
+    }
+
+    /**
+     * Gives each of the figure's [skins] a sphere it is kept within, in its own space: round the figure's middle,
+     * [REACH] times its height across from there, so the figure fits in it in every pose (arms raised, reaching for
+     * an instrument, sitting, a step to the side). three.js works a skinned mesh's sphere out only while it has none,
+     * and then from the pose of that moment; a figure that moves would be left out where it still shows. With this
+     * one it is left out only where all of the sphere is out of sight.
+     */
+    private fun keepInSight(skins: List<SkinnedMesh>) {
+        val tall = TALL * height
+
+        for (skin in skins) {
+            fun inSkin(x: Double, y: Double, z: Double) = skin.worldToLocal(root.localToWorld(vec(x, y, z)))
+
+            val middle = inSkin(0.0, tall / 2, 0.0)
+            val away = REACH * tall
+            // the farthest of three points that far off in the figure's measure: the skin's own measure may differ
+            val radius = listOf(
+                inSkin(away, tall / 2, 0.0),
+                inSkin(0.0, tall / 2 + away, 0.0),
+                inSkin(0.0, tall / 2, away),
+            ).maxOf { it.distanceTo(middle) }
+
+            skin.boundingSphere = Three.addon.createSphere(center = middle, radius = radius)
+        }
     }
 
     /**

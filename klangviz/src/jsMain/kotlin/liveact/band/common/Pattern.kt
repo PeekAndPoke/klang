@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.viz.liveact.band.common
 
+import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.workshop.threejs.CompiledShader
 import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
+import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
@@ -21,11 +23,11 @@ import io.peekandpoke.kraft.addons.threejs.js.Vector3
  * light alone the whole dress reflects (it looked best so in the dark); lit from the front its ground goes dark and
  * the pattern stays bright. One uniform, shared by every patterned material.
  */
-private val dress: dynamic = uniform(0)
+private val dress = uniform(0.0)
 
 /** The value of the shared `dress` uniform (see [dress]): the stage sets it every frame. */
 var dressLevel: Double
-    get() = dress.value.unsafeCast<Double>()
+    get() = dress.value
     set(value) {
         dress.value = value
     }
@@ -152,7 +154,7 @@ fun pattern(
     val cacheKey = "pattern-" + kind.key + (if (hair != null) "-hair" else "") + "-glitter" + glitter.jsText()
 
     material.onBeforeCompile(cacheKey) { shader: CompiledShader ->
-        shader.uniforms.uDress = dress
+        shader.uniforms["uDress"] = dress
 
         shader.vertexShader = shader.vertexShader
             .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;")
@@ -203,7 +205,7 @@ fun wall(
     width: Double = 5.5,
     color: Triple<Double, Double, Double> = Triple(0.55, 0.62, 1.0),
 ): (front: Double) -> Unit {
-    val uFront: dynamic = uniform(0)
+    val uFront = uniform(0.0)
     val ornament = """
     float u = p.x * 2.4, v = p.y * 2.4;
     float field = cos(u) * cos(v);
@@ -220,7 +222,7 @@ fun wall(
     val rgb = listOf(color.first, color.second, color.third).joinToString(", ") { it.jsText() }
 
     material.onBeforeCompile("wall-two-faces-braid-glow") { shader: CompiledShader ->
-        shader.uniforms.uFront = uFront
+        shader.uniforms["uFront"] = uFront
 
         shader.vertexShader = shader.vertexShader
             .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;")
@@ -242,9 +244,6 @@ fun wall(
 
     return { front -> uFront.value = front }
 }
-
-/** The number with [digits] digits after the point, exactly as JavaScript's `toFixed` writes it. */
-private fun Double.toFixed(digits: Int): String = asDynamic().toFixed(digits).unsafeCast<String>()
 
 /** The number as JavaScript writes it in a string (`1` for 1.0, `0.55`): as the prototype's shader text has it. */
 private fun Double.jsText(): String = js("String")(this).unsafeCast<String>()

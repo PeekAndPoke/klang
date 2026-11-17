@@ -16,6 +16,7 @@ import io.peekandpoke.klang.viz.liveact.smoother
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.applyQuaternion
+import io.peekandpoke.klang.workshop.threejs.asLight
 import io.peekandpoke.klang.workshop.threejs.asSkinnedMesh
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.cross
@@ -23,11 +24,9 @@ import io.peekandpoke.klang.workshop.threejs.distanceTo
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.getWorldQuaternion
-import io.peekandpoke.klang.workshop.threejs.isLight
 import io.peekandpoke.klang.workshop.threejs.isMesh
 import io.peekandpoke.klang.workshop.threejs.setY
 import io.peekandpoke.kraft.addons.threejs.js.DirectionalLight
-import io.peekandpoke.kraft.addons.threejs.js.Light
 import io.peekandpoke.kraft.addons.threejs.js.PerspectiveCamera
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import kotlinx.browser.window
@@ -350,8 +349,10 @@ class View(
         if (switches.has("outline")) {
             // nothing but this figure: no light, no stage, no instrument, nobody else
             scene.traverse { o ->
-                if (o.isLight) {
-                    o.unsafeCast<Light>().intensity = 0.0
+                val light = o.asLight
+
+                if (light != null) {
+                    light.intensity = 0.0
                 } else if (o.isMesh && o.asSkinnedMesh == null) {
                     o.visible = false
                 }

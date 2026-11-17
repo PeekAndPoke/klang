@@ -69,6 +69,9 @@ external class Matrix4 {
 
     /** The rotation whose three axes are [x], [y] and [z]. */
     fun makeBasis(x: Vector3, y: Vector3, z: Vector3): Matrix4
+
+    /** Set to: sized by [scale], then turned by [quaternion], then moved to [position]. */
+    fun compose(position: Vector3, quaternion: Quaternion, scale: Vector3): Matrix4
 }
 
 fun ThreeJsAddon.createQuaternion(): Quaternion = create("Quaternion")
@@ -84,6 +87,9 @@ fun Vector3.addScaledVector(v: Vector3, s: Double): Vector3 = also { asDynamic()
 
 /** [share] of the way (0 to 1) to [to]. */
 fun Vector3.lerp(to: Vector3, share: Double): Vector3 = also { asDynamic().lerp(to, share) }
+
+/** Set to [share] of the way (0 to 1) from [from] to [to]. */
+fun Vector3.lerpVectors(from: Vector3, to: Vector3, share: Double): Vector3 = also { asDynamic().lerpVectors(from, to, share) }
 
 /** This vector crossed with [v]. */
 fun Vector3.cross(v: Vector3): Vector3 = also { asDynamic().cross(v) }

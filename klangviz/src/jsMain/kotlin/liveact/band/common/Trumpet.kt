@@ -22,16 +22,16 @@ import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.applyQuaternion
 import io.peekandpoke.klang.workshop.threejs.createCircleGeometry
 import io.peekandpoke.klang.workshop.threejs.createColor
+import io.peekandpoke.klang.workshop.threejs.createLatheGeometry
 import io.peekandpoke.klang.workshop.threejs.crossVectors
 import io.peekandpoke.klang.workshop.threejs.dot
+import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.getWorldQuaternion
 import io.peekandpoke.klang.workshop.threejs.isMesh
 import io.peekandpoke.klang.workshop.threejs.lerp
 import io.peekandpoke.klang.workshop.threejs.quaternion
-import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
-import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.MaterialSide
@@ -73,20 +73,6 @@ private object Raise {
 private val FINGERS: List<List<Int>> = listOf(
     listOf(0, 0, 0), listOf(0, 1, 0), listOf(1, 0, 0), listOf(1, 1, 0), listOf(0, 1, 1), listOf(1, 0, 1), listOf(1, 1, 1),
 )
-
-// TYPING: belongs in the workshop
-private var MaterialParameters.emissive: Color
-    get() = asDynamic().emissive.unsafeCast<Color>()
-    set(value) {
-        asDynamic().emissive = value
-    }
-
-// TYPING: belongs in the workshop
-private var MaterialParameters.emissiveIntensity: Double
-    get() = asDynamic().emissiveIntensity.unsafeCast<Double>()
-    set(value) {
-        asDynamic().emissiveIntensity = value
-    }
 
 /**
  * The frontwoman with her trumpet. [part]: her notes, sorted by time, as far as the song is known; the beat for the nod is the [show]'s.
@@ -297,7 +283,7 @@ class TrumpetPlayer(
             profile.add(Three.addon.createVector2((0.007 + 0.058 * u.pow(2.6)) * s, u * 0.14 * s))
         }
 
-        val lathe = Three.addon.create<BufferGeometry>("LatheGeometry", profile.toTypedArray(), 24)
+        val lathe = Three.addon.createLatheGeometry(points = profile.toTypedArray(), segments = 24)
         val bell = Three.addon.createMesh(lathe, brass)
 
         bell.rotation.z = -PI / 2

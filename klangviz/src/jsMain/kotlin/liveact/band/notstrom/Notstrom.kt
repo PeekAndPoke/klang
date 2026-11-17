@@ -38,13 +38,13 @@ import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Gltf
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
+import io.peekandpoke.klang.workshop.threejs.asMeshStandardMaterial
 import io.peekandpoke.klang.workshop.threejs.asSkinnedMesh
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.gltfLoader
 import io.peekandpoke.klang.workshop.threejs.materials
 import io.peekandpoke.klang.workshop.threejs.name
 import io.peekandpoke.klang.workshop.threejs.quaternion
-import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import kotlinx.coroutines.async
@@ -222,7 +222,8 @@ class Notstrom private constructor(
 
                 figure.traverse { o ->
                     o.asSkinnedMesh?.materials?.forEach { m ->
-                        val material = m.unsafeCast<MeshStandardMaterial>()
+                        // a pattern goes into a standard material's shader: every material of the figures is one
+                        val material = m.asMeshStandardMaterial ?: return@forEach
 
                         if (m.name.endsWith("_hair")) {
                             pattern(material = material, kind = ClothPattern.Strands, gloss = 0.07, matt = 0.62, hair = null, glitter = 0.05)

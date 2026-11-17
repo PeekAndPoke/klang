@@ -19,10 +19,14 @@ import io.peekandpoke.klang.viz.liveact.song.Limb
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
+import io.peekandpoke.klang.workshop.threejs.clone
+import io.peekandpoke.klang.workshop.threejs.colorSpace
 import io.peekandpoke.klang.workshop.threejs.createCircleGeometry
+import io.peekandpoke.klang.workshop.threejs.createConeGeometry
 import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.isMesh
+import io.peekandpoke.klang.workshop.threejs.map
 import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
@@ -164,23 +168,6 @@ private fun named(name: String): Texture {
 
     return texture
 }
-
-// TYPING: belongs in the workshop
-private var Texture.colorSpace: String
-    get() = asDynamic().colorSpace.unsafeCast<String>()
-    set(value) {
-        asDynamic().colorSpace = value
-    }
-
-// TYPING: belongs in the workshop
-private var MeshStandardMaterial.map: Texture?
-    get() = asDynamic().map.unsafeCast<Texture?>()
-    set(value) {
-        asDynamic().map = value
-    }
-
-// TYPING: belongs in the workshop
-private fun MeshStandardMaterial.clone(): MeshStandardMaterial = asDynamic().clone().unsafeCast<MeshStandardMaterial>()
 
 /** A place of the kit in the figure's own measures (times its scale gives the place on the stage). */
 private class KitSpot(val x: Double, val y: Double, val z: Double)
@@ -573,7 +560,7 @@ class Drummer(
 
         /** A cymbal's cone: open, so it is a thin shell of brass. */
         fun cone(radius: Double, height: Double): BufferGeometry =
-            Three.addon.create("ConeGeometry", radius, height, 32, 1, true)
+            Three.addon.createConeGeometry(radius = radius, height = height, radialSegments = 32, heightSegments = 1, openEnded = true)
 
         /** The hand of a side. */
         val Side.hand: Limb

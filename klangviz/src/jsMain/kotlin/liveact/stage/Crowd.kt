@@ -9,15 +9,18 @@ import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.workshop.threejs.Blending
 import io.peekandpoke.klang.workshop.threejs.ShaderMaterialParameters
 import io.peekandpoke.klang.workshop.threejs.createBufferGeometry
+import io.peekandpoke.klang.workshop.threejs.createCylinderGeometry
 import io.peekandpoke.klang.workshop.threejs.createFloat32Attribute
 import io.peekandpoke.klang.workshop.threejs.createPoints
 import io.peekandpoke.klang.workshop.threejs.createShaderMaterial
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.frustumCulled
 import io.peekandpoke.klang.workshop.threejs.setAttribute
+import io.peekandpoke.klang.workshop.threejs.toneMapped
 import io.peekandpoke.klang.workshop.threejs.uniform
-import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
+import io.peekandpoke.klang.workshop.threejs.uniformsOf
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
+import io.peekandpoke.kraft.addons.threejs.js.MaterialSide
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.utils.jsObject
 import kotlin.math.PI
@@ -51,12 +54,7 @@ class Crowd(scene: Scene) {
         geometry.setAttribute("seed", Three.addon.createFloat32Attribute(lights.map { it.seed }.toTypedArray(), 1))
         geometry.setAttribute("group", Three.addon.createFloat32Attribute(lights.map { it.group }.toTypedArray(), 1))
 
-        val uniforms: dynamic = jsObject()
-        uniforms.uTime = time
-        uniforms.uSize = size
-        uniforms.uEnergy = energy
-        uniforms.uLow = low
-        uniforms.uBeat = beat
+        val uniforms = uniformsOf("uTime" to time, "uSize" to size, "uEnergy" to energy, "uLow" to low, "uBeat" to beat)
 
         val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
             this.uniforms = uniforms
@@ -77,15 +75,23 @@ class Crowd(scene: Scene) {
         val top = CrowdPlaces.LAST + 0.8
         val climbs = CrowdPlaces.SLOPE * (top - CrowdPlaces.RISE)
         val terraces = Three.addon.createMesh(
-            // TYPING: belongs in the workshop (CylinderGeometry's open ends and its part of a turn): half a ring,
-            // on the side the band looks to
-            Three.addon.create<BufferGeometry>("CylinderGeometry", top, CrowdPlaces.RISE, climbs, 96, 1, true, -PI / 2, PI),
+            // half a ring, open at both ends, on the side the band looks to
+            Three.addon.createCylinderGeometry(
+                radiusTop = top,
+                radiusBottom = CrowdPlaces.RISE,
+                height = climbs,
+                radialSegments = 96,
+                heightSegments = 1,
+                openEnded = true,
+                thetaStart = -PI / 2,
+                thetaLength = PI,
+            ),
             Three.addon.createMeshBasicMaterial(jsObject<MaterialParameters> { color = 0x020308 }).also {
                 it.fog = false
-                it.asDynamic().side = 2          // seen from within: both of its faces
+                it.side = MaterialSide.DoubleSide          // seen from within: both of its faces
                 // exactly the dark's colour, as the dark itself is drawn: not through the film's curve, which
                 // would leave it a shade blacker, and its edge would show
-                it.asDynamic().toneMapped = false
+                it.toneMapped = false
             },
         )
 

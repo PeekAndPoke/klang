@@ -16,17 +16,17 @@ import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.createFog
 import io.peekandpoke.klang.workshop.threejs.depthWrite
 import io.peekandpoke.klang.workshop.threejs.fog
+import io.peekandpoke.klang.workshop.threejs.getPixelRatio
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
+import io.peekandpoke.klang.workshop.threejs.map
 import io.peekandpoke.klang.workshop.threejs.scale
 import io.peekandpoke.klang.workshop.threejs.toneMapping
 import io.peekandpoke.kraft.addons.threejs.js.CanvasTexture
-import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.PerspectiveCamera
 import io.peekandpoke.kraft.addons.threejs.js.Scene
-import io.peekandpoke.kraft.addons.threejs.js.Texture
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
@@ -151,8 +151,7 @@ class Stage(
         lights.shine(t, house, front)
         groundFog?.update(t, lights.lamps, camera)
 
-        // TYPING: belongs in the workshop (WebGLRenderer.getPixelRatio)
-        sky?.update(t = t, ratio = renderer.asDynamic().getPixelRatio().unsafeCast<Double>())
+        sky?.update(t = t, ratio = renderer.getPixelRatio())
 
         // the crowd moves with the music: still while it waits, and by how loud it is once it plays
         val sound = if (waiting || t < 0) null else show.energyAt(t)
@@ -241,11 +240,3 @@ class Stage(
         private const val PCF_SOFT_SHADOW_MAP = 2
     }
 }
-
-// TYPING: belongs in the workshop
-/** A material's texture. */
-private var MaterialParameters.map: Texture
-    get() = asDynamic().map.unsafeCast<Texture>()
-    set(value) {
-        asDynamic().map = value
-    }

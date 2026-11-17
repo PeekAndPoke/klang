@@ -4,12 +4,17 @@ package io.peekandpoke.klang.workshop.threejs
 
 import io.peekandpoke.kraft.addons.threejs.ThreeJsAddon
 import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
+import io.peekandpoke.kraft.addons.threejs.js.Camera
 import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Light
+import io.peekandpoke.kraft.addons.threejs.js.LightShadow
 import io.peekandpoke.kraft.addons.threejs.js.Material
+import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Object3D
+import io.peekandpoke.kraft.addons.threejs.js.PerspectiveCamera
 import io.peekandpoke.kraft.addons.threejs.js.Scene
+import io.peekandpoke.kraft.addons.threejs.js.Texture
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 
@@ -44,8 +49,8 @@ external class BufferAttribute {
 
 /** What a [ShaderMaterial] is made from. A field left out keeps three.js's default. */
 external interface ShaderMaterialParameters {
-    /** The uniforms by name, each an object with a `value`; see [uniform]. */
-    var uniforms: dynamic
+    /** The uniforms by name; see [uniformsOf]. */
+    var uniforms: Uniforms
     var vertexShader: String
     var fragmentShader: String
     var transparent: Boolean
@@ -63,8 +68,8 @@ external interface ShaderMaterialParameters {
 
 /** A material drawn by shaders of one's own. */
 external class ShaderMaterial : Material {
-    /** The uniforms by name, each an object with a `value`: the same objects the parameters gave. */
-    val uniforms: dynamic
+    /** The uniforms by name: the same objects the parameters gave. */
+    val uniforms: Uniforms
 }
 
 /** Points: one dot for every vertex of its geometry. */
@@ -78,7 +83,8 @@ external class Points : Object3D {
  * be added to.
  */
 external interface CompiledShader {
-    val uniforms: dynamic
+    /** The material's uniforms by name: one added here reaches the shader. */
+    val uniforms: Uniforms
     var vertexShader: String
     var fragmentShader: String
 }
@@ -113,12 +119,45 @@ object ShadowMapType {
     const val VSMShadowMap: Int = 3
 }
 
-/** A uniform of a [ShaderMaterial] or a [CompiledShader]: an object holding [value]. */
-fun uniform(value: Any?): dynamic {
-    val holder: dynamic = js("({})")
+/**
+ * A uniform: a value handed to a shader, as three.js takes it, an object holding [value]. A shader reads the value
+ * anew each time it draws, so setting [value] changes what it draws next. Made by [uniform].
+ */
+external interface Uniform<T> {
+    var value: T
+}
+
+/** A new [Uniform] holding [value]: a plain object `{ value }`, as three.js's materials take them. */
+fun <T> uniform(value: T): Uniform<T> {
+    val holder = js("({})").unsafeCast<Uniform<T>>()
     holder.value = value
 
     return holder
+}
+
+/**
+ * The uniforms of a [ShaderMaterial] or a [CompiledShader]: a plain object with a [Uniform] under each name the
+ * shader declares. Made by [uniformsOf]; one more is put in with [set].
+ */
+external interface Uniforms
+
+/** The uniform under [name], or null. */
+operator fun Uniforms.get(name: String): Uniform<*>? = asDynamic()[name].unsafeCast<Uniform<*>?>()
+
+/** Puts [uniform] under [name]. */
+operator fun Uniforms.set(name: String, uniform: Uniform<*>) {
+    asDynamic()[name] = uniform
+}
+
+/** The uniforms [named], each under its name, in this order. */
+fun uniformsOf(vararg named: Pair<String, Uniform<*>>): Uniforms {
+    val uniforms = js("({})").unsafeCast<Uniforms>()
+
+    for ((name, uniform) in named) {
+        uniforms[name] = uniform
+    }
+
+    return uniforms
 }
 
 ////  MAKING  /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -191,15 +230,120 @@ fun Material.onBeforeCompile(cacheKey: String, change: (CompiledShader) -> Unit)
     needsUpdate = true
 }
 
+/**
+ * Whether the material writes its colour into the picture: false for something that is only there to throw a
+ * shadow (it still stands in the lamps' light).
+ */
+var Material.colorWrite: Boolean
+    get() = asDynamic().colorWrite.unsafeCast<Boolean>()
+    set(value) {
+        asDynamic().colorWrite = value
+    }
+
+/**
+ * Whether a see-through, two-sided material is drawn in one go: three.js draws it twice otherwise, its back faces
+ * first and then its front faces.
+ */
+var Material.forceSinglePass: Boolean
+    get() = asDynamic().forceSinglePass.unsafeCast<Boolean>()
+    set(value) {
+        asDynamic().forceSinglePass = value
+    }
+
+/** Whether what the material draws goes through the renderer's [toneMapping]: false sends its colour as it is. */
+var Material.toneMapped: Boolean
+    get() = asDynamic().toneMapped.unsafeCast<Boolean>()
+    set(value) {
+        asDynamic().toneMapped = value
+    }
+
+/** The material as a [MeshStandardMaterial] (three.js's physical one counts as one too), or null. */
+val Material.asMeshStandardMaterial: MeshStandardMaterial?
+    get() = if (asDynamic().isMeshStandardMaterial == true) unsafeCast<MeshStandardMaterial>() else null
+
+/** The light a lit material gives off by itself: copied into the material's own colour when it is made. */
+var MaterialParameters.emissive: Color
+    get() = asDynamic().emissive.unsafeCast<Color>()
+    set(value) {
+        asDynamic().emissive = value
+    }
+
+/** How strong [emissive] is. */
+var MaterialParameters.emissiveIntensity: Double
+    get() = asDynamic().emissiveIntensity.unsafeCast<Double>()
+    set(value) {
+        asDynamic().emissiveIntensity = value
+    }
+
+/** The material's picture: its colour is multiplied by it. None where none was set. */
+var MaterialParameters.map: Texture?
+    get() = asDynamic().map.unsafeCast<Texture?>()
+    set(value) {
+        asDynamic().map = value
+    }
+
 /** The light the material gives off by itself. */
 val MeshStandardMaterial.emissive: Color
     get() = asDynamic().emissive.unsafeCast<Color>()
 
+/** How strong [emissive] is. */
 var MeshStandardMaterial.emissiveIntensity: Double
     get() = asDynamic().emissiveIntensity.unsafeCast<Double>()
     set(value) {
         asDynamic().emissiveIntensity = value
     }
+
+/** The material's picture, or null: its colour is multiplied by it. */
+var MeshStandardMaterial.map: Texture?
+    get() = asDynamic().map.unsafeCast<Texture?>()
+    set(value) {
+        asDynamic().map = value
+    }
+
+/** A new material with the same values; the pictures it holds are shared, not copied. */
+fun MeshStandardMaterial.clone(): MeshStandardMaterial = asDynamic().clone().unsafeCast<MeshStandardMaterial>()
+
+/** How the texture's colours are to be read: `"srgb"` for a picture's colours, `""` (none) for plain data. */
+var Texture.colorSpace: String
+    get() = asDynamic().colorSpace.unsafeCast<String>()
+    set(value) {
+        asDynamic().colorSpace = value
+    }
+
+/**
+ * The draw order, three.js's `renderOrder`, as any number and not only a whole one (the addon's
+ * [Object3D.renderOrder] is an Int): a higher one draws later.
+ */
+var Object3D.drawOrder: Double
+    get() = asDynamic().renderOrder.unsafeCast<Double>()
+    set(value) {
+        asDynamic().renderOrder = value
+    }
+
+/** The node as a light, or null. */
+val Object3D.asLight: Light?
+    get() = if (asDynamic().isLight == true) unsafeCast<Light>() else null
+
+/** The camera as a perspective camera, or null. */
+val Camera.asPerspectiveCamera: PerspectiveCamera?
+    get() = if (asDynamic().isPerspectiveCamera == true) unsafeCast<PerspectiveCamera>() else null
+
+/**
+ * Whether the shadow's map is drawn anew with every frame: false keeps the map as it was last drawn (or none at
+ * all, before the first).
+ */
+var LightShadow.autoUpdate: Boolean
+    get() = asDynamic().autoUpdate.unsafeCast<Boolean>()
+    set(value) {
+        asDynamic().autoUpdate = value
+    }
+
+/** Moves every vertex of the geometry by [x], [y] and [z], once. */
+fun BufferGeometry.translate(x: Double, y: Double, z: Double): BufferGeometry {
+    asDynamic().translate(x, y, z)
+
+    return this
+}
 
 /** A [ToneMapping] value. */
 var WebGLRenderer.toneMapping: Int
