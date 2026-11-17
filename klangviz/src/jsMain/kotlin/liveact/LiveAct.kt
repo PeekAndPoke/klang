@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.band.figure.breathing
 import io.peekandpoke.klang.viz.liveact.band.figure.eyeContact
 import io.peekandpoke.klang.viz.liveact.band.figure.eyesWarm
 import io.peekandpoke.klang.viz.liveact.band.figure.eyesWaver
+import io.peekandpoke.klang.viz.liveact.band.members.Members
 import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
@@ -286,7 +287,13 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         show.energy = energy
         now.band.play(t)
         // (into refactorme: her notes are the trumpet player's, and who that is, the cast says)
-        eyeContact(show = show, rigs = now.band.rigs, herNotes = now.band.playsAt(SchmetterlingCast.TRUMPET), t = t)
+        eyeContact(
+            show = show,
+            rigs = now.band.rigs,
+            herNotes = now.band.playsAt(SchmetterlingCast.TRUMPET),
+            t = t,
+            skills = { player -> Members.of(player).skills },
+        )
         // (`?warm=1` holds everyone's eyes at their full colour, `?warm=0` at rest: to look at them)
         val held = show.switches.double(Switch.Warm)?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
 

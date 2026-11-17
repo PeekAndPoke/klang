@@ -1,6 +1,6 @@
 # KLANG-00451: Live act: the players' plans as plain functions with specs
 
-> **Status (2026-11-16): IDEA.** From the reviews of KLANG-00449's rolling look ahead: the players' plans have no spec.
+> **Status (2026-11-17): IN PROGRESS.** Parts 1 to 4 done with commit d699a4b40 (planMarimba, planStrings, planDrums, planTrumpet, each with its spec); part 5, the camera, is open.
 >
 > **Part of:** KLANG-00447 (Live act: a band on a stage, played by the song)
 
@@ -29,14 +29,19 @@ Each as a plain function from the notes known and what is carried over, with a s
 against the whole reading:
 
 1. The marimba player's hands (`MarimbaPlayer.plan`): which hand plays which note, across a forget in a passage,
-   with a chord at the cut, with none of her notes left.
+   with a chord at the cut, with none of her notes left. **Done** (d699a4b40): `planMarimba`, with `MarimbaPlanSpec`.
 2. A string player's way through the strings and the fingering (`StringPlayer.fingered`). Since 2026-11-17 the fingering itself is
    plain and has a spec (`Tuning.grips`); what `fingered` keeps of the grips played when the song grows, forgets or
-   begins again (the kept prefix up to now, the forgotten pluck) still has none (review of that day, MINOR).
+   begins again (the kept prefix up to now, the forgotten pluck) had none until d699a4b40.
+   **Done** (d699a4b40): `planStrings`, with `StringPlanSpec`.
 3. The frontwoman's phrases and strolls (`TrumpetPlayer.plan`), with the rule that a stroll that has begun stays.
-4. The drummer's lists by limb (`Drummer.plan`).
+   **Done** (d699a4b40): `planTrumpet`, with `TrumpetPlanSpec`.
+4. The drummer's lists by limb (`Drummer.plan`). **Done** (d699a4b40): `planDrums`, with `DrumPlanSpec`.
 5. The camera's choice of a look (`Choreography.choose`, `subject`, `kind`): stable through a round whatever the
-   song forgets.
+   song forgets. **Open.** What it needs, from the worker who did 1 to 4: `Subject`, `Placement`, the looks tables
+   and the order of the keys move to `commonMain`; the cast's two players who play seldom are handed in instead of
+   read from the cast; and the `begun` map (a look the camera has begun) becomes data the plan carries over
+   explicitly, as the other four plans carry theirs.
 
 ## Acceptance
 
@@ -46,3 +51,4 @@ are the same as before (the 18 stills).
 ## History
 
 - 2026-11-16: created.
+- 2026-11-17: IN PROGRESS. Parts 1 to 4 done with commit d699a4b40 (planMarimba, planStrings, planDrums, planTrumpet, each with its spec); part 5, the camera, is open.

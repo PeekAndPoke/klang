@@ -114,8 +114,9 @@ class DrumPlanSpec : StringSpec({
         var steps = 0
         var emptied = 0
 
-        // as the drummer does it whenever the song has changed: plan anew from what the last plan carries on
-        fun step() {
+        // as the drummer does it whenever the song has changed: plan anew from what the last plan carries on. [how]:
+        // what changed the song since the last plan
+        fun step(how: String) {
             val hits = song.drumHits()
             val from = hits.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
             val next = planDrums(hits = hits, before = planned?.carryOn(from = from) ?: emptyMap())
@@ -127,7 +128,7 @@ class DrumPlanSpec : StringSpec({
                 emptied++
             }
 
-            withClue("forgetting: step $steps, the song from $from to $until") {
+            withClue("forgetting: step $steps ($how), the song from $from to $until") {
                 for (limb in Limb.entries) {
                     val list = whole.byLimb.getValue(limb)
 
@@ -140,15 +141,24 @@ class DrumPlanSpec : StringSpec({
         for (bar in 0 until 40) {
             // the song grows by a bar, cut in the rest at the bar's end (no hit is then told anew from one after it)
             until = sixteenth(bar * 16 + 15) + 0.06
-            song.add(events.filter { it.t >= sixteenth(bar * 16 - 1) + 0.06 && it.t < until })
-            step()
+
+            val more = events.filter { it.t >= sixteenth(bar * 16 - 1) + 0.06 && it.t < until }
 
             // and forgets what lies some three seconds behind, in the middle of a bar
-            song.forget(before = sixteenth(bar * 16 - 17) + 0.01)
-            step()
+            if (bar % 2 == 1) {
+                // as the show does it: it forgets and adds in one go, and the drummer plans once
+                song.forget(before = sixteenth(bar * 16 - 17) + 0.01)
+                song.add(more)
+                step(how = "forgot and added in one go")
+            } else {
+                song.add(more)
+                step(how = "added")
+                song.forget(before = sixteenth(bar * 16 - 17) + 0.01)
+                step(how = "forgot")
+            }
         }
 
-        steps shouldBe 80
+        steps shouldBe 60
         // (in the rest of four bars, the song once knew none of the hits)
         emptied shouldBeGreaterThan 0
     }

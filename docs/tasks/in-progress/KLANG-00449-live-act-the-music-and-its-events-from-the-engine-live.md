@@ -112,7 +112,8 @@ also while its code is edited.
    The camera keeps a look once it has begun, and each player's list begins with its last note forgotten (a hand
    stays where that note left it through a long rest). The song is cut at a quiet moment, never through notes
    that sound together. Known and accepted: while the page is hidden nobody plans, so seen again the band takes
-   up as if it had begun there. The players' own carrying over has no spec yet: KLANG-00451.
+   up as if it had begun there. The players' own carrying over has a spec for all four
+   (the marimba, the strings, the drums, the trumpet); the camera's choice of a look has none yet: KLANG-00451.
    Decided by the maintainer (2026-11-16): the marimba not being note for note is fine for now ("only an expert
    would see this"), and so is the band being made anew by an edit or a tempo change.
 6. Plans that follow a changing song (point 5): an edit or a tempo change still makes the band anew.

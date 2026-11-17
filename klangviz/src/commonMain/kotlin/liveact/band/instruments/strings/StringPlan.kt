@@ -45,15 +45,15 @@ data class StringPlan(val plucks: List<Fingered> = emptyList(), val forgotten: F
  *
  * Where the song grows or changes, what was played up to [now] (and the note the hand is already going to) stays as
  * it was held in [before]; only what is still to come is worked out anew. Where the song has forgotten its past, the
- * plan begins with the last pluck forgotten (of [before]'s plucks, or the one [before] began with), and the hands
- * go on from it. What comes back is the plan, to be given as [before] the next time.
+ * plan begins with the last pluck forgotten (of [before]'s plucks), and the hands go on from it. What comes back
+ * is the plan, to be given as [before] the next time.
  */
 fun planStrings(strums: List<Strum>, now: Double, before: StringPlan, tuning: Tuning): StringPlan {
     // what the song has forgotten since the last plan: the hands go on from the last of it
     val from = strums.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
 
     // (none where the song begins again before it: the plucks stay in the order of their times)
-    val forgotten = (before.plucks.lastOrNull { it.t < from } ?: before.forgotten)?.takeIf { it.t < from }
+    val forgotten = before.plucks.lastOrNull { it.t < from }
 
     val planned = before.plucks.associateBy { it.t }
     val kept = mutableListOf<Grip>()

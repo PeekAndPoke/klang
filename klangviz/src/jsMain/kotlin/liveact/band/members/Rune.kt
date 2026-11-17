@@ -8,11 +8,12 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 
-/** Rune's sheet: the riddle of the band. */
+/** Rune's sheet: the riddle of the band, with Medusa's snakes in her shadow (see [Dress.shadowSnakes]). */
 val RUNE: Member = Member(
     player = Player.Rune,
-    dress = Dress(cloth = ClothPattern.Diamonds, glitter = 0.21),
+    dress = Dress(cloth = ClothPattern.Diamonds, glitter = 0.21, shadowSnakes = true),
     // composed: modest nods (a little more than at first: the maintainer, 2026-11-16), her head tilting from
     // side to side
     character = Character(
@@ -25,5 +26,5 @@ val RUNE: Member = Member(
         ),
     ),
     bearing = null,
-    extras = listOf(Extra.ShadowSnakes),
+    skills = listOf(EyeContact),
 )

@@ -17,6 +17,7 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.members.Bearing
+import io.peekandpoke.klang.viz.liveact.band.skills.Look
 import io.peekandpoke.klang.viz.liveact.inSight
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
@@ -38,7 +39,6 @@ import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
-import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -57,12 +57,6 @@ private const val DAMP = 0.06
 
 /** How far along the neck the fingers reach from the hand's own place, in the figure's measure. */
 private const val REACH = 0.04
-
-/**
- * Looks at the viewer every now and then: a chance every [every] seconds, of which [chance] are taken. [at] is where
- * the camera is: the very vector the show keeps up to date, read whenever the player looks.
- */
-class Glance(val at: Vector3, val every: Double, val chance: Double)
 
 /** One pluck or strum, as this player plays it (see [planStrings]): where the hands go for it and which strings sound. */
 private class Pluck(
@@ -98,9 +92,10 @@ private class Fret(val along: Double, val hold: Double, val across: Double, val 
  * moves with the music, with the show's chance under [seed] (the player's own; the prototype's fallback is 4, the
  * band gives each player one of their own). [bearing]: how the player carries themselves over the instrument, the
  * member's own (see [Bearing]), or a plain one where none is given; [outline]: the body's
- * outline, the [design]'s own unless given; [glance]: whether and how the player looks at the viewer; [straighten]:
- * when the player straightens up from the instrument (null: never; `?straight=1` holds everyone straight, to look
- * at the pose).
+ * outline, the [design]'s own unless given; [looks]: where the member's skills ask the head to look at a time (see
+ * `lookAt`; none unless given): the head comes up from the instrument and turns to it as far as it is asked;
+ * [straighten]: when the player straightens up from the instrument (null: never; `?straight=1` holds everyone
+ * straight, to look at the pose).
  */
 class StringPlayer(
     private val show: Show,
@@ -111,7 +106,7 @@ class StringPlayer(
     private val seed: Double = 4.0,
     bearing: Bearing? = null,
     outline: BodyOutline = design.outline,
-    private val glance: Glance? = null,
+    private val looks: (Double) -> Look? = { null },
     private val straighten: Straighten? = Straighten(every = 21.0, chance = 0.55),
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
@@ -216,27 +211,6 @@ class StringPlayer(
         )
     }
 
-    /**
-     * How much the player looks at the viewer at [t], 0 to 1 (see [Glance]). Chance decides, the same at the same
-     * place in the song.
-     */
-    private fun glanceAt(t: Double): Double {
-        val g = glance ?: return 0.0
-        val slot = floor(t / g.every)
-
-        fun roll(n: Int): Double = show.own(slot + n, seed)
-
-        if (roll(0) > g.chance) {
-            return 0.0
-        }
-
-        val start = slot * g.every + 0.8 + roll(1) * (g.every - 6)
-        val hold = 2.2 + 2.0 * roll(2)
-        val x = t - start
-
-        return smooth(x / 0.7) * smooth((hold + 0.7 - x) / 0.9)
-    }
-
     /** The right hand's place across the strings at [t], -1 (above them) to 1 (below): through them at each note. */
     private fun strumAt(t: Double): Double {
         val (before, after) = notes.around(t)
@@ -312,15 +286,15 @@ class StringPlayer(
         rig.turn("chest", Z_AXIS, -0.05 * sway)
         rig.turn("chest", Y_AXIS, 0.18)
 
-        // a look at the viewer every now and then: the head comes up from the instrument and turns to the camera,
-        // holds it a few seconds and goes back
-        var look = glanceAt(t)
+        // where the member's skills ask the head to look (a glance at the camera every now and then): the head comes
+        // up from the instrument and turns to it as far as it is asked, and goes back
+        val asked = looks(t)
+        var look = asked?.share ?: 0.0
         var yaw = 0.35
         var pitch = 0.0
-        val g = glance
 
-        if (look > 0 && g != null) {
-            val eye = rig.root.worldToLocal(g.at.clone())
+        if (look > 0 && asked != null) {
+            val eye = rig.root.worldToLocal(asked.at.clone())
             val from = rig.height + 0.10 * s
             val toward = atan2(eye.x, eye.z)
 

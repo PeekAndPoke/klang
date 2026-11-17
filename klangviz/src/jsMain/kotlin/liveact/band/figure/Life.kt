@@ -8,6 +8,9 @@ package io.peekandpoke.klang.viz.liveact.band.figure
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
+import io.peekandpoke.klang.viz.liveact.band.skills.Skill
+import io.peekandpoke.klang.viz.liveact.band.skills.turning
 import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -29,7 +32,8 @@ import kotlin.math.sin
 /**
  * Eye contact: every now and then two of them look at each other for a few seconds, then back to their playing.
  * Chance picks the moment and the pair, the same at the same place in the song. Pairs that have something to say
- * to each other: the rhythm section, neighbours, the frontwoman and whoever she passes.
+ * to each other: the rhythm section, neighbours, the frontwoman and whoever she passes. Each of the two turns only
+ * with the skill ([EyeContact]): one without it does not answer, the other still offers the look.
  */
 val PAIRS: List<Pair<Player, Player>> = listOf(
     Player.Beben to Player.Wucht,
@@ -119,14 +123,20 @@ private fun contactAt(show: Show, t: Double, herNotes: List<Double>): Contact? {
     )
 }
 
-/** Turns the heads of the two who look at each other at [t]. [herNotes]: when the frontwoman plays. */
-fun eyeContact(show: Show, rigs: Map<Player, Rig>, herNotes: List<Double>, t: Double) {
+/**
+ * Turns the heads of the two who look at each other at [t], each only where their [skills] give them [EyeContact]
+ * (see [turning]). [herNotes]: when the frontwoman plays.
+ */
+fun eyeContact(show: Show, rigs: Map<Player, Rig>, herNotes: List<Double>, t: Double, skills: (Player) -> List<Skill>) {
     val contact = contactAt(show, t, herNotes)
 
     if (contact == null || (contact.wFirst <= 0 && contact.wSecond <= 0)) {
         return
     }
 
+    val turns = turning(first = contact.first, second = contact.second, skills = skills)
+    val firstTurns = contact.first in turns
+    val secondTurns = contact.second in turns
     val a = rigs.getValue(contact.first)
     val b = rigs.getValue(contact.second)
 
@@ -138,10 +148,21 @@ fun eyeContact(show: Show, rigs: Map<Player, Rig>, herNotes: List<Double>, t: Do
     val ea = eyes(a)
     val eb = eyes(b)
 
-    a.faceTo(eb, contact.wFirst)
-    b.faceTo(ea, contact.wSecond)
-    a.turn("head", X_AXIS, 0.09 * contact.nodFirst)
-    b.turn("head", X_AXIS, 0.09 * contact.nodSecond)
+    if (firstTurns) {
+        a.faceTo(eb, contact.wFirst)
+    }
+
+    if (secondTurns) {
+        b.faceTo(ea, contact.wSecond)
+    }
+
+    if (firstTurns) {
+        a.turn("head", X_AXIS, 0.09 * contact.nodFirst)
+    }
+
+    if (secondTurns) {
+        b.turn("head", X_AXIS, 0.09 * contact.nodSecond)
+    }
 }
 
 /** The rigs in the players' order ([Player.entries]), those there are. */

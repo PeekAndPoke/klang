@@ -8,8 +8,14 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.CameraGlance
+import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
+import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
 
-/** Klaue's sheet: the heavier one with the cap, less fine than [Player.Skalpell] and with the power. */
+/**
+ * Klaue's sheet: the heavier one with the cap, less fine than [Player.Skalpell] and with the power. The one who
+ * glances at the camera ([CameraGlance]).
+ */
 val KLAUE: Member = Member(
     player = Player.Klaue,
     dress = Dress(cloth = ClothPattern.Claws, glitter = 0.14),
@@ -26,5 +32,22 @@ val KLAUE: Member = Member(
         ),
     ),
     bearing = Bearing(lean = 0.10, bang = 0.24, bounce = 0.028),
-    extras = listOf(Extra.GlanceAtCamera(every = 11.0, chance = 0.5)),
+    // he answers a look, and looks at the camera every now and then: a chance every eleven seconds, half of them
+    // taken, each look held for two to four seconds
+    skills = listOf(
+        EyeContact,
+        CameraGlance(
+            SkillTiming(
+                every = 11.0,
+                chance = 0.5,
+                cooldown = 0.0,
+                least = 2.2,
+                most = 4.2,
+                earliest = 0.8,
+                reserve = 6.0,
+                rise = 0.7,
+                fall = 0.9,
+            ),
+        ),
+    ),
 )

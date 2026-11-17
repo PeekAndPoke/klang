@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 
 /** Wucht's sheet: the muscular one. */
 val WUCHT: Member = Member(
@@ -24,4 +25,5 @@ val WUCHT: Member = Member(
         ),
     ),
     bearing = null,
+    skills = listOf(EyeContact),
 )

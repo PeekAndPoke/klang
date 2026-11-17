@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 
 /** Sirene's sheet: the frontwoman. */
 val SIRENE: Member = Member(
@@ -23,4 +24,5 @@ val SIRENE: Member = Member(
         ),
     ),
     bearing = null,
+    skills = listOf(EyeContact),
 )

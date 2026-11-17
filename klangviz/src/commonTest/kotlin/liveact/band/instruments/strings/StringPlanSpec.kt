@@ -147,7 +147,8 @@ class StringPlanSpec : StringSpec({
         var emptied = 0
         val tags = listOf("guitar2", "guitar3")
 
-        fun step(now: Double) {
+        // [how]: what changed the song since the last plan
+        fun step(now: Double, how: String) {
             val strums = forgetting.strumsOf(tags)
             val from = strums.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
 
@@ -158,7 +159,7 @@ class StringPlanSpec : StringSpec({
                 emptied++
             }
 
-            withClue("forgetting: step $steps at $now, the song from $from") {
+            withClue("forgetting: step $steps ($how) at $now, the song from $from") {
                 val last = all.plucks.lastOrNull { it.t < from }
 
                 kept.forgotten shouldBe last
@@ -173,15 +174,22 @@ class StringPlanSpec : StringSpec({
             val more = events.filter { it.t >= start && it.t < moment(17 * (n + 1) + 128) - 0.06 }
 
             grown.add(more)
-            forgetting.add(more)
             all = plan(grown.strumsOf(tags), now = now, before = all)
-            step(now)
 
-            forgetting.forget(before = now - 5.0)
-            step(now)
+            if (n % 2 == 1) {
+                // as the show does it: it forgets and adds in one go, and the player plans once
+                forgetting.forget(before = now - 5.0)
+                forgetting.add(more)
+                step(now = now, how = "forgot and added in one go")
+            } else {
+                forgetting.add(more)
+                step(now = now, how = "added")
+                forgetting.forget(before = now - 5.0)
+                step(now = now, how = "forgot")
+            }
         }
 
-        steps shouldBe 90
+        steps shouldBe 68
         // (in the long pause the song once knew none of her notes)
         emptied shouldBeGreaterThan 0
         all.plucks.size shouldBe grown.strumsOf(tags).size

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 
 /** Beben's sheet: tall and thin. */
 val BEBEN: Member = Member(
@@ -24,4 +25,5 @@ val BEBEN: Member = Member(
         ),
     ),
     bearing = Bearing(lean = 0.10, bang = 0.16, bounce = 0.045),
+    skills = listOf(EyeContact),
 )

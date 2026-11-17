@@ -24,11 +24,11 @@ import io.peekandpoke.klang.viz.liveact.band.figure.stepLegs
 import io.peekandpoke.klang.viz.liveact.band.figure.walkPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.drums.Drummer
 import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
-import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Glance
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
-import io.peekandpoke.klang.viz.liveact.band.members.Extra
 import io.peekandpoke.klang.viz.liveact.band.members.Members
+import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.band.skills.lookAt
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.vec
@@ -143,14 +143,14 @@ class Notstrom private constructor(
     )
 
     /**
-     * Medusa's snakes, in the shadow of whoever's sheet names them (see [Extra.ShadowSnakes]). They are made here,
+     * Medusa's snakes, in the shadow of whoever's dress has them (see `Dress.shadowSnakes`). They are made here,
      * after the drummer and before the marimba's materials: three.js numbers what is made in order, and the picture
      * depends on it.
      */
     private val snakes: List<ShadowHair> = when {
         show.switches.has(Switch.NoSnakes) -> emptyList()
         else -> Player.entries
-            .filter { player -> Extra.ShadowSnakes in Members.of(player).extras }
+            .filter { player -> Members.of(player).dress.shadowSnakes }
             .map { player -> ShadowHair(rig = rig(player), shown = show.switches.has(Switch.Snakes)) }
     }
 
@@ -181,15 +181,20 @@ class Notstrom private constructor(
             seed = character(cast.player).seed,
             bearing = Members.of(cast.player).bearing,
             outline = cast.outline ?: cast.design.outline,
-            glance = glanceOf(cast.player),
+            looks = headLooksOf(cast.player),
         )
     }
 
-    /** How [player] glances at the camera, where their sheet says they do (see [Extra.GlanceAtCamera]). */
-    private fun glanceOf(player: Player): Glance? = Members.of(player).extras
-        .filterIsInstance<Extra.GlanceAtCamera>()
-        .firstOrNull()
-        ?.let { glance -> Glance(at = viewer, every = glance.every, chance = glance.chance) }
+    /**
+     * Where [player]'s skills ask the head to look at a time (see [lookAt]): by the skills on their sheet, with their
+     * own chance (the show's under their character's seed), toward the camera where the show keeps it.
+     */
+    private fun headLooksOf(player: Player): (Double) -> Look? {
+        val member = Members.of(player)
+        val roll = { index: Double -> show.own(index, member.character.seed) }
+
+        return { t -> lookAt(skills = member.skills, t = t, roll = roll, camera = viewer) }
+    }
 
     /**
      * What goes with the figures as they are posed at last: the snakes on a head. Call it once everything that turns

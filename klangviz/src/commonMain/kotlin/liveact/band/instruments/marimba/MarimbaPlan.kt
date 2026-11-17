@@ -107,8 +107,9 @@ fun planMarimba(
             // one note: the inner mallet plays it, the outer one rides beside it, further out and above the bars
             1 -> MarimbaPoint(x = hand.sign * MALLETS_APART / 2 * s, y = RIDE / 2 * s, z = 0.0)
             // two: the outer mallet takes the bar further out (the left hand's lower one, the right hand's higher).
-            // (Summed in the order the figure's vectors summed it: from nothing, half the outer bar on, half the inner
-            // one back.)
+            // (Halving is exact, and a sum of two is the same either way round, so the order of the sum changes no
+            // bit. The `0.0 +` is the vector the figure's sum began with: it keeps even the sign of a zero as that
+            // sum gave it, since 0.0 + -0.0 is 0.0.)
             else -> {
                 val (inner, outer) = struck.sortedBy { it.x * hand.sign }
 

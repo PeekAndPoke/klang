@@ -73,7 +73,8 @@ fun planTrumpet(notes: List<Note>, now: Double, before: TrumpetPlan): TrumpetPla
     for (i in 0..notes.size) {
         val next = if (i < notes.size) notes[i].t else 1e9
 
-        // he stands a good while first (the maintainer, 2026-11-16): twelve seconds after his last note, or after the start
+        // she stands a good while first (the maintainer, 2026-11-16): twelve seconds after her last note, or after
+        // the start
         val start = free + 12
         // one that has begun: it was planned before, and now is in it
         val begun = start < now && next > now && before.strolls.any { it.from == start }

@@ -121,7 +121,8 @@ class TrumpetPlanSpec : StringSpec({
         var emptied = 0
         var begun = 0
 
-        fun step(now: Double) {
+        // [how]: what changed the song since the last plan
+        fun step(now: Double, how: String) {
             val notes = forgetting.notesOf("trommel")
             val from = notes.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
 
@@ -137,14 +138,18 @@ class TrumpetPlanSpec : StringSpec({
                 begun++
             }
 
-            withClue("forgetting: step $steps at $now, the song from $from to $until") {
+            withClue("forgetting: step $steps ($how) at $now, the song from $from to $until") {
+                // (the strolls after her last note forgotten: that note taken from the song grown, not from the plan)
+                val lastForgotten = all.notes.lastOrNull { it.t < from }?.t ?: Double.NEGATIVE_INFINITY
+
                 kept.phrases shouldBe whole.phrases.filter { it >= from && it < until }
-                kept.strolls shouldBe all.strolls.filter { it.to > (kept.lastBefore?.t ?: Double.NEGATIVE_INFINITY) }
+                kept.strolls shouldBe all.strolls.filter { it.to > lastForgotten }
                 listOf(kept.lowest, kept.highest) shouldBe listOf(all.lowest, all.highest)
             }
         }
 
         var now = -15.0
+        var n = 0
 
         while (now < 420.0) {
             // known nine seconds ahead of what is heard, forgotten six seconds behind it
@@ -152,13 +157,22 @@ class TrumpetPlanSpec : StringSpec({
 
             until = now + 9.0
             grown.add(more)
-            forgetting.add(more)
             all = plan(grown.notesOf("trommel"), now = now, before = all)
-            step(now)
 
-            forgetting.forget(before = now - 6.0)
-            step(now)
+            if (n % 2 == 1) {
+                // as the show does it: it forgets and adds in one go, and she plans once
+                forgetting.forget(before = now - 6.0)
+                forgetting.add(more)
+                step(now = now, how = "forgot and added in one go")
+            } else {
+                forgetting.add(more)
+                step(now = now, how = "added")
+                forgetting.forget(before = now - 6.0)
+                step(now = now, how = "forgot")
+            }
+
             now += 0.7
+            n++
         }
 
         // (in the long silences the song knew none of her notes, and a stroll begun before a note known late stayed)

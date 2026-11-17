@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 
 /** Skalpell's sheet: slim, long hair, the virtuoso. */
 val SKALPELL: Member = Member(
@@ -24,4 +25,5 @@ val SKALPELL: Member = Member(
         ),
     ),
     bearing = Bearing(lean = -0.05, bang = 0.14, bounce = 0.025),
+    skills = listOf(EyeContact),
 )

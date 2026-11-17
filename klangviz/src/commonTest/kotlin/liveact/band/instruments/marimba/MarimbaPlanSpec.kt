@@ -195,8 +195,8 @@ class MarimbaPlanSpec : StringSpec({
 
         // as the player does it whenever the song has changed: plan anew from what the last plan carries on, and
         // compare with the whole reading: the blows of the notes known, and each hand's list from its last blow
-        // forgotten
-        fun step() {
+        // forgotten. [how]: what changed the song since the last plan
+        fun step(how: String) {
             val notes = song.notesOf("lead")
             val from = notes.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
             val next = plan(notes, before = planned?.carryOn(from = from) ?: HandsBefore())
@@ -205,7 +205,7 @@ class MarimbaPlanSpec : StringSpec({
             planned = next
             steps++
 
-            withClue("forgetting: step $steps, the song from $from to $until") {
+            withClue("forgetting: step $steps ($how), the song from $from to $until") {
                 next.blows shouldBe whole.blows.filter { it.t >= from && it.t < until }
 
                 for (side in Side.entries) {
@@ -220,21 +220,33 @@ class MarimbaPlanSpec : StringSpec({
         for (n in 0 until 20) {
             // the song grows by nine moments, cut in the pause between two
             until = moment(9 * (n + 1)) - 0.075
-            song.add(events.filter { it.t >= moment(9 * n) - 0.075 && it.t < until })
-            step()
 
-            when (n) {
-                // once, all of it is forgotten: none of her notes is left, and the hands go on from the last of them
-                12 -> song.forget(before = until)
-                // else it forgets what lies three seconds behind, just after a moment's first note (on every fifth
-                // forget, a chord: the song is cut before it)
-                else -> song.forget(before = moment(9 * n - 11) + 0.003)
+            val more = events.filter { it.t >= moment(9 * n) - 0.075 && it.t < until }
+
+            fun forget() {
+                when (n) {
+                    // once, all of it is forgotten: none of her notes is left, and the hands go on from the last of them
+                    12 -> song.forget(before = until)
+                    // else it forgets what lies three seconds behind, just after a moment's first note (on every fifth
+                    // forget, a chord: the song is cut before it)
+                    else -> song.forget(before = moment(9 * n - 11) + 0.003)
+                }
             }
 
-            step()
+            if (n % 2 == 1) {
+                // as the show does it: it forgets and adds in one go, and the player plans once
+                forget()
+                song.add(more)
+                step(how = "forgot and added in one go")
+            } else {
+                song.add(more)
+                step(how = "added")
+                forget()
+                step(how = "forgot")
+            }
         }
 
-        steps shouldBe 40
+        steps shouldBe 30
         whole.blows.size shouldBe whole.blows.count { it.t < until }
     }
 })
