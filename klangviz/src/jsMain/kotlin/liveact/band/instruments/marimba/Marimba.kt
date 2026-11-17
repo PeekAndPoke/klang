@@ -57,8 +57,11 @@ private object MarimbaMaterials {
 /** Which of the twelve notes of an octave are naturals (the bars of the near row), from C. */
 private val NATURAL = listOf(true, false, true, false, true, true, false, true, false, true, false, true)
 
-/** One bar of the marimba: its mesh, its glowing material, its height at rest, and where a mallet lands on it. */
-internal class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val restY: Double, val at: Vector3) {
+/**
+ * One bar of the marimba: its mesh, its glowing material, its height at rest, and where a mallet lands on it ([place],
+ * as plain numbers for the plan of the hands).
+ */
+internal class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val restY: Double, val place: MarimbaPoint) {
     /** When it was last hit, within the last moments; -9 where it was not. */
     var hitT: Double = -9.0
 
@@ -183,7 +186,7 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
                 bar = bar,
                 material = material,
                 restY = y,
-                at = vec(x, y + 0.012 * s, z - length * (if (natural) 0.15 else 0.30)),
+                place = MarimbaPoint(x = x, y = y + 0.012 * s, z = z - length * (if (natural) 0.15 else 0.30)),
             )
         }
 

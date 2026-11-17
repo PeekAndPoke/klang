@@ -56,7 +56,11 @@ class Drummer(
     /** The kit he plays, and the sticks he plays it with (see [Kit]). */
     val kit: Kit = Kit(rig = rig, name = name)
 
-    private val byLimb: Map<Limb, MutableList<Stroke>> = Limb.entries.associateWith { mutableListOf() }
+    /** Each limb's hits, with the places they land at. */
+    private var byLimb: Map<Limb, List<Stroke>> = emptyMap()
+
+    /** The last plan (see [planDrums]): where the song has forgotten its past, the next one goes on from it. */
+    private var planned: DrumPlan? = null
 
     init {
         hits.refresh()
@@ -70,18 +74,11 @@ class Drummer(
      */
     private fun plan() {
         val from = hits.events.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
-        val gone = byLimb.mapValues { (_, list) -> list.lastOrNull { it.t < from } }
+        val next = planDrums(hits = hits.events, before = planned?.carryOn(from = from) ?: emptyMap())
 
         all = hits.events
-
-        for ((limb, list) in byLimb) {
-            list.clear()
-            gone.getValue(limb)?.let { list.add(it) }
-        }
-
-        for (h in all) {
-            byLimb.getValue(h.limb).add(KitHit(t = h.t, at = kit.at(h.drum), v = h.v))
-        }
+        planned = next
+        byLimb = next.byLimb.mapValues { (_, list) -> list.map { h -> KitHit(t = h.t, at = kit.at(h.drum), v = h.v) } }
     }
 
     /** The drummer and his kit at [t] (seconds). */

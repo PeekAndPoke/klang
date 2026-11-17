@@ -50,14 +50,6 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/** A figure's left or right. */
-enum class Side(val sign: Double) {
-    L(1.0),
-    R(-1.0);
-
-    val other: Side get() = if (this == L) R else L
-}
-
 /**
  * A figure's rig: its bones by the names of the joints they end at, its measures, and the two-bone reach.
  *

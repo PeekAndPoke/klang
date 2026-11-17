@@ -55,9 +55,6 @@ import kotlin.math.tanh
 private const val RING = 0.25
 private const val DAMP = 0.06
 
-/** A note this many seconds ahead is settled: the left hand is on its way to it, and it stays held as planned. */
-private const val SETTLED = 0.4
-
 /** How far along the neck the fingers reach from the hand's own place, in the figure's measure. */
 private const val REACH = 0.04
 
@@ -67,14 +64,11 @@ private const val REACH = 0.04
  */
 class Glance(val at: Vector3, val every: Double, val chance: Double)
 
-/** One pluck or strum, as this player plays it: where the hands go for it and which strings sound. */
+/** One pluck or strum, as this player plays it (see [planStrings]): where the hands go for it and which strings sound. */
 private class Pluck(
     override val t: Double,
     val v: Double,
     val d: Double,
-    /** The notes that sound, as the song has them, and how the left hand holds them. */
-    val pitches: List<Int>,
-    val grip: Grip,
     /** The fingers' place along the neck, from the nut: at the frets they press. */
     val along: Double,
     /** The hand's own place along the neck: the middle of the four frets its fingers reach in its position. */
@@ -143,10 +137,10 @@ class StringPlayer(
     private var notes: List<Pluck> = emptyList()
 
     /**
-     * The last pluck before the first one known, where the song has forgotten its past: the right hand's way
-     * through the strings goes on from it, and the plucks begin with it: the hands stay where it left them.
+     * The last plan (see [planStrings]): what was played stays held as it was, and where the song has forgotten its
+     * past, the plucks begin with the last one forgotten: the hands stay where it left them.
      */
-    private var forgotten: Pluck? = null
+    private var planned: StringPlan = StringPlan()
 
     init {
         part.refresh()
@@ -154,39 +148,14 @@ class StringPlayer(
     }
 
     /**
-     * Where the hands are for each of [strums]. The left hand holds each as a player would on the instrument's real
-     * strings: the string and the fret of each note, in a position on the neck it leaves as seldom as the passage
-     * allows (see [Tuning.grips]); a note too low or too high for the instrument is played octaves nearer.
-     *
-     * Where the song grows or changes, what was played up to [now] (and the note the hand is already going to) stays
-     * as it was held; only what is still to come is worked out anew.
+     * Where the hands are for each of [strums], as far as the song is known at [now]: how each is held and which
+     * way the right hand goes is the plan's ([planStrings]), what was played staying as it was; where the hands are
+     * for it follows from that.
      */
     private fun fingered(strums: List<Strum>, now: Double): List<Pluck> {
         val k = design
-        // what the song has forgotten since the last plan: the hands go on from the last of it
-        val from = strums.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
 
-        // (none where the song begins again before it: the plucks stay in the order of their times)
-        forgotten = (this.notes.lastOrNull { it.t < from } ?: forgotten)?.takeIf { it.t < from }
-
-        val before = this.notes.associateBy { it.t }
-        val kept = mutableListOf<Grip>()
-
-        for (n in strums) {
-            val was = before[n.t]
-
-            if (was == null || n.t > now + SETTLED || was.pitches.sorted() != n.all.sorted()) {
-                break
-            }
-
-            kept.add(was.grip)
-        }
-
-        val lead = listOfNotNull(forgotten)
-        val grips = k.tuning.grips(
-            strums = lead.map { it.pitches } + strums.map { it.all },
-            held = lead.map { it.grip } + kept,
-        ).drop(lead.size)
+        planned = planStrings(strums = strums, now = now, before = planned, tuning = k.tuning)
 
         /** How far from the nut a finger lies that presses at [fret]: just behind the fret's wire. */
         fun alongOf(fret: Double): Double = k.scale * s * (1 - 2.0.pow(-max(0.0, fret - 0.4) / 12))
@@ -194,11 +163,9 @@ class StringPlayer(
         /** Where the [string] lies across the instrument, drawn two and a half times as far apart as the strings are. */
         fun acrossOf(string: Double): Double = (0.5 - string / (k.strings - 1)) * k.neck * 0.8 * s * 2.5
 
-        // the right hand's way through the strings at each note: down after a pause, else down and up in turn
-        var way = forgotten?.way ?: 1.0
-
-        return lead + strums.mapIndexed { i, n ->
-            val grip = grips[i]
+        return planned.plucks.map { pluck ->
+            val n = pluck.strum
+            val grip = pluck.grip
             // the strings that sound: each note's own
             val sounding = grip.stops.map { it.string }.ifEmpty { listOf(0) }
             // the fingers lie on the strings that are pressed, at the middle of their frets; where every string is
@@ -208,23 +175,18 @@ class StringPlayer(
             val fingers = pressed.map { it.string }.ifEmpty { sounding }
             // the right hand plays at the middle of the strings that sound; one string is picked, several are strummed
             val mid = sounding.sum().toDouble() / sounding.size
-            val gap = if (i > 0) n.t - strums[i - 1].t else forgotten?.let { n.t - it.t } ?: 9.0
-
-            way = if (gap > 0.28) 1.0 else -way
 
             Pluck(
                 t = n.t,
                 v = n.v,
                 d = n.d,
-                pitches = n.all,
-                grip = grip,
                 along = alongOf(fret),
                 hold = alongOf(grip.position + Tuning.SPAN / 2.0),
                 across = acrossOf(fingers.sum().toDouble() / fingers.size),
                 strings = sounding,
                 pick = acrossOf(mid),
                 wide = if (sounding.size > 1) 1.0 else 0.4,
-                way = way,
+                way = pluck.way,
             )
         }
     }

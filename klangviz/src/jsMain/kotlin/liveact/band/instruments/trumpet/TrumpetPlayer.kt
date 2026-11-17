@@ -124,11 +124,10 @@ class TrumpetPlayer(
     private var notes: List<Note> = emptyList()
 
     /**
-     * Until when she played before the first note known, where the song has forgotten its past, and her last note
-     * of it; null where it has not. Her strolls go on from the one, her phrases from the other.
+     * The last plan (see [planTrumpet]): where the song has forgotten its past, the next one goes on from until when
+     * she played and from her last note of it.
      */
-    private var playedUntil: Double? = null
-    private var lastBefore: Note? = null
+    private var planned: TrumpetPlan = TrumpetPlan()
 
     /** Her lowest and her highest note so far: of those known, and of those the song has forgotten. */
     private var lowest: Int = 60
@@ -165,63 +164,21 @@ class TrumpetPlayer(
     }
 
     /**
-     * Her phrases and her strolls, from the notes as far as they are known at [now].
-     *
-     * After the last note known she is free for as long as nothing more is known, and strolls. So a stroll can have
-     * begun before the song said that her next note comes sooner than a stroll needs: one that has begun stays, and
-     * she is back four seconds before that note. Her way back takes up to nine seconds, so she comes back without a
-     * jump only where the song is known thirteen seconds ahead or more (who reads the song sees to that).
+     * Her phrases and her strolls, from the notes as far as they are known at [now] (see [planTrumpet]: a stroll
+     * that has begun stays).
      */
     private fun plan(now: Double) {
-        // what the song has forgotten since the last plan: she is free from the end of the last of it
-        val known = part.events
-        val from = known.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
-
-        for (n in notes) {
-            if (n.t < from) {
-                playedUntil = max(playedUntil ?: 0.0, n.t + n.d)
-                lastBefore = n
-            }
-        }
-
-        val until = playedUntil
-        val last = lastBefore
-
-        notes = known
-        // (a note forgotten still counts for her range)
-        lowest = listOfNotNull(notes.minOfOrNull { it.midi }, lowest.takeIf { until != null }).minOrNull() ?: 60
-        highest = listOfNotNull(notes.maxOfOrNull { it.midi }, highest.takeIf { until != null }).maxOrNull() ?: 72
-        phrases = notes.filterIndexed { i, n ->
-            val previous = if (i == 0) last else notes[i - 1]
-
-            previous == null || n.t - (previous.t + previous.d) > 6
-        }.map { it.t }
-
         val before = strolls
-        val found = mutableListOf<Stroll>()
-        var free = max(3.0, until ?: 0.0)
 
-        for (i in 0..notes.size) {
-            val next = if (i < notes.size) notes[i].t else 1e9
-
-            // he stands a good while first (the maintainer, 2026-11-16): twelve seconds after his last note, or after the start
-            val from = free + 12
-            // one that has begun: it was planned before, and now is in it
-            val begun = from < now && next > now && before.any { it.from == from }
-
-            if (next - free > 30 || begun) {
-                val to = min(next - 4, free + 12 + 3600)
-
-                // the same stroll as before keeps what was worked out for it
-                found.add(before.firstOrNull { it.from == from && it.to == to } ?: Stroll(from = from, to = to))
-            }
-
-            if (i < notes.size) {
-                free = max(free, notes[i].t + notes[i].d)
-            }
+        planned = planTrumpet(notes = part.events, now = now, before = planned)
+        notes = planned.notes
+        lowest = planned.lowest
+        highest = planned.highest
+        phrases = planned.phrases
+        // the same stroll as before keeps what was worked out for it
+        strolls = planned.strolls.map { stroll ->
+            before.firstOrNull { it.from == stroll.from && it.to == stroll.to } ?: Stroll(from = stroll.from, to = stroll.to)
         }
-
-        strolls = found
     }
 
     /** Where the stroll [k] has him at [t], off his place: a slow wandering that leaves from his place and comes back to it. */
