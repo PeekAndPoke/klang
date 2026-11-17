@@ -112,3 +112,4 @@ The maintainer watches Der Schmetterling played by the band and says it is good 
   picture as the prototype: of 18 fixed stills 17 are identical pixel for pixel, one differs in one pixel. Next:
   the music and its events from the engine, live (no ticket yet; see the epic, KLANG-00447).
 - 2026-11-16: the audience stands in half a circle around the stage (the maintainer: "as if they are in a giant open air theater - half a big circle"); `CrowdPlaces`, with a spec.
+- 2026-11-17: the camera does a little more (the maintainer: "could use more camera cuts and movements. not too much but a little more", and asked for the travel "from the total over the audience back to the FOH" and "the other way around"): a fourth kind of round, the flight to the mixing desk and back (`Flight`, with a spec; `?move=flight`), and two looks in a row in the first half of a round of looks or with an arc.

@@ -27,13 +27,18 @@ import kotlin.math.sin
 import kotlin.math.tan
 
 // The camera's choreography. Mostly the total: the wide view from the audience, the start position. The song is cut
-// into rounds of 48 cycles (bars, about 79 s), and a round is one of three kinds, by the seed:
+// into rounds of 48 cycles (bars, about 79 s), and a round is one of four kinds, by the seed:
 //   looks   34 bars on the total, then three looks in a row, three bars each, with a cut between them (close on one
 //           player, or the stage from another angle)
 //   arc     the same, but the nine bars are one look: the camera goes slowly round one player, across their front
 //   circle  24 bars on the total, then one slow flight right round the whole band, from the start position and
 //           back to it, with no cut at all
-// From a look or an arc it comes back to the total by a plain cut in two rounds of three, and in the third by a slow
+//   flight  20 bars on the total, then out backward over the audience to the mixing desk far back (the FOH), a
+//           while there, and back in; one of the two ways may be a cut instead (see Flight)
+// A round of looks or with an arc also has two looks in a row in its first half (bars 12 to 18, back to the total
+// by a plain cut), so such a round never holds the total longer than some 17 bars (the maintainer, 2026-11-17:
+// "could use more camera cuts and movements. not too much but a little more").
+// From the late looks or an arc it comes back to the total by a plain cut in two rounds of three, and in the third by a slow
 // dolly zoom over five bars (the camera travels back while its lens opens, so the player keeps much of their size
 // at first as the stage grows round them).
 // Calm on purpose (the maintainer, 2026-11-16: fast moves "make dizzy"; "do not cut too often to the people, but
@@ -63,7 +68,10 @@ enum class RoundKind(val key: String) {
     Arc("arc"),
 
     /** One slow flight right round the whole band. */
-    Circle("circle");
+    Circle("circle"),
+
+    /** Out over the audience to the mixing desk far back, and back in. */
+    Flight("flight");
 
     companion object {
         /** The kind named [key]; null where there is none. */
@@ -150,6 +158,15 @@ private const val BACK = 43
 private const val CIRCLE = 24
 private const val ROUND = 48
 
+/** Where the two looks of a round's first half begin, in bars. */
+private const val EARLY = 12
+
+/** How many looks a round can have: three late, two early. */
+private const val LOOKS_A_ROUND = 5
+
+/** The bar of a round at which its look number [i] begins: 0 to 2 are the late three, 3 and 4 the early two. */
+private fun opens(i: Int): Int = if (i < 3) FIRST + 3 * i else EARLY + 3 * (i - 3)
+
 /** The players in the order the camera tries them, and the keys 1 to 6 choose them. */
 val ORDER: List<Player> = listOf(Player.Drums, Player.Guitar1, Player.Eimer, Player.Bass, Player.Guitar2, Player.Marimba)
 
@@ -204,23 +221,26 @@ class Choreography(
     private val begun = mutableMapOf<Int, Subject>()
 
     /**
-     * What the look number [i] (0, 1, 2) of round [n] shows: a player who plays then, or the stage from another angle.
+     * What the look number [i] of round [n] shows (0, 1, 2 the late three, 3 and 4 the early two): a player who plays
+     * then, or the stage from another angle.
      * It is chosen from the notes known, and kept once the look has begun: a song played live forgets those notes
      * while the round still asks for its looks (the way back from the last look goes on long after the first).
      */
     fun subject(n: Int, i: Int): Subject {
-        val key = n * 3 + i
+        val key = n * LOOKS_A_ROUND + i
 
         return begun[key] ?: choose(n, i).also {
-            if (heard >= start + n * round + (FIRST + 3 * i) * cycle) {
+            if (heard >= start + n * round + opens(i) * cycle) {
                 begun[key] = it
             }
         }
     }
 
     private fun choose(n: Int, i: Int): Subject {
-        val a = start + n * round + (FIRST + 3 * i) * cycle
+        val a = start + n * round + opens(i) * cycle
         val b = a + 3 * cycle
+        // the first of its row of looks: nobody was shown right before it
+        val leads = i == 0 || i == 3
 
         fun <T> pick(list: List<T>, salt: Int): T = list[floor(chance(n, i, salt) * list.size).toInt() % list.size]
 
@@ -233,7 +253,7 @@ class Choreography(
         val rare = listOf(Player.Marimba, Player.Eimer).filter { plays(it, a, b) > 2 }
         var player: Player? = if (rare.isNotEmpty() && i == 0) pick(rare, 3) else null
         // else someone who plays just then, and not the one the look before showed
-        val before = if (i > 0) subject(n, i - 1).player else null
+        val before = if (!leads) subject(n, i - 1).player else null
         val first = floor(chance(n, i, 4) * ORDER.size).toInt()
 
         for (k in ORDER.indices) {
@@ -256,13 +276,14 @@ class Choreography(
     }
 
     /**
-     * What kind the round [n] is: about a quarter each are a circle and an arc, the rest looks. An arc needs a player
-     * who stays at their place (the frontwoman strolls and turns: the camera would swing with her).
+     * What kind the round [n] is: about a fifth each are a circle, an arc and a flight, the rest looks. An arc needs
+     * a player who stays at their place (the frontwoman strolls and turns: the camera would swing with her).
      */
     fun kind(n: Int): RoundKind {
         val kind = force ?: when {
-            chance(n, 0, 7) < 0.25 -> RoundKind.Circle
-            chance(n, 0, 7) < 0.5 -> RoundKind.Arc
+            chance(n, 0, 7) < 0.2 -> RoundKind.Circle
+            chance(n, 0, 7) < 0.4 -> RoundKind.Arc
+            chance(n, 0, 7) < 0.6 -> RoundKind.Flight
             else -> RoundKind.Looks
         }
         val player = subject(n, 0).player
@@ -285,6 +306,21 @@ class Choreography(
         val pos = vec(8.5 * sin(angle), HOME.pos.y + 0.45 * (1 - cos(angle)), -0.3 + far * cos(angle))
 
         return Shot(pos = pos.add(home.pos).sub(HOME.pos), at = home.at, fov = home.fov)
+    }
+
+    /**
+     * The camera [share] of the way from the total [home] (0) to the mixing desk far back in the audience (1), at
+     * [t]: backward and upward over the audience's lights in a straight line, the look sinking from the band to the
+     * ground before the stage, the lens closing. At the desk it is never quite still either.
+     */
+    private fun flight(share: Double, home: Shot, t: Double): Shot {
+        val desk = vec(STADIUM.pos).add(vec(0.30 * sin(t * 0.06), 0.10 * sin(t * 0.05 + 1), 0.0))
+
+        return Shot(
+            pos = home.pos.clone().lerp(desk, share),
+            at = home.at.clone().lerp(vec(STADIUM.at), share),
+            fov = home.fov + (STADIUM.fov - home.fov) * share,
+        )
     }
 
     /** The slow way round the player of round [n], [u] of it (0 to 1): across their front, 43 degrees to each side. */
@@ -379,7 +415,7 @@ class Choreography(
 
         heard = t
         // (the looks of the rounds before the last are of no use any more)
-        begun.keys.removeAll { it < (n - 1) * 3 }
+        begun.keys.removeAll { it < (n - 1) * LOOKS_A_ROUND }
         val roundKind = kind(n)
 
         if (roundKind == RoundKind.Circle) {
@@ -390,6 +426,33 @@ class Choreography(
             label = "circle round the band"
 
             return circle(n, smoother((x - CIRCLE) / (ROUND - CIRCLE)), home)
+        }
+
+        if (roundKind == RoundKind.Flight) {
+            val way = Flight.way(chance(n, 0, 10))
+            val share = Flight.share(way, x)
+
+            label = when {
+                share <= 0.0 -> "total"
+                share >= 1.0 -> "from the mixing desk"
+                x < Flight.IN -> "flight out over the audience"
+                else -> "flight back in over the audience"
+            }
+
+            return if (share <= 0.0) home else flight(share = share, home = home, t = t)
+        }
+
+        // two looks in a row in the round's first half
+        if (x >= EARLY && x < opens(4) + 3) {
+            val i = if (x < opens(4)) 3 else 4
+            val seen = subject(n, i)
+            val early = this.shot(seen)
+            val far = slide(early, i, (x - opens(i)) / 3)
+
+            label = "look ${i - 2} of 2: ${seen.words}"
+            early.pos.y += 0.008 * far * sin(t * 0.8 + i)
+
+            return early
         }
 
         val dolly = chance(n, 0, 6) < 0.34
