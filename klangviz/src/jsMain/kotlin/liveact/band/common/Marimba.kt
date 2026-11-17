@@ -128,6 +128,15 @@ class MarimbaPlayer(
     /** The marimba. */
     val group: Group = Three.addon.createGroup()
 
+    /**
+     * Her hair as only her shadow has it: Medusa's snakes (see [ShadowHair]). None with `?nosnakes`; drawn as well,
+     * to look at them, with `?snakes`.
+     */
+    private val snakes: ShadowHair? = when {
+        show.switches.has("nosnakes") -> null
+        else -> ShadowHair(rig = rig, shown = show.switches.has("snakes"))
+    }
+
     /** The stage's floor where she stands: the marimba hovers above it. */
     private val floor: Double
 
@@ -619,6 +628,14 @@ class MarimbaPlayer(
         if (eyes != null) {
             eyes.emissiveIntensity = 2 + 12 * min(1.6, energy)
         }
+    }
+
+    /**
+     * What goes with her as she is posed at last: the snakes on her head. Call it once everything that turns her
+     * head has done so for this frame (the looks between the players come after [update]).
+     */
+    fun afterPose(t: Double) {
+        snakes?.update(t)
     }
 
     private companion object {

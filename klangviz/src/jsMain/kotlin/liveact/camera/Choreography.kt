@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.camera
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.common.Place
 import io.peekandpoke.klang.viz.liveact.band.common.Rig
 import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.smoother
@@ -134,13 +135,42 @@ val LOOKS: Map<Player, List<Placement>> = mapOf(
     ),
     Player.Rune to listOf(
         Placement(pos = Triple(0.2, 2.2, 2.3), at = Triple(0.0, 0.90, 0.5), fov = 42.0),    // down on the bars
-        Placement(pos = Triple(1.9, 1.15, 1.5), at = Triple(0.0, 1.05, 0.5), fov = 38.0),   // along the bars
+        // along the bars, low, from before the rhythm guitarist: his guitar at the picture's edge, and she is seen
+        // (from beside him he stood before her, and the camera in his guitar)
+        Placement(pos = Triple(1.6, 0.95, 2.1), at = Triple(0.0, 1.05, 0.5), fov = 38.0),
         Placement(pos = Triple(-0.8, 1.5, 2.2), at = Triple(0.0, 1.25, 0.2), fov = 32.0),
     ),
 )
 
 /** The looks at [player]. */
 fun looksOf(player: Player): List<Placement> = LOOKS[player] ?: STANDING_LOOKS
+
+/**
+ * The looks at every player of a band that stands at [homes]: [looksOf], each camera moved where it would stand in
+ * another player or their instrument, so that it is [CLEAR] m from where every other one stands (see [clearLook]).
+ * A look from above the players' heads passes over them and stays as it is set.
+ */
+fun looksOn(homes: Map<Player, Place>): Map<Player, List<Placement>> = homes.mapValues { (player, home) ->
+    val others = homes.filterKeys { it != player }.values.map { Ground(x = it.x, z = it.z) }
+
+    looksOf(player).map { look ->
+        when {
+            look.pos.second + home.y >= OVERHEAD -> look
+
+            else -> {
+                val moved = clearLook(
+                    camera = Ground(x = look.pos.first, z = look.pos.third),
+                    target = Ground(x = look.at.first, z = look.at.third),
+                    home = Standing(at = Ground(x = home.x, z = home.z), turn = home.turn),
+                    others = others,
+                    clear = CLEAR,
+                )
+
+                look.copy(pos = Triple(moved.x, look.pos.second, moved.z))
+            }
+        }
+    }
+}
 
 /** The stadium shot: from far back and high in the audience, the whole stage small above a field of held-up lights. */
 val STADIUM: Placement = Placement(pos = Triple(5.0, 11.0, 46.0), at = Triple(0.0, 0.0, 14.0), fov = 27.0)
@@ -188,6 +218,12 @@ private const val LOOKS_A_ROUND = 5
 /** The bar of a round at which its look number [i] begins: 0 to 2 are the late three, 3 and 4 the early two. */
 private fun opens(i: Int): Int = if (i < 3) FIRST + 3 * i else EARLY + 3 * (i - 3)
 
+/** How far a camera that looks at one player stays from where every other one stands, in metres: clear of a guitar's neck and head. */
+const val CLEAR = 1.3
+
+/** From this height on a camera is above the players' heads and passes over them. */
+private const val OVERHEAD = 2.1
+
 /** The players in the order the camera tries them, and the keys 1 to 6 choose them. */
 val ORDER: List<Player> = listOf(Player.Wucht, Player.Skalpell, Player.Sirene, Player.Beben, Player.Klaue, Player.Rune)
 
@@ -195,12 +231,13 @@ val ORDER: List<Player> = listOf(Player.Wucht, Player.Skalpell, Player.Sirene, P
  * The camera's choreography under [show]: a bar is its cycle, and every seed gives another show (who is looked at,
  * from where, in which order, when, and how it comes back).
  *
- * [rigs]: the players' figures. [activity]: the times a player plays a note, sorted, as far as the song is known
+ * [rigs]: the players' figures. [looks]: the looks at each player (see [looksOn]). [activity]: the times a player plays a note, sorted, as far as the song is known
  * (asked at every look). [force]: makes every round that kind (to see one; else the seed decides).
  */
 class Choreography(
     show: Show,
     private val rigs: Map<Player, Rig>,
+    private val looks: Map<Player, List<Placement>>,
     private val activity: (Player) -> List<Double>,
     private val force: RoundKind? = null,
 ) {
@@ -293,7 +330,7 @@ class Choreography(
             return Subject.Angle(pick(ANGLES, 2))
         }
 
-        return Subject.OnPlayer(player, pick(looksOf(player), 5))
+        return Subject.OnPlayer(player, pick(looks.getValue(player), 5))
     }
 
     /**

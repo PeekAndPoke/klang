@@ -54,7 +54,7 @@ enum class Side(val sign: Double) {
 class Rig(val root: Object3D) {
 
     /** A bone as it is at rest: its turn and place against its parent, and its place in the world. */
-    private class Rest(val q: Quaternion, val p: Vector3, val world: Vector3)
+    private class Rest(val q: Quaternion, val p: Vector3, val world: Vector3, val turn: Quaternion)
 
     /** The bones by name: each is named after the joint it ends at. */
     val bones: Map<String, Bone>
@@ -114,8 +114,15 @@ class Rig(val root: Object3D) {
 
         root.updateWorldMatrix(updateParents = true, updateChildren = true)
 
+        val upright = root.getWorldQuaternion(quat()).invert()
+
         rest = bones.mapValues { (_, bone) ->
-            Rest(q = bone.quaternion.clone(), p = bone.position.clone(), world = bone.getWorldPosition(vec()))
+            Rest(
+                q = bone.quaternion.clone(),
+                p = bone.position.clone(),
+                world = bone.getWorldPosition(vec()),
+                turn = upright.clone().multiply(bone.getWorldQuaternion(quat())),
+            )
         }
 
         fun local(name: String) = root.worldToLocal(rest.getValue(name).world.clone())
@@ -134,6 +141,9 @@ class Rig(val root: Object3D) {
 
     /** Where the bone [name] starts just now, in the world. */
     fun at(name: String): Vector3 = bone(name).getWorldPosition(vec())
+
+    /** How the bone [name] is turned against the figure as a whole, at rest. A new one each time. */
+    fun restTurn(name: String): Quaternion = rest.getValue(name).turn.clone()
 
     /** Where the bone [name] starts at rest, in the figure's space. */
     fun restStart(name: String): Vector3 = root.worldToLocal(rest.getValue(name).world.clone())

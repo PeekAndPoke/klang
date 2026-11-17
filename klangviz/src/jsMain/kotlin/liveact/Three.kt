@@ -46,7 +46,7 @@ internal fun Event.fromTyping(): Boolean {
 
 /**
  * Frees what the nodes under this one hold on the graphics card: every geometry, every material and the textures
- * a material carries, a lamp's shadow map and a skeleton's bones. The nodes stay where they are; call it when the scene is given up.
+ * a material carries, a lamp's shadow map, a skeleton's bones and the places of a mesh drawn many times over. The nodes stay where they are; call it when the scene is given up.
  */
 internal fun Object3D.disposeTree() {
     traverse { node ->
@@ -76,6 +76,11 @@ internal fun Object3D.disposeTree() {
         o.shadow?.dispose()
         // a figure's bones, as a picture on the card
         o.skeleton?.dispose()
+
+        // a mesh drawn many times over holds each one's place on the card
+        if (o.isInstancedMesh == true) {
+            o.dispose()
+        }
     }
 }
 

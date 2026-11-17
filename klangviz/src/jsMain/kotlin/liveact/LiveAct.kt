@@ -59,8 +59,8 @@ fun Tag.LiveAct(show: Show, models: String) = comp(
  * It puts the pieces together and runs the frames. Set up, in this order (what is made first is drawn first, and
  * the players take their figures' places as home): the stage, the band, the clock, the view. Each frame, in this
  * order: the sound's energy first (the nod reads it); then everyone's place and pose; then what is laid over the
- * poses (eye contact, the eyes' glow, breath, breath last because it widens bones); then the lights; then the
- * camera, which follows the figures; and the viewer's place for the next frame's looks.
+ * poses (eye contact, the eyes' glow, what goes with a head, breath; breath last because it widens bones); then the
+ * lights; then the camera, which follows the figures; and the viewer's place for the next frame's looks.
  *
  * Two limits, as the prototype it was ported from has them. It takes the page for its own: its keys (space, the
  * arrows, single letters and digits) and a click anywhere are the show's, except while the user types in a field;
@@ -248,7 +248,13 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
             stage.shade(band.drummer.kit)
 
-            val view = View(show = show, scene = ctx.scene, camera = lens, rigs = band.rigs)
+            val view = View(
+                show = show,
+                scene = ctx.scene,
+                camera = lens,
+                rigs = band.rigs,
+                homes = Notstrom.PLACES,
+            )
             // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
             // fail before it is kept (and with it given up on unmount)
             val clock = ShowClock(show = show, notice = element(NOTICE_ID), intro = Notstrom.INTRO)
@@ -274,6 +280,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         now.band.play(t)
         eyeContact(show = show, rigs = now.band.rigs, herNotes = herNotes, t = t)
         eyesWaver(show = show, rigs = now.band.rigs, t = t)
+        // what goes with a head as it is held at last: after every turn of it above, and before the breath, which
+        // widens bones and would blur how the head is read
+        now.band.marimba.afterPose(t)
         breathing(show = show, rigs = now.band.rigs, t = t, slow = energy.slow)
         now.stage.light(t = t, house = now.clock.houseAt(), waiting = now.clock.waiting())
         now.view.look(t)

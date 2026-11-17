@@ -118,7 +118,7 @@ class ThreeHelpersSpec : StringSpec({
         inPage(host) { typingOn(field) } shouldBe true
     }
 
-    "giving a tree up frees its geometries, its materials, their pictures, a lamp's shadow map and a skeleton" {
+    "giving a tree up frees its geometries, its materials, their pictures, a lamp's shadow map, a skeleton and a mesh drawn many times" {
         withThree { three ->
             val freed = mutableListOf<String>()
 
@@ -153,8 +153,15 @@ class ThreeHelpersSpec : StringSpec({
             figure.skeleton = jsObject<dynamic> { dispose = { skeletonFreed.add(true) } }
             root.add(figure.unsafeCast<Object3D>())
 
+            // a mesh drawn many times over, which says when its places are freed
+            val many = three.create<dynamic>("InstancedMesh", geometry, plain, 3)
+            val manyFreed = mutableListOf<Boolean>()
+            many.addEventListener("dispose") { manyFreed.add(true) }
+            root.add(many.unsafeCast<Object3D>())
+
             root.disposeTree()
 
+            manyFreed.size shouldBe 1
             freed.contains("geometry") shouldBe true
             freed.contains("picture") shouldBe true
             freed.contains("pictured") shouldBe true
@@ -162,7 +169,7 @@ class ThreeHelpersSpec : StringSpec({
             shadowFreed.size shouldBe 1
             skeletonFreed.size shouldBe 1
             // the nodes stay where they are
-            root.children.size shouldBe 4
+            root.children.size shouldBe 5
         }
     }
 })

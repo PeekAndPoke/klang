@@ -9,6 +9,7 @@ import io.peekandpoke.klang.viz.liveact.fromTyping
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.common.Place
 import io.peekandpoke.klang.viz.liveact.band.common.Rig
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.smoother
@@ -59,17 +60,22 @@ class View(
     private val scene: Scene,
     private val camera: PerspectiveCamera,
     private val rigs: Map<Player, Rig>,
+    homes: Map<Player, Place>,
 ) {
     private val switches = show.switches
 
     /** A bar, in seconds. */
     private val bar: Double = show.bar
 
+    /** The looks at each player, clear of the others where they stand. */
+    private val looks: Map<Player, List<Placement>> = looksOn(homes)
+
     /** The camera's choreography, when the song is there (`?still`: the wide view only). */
     private val choreography: Choreography? = if (show.song != null && !switches.has("still")) {
         Choreography(
             show = show,
             rigs = rigs,
+            looks = looks,
             activity = { player ->
                 when (player) {
                     Player.Wucht -> show.times("kick", "snare")
@@ -199,12 +205,12 @@ class View(
 
             k >= "1" && k <= "6" -> {
                 val chosen = ORDER[k.first().digitToInt() - 1]
-                val looks = looksOf(chosen)
+                val theirs = looks.getValue(chosen)
                 val before = lookOf[chosen] ?: 0
 
-                lookOf[chosen] = if (chosen == player && hand is Hand.Fixed) (before + 1) % looks.size else before
+                lookOf[chosen] = if (chosen == player && hand is Hand.Fixed) (before + 1) % theirs.size else before
                 player = chosen
-                hand = Hand.Fixed(Subject.OnPlayer(player = chosen, look = looks[lookOf.getValue(chosen)]))
+                hand = Hand.Fixed(Subject.OnPlayer(player = chosen, look = theirs[lookOf.getValue(chosen)]))
             }
 
             k == "a" -> {
