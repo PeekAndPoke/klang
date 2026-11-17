@@ -74,11 +74,14 @@ fun SprudelVoiceData.resolveNote(newIndex: Int? = null): SprudelVoiceData {
     }
 
     // Case B: reinterpretation / fallback. Populate note from value if missing.
+    // With no note to resolve the frequency stays as it is: an unset one stays unset (a sample then plays at its own
+    // pitch) and one set by freq() survives. Tones.noteToFreq("") is 440 Hz, which once re-pitched every drum sample
+    // and replaced every freq() under a song-wide scale().
     val resolvedNote = note ?: fallbackName
 
     return copy(
         note = resolvedNote,
-        freqHz = Tones.noteToFreq(resolvedNote ?: ""),
+        freqHz = if (resolvedNote != null) Tones.noteToFreq(resolvedNote) else freqHz,
         soundIndex = variantOverride ?: (n ?: soundIndex),
         gain = gainOverride ?: gain,
     )

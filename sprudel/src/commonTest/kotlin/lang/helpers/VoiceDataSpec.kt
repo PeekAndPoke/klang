@@ -85,6 +85,29 @@ class VoiceDataSpec : StringSpec({
         result.freqHz shouldBe 440.0
     }
 
+    "resolveNote() with a scale but no note and no index leaves the frequency unset" {
+        // A drum sample under a song-wide scale: sound("oh").scale("c3:minor"). It has nothing to resolve, so it
+        // keeps no frequency and plays at its own pitch.
+        val voice = createSprudelVoiceData { scale = "C3 minor" }
+
+        val result = voice.resolveNote()
+
+        result.note shouldBe null
+        result.freqHz shouldBe null
+    }
+
+    "resolveNote() with a scale but no note and no index keeps a frequency set by freq()" {
+        val voice = createSprudelVoiceData {
+            scale = "C3 minor"
+            freqHz = 205.0
+        }
+
+        val result = voice.resolveNote()
+
+        result.note shouldBe null
+        result.freqHz shouldBe 205.0
+    }
+
     "resolveNote() with value as note string should use it as fallback" {
         val voice = createSprudelVoiceData {
             value = "C4".asVoiceValue()
@@ -230,7 +253,7 @@ class VoiceDataSpec : StringSpec({
         val result = voice.resolveNote()
 
         result.note shouldBe null
-        result.freqHz shouldBe 440.0
+        result.freqHz shouldBe null
         result.soundIndex shouldBe null
     }
 })
