@@ -124,9 +124,10 @@ FIGURES = {
                     move=dict(shoulderL=(0, 0, -0.020), shoulderR=(0, 0, -0.020)),
                     # a bit of a neck, not as thick as it was, and a chin seen from the side: the throat is set back
                     # under it, so the chest no longer runs straight up into the face (the maintainer, 2026-11-17: "we
-                    # need a little Kinn when seen from the side"); broad rather than pointed, and not much of it
-                    hips=1.2, shoulders=1.06, neck=1.06, eye=(1.0, 0.6, 0.1), face=dict(taper=0.0, throat=0.034),
-                    jaw=0.8, chin=dict(wide=1.7, square=True, drop=0.5),
+                    # need a little Kinn when seen from the side"). Nothing is drawn out of the face for it: a chin pulled
+                    # forward left a hollow above it that read as a mouth wide open, and the face is to stay flat
+                    hips=1.2, shoulders=1.06, neck=1.06, eye=(1.0, 0.6, 0.1), face=dict(taper=0.0, throat=0.040),
+                    jaw=0.0, flat_face=True,
                     extras=[("gut", "belly", (0, -0.09, -0.01), 0.165, 1.0, False),
                             ("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
                             ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
@@ -445,6 +446,33 @@ def shape_face(body, head, hs, taper=0.0, throat=0.0):
         v.co.y += throat * hs * front * under
 
 
+def flatten_face(body, head, hs):
+    """
+    A flat face: from the eyes down to the chin the skin that lies behind the face's front is brought forward to it,
+    so no hollow is left between the head and the chin under it (lit from above it read as a mouth wide open).
+    The front is where the skin is at the eyes' height; it fades out toward the sides, the brow and under the chin.
+    """
+    def smooth(x):
+        x = min(1.0, max(0.0, x))
+        return x * x * (3 - 2 * x)
+
+    eye_z = head.pos.z + 0.010 * hs
+    chin_z = head.pos.z - 0.085 * hs
+    at_eyes = [v.co.y for v in body.data.vertices
+               if abs(v.co.x) < 0.03 * hs and abs(v.co.z - eye_z) < 0.03 * hs and v.co.y < head.pos.y
+               and (v.co - head.pos).length < 1.6 * head.radius]
+    if not at_eyes:
+        return
+    front = min(at_eyes)
+    for v in body.data.vertices:
+        if (v.co - head.pos).length > 1.8 * head.radius or v.co.y > head.pos.y or v.co.y <= front:
+            continue
+        high = smooth((eye_z + 0.03 * hs - v.co.z) / (0.03 * hs))
+        low = smooth((v.co.z - (chin_z - 0.02 * hs)) / (0.025 * hs))
+        side = smooth((0.065 * hs - abs(v.co.x)) / (0.03 * hs))
+        v.co.y += (front - v.co.y) * high * low * side
+
+
 # How deep an eye's socket is, in metres at a head of normal size
 SOCKET = 0.010
 
@@ -605,6 +633,8 @@ def build(key):
     if p.get("face"):
         shape_face(body, head, hs, **p["face"])
     draw_chin(body, head, hs, p.get("jaw", 1.0), **p.get("chin", {}))
+    if p.get("flat_face"):
+        flatten_face(body, head, hs)
     # a long skull, where one is worn, before the eyes: they have to find the forehead it makes
     back = None
     if p.get("skull"):
