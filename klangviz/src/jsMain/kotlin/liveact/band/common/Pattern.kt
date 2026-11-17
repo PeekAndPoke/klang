@@ -30,8 +30,11 @@ var dressLevel: Double
         dress.value = value
     }
 
-/** A pattern a body can wear: [key] names it (in the program's cache key), [glsl] is its value at the place `p`. */
-enum class ClothPattern(val key: String, val glsl: String) {
+/**
+ * A pattern a body can wear: [key] names it (in the program's cache key), [glsl] is its value at the place `p`, an
+ * expression; [before] are statements that work out what that expression needs, where one line is not enough.
+ */
+enum class ClothPattern(val key: String, val glsl: String, val before: String = "") {
     /** Broad bands round the body, waving like a tiger's. */
     Tiger(
         key = "tiger",
@@ -54,6 +57,23 @@ enum class ClothPattern(val key: String, val glsl: String) {
     Spots(
         key = "spots",
         glsl = "1.0 - smoothstep(0.26, 0.34, length(fract(vec3(p.x * 11.0 + 0.5 * floor(p.y * 11.0), p.y * 11.0, p.z * 11.0)) - 0.5))",
+    ),
+
+    /**
+     * The marks of a claw: four scratches side by side, slanting down the body, a little bent, thin at both ends;
+     * one such mark in most of the fields the body is cut into (six round it, a scratch some 25 cm long), a quarter of
+     * them left bare. The fields meet where the angle round the body starts again, so no mark is cut there.
+     */
+    Claws(
+        key = "claws",
+        before = "float ca = atan(p.z, p.x); " +
+            "vec2 cq = vec2(ca * (2.0 / PI) + p.y * 1.9, p.y * 2.5 - ca * RECIPROCAL_PI); " +
+            "vec2 ci = floor(cq); vec2 cf = cq - ci - 0.5; " +
+            "float ch = fract(sin(dot(vec2(ci.x + 2.0 * ci.y, mod(ci.x, 4.0)), vec2(12.9898, 78.233))) * 43758.5453); " +
+            "float cx = cf.x + 0.35 * cf.y * cf.y - 0.04; " +
+            "float cd = abs(abs(abs(cx) - 0.14) - 0.07); " +
+            "float cw = 0.040 * (1.0 - smoothstep(0.18, 0.44, abs(cf.y)));",
+        glsl = "(1.0 - smoothstep(cw * 0.45, cw + 0.0005, cd)) * step(abs(cx), 0.27) * step(abs(cf.y), 0.44) * step(0.25, ch)",
     ),
 
     /** A harlequin's diamonds. */
@@ -142,12 +162,12 @@ fun pattern(
             .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;\nuniform float uDress;")
             .replaceFirst(
                 "#include <roughnessmap_fragment>",
-                "#include <roughnessmap_fragment>\nfloat klOn; { vec3 p = vRest; klOn = ${kind.glsl}; " +
+                "#include <roughnessmap_fragment>\nfloat klOn; { vec3 p = vRest; ${kind.before} klOn = ${kind.glsl}; " +
                     "roughnessFactor = mix(${matt.toFixed(3)}, ${gloss.toFixed(3)}, klOn); }$sparkle$combed",
             )
             .replaceFirst(
                 "#include <color_fragment>",
-                "#include <color_fragment>\n{ vec3 p = vRest; float figure = ${kind.glsl}; " +
+                "#include <color_fragment>\n{ vec3 p = vRest; ${kind.before} float figure = ${kind.glsl}; " +
                     "diffuseColor.rgb *= mix(mix(1.0, 0.15, uDress), 1.0, figure); }",
             )
             // lit from the front ([dress]) the cloth's ground goes dark: it throws back an eighth of the light the

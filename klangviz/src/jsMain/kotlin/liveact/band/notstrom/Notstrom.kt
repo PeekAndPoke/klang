@@ -94,7 +94,7 @@ class Notstrom private constructor(
             Player.Wucht to ClothPattern.Tiger,
             Player.Beben to ClothPattern.Pinstripe,
             Player.Skalpell to ClothPattern.Spiral,
-            Player.Klaue to ClothPattern.Spots,
+            Player.Klaue to ClothPattern.Claws,
             Player.Rune to ClothPattern.Diamonds,
             Player.Sirene to ClothPattern.Braid,
         )
