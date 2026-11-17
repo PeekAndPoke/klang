@@ -23,5 +23,6 @@ class Rune(Figure):
     def sculpt(self, w):
         # who has a bust has no chest muscle drawn over it
         shape_muscles(w.body, w.P, w.height, only=[m for m in MUSCLES if m != "pec"])
-        shape_bust(w.body, w.P["chest"], w.height, apart=0.056, down=0.045, out=0.038, size=0.052)
+        # (a little fuller than at first: the maintainer, 2026-11-17)
+        shape_bust(w.body, w.P["chest"], w.height, apart=0.058, down=0.046, out=0.046, size=0.058)
         draw_chin(w.body, w.head, w.hs, 1.0)

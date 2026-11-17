@@ -54,7 +54,9 @@ private suspend fun withThree(block: suspend (ThreeJsAddon) -> Unit) {
  * things on its renderer.
  */
 private fun standInRenderer(): WebGLRenderer {
-    val renderer: dynamic = js("({ shadowMap: {}, domElement: { height: 520 }, setPixelRatio: function () {} })")
+    val renderer: dynamic = js(
+        "({ shadowMap: {}, domElement: { height: 520 }, setPixelRatio: function () {}, getPixelRatio: function () { return 1; } })",
+    )
 
     return renderer.unsafeCast<WebGLRenderer>()
 }
@@ -139,12 +141,22 @@ class StageSpec : StringSpec({
 
                 // the ambient light, four lamps above and the one low at the front
                 lamps shouldBe 6
-                // floor, wall, riser, the lamps with their targets, the crowd; and the fog's twelve sheets
-                scene.children.size shouldBe 15 + 12
+                // floor, wall, riser, the lamps with their targets, the crowd's lights and the terraces they stand
+                // on, the night sky; and the fog's twelve sheets
+                scene.children.size shouldBe 17 + 12
 
                 // a frame's light step runs on it, before the song and in it
                 stage.light(t = -5.0, house = 0.07, waiting = true)
                 stage.light(t = 62.0, house = 1.0, waiting = false)
+
+                // the sky goes with the camera, once the stage is told where the camera stands this frame: its
+                // stars, its moon and its shooting star are the one group of three in the scene
+                val sky = scene.children.single { it.children.size == 3 && it.children.none { child -> child.isLight } }
+
+                camera.position.set(4.0, 11.0, 46.0)
+                (sky.position.x == 4.0) shouldBe false
+                stage.follow()
+                listOf(sky.position.x, sky.position.y, sky.position.z) shouldBe listOf(4.0, 11.0, 46.0)
             } finally {
                 stage.dispose()
             }

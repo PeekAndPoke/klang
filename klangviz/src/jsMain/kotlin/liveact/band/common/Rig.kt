@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.viz.liveact.band.common
 
+import io.peekandpoke.klang.viz.liveact.Three
+import io.peekandpoke.klang.viz.liveact.band.EyeLook
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Bone
@@ -13,18 +15,25 @@ import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.applyQuaternion
 import io.peekandpoke.klang.workshop.threejs.asBone
 import io.peekandpoke.klang.workshop.threejs.asSkinnedMesh
+import io.peekandpoke.klang.workshop.threejs.copied
+import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.distanceTo
 import io.peekandpoke.klang.workshop.threejs.dot
+import io.peekandpoke.klang.workshop.threejs.emissive
+import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.frustumCulled
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.getWorldQuaternion
+import io.peekandpoke.klang.workshop.threejs.lerp
 import io.peekandpoke.klang.workshop.threejs.lengthSq
 import io.peekandpoke.klang.workshop.threejs.materials
 import io.peekandpoke.klang.workshop.threejs.matrixWorld
 import io.peekandpoke.klang.workshop.threejs.name
 import io.peekandpoke.klang.workshop.threejs.quaternion
+import io.peekandpoke.klang.workshop.threejs.setTo
 import io.peekandpoke.klang.workshop.threejs.transformDirection
 import io.peekandpoke.klang.workshop.threejs.worldToLocal
+import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
@@ -61,6 +70,10 @@ class Rig(val root: Object3D) {
 
     /** The eyes' material, where the figure has eyes: its glow is the player's to set. */
     val eyes: MeshStandardMaterial?
+
+    /** The eyes' own colour, as the figure was made, and the pale one they have while their player rests. */
+    private val eyeColor: Color?
+    private val eyePale: Color?
 
     private val rest: Map<String, Rest>
 
@@ -105,12 +118,18 @@ class Rig(val root: Object3D) {
                     // the eyes are a little see-through (the maintainer, 2026-11-16: "say 95% opacity")
                     material.transparent = true
                     material.opacity = EYES_OPACITY
+                    // the eyes' light goes to the screen as it is: the film's curve, which the rest of the picture
+                    // goes through, turns a bright colour pale, and their colour is what they are there for
+                    material.asDynamic().toneMapped = false
                 }
             }
         }
 
         bones = found
         eyes = eyesFound
+        eyeColor = eyesFound?.emissive?.copied()
+        // almost white, with a tint of their own colour
+        eyePale = eyeColor?.copied()?.lerp(Three.addon.createColor(0xffffff), 0.82)
 
         root.updateWorldMatrix(updateParents = true, updateChildren = true)
 
@@ -134,6 +153,21 @@ class Rig(val root: Object3D) {
         ankle = mapOf(Side.L to local("toeL"), Side.R to local("toeR"))
         height = local("head").y
         faceAhead = dir(0.0, 0.0, 1.0).applyQuaternion(bone("head").getWorldQuaternion(quat()).invert())
+    }
+
+    /**
+     * Colours the eyes by how warm their player is ([warmth], 0 to 1): a pale, almost white light while they rest,
+     * their own colour the longer they play (see EyeWarmth). It sets the glow from what the player set this frame,
+     * so it runs once a frame, after the players.
+     */
+    fun warmEyes(warmth: Double) {
+        val material = eyes ?: return
+        val pale = eyePale ?: return
+        val own = eyeColor ?: return
+        val look = EyeLook.of(warmth = warmth, set = material.emissiveIntensity)
+
+        material.emissive.setTo(pale).lerp(own, look.own)
+        material.emissiveIntensity = look.glow
     }
 
     /** The bone [name]. It throws where the figure has none of that name: every figure is built on the one skeleton. */

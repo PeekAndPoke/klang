@@ -12,11 +12,15 @@ import io.peekandpoke.klang.workshop.threejs.createBufferGeometry
 import io.peekandpoke.klang.workshop.threejs.createFloat32Attribute
 import io.peekandpoke.klang.workshop.threejs.createPoints
 import io.peekandpoke.klang.workshop.threejs.createShaderMaterial
+import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.frustumCulled
 import io.peekandpoke.klang.workshop.threejs.setAttribute
 import io.peekandpoke.klang.workshop.threejs.uniform
+import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
+import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.utils.jsObject
+import kotlin.math.PI
 
 // The audience, as far as it is seen: the small lights people hold up, nothing more. They stand in half a circle
 // around the stage, as in a giant open-air theatre, in loose rows below the stage's edge and a few metres off it,
@@ -65,6 +69,28 @@ class Crowd(scene: Scene) {
         val points = Three.addon.createPoints(geometry, material)
         points.frustumCulled = false
         scene.add(points)
+
+        // The terraces they stand on, where the ground climbs: nothing is seen of them in the dark, but they are
+        // there, and what lies behind them is hidden: the sky shows above the last row only, between the lights of
+        // those who stand on the theatre's rim, and not down among the audience (the moon's glow did: the
+        // maintainer, 2026-11-17).
+        val top = CrowdPlaces.LAST + 0.8
+        val climbs = CrowdPlaces.SLOPE * (top - CrowdPlaces.RISE)
+        val terraces = Three.addon.createMesh(
+            // TYPING: belongs in the workshop (CylinderGeometry's open ends and its part of a turn): half a ring,
+            // on the side the band looks to
+            Three.addon.create<BufferGeometry>("CylinderGeometry", top, CrowdPlaces.RISE, climbs, 96, 1, true, -PI / 2, PI),
+            Three.addon.createMeshBasicMaterial(jsObject<MaterialParameters> { color = 0x020308 }).also {
+                it.fog = false
+                it.asDynamic().side = 2          // seen from within: both of its faces
+                // exactly the dark's colour, as the dark itself is drawn: not through the film's curve, which
+                // would leave it a shade blacker, and its edge would show
+                it.asDynamic().toneMapped = false
+            },
+        )
+
+        terraces.position.y = -CrowdPlaces.PIT + climbs / 2
+        scene.add(terraces)
     }
 
     /**

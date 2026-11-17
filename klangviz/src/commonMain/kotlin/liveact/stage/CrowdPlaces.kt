@@ -22,12 +22,16 @@ import kotlin.math.sqrt
  * [FIRST] m off it to [LAST]; from [RISE] m off on the ground climbs ([SLOPE] m a metre). The stage stands [PIT] m
  * above the ground they stand on, so a held-up light is about level with the stage's floor.
  *
- * The first row is as near as the cameras allow: the widest way a camera goes round the band is some 9.7 m from the
- * stage's middle, and the total stands 9.5 m before it. (16 m at first left a wide empty ring before the stage: the
- * maintainer, 2026-11-17, "the crowd could be closer".)
+ * At the stage's sides the first row is as near as the cameras allow: the widest way a camera goes round the band
+ * is some 9.7 m from the stage's middle. (16 m all round at first left a wide empty ring: the maintainer,
+ * 2026-11-17, "the crowd could be closer".) Straight before the stage it stays [FRONT] m off: the lamps' light and
+ * the fog on the floor reach out there, and lights standing in it looked wrong (the maintainer, the same day: "we
+ * should avoid this overlap ... distance on the very left and right needs to stay the same"). Between the two the
+ * open ground's edge is an oval.
  */
 object CrowdPlaces {
     const val FIRST = 11.5
+    const val FRONT = 16.0
     const val LAST = 62.0
     const val RISE = 26.0
     const val SLOPE = 0.25
@@ -45,6 +49,14 @@ object CrowdPlaces {
 
         /** The light at about [x], [z], if someone holds one up there. */
         fun place(x: Double, z: Double) {
+            // nobody on the open ground before the stage: an oval, [FRONT] m ahead and to the sides just short of
+            // the first row, which so stays where the stage's sides are and gives way only before it
+            val side = FIRST - ROWS / 2
+
+            if ((x / side) * (x / side) + (z / FRONT) * (z / FRONT) < 1.0) {
+                return
+            }
+
             val n = lights.size + z * 131.0 + x * 17.0
 
             if (hash01(n * 1.7 + 0.3) > 0.88) {

@@ -61,6 +61,7 @@ class View(
     private val camera: PerspectiveCamera,
     private val rigs: Map<Player, Rig>,
     homes: Map<Player, Place>,
+    activity: (Player) -> List<Double>,
 ) {
     private val switches = show.switches
 
@@ -76,16 +77,7 @@ class View(
             show = show,
             rigs = rigs,
             looks = looks,
-            activity = { player ->
-                when (player) {
-                    Player.Wucht -> show.times("kick", "snare")
-                    Player.Beben -> show.times("bass")
-                    Player.Skalpell -> show.times("guitar1")
-                    Player.Klaue -> show.times("guitar2", "guitar3")
-                    Player.Rune -> show.times("lead")
-                    Player.Sirene -> show.times("trommel")
-                }
-            },
+            activity = activity,
             force = forcedKind(switches["move"]),
         )
     } else {

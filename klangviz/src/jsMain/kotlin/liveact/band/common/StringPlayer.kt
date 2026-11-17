@@ -25,6 +25,7 @@ import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.angleTo
 import io.peekandpoke.klang.workshop.threejs.applyAxisAngle
+import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.crossVectors
 import io.peekandpoke.klang.workshop.threejs.dot
@@ -692,7 +693,3 @@ private fun extruded(
 
     return addon.create("ExtrudeGeometry", shape, options)
 }
-
-/** A new colour, the same as this one. */
-// TYPING: belongs in the workshop (Color.clone)
-private fun Color.copied(): Color = asDynamic().clone().unsafeCast<Color>()

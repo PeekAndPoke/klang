@@ -233,6 +233,16 @@ fun Color.scale(by: Double): Color {
     return this
 }
 
+/** A new colour, the same as this one. */
+fun Color.copied(): Color = asDynamic().clone().unsafeCast<Color>()
+
+/** Makes this colour the same as [from]. */
+fun Color.setTo(from: Color): Color {
+    asDynamic().copy(from)
+
+    return this
+}
+
 fun Vector3.distanceTo(other: Vector3): Double =
     asDynamic().distanceTo(other).unsafeCast<Double>()
 

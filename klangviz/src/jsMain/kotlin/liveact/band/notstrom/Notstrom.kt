@@ -280,6 +280,16 @@ class Notstrom private constructor(
 
     private val song = show.song
 
+    /** When [player] begins a note, sorted, as far as the song is known: what the camera and the eyes go by. */
+    fun playsAt(player: Player): List<Double> = when (player) {
+        Player.Wucht -> show.times("kick", "snare")
+        Player.Beben -> show.times("bass")
+        Player.Skalpell -> show.times("guitar1")
+        Player.Klaue -> show.times("guitar2", "guitar3")
+        Player.Rune -> show.times("lead")
+        Player.Sirene -> show.times("trommel")
+    }
+
     val drummer = Drummer(
         show = show,
         rig = rig(Player.Wucht),

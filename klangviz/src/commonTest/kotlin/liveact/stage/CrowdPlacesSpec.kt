@@ -11,6 +11,7 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -28,6 +29,13 @@ class CrowdPlacesSpec : StringSpec({
         lights.minOf { it.off() } shouldBeGreaterThan CrowdPlaces.FIRST - 0.5
         lights.maxOf { it.off() } shouldBeLessThan CrowdPlaces.LAST + 0.5
         lights.minOf { it.z } shouldBeGreaterThan -0.5
+
+        // at the stage's sides the first row is that near; straight before the stage the ground stays open further
+        // out, where the lamps' light and the fog reach
+        // (a place is moved about by at most 0.3 m each way: the first row itself is still there)
+        lights.filter { it.z < 2.0 }.minOf { it.off() } shouldBeLessThan CrowdPlaces.FIRST + 0.3
+        lights.filter { abs(it.x) < 2.0 }.minOf { it.z } shouldBeGreaterThan CrowdPlaces.FRONT - 0.6
+        lights.filter { abs(it.x) < 2.0 }.minOf { it.z } shouldBeLessThan CrowdPlaces.FRONT + 1.0
     }
 
     "it reaches from the stage's left side around the front to its right, evenly" {

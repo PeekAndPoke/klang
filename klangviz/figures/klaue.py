@@ -8,7 +8,7 @@ class Klaue(Figure):
     """The rhythm guitar: the shorter, heavier one: a belly, a broad face, a flat cap."""
     key = "klaue"
     frame = dict(
-        height=0.94, scale=dict(torso=1.25, waist=1.55, chest=1.18, shoulder=1.15, arm=1.2, hand=1.1, thigh=1.25,
+        height=0.94, scale=dict(torso=1.25, waist=1.44, chest=1.18, shoulder=1.15, arm=1.2, hand=1.1, thigh=1.25,
                                 leg=1.2, neck=0.95, head=1.08),
         move=dict(
             PICK_HAND,
@@ -18,9 +18,10 @@ class Klaue(Figure):
             # the belly is the trunk's own, carried forward and full: a piece of its own set before the trunk left a
             # hard edge across the chest and corners at its sides, a box on the upper body (the maintainer,
             # 2026-11-17: "this rectangular thing needs to go away")
-            belly=(0, -0.050, -0.010), ribs=(0, -0.022, 0), hips=(0, -0.012, 0),
+            # (a hint less of it than at first: the maintainer, the same day, "not so much waist fat")
+            belly=(0, -0.036, -0.010), ribs=(0, -0.018, 0), hips=(0, -0.010, 0),
         ),
-        radius=dict(belly=1.22),
+        radius=dict(belly=1.12),
         # a bit of a neck, not as thick as it was
         hips=1.2, shoulders=1.06, neck=1.06, eye=(1.0, 0.6, 0.1),
         extras=[("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),

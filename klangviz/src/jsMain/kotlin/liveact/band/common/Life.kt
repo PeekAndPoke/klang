@@ -146,9 +146,19 @@ fun eyeContact(show: Show, rigs: Map<Player, Rig>, herNotes: List<Double>, t: Do
 private fun inOrder(rigs: Map<Player, Rig>): List<Rig> = Player.entries.mapNotNull { rigs[it] }
 
 /**
- * The eyes: a third less bright than their players set them, and never steady. Their glow wanders by smooth noise,
+ * The eyes' colour: each player's by how warm they are just now ([warmth], 0 to 1; see [Rig.warmEyes]). Once a
+ * frame.
+ */
+fun eyesWarm(rigs: Map<Player, Rig>, warmth: (Player) -> Double) {
+    for ((player, rig) in rigs) {
+        rig.warmEyes(warmth(player))
+    }
+}
+
+/**
+ * The eyes: a third less bright than they are set (by their players, then by their warmth), and never steady. Their glow wanders by smooth noise,
  * each pair on its own (two layers: a slow drift and a quicker waver), by about a third up and down. It scales what
- * the players set this frame, so it runs once a frame, after them.
+ * is set this frame, so it runs once a frame, after [eyesWarm].
  */
 fun eyesWaver(show: Show, rigs: Map<Player, Rig>, t: Double) {
     inOrder(rigs).forEachIndexed { i, rig ->

@@ -5,9 +5,11 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import io.peekandpoke.klang.viz.liveact.band.EyeWarmth
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.common.breathing
 import io.peekandpoke.klang.viz.liveact.band.common.eyeContact
+import io.peekandpoke.klang.viz.liveact.band.common.eyesWarm
 import io.peekandpoke.klang.viz.liveact.band.common.eyesWaver
 import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
@@ -87,6 +89,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
     private val scope = MainScope()
     private var running: Running? = null
+
+    /** How the players' eyes take colour as they play. */
+    private val eyeWarmth = EyeWarmth()
 
     /** The stage, from the moment it is built: it listens for a key, so it is given up also where the band never came. */
     private var stage: Stage? = null
@@ -254,6 +259,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 camera = lens,
                 rigs = band.rigs,
                 homes = Notstrom.PLACES,
+                activity = band::playsAt,
             )
             // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
             // fail before it is kept (and with it given up on unmount)
@@ -279,6 +285,10 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         show.energy = energy
         now.band.play(t)
         eyeContact(show = show, rigs = now.band.rigs, herNotes = herNotes, t = t)
+        // (`?warm=1` holds everyone's eyes at their full colour, `?warm=0` at rest: to look at them)
+        val held = show.switches.double("warm")?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
+
+        eyesWarm(rigs = now.band.rigs) { player -> held ?: eyeWarmth.at(notes = now.band.playsAt(player), t = t) }
         eyesWaver(show = show, rigs = now.band.rigs, t = t)
         // what goes with a head as it is held at last: after every turn of it above, and before the breath, which
         // widens bones and would blur how the head is read
@@ -286,6 +296,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         breathing(show = show, rigs = now.band.rigs, t = t, slow = energy.slow)
         now.stage.light(t = t, house = now.clock.houseAt(), waiting = now.clock.waiting())
         now.view.look(t)
+        now.stage.follow()
         camera?.let { viewer.copy(it.position) }
 
         val nowMs = window.performance.now()

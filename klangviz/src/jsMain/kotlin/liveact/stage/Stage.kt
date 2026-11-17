@@ -40,10 +40,11 @@ import kotlin.math.min
 
 /**
  * The stage, built into [scene]: floor, the wall behind, the lamps ([Lights]), the drummer's [riser], the crowd's
- * lights and the fog on the floor. Sets on [renderer], [scene] and [camera] what the show needs of them: the
+ * lights, the night sky and the fog on the floor. Sets on [renderer], [scene] and [camera] what the show needs of them: the
  * shadows, the tone mapping, the dark and the distance fog, the camera's lens.
  *
- * Each frame: [light]. Once the band stands: [shade]. When the stage goes: [dispose].
+ * Each frame: [light], and [follow] once the camera is placed. Once the band stands: [shade]. When the stage goes:
+ * [dispose].
  */
 class Stage(
     private val show: Show,
@@ -63,6 +64,9 @@ class Stage(
     val riser: Mesh
 
     private val crowd: Crowd
+
+    /** The night sky over the theatre; none with ?nosky. */
+    private val sky: NightSky?
 
     /** The fog on the floor; none with ?nofog. */
     private val groundFog: GroundFog?
@@ -126,6 +130,7 @@ class Stage(
         scene.add(riser)
 
         crowd = Crowd(scene)
+        sky = if (show.switches.has("nosky")) null else NightSky(scene)
         // fog on the floor (?nofog: none; ?fullfog: every pixel works it out for itself, to compare)
         groundFog = when {
             show.switches.has("nofog") -> null
@@ -146,6 +151,9 @@ class Stage(
         lights.shine(t, house, front)
         groundFog?.update(t, lights.lamps, camera)
 
+        // TYPING: belongs in the workshop (WebGLRenderer.getPixelRatio)
+        sky?.update(t = t, ratio = renderer.asDynamic().getPixelRatio().unsafeCast<Double>())
+
         // the crowd moves with the music: still while it waits, and by how loud it is once it plays
         val sound = if (waiting || t < 0) null else show.energyAt(t)
         crowd.update(
@@ -155,6 +163,11 @@ class Stage(
             low = if (sound != null) min(1.0, sound.low) else 0.0,
             beat = t * show.bpm / 60,
         )
+    }
+
+    /** What goes with the camera (the sky): call it once the camera stands where this frame is seen from. */
+    fun follow() {
+        sky?.follow(camera)
     }
 
     /**
