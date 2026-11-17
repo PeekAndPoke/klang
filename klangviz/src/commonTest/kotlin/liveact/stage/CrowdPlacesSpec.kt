@@ -22,7 +22,7 @@ class CrowdPlacesSpec : StringSpec({
     "the audience stands in half a ring around the stage, on the side the band looks to" {
         val lights = CrowdPlaces.all
 
-        lights.size shouldBeGreaterThan 5000
+        lights.size shouldBeGreaterThan 12000
 
         // a place is moved about by at most 0.3 m each way
         lights.minOf { it.off() } shouldBeGreaterThan CrowdPlaces.FIRST - 0.5

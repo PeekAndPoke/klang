@@ -81,11 +81,14 @@ object CrowdPlaces {
         return lights
     }
 
+    // (half as many again as at first, when a place was 0.7 m wide and the rows 0.85 m apart; the maintainer,
+    // 2026-11-17: "say 50% more people in the crowd")
+
     /** A place about every so many metres along a row. */
-    private const val APART = 0.7
+    private const val APART = 0.57
 
     /** The rows are this far apart, in metres. */
-    private const val ROWS = 0.85
+    private const val ROWS = 0.69
 }
 
 /**
