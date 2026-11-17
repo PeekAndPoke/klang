@@ -55,10 +55,11 @@ class MedusaHair(val snakes: Int = 9, val joints: Int = 11, val length: Double =
             out.third * side.first - out.first * side.third,
             out.first * side.second - out.second * side.first,
         )
-        // the wave: nothing at the root, widest at the tip, travelling outward
+        // the wave: nothing at the root, widest at the tip, travelling outward, unhurried (a fifth slower than at
+        // first: the maintainer, 2026-11-17, "a little too fast ... just a little")
         val wide = WAVE * length * along.pow(1.3)
-        val a = wide * sin(3.0 * PI * along - 1.7 * t + snake * 2.1)
-        val b = 0.7 * wide * sin(2.1 * PI * along - 1.1 * t + snake * 3.7 + 1.0)
+        val a = wide * sin(3.0 * PI * along - 1.35 * t + snake * 2.1)
+        val b = 0.7 * wide * sin(2.1 * PI * along - 0.88 * t + snake * 3.7 + 1.0)
 
         return HairPoint(
             x = out.first * (ROOT + far) + side.first * a + other.first * b,
