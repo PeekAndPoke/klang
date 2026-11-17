@@ -32,10 +32,11 @@ import * from "sprudel"
 //   parts  lines played together; a part starts on its own first cycle
 //   song   arrange(): which part, for how many cycles (3 s each), in which order
 
-let feel    =  10        // analog drift of the guitars, as in Der Schmetterling
-let drunk   =   1        // two guitarists, sober this time, mostly
-let snareHz = 400        // where does the snare sit?
-let scale   = "c3:minor" // which scale to play the song in
+let feel      =  10        // analog drift of the guitars, as in Der Schmetterling
+let drunk     =   1        // two guitarists, sober this time, mostly
+let snareHz   = 400        // where does the snare sit?
+let songScale = "c3:minor" // which scale to play the song in
+let endScale  = "c3:major" // which chord the song ends on
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
 // string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
@@ -370,7 +371,7 @@ export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
   .ignp("decay", 3.0).clip(1.5)
   .hpf(240)                                        // two octaves up, nothing of the melody lives below
-  .gain(0.46).pan(0.5)
+  .gain(0.45).pan(0.5)
   .cylinder(6)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -522,7 +523,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.45).pregain(1.2).pan(0.25).superimpose(pan(0.75)),
+  spin(cocoonArp.add(7)).ply(2).gain(0.48).pregain(1.2).pan(0.25).superimpose(pan(0.75)),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
@@ -557,7 +558,7 @@ let flyingOff = stack(
 
 // The last chord is D major: this part brings its own scale, and the first scale on a note wins.
 let lastChord = stack(
-  strum("<[0 4 7 9 11 ~@27] ~!3>").scale("c3:major").ignp("release", 5.0),
+  strum("<[0 4 7 9 11 ~@27] ~!3>").scale(endScale).ignp("release", 5.0),
 )
 
 // The heavy block: the cocoon breaks open, the arpeggio unravels, the lift, the landing. Played twice, the second time
@@ -604,7 +605,7 @@ export song = stack(
     [4, lastChord],
     [2, silence]
   )
-    .scale(scale)
+    .scale(songScale)
     .analog(feel)
 
   , sound("pink!4").clip(3).adsr(0.5, 0.5, 0.5, 1.5).gain(perlin(0.005, 0.01))
@@ -614,7 +615,7 @@ export song = stack(
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7.5, 7500)     
-    .mul(0.25)
+    .mul(0.22)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5000)
