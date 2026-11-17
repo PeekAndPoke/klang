@@ -146,6 +146,14 @@ fun SprudelVoiceData.transpose(amount: Any?): SprudelVoiceData {
         }
     }
 
+    // Nothing to transpose: no note and no frequency (a drum sample). The event stays as it is and plays at its own
+    // pitch; Tones.noteToFreq("") below would make it 440 Hz and shift that.
+    if (currentNoteName.isEmpty() && freqHz == null) {
+        return copy(
+            value = null, // clear the value ... it was consumed
+        )
+    }
+
     // Strategy 2: Frequency shifting (Physics)
     // Fallback if we only have frequency or an invalid note name.
     val currentFreq = freqHz ?: Tones.noteToFreq(currentNoteName)

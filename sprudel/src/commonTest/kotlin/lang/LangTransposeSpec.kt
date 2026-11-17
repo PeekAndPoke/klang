@@ -8,6 +8,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
@@ -66,6 +67,22 @@ class LangTransposeSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.note shouldBe "C4"
+    }
+
+    "transpose() leaves an event with no note and no frequency alone" {
+        // A drum sample: it has nothing to transpose and plays at its own pitch.
+        val events = sound("oh").transpose(12).queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe null
+        events[0].data.freqHz shouldBe null
+    }
+
+    "transpose() shifts a frequency set by freq() on an event with no note" {
+        val events = sound("sd").freq(200).transpose(12).queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.freqHz shouldBe (400.0 plusOrMinus 1e-9)
     }
 
     "debug: SprudelVoiceData.transpose with intervals from 'note'" {

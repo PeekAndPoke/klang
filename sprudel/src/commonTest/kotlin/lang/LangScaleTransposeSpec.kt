@@ -112,6 +112,23 @@ class LangScaleTransposeSpec : StringSpec({
         events[1].data.note shouldBe "F#4"
     }
 
+    "scaleTranspose() without a scale leaves an event with no note and no frequency alone" {
+        // The chromatic fallback meets a drum sample: nothing to transpose, it plays at its own pitch.
+        val events = sound("oh").scaleTranspose(2).queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe null
+        events[0].data.freqHz shouldBe null
+    }
+
+    "scale() then scaleTranspose() leave an event with no note and no frequency alone" {
+        val events = sound("oh").scale("c3:minor").scaleTranspose(2).queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe null
+        events[0].data.freqHz shouldBe null
+    }
+
     "scaleTranspose() works with control patterns" {
         val p = note("C").scale("C:major").scaleTranspose("0 1 2")
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
