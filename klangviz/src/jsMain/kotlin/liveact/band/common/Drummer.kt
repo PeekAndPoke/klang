@@ -10,6 +10,8 @@ import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.NAME_GAP
+import io.peekandpoke.klang.viz.liveact.band.nameSize
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.song.Drum
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
@@ -32,11 +34,11 @@ import io.peekandpoke.kraft.addons.threejs.js.Texture
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
-import org.w3c.dom.CENTER
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.CanvasTextAlign
 import org.w3c.dom.CanvasTextBaseline
 import org.w3c.dom.HTMLCanvasElement
+import org.w3c.dom.LEFT
 import org.w3c.dom.MIDDLE
 import kotlin.math.PI
 import kotlin.math.exp
@@ -105,6 +107,12 @@ private fun lit(material: MeshStandardMaterial, glow: DrumGlow): MeshStandardMat
     return m
 }
 
+/** How much of the picture's width the name on the bass drum takes: the ring round it is 0.86 of it. */
+private const val NAME_ROOM = 0.72
+
+/** How large its letters are at most, as a share of the picture's height: a short name does not fill the head. */
+private const val NAME_MOST = 0.2
+
 /**
  * A drum head with [name] written across it: the head's own dark grey, a thin ring near its rim, the name in
  * pale capitals. A picture for the head's material.
@@ -126,11 +134,28 @@ private fun named(name: String): Texture {
     g.arc(size / 2.0, size / 2.0, size * 0.43, 0.0, 2 * PI)
     g.stroke()
     g.fillStyle = "#c9ccd8"
-    g.textAlign = CanvasTextAlign.CENTER
+    g.textAlign = CanvasTextAlign.LEFT
     g.textBaseline = CanvasTextBaseline.MIDDLE
-    g.font = "bold ${size * 0.13}px sans-serif"
-    // a hair of space between the letters
-    g.fillText(name.toList().joinToString("\u200a"), size / 2.0, size / 2.0 + size * 0.01)
+
+    // The name takes a fixed share of the ring's width whatever font the machine has for "sans-serif": the letters
+    // are measured and set one by one, a hair of space between them. (A hair space character between them was as
+    // wide as a word space where the font has none, and the name went over the ring: the maintainer's MacBook,
+    // 2026-11-17.)
+    val letters = name.map { it.toString() }
+    val trial = 100.0
+
+    g.font = "bold ${trial}px sans-serif"
+
+    val widths = letters.map { g.measureText(it).width / trial }
+    val px = nameSize(widths = widths, room = size * NAME_ROOM, most = size * NAME_MOST)
+    var x = (size - px * (widths.sum() + NAME_GAP * (letters.size - 1))) / 2
+
+    g.font = "bold ${px}px sans-serif"
+
+    for ((letter, width) in letters.zip(widths)) {
+        g.fillText(letter, x, size / 2.0 + size * 0.01)
+        x += px * (width + NAME_GAP)
+    }
 
     val texture = Three.addon.createCanvasTexture(canvas)
 

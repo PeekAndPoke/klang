@@ -5,10 +5,12 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sign
 import kotlin.math.sin
 
 // The few numeric helpers the whole live act shares.
@@ -32,6 +34,21 @@ fun smoother(x: Double): Double {
  * all the way (1) up to some 70 degrees, not at all (0) from some 95 degrees on, where it is behind them.
  */
 fun inSight(angle: Double): Double = smooth((cos(angle) + 0.1) / 0.4)
+
+/**
+ * How far [x] lies beyond [easy] on either side of 0, with its sign: 0 well within, and from [soft] before the edge
+ * to [soft] past it a round bend into the straight line, so nothing starts with a jolt. [soft] 0: a sharp corner.
+ */
+fun beyond(x: Double, easy: Double, soft: Double): Double {
+    val over = abs(x) - easy
+    val far = when {
+        over <= -soft -> 0.0
+        over >= soft -> over
+        else -> (over + soft) * (over + soft) / (4 * soft)
+    }
+
+    return sign(x) * far
+}
 
 /** A number from 0 to 1 that belongs to [arg], always the same one: the chance behind every seeded choice. */
 fun hash01(arg: Double): Double {

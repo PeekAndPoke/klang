@@ -12,7 +12,9 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.Grip
 import io.peekandpoke.klang.viz.liveact.band.Straighten
+import io.peekandpoke.klang.viz.liveact.band.Tuning
 import io.peekandpoke.klang.viz.liveact.inSight
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
@@ -51,13 +53,20 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.tanh
 
-// The string players: a bass or a guitar on a strap. The left hand goes along the neck with the note's pitch, the
-// right hand plucks (bass) or strums down and up (guitar) on every note; the strings light up when played.
+// The string players: a bass or a guitar on a strap. The left hand is where a player's would be for the note (the
+// string and the fret of the instrument's real tuning, see Tuning), the right hand plucks (bass) or strums down and
+// up (guitar) on every note; the strings light up when played.
 // All places are in the figure's own measures; the instrument hangs from the trunk and moves with it.
 
 // how a played string's light falls, in seconds to 1/e: while the note rings, and once it has ended
 private const val RING = 0.25
 private const val DAMP = 0.06
+
+/** A note this many seconds ahead is settled: the left hand is on its way to it, and it stays held as planned. */
+private const val SETTLED = 0.4
+
+/** How far along the neck the fingers reach from the hand's own place, in the figure's measure. */
+private const val REACH = 0.04
 
 /**
  * The instruments' surfaces, shared by every string player: made together when the first instrument is built
@@ -123,7 +132,8 @@ enum class BodyOutline(val points: List<Pair<Double, Double>>) {
  * the neck's tilt; how the right hand plays: [swing] how far it goes through the strings, [tau] how quickly (in
  * seconds), [arm] the share of the swing the arm does (the rest is the wrist); [hang]: how low it hangs from the
  * trunk; [outline]: the body's outline unless the player has another; [pickups]: where the pickups sit along it;
- * [head]: the head's outline, as the body's is drawn.
+ * [head]: the head's outline, as the body's is drawn; [tuning]: its strings' notes, by which the left hand finds
+ * each note's string and fret.
  */
 enum class StringKind(
     val scale: Double,
@@ -139,18 +149,21 @@ enum class StringKind(
     val outline: BodyOutline,
     val pickups: List<Double>,
     val head: List<Pair<Double, Double>>,
+    val tuning: Tuning,
 ) {
     Guitar(
         scale = 0.64, bodyHalfLength = 0.22, bodyHalfWidth = 0.165, strings = 6, neck = 0.044, tilt = 0.50,
         swing = 0.095, tau = 0.028, hang = -0.09, arm = 0.15, outline = BodyOutline.DoubleCutaway,
         pickups = listOf(0.01, 0.075),
         head = listOf(0.0 to -0.022, 0.035 to -0.032, 0.16 to -0.038, 0.19 to -0.012, 0.172 to 0.026, 0.04 to 0.03, 0.0 to 0.022),
+        tuning = Tuning.GUITAR,
     ),
     Bass(
         scale = 0.84, bodyHalfLength = 0.25, bodyHalfWidth = 0.17, strings = 4, neck = 0.05, tilt = 0.62,
         swing = 0.040, tau = 0.02, hang = -0.13, arm = 0.35, outline = BodyOutline.LongHornBass,
         pickups = listOf(0.0, 0.07),
         head = listOf(0.0 to -0.025, 0.04 to -0.04, 0.19 to -0.048, 0.23 to -0.015, 0.20 to 0.034, 0.05 to 0.036, 0.0 to 0.025),
+        tuning = Tuning.BASS,
     ),
 }
 
@@ -165,9 +178,14 @@ private class Pluck(
     override val t: Double,
     val v: Double,
     val d: Double,
-    /** The left hand's place along the neck, from the nut. */
+    /** The notes that sound, as the song has them, and how the left hand holds them. */
+    val pitches: List<Int>,
+    val grip: Grip,
+    /** The fingers' place along the neck, from the nut: at the frets they press. */
     val along: Double,
-    /** Where its string lies across the instrument, drawn two and a half times as far apart as the strings are. */
+    /** The hand's own place along the neck: the middle of the four frets its fingers reach in its position. */
+    val hold: Double,
+    /** Where the fingers' strings lie across the instrument, drawn two and a half times as far apart as the strings are. */
     val across: Double,
     /** The strings that sound, the lowest is 0. */
     val strings: List<Int>,
@@ -179,8 +197,11 @@ private class Pluck(
     val way: Double,
 ) : Timed
 
-/** The hands' places at one moment: [along] the neck, [across] it, where the right hand [pick]s and how [wide]. */
-private class Fret(val along: Double, val across: Double, val pick: Double, val wide: Double)
+/**
+ * The hands' places at one moment: the fingers [along] the neck and [across] it, the left hand's own place along it
+ * ([hold]), where the right hand [pick]s and how [wide].
+ */
+private class Fret(val along: Double, val hold: Double, val across: Double, val pick: Double, val wide: Double)
 
 /**
  * A string player: a bass or a guitar on a strap, played by [rig].
@@ -226,17 +247,11 @@ class StringPlayer(
 
     private var notes: List<Pluck> = emptyList()
 
-    /** The string each pitch is played on. A pitch keeps its string once it has one, also when the song grows. */
-    private val share = mutableMapOf<Int, Int>()
-
     /**
      * The last pluck before the first one known, where the song has forgotten its past: the right hand's way
      * through the strings goes on from it, and the plucks begin with it: the hands stay where it left them.
      */
     private var forgotten: Pluck? = null
-
-    /** The fret each pitch is played at; kept as well, so a hand that holds a note stays where it is. */
-    private val frets = mutableMapOf<Int, Double>()
 
     init {
         val addon = Three.addon
@@ -341,74 +356,65 @@ class StringPlayer(
         (rig.root.parent ?: error("The figure stands in no scene")).add(g)
 
         part.refresh()
-        notes = fingered(part.events)
+        notes = fingered(strums = part.events, now = Double.NEGATIVE_INFINITY)
     }
 
     /**
-     * Where the left hand is for each note. The pitches played are shared out over the strings in order, low to
-     * high, each string taking its share of the notes: so a part that lives on a few low notes still goes across the
-     * strings, as a player would choose positions, and not all on the lowest one. Along the neck: by how far the note
-     * is above the lowest one on its string.
+     * Where the hands are for each of [strums]. The left hand holds each as a player would on the instrument's real
+     * strings: the string and the fret of each note, in a position on the neck it leaves as seldom as the passage
+     * allows (see [Tuning.grips]); a note too low or too high for the instrument is played octaves nearer.
      *
-     * Where the song grows, the pitches that are new get their string and their fret by the notes known then; the
-     * others keep theirs, so a hand that holds a note does not jump when more of the song is read.
+     * Where the song grows or changes, what was played up to [now] (and the note the hand is already going to) stays
+     * as it was held; only what is still to come is worked out anew.
      */
-    private fun fingered(notes: List<Strum>): List<Pluck> {
+    private fun fingered(strums: List<Strum>, now: Double): List<Pluck> {
         val k = kind
-        val pitches = notes.map { it.midi }.distinct().sorted()
-        // by how often each is played: a string takes its share of the notes, not of the pitches
-        var passed = 0
+        // what the song has forgotten since the last plan: the hands go on from the last of it
+        val from = strums.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
 
-        for (p in pitches) {
-            val count = notes.count { it.midi == p }
+        // (none where the song begins again before it: the plucks stay in the order of their times)
+        forgotten = (this.notes.lastOrNull { it.t < from } ?: forgotten)?.takeIf { it.t < from }
 
-            if (p !in share) {
-                share[p] = min(k.strings - 1, floor((passed + count / 2.0) * k.strings / max(1, notes.size)).toInt())
+        val before = this.notes.associateBy { it.t }
+        val kept = mutableListOf<Grip>()
+
+        for (n in strums) {
+            val was = before[n.t]
+
+            if (was == null || n.t > now + SETTLED || was.pitches.sorted() != n.all.sorted()) {
+                break
             }
 
-            passed += count
+            kept.add(was.grip)
         }
 
-        fun stringOf(midi: Int): Int = share.getValue(midi)
+        val lead = listOfNotNull(forgotten)
+        val grips = k.tuning.grips(
+            strums = lead.map { it.pitches } + strums.map { it.all },
+            held = lead.map { it.grip } + kept,
+        ).drop(lead.size)
 
-        // the hand stays in one position on the neck, as a player's does: the notes of a string lie within the four
-        // frets the fingers span there, and a higher note is reached by going to a higher string, not up the neck
-        val base = mutableMapOf<Int, Int>()
-        val top = mutableMapOf<Int, Int>()
+        /** How far from the nut a finger lies that presses at [fret]: just behind the fret's wire. */
+        fun alongOf(fret: Double): Double = k.scale * s * (1 - 2.0.pow(-max(0.0, fret - 0.4) / 12))
 
-        for (p in pitches) {
-            if (base[stringOf(p)] == null) {
-                base[stringOf(p)] = p
-            }
-
-            top[stringOf(p)] = p
-        }
-
-        for (p in pitches) {
-            if (p !in frets) {
-                val low = base.getValue(stringOf(p))
-                val span = top.getValue(stringOf(p)) - low
-
-                frets[p] = 3 + if (span > 3) (p - low) * 3.0 / span else (p - low).toDouble()
-            }
-        }
-
-        // what the song has forgotten since the last plan: the right hand goes on from the last of it
-        val from = notes.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
-
-        forgotten = this.notes.lastOrNull { it.t < from } ?: forgotten
+        /** Where the [string] lies across the instrument, drawn two and a half times as far apart as the strings are. */
+        fun acrossOf(string: Double): Double = (0.5 - string / (k.strings - 1)) * k.neck * 0.8 * s * 2.5
 
         // the right hand's way through the strings at each note: down after a pause, else down and up in turn
         var way = forgotten?.way ?: 1.0
 
-        return listOfNotNull(forgotten) + notes.mapIndexed { i, n ->
-            val string = stringOf(n.midi)
-            val fret = frets.getValue(n.midi)
-            // the strings that sound: the note's own, and for a chord one more for each further note
-            val sounding = n.all.indices.map { j -> min(k.strings - 1, string + j) }
+        return lead + strums.mapIndexed { i, n ->
+            val grip = grips[i]
+            // the strings that sound: each note's own
+            val sounding = grip.stops.map { it.string }.ifEmpty { listOf(0) }
+            // the fingers lie on the strings that are pressed, at the middle of their frets; where every string is
+            // open they stay over the neck where the hand is
+            val pressed = grip.stops.filter { it.fret > 0 }
+            val fret = if (pressed.isEmpty()) grip.position + 1.0 else pressed.sumOf { it.fret }.toDouble() / pressed.size
+            val fingers = pressed.map { it.string }.ifEmpty { sounding }
             // the right hand plays at the middle of the strings that sound; one string is picked, several are strummed
             val mid = sounding.sum().toDouble() / sounding.size
-            val gap = if (i > 0) n.t - notes[i - 1].t else forgotten?.let { n.t - it.t } ?: 9.0
+            val gap = if (i > 0) n.t - strums[i - 1].t else forgotten?.let { n.t - it.t } ?: 9.0
 
             way = if (gap > 0.28) 1.0 else -way
 
@@ -416,12 +422,13 @@ class StringPlayer(
                 t = n.t,
                 v = n.v,
                 d = n.d,
-                along = k.scale * s * (1 - 2.0.pow(-fret / 12)) - 0.012 * s,
-                // where the string lies across the instrument, drawn two and a half times as far apart as the strings
-                // are: the hands' way from string to string is a few centimetres and would not be seen
-                across = (0.5 - string.toDouble() / (k.strings - 1)) * k.neck * 0.8 * s * 2.5,
+                pitches = n.all,
+                grip = grip,
+                along = alongOf(fret),
+                hold = alongOf(grip.position + Tuning.SPAN / 2.0),
+                across = acrossOf(fingers.sum().toDouble() / fingers.size),
                 strings = sounding,
-                pick = (0.5 - mid / (k.strings - 1)) * k.neck * 0.8 * s * 2.5,
+                pick = acrossOf(mid),
                 wide = if (sounding.size > 1) 1.0 else 0.4,
                 way = way,
             )
@@ -435,7 +442,7 @@ class StringPlayer(
         val to = after ?: before
 
         if (from == null || to == null) {
-            return Fret(along = 0.1 * s, across = 0.0, pick = 0.0, wide = 1.0)
+            return Fret(along = 0.1 * s, hold = 0.1 * s, across = 0.0, pick = 0.0, wide = 1.0)
         }
 
         val gap = max(0.02, to.t - from.t)
@@ -446,6 +453,7 @@ class StringPlayer(
 
         return Fret(
             along = mix(from.along, to.along),
+            hold = mix(from.hold, to.hold),
             across = mix(from.across, to.across),
             pick = mix(from.pick, to.pick),
             wide = mix(from.wide, to.wide),
@@ -492,7 +500,7 @@ class StringPlayer(
     /** The player at [t]: the strings' light, the body with the beat, the instrument on the trunk, both hands. */
     fun update(t: Double) {
         if (part.refresh()) {
-            notes = fingered(part.events)
+            notes = fingered(strums = part.events, now = t)
         }
 
         val k = kind
@@ -624,7 +632,9 @@ class StringPlayer(
         // a string is a finger's reach away, not a move of the hand (the right hand's way stays drawn larger)
         val cross = fret.across / 2.5
         val onNeck = place(nut - fret.along, cross, 0.02 * s)
-        val wristL = onNeck.clone()
+        // the hand stays in its position on the neck while the fingers go from fret to fret: the wrist is at the
+        // hand's place, as far from the fingers as a hand allows
+        val wristL = place(nut - fret.along - max(-REACH * s, min(REACH * s, fret.hold - fret.along)), cross, 0.02 * s)
             .addScaledVector(axisY, -0.07 * s + 0.10 * cross)
             .addScaledVector(axisZ, -0.03 * s + 0.15 * cross)
 

@@ -30,7 +30,9 @@ against the whole reading:
 
 1. The marimba player's hands (`MarimbaPlayer.plan`): which hand plays which note, across a forget in a passage,
    with a chord at the cut, with none of her notes left.
-2. A string player's way through the strings and the fingering (`StringPlayer.fingered`).
+2. A string player's way through the strings and the fingering (`StringPlayer.fingered`). Since 2026-11-17 the fingering itself is
+   plain and has a spec (`Tuning.grips`); what `fingered` keeps of the grips played when the song grows, forgets or
+   begins again (the kept prefix up to now, the forgotten pluck) still has none (review of that day, MINOR).
 3. The frontwoman's phrases and strolls (`TrumpetPlayer.plan`), with the rule that a stroll that has begun stays.
 4. The drummer's lists by limb (`Drummer.plan`).
 5. The camera's choice of a look (`Choreography.choose`, `subject`, `kind`): stable through a round whatever the

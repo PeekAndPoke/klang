@@ -11,14 +11,20 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.malletShare
+import io.peekandpoke.klang.viz.liveact.beyond
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.vec
+import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.isMesh
+import io.peekandpoke.klang.workshop.threejs.lengthSq
+import io.peekandpoke.klang.workshop.threejs.lerp
+import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
@@ -26,15 +32,18 @@ import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.utils.jsObject
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sign
 import kotlin.math.sin
+import kotlin.math.sqrt
 
-// The marimba player: stands behind a marimba and plays notes with two mallets. Which bar is hit follows the note,
-// so the player moves along the instrument with the tune. All places are in the figure's own measures.
+// The marimba player: stands behind a marimba and plays notes with four mallets, two in each hand. Which bar is hit
+// follows the note, so the player moves along the instrument with the tune. All places are in the figure's own
+// measures.
 
 /**
  * The marimba's materials, made together and in this order the first time a marimba is built (three.js numbers its
@@ -88,18 +97,23 @@ private class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val 
     var v: Double = 0.0
 }
 
-/** One note as one hand plays it: when, how hard, where the mallet lands, and the note. */
+/**
+ * One blow of one hand, with its two mallets: when, how hard, and where. [at] is the place between the two heads
+ * and [half] the way from there to the outer mallet's head (the inner one's is as far the other way). Where the
+ * hand plays one note, its inner mallet lands on the bar and the outer one rides beside it, above the bars.
+ */
 private class MalletHit(
     override val t: Double,
     override val v: Double,
     override val at: Vector3,
-    val midi: Int,
+    val half: Vector3,
     val side: Side,
 ) : Stroke
 
 /**
- * The marimba player of [show]: the figure [rig] behind a marimba, playing [notes] (sorted by time) with two
- * mallets. She moves with the music by her [traits], her chance drawn under [seed].
+ * The marimba player of [show]: the figure [rig] behind a marimba, playing [notes] (sorted by time) with four
+ * mallets, two in each hand: a single note with a hand's inner mallet, notes that sound together with as many
+ * mallets as they need (see [malletShare]). She moves with the music by her [traits], her chance drawn under [seed].
  */
 class MarimbaPlayer(
     private val show: Show,
@@ -147,17 +161,23 @@ class MarimbaPlayer(
     private val highest: Int
     private val width: Double
 
-    /** Where a mallet idles when its hand has nothing to play. */
+    /** Where a hand's mallets idle when it has nothing to play: the place between their two heads. */
     private val rests: Map<Side, Vector3> = mapOf(
-        Side.L to vec(0.12 * s, height + 0.012 * s, near + 0.08 * s),
-        Side.R to vec(-0.12 * s, height + 0.012 * s, near + 0.08 * s),
+        Side.L to vec(0.14 * s, height + 0.012 * s, near + 0.08 * s),
+        Side.R to vec(-0.14 * s, height + 0.012 * s, near + 0.08 * s),
     )
+
+    /** From there to the outer mallet's head, as the hand holds the two when both idle. */
+    private val restHalves: Map<Side, Vector3> = Side.entries.associateWith { side -> vec(side.sign * APART / 2 * s, 0.0, 0.0) }
 
     /** The mallets' length. */
     val malletLength: Double = 0.40 * s
 
-    /** The mallets, one in each hand: they stand on the stage beside the figure, not in its skeleton. */
-    val mallets: Map<Side, Group>
+    /**
+     * The mallets, two in each hand, the outer one first: they stand on the stage beside the figure, not in its
+     * skeleton.
+     */
+    val mallets: Map<Side, List<Group>>
 
     init {
         val stage = rig.root.parent ?: error("The marimba player's figure stands on no stage")
@@ -286,7 +306,7 @@ class MarimbaPlayer(
 
         plan()
 
-        mallets = listOf(Side.L, Side.R).associateWith {
+        fun mallet(): Group {
             val mallet = Three.addon.createGroup()
 
             mallet.add(
@@ -307,8 +327,10 @@ class MarimbaPlayer(
             mallet.add(head)
             stage.add(mallet)
 
-            mallet
+            return mallet
         }
+
+        mallets = listOf(Side.L, Side.R).associateWith { listOf(mallet(), mallet()) }
     }
 
     /** The bar of the note [midi]: its own, or the same note as many octaves nearer as it takes where it lies beyond the bars. */
@@ -340,25 +362,25 @@ class MarimbaPlayer(
             gone.lastOrNull { it.side == side }?.let { hitsBefore[side] = it }
         }
 
-        // which hand plays which note: in turn, but never crossing over the other hand
         val hands = Side.entries.associateWith { side -> listOfNotNull(hitsBefore[side]).toMutableList() }
         val all = mutableListOf<MalletHit>()
         var last = lastBefore
         val where = hitsBefore.toMutableMap()
 
-        for (n in notes) {
-            val at = barOf(n.midi).at
-            var hand = last.other
-            val other = hand.other
-            val there = where[other]
-            val recent = if (there != null && n.t - there.t < 0.6) there.at.x else null
+        /** The [hand] plays the [struck] bars (one or two) at [t], as hard as [v]. */
+        fun blow(hand: Side, struck: List<MarimbaBar>, t: Double, v: Double) {
+            val half = when (struck.size) {
+                // one note: the inner mallet plays it, the outer one rides beside it, further out and above the bars
+                1 -> vec(hand.sign * APART / 2 * s, RIDE / 2 * s, 0.0)
+                // two: the outer mallet takes the bar further out (the left hand's lower one, the right hand's higher)
+                else -> {
+                    val (inner, outer) = struck.sortedBy { it.at.x * hand.sign }
 
-            // the left hand is on the side of the low notes (x > 0): it never plays to the right of the right hand
-            if (recent != null && ((hand == Side.L && at.x < recent - width) || (hand == Side.R && at.x > recent + width))) {
-                hand = other
+                    vec().addScaledVector(outer.at, 0.5).addScaledVector(inner.at, -0.5)
+                }
             }
-
-            val hit = MalletHit(t = n.t, v = n.v, at = at, midi = n.midi, side = hand)
+            val inner = struck.minBy { it.at.x * hand.sign }
+            val hit = MalletHit(t = t, v = v, at = inner.at.clone().add(half), half = half, side = hand)
 
             all.add(hit)
             hands.getValue(hand).add(hit)
@@ -366,8 +388,73 @@ class MarimbaPlayer(
             last = hand
         }
 
+        var i = 0
+
+        while (i < notes.size) {
+            // what sounds together is one moment
+            var end = i + 1
+
+            while (end < notes.size && notes[end].t - notes[i].t < TOGETHER) {
+                end++
+            }
+
+            val together = notes.subList(i, end)
+            val t = together.first().t
+
+            i = end
+
+            // (notes that lie on one bar, as a note doubled an octave beyond the bars does, are one note)
+            val struck = together.map { barOf(it.midi) }.distinct()
+            val v = together.maxOf { it.v }
+
+            if (struck.size == 1) {
+                // one note: the hands play in turn, but never crossing over each other
+                val at = struck.single().at
+                var hand = last.other
+                val other = hand.other
+                val there = where[other]
+                // where the other hand's inner mallet is, the one nearest this hand (its blow's middle less the way
+                // to its outer one)
+                val recent = if (there != null && t - there.t < 0.6) there.at.x - there.half.x else null
+                val slack = width / 2
+
+                // the left hand is on the side of the low notes (x > 0): it never plays to the right of the right
+                // hand's mallets, nor between them
+                if (recent != null && ((hand == Side.L && at.x < recent - slack) || (hand == Side.R && at.x > recent + slack))) {
+                    hand = other
+                }
+
+                blow(hand = hand, struck = struck, t = t, v = v)
+
+                continue
+            }
+
+            // several: shared between the hands, the low ones for the left (the low notes lie at x > 0)
+            val share = malletShare(places = struck.map { -it.at.x }, reach = REACH * s)
+
+            for ((hand, mine) in listOf(Side.L to share.low, Side.R to share.high)) {
+                if (mine.isNotEmpty()) {
+                    blow(hand = hand, struck = mine.map { struck[it] }, t = t, v = v)
+                }
+            }
+        }
+
         byHand = hands
         played = all
+    }
+
+    /**
+     * Half the way between the two mallet heads of [side]'s hand at [t]: as its blow before asks, on the way to what
+     * the next one asks, as the hand itself travels (see [strokeAt]).
+     */
+    private fun halfAt(side: Side, t: Double): Vector3 {
+        val (before, after) = byHand.getValue(side).around(t)
+        val from = before?.half ?: restHalves.getValue(side)
+        val to = after?.half ?: from
+        val gap = if (before != null && after != null) after.t - before.t else 1.0
+        val until = if (after != null) after.t - t else 9.0
+
+        return from.clone().lerp(to, smooth((gap - until) / max(0.05, gap * 0.8)))
     }
 
     /** The marimba player and her marimba at [t] (seconds). */
@@ -440,27 +527,38 @@ class MarimbaPlayer(
 
             StickPose(tip = pose.tip, bend = pose.bend * up, lift = pose.lift, aim = pose.aim)
         }
+        // each hand's two mallets: wide as its blows ask while she plays, nearly closed while the arms hang
+        val halves = listOf(Side.L, Side.R).associateWith { side ->
+            val half = halfAt(side, t)
+
+            half.set(half.x * (0.3 + 0.7 * up), half.y * up, half.z * up)
+        }
         val left = hands.getValue(Side.L)
         val right = hands.getValue(Side.R)
 
         // the body and the arms are two things: the arms reach for the notes, and the body stays where it is as long
         // as they can. Only where the playing moves out of easy reach does the body follow, by what is beyond it, and
-        // slowly: it goes by where the hands play over a few seconds, not by each note.
+        // slowly: it goes by where the hands play over some five seconds, the nearer moments counting more, and not
+        // by each note; and it starts and ends softly. (Over two seconds, and from a hard edge, the weight went from
+        // leg to leg too hectically: the maintainer, 2026-11-17.)
         val middle = (left.aim.x + right.aim.x) / 2
         var region = 0.0
+        var counted = 0.0
 
-        for (dt in listOf(-1.0, -0.5, 0.0, 0.5, 1.0)) {
+        for (step in -WEIGH_STEPS..WEIGH_STEPS) {
+            val counts = 0.5 + 0.5 * cos(PI * step / (WEIGH_STEPS + 1))
+
             for (side in listOf(Side.L, Side.R)) {
                 val rest = rests.getValue(side)
 
-                region += strokeAt(list = byHand.getValue(side), t = t + dt, rest = rest, home = rest, height = 0.0).aim.x / 10
+                region += counts * strokeAt(list = byHand.getValue(side), t = t + step * WEIGH_STEP, rest = rest, home = rest, height = 0.0).aim.x
+                counted += counts
             }
         }
 
-        region *= up
+        region *= up / counted
 
-        val easy = 0.20 * s
-        val beyond = sign(region) * max(0.0, abs(region) - easy)
+        val beyond = beyond(x = region, easy = 0.20 * s, soft = 0.08 * s)
         val stance = (0.07 + 0.10 * up) * s
         val reach = stance + rig.ankle.getValue(Side.L).x
         val shift = max(-1.0, min(1.0, beyond / reach)) * reach
@@ -491,17 +589,29 @@ class MarimbaPlayer(
 
         for (side in listOf(Side.L, Side.R)) {
             val hand = hands.getValue(side)
-
-            holdStick(
+            val half = halves.getValue(side)
+            val held = malletLength * GRIP
+            // the hand holds both: it reaches for the place between the two heads, each of them about a mallet's hold
+            // away. Each mallet is then set from its head, so the head is where the blow asks whatever the angle
+            // between the two; only where the hand holds the shaft gives a little
+            val grip = holdStick(
                 rig = rig,
                 side = side,
                 tip = hand.tip,
                 bend = hand.bend,
                 length = malletLength,
-                grip = 0.80,
                 pole = rig.dir(0.6 * side.sign, -1.0, -0.5),
-                mesh = mallets.getValue(side),
+                mesh = null,
+                reach = sqrt(max(0.25 * held * held, held * held - half.lengthSq())),
             )
+
+            for ((mallet, way) in mallets.getValue(side).zip(listOf(1.0, -1.0))) {
+                val head = rig.root.localToWorld(hand.tip.clone().addScaledVector(half, way))
+                val along = head.clone().sub(grip).normalize()
+
+                mallet.position.copy(head).addScaledVector(along, -malletLength / 2)
+                mallet.quaternion.setFromUnitVectors(Y_AXIS, along)
+            }
         }
 
         val eyes = rig.eyes
@@ -514,6 +624,25 @@ class MarimbaPlayer(
     private companion object {
         /** The highest bar of a marimba whose song still grows: the c three octaves above the middle one. */
         const val GROWING_TOP = 96
+
+        /** Notes that begin within this many seconds of each other sound together: one blow. */
+        const val TOGETHER = 0.03
+
+        /** How far apart a hand's two mallet heads are when it plays one note or none, in the figure's measure: two bars or so. */
+        const val APART = 0.11
+
+        /** How high above the bars the mallet rides that does not play. */
+        const val RIDE = 0.045
+
+        /** How wide a hand's two mallets open at most: an octave in the middle of the instrument. */
+        const val REACH = 0.36
+
+        /** Where along a mallet the hand holds it, from its head, as a share of its length. */
+        const val GRIP = 0.80
+
+        /** How the body weighs where the hands play: this many moments either side of now, this many seconds apart. */
+        const val WEIGH_STEPS = 6
+        const val WEIGH_STEP = 0.45
 
         /** Whether the midi note [m] is a natural; none below midi 0, as in the prototype. */
         fun isNatural(m: Int): Boolean = NATURAL.getOrElse(m % 12) { false }

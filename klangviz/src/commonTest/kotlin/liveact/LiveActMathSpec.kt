@@ -202,4 +202,27 @@ class LiveActMathSpec : StringSpec({
         inSight(-2.55) shouldBe 0.0
         inSight(3.14159) shouldBe 0.0
     }
+
+    "beyond: nothing well within the easy reach, what lies past it far out, and a round bend between" {
+        beyond(x = 0.10, easy = 0.2, soft = 0.05) shouldBe 0.0
+        beyond(x = 0.15, easy = 0.2, soft = 0.05) shouldBe 0.0
+        beyond(x = 0.30, easy = 0.2, soft = 0.05) shouldBe (0.10 plusOrMinus 1e-12)
+        beyond(x = 0.25, easy = 0.2, soft = 0.05) shouldBe (0.05 plusOrMinus 1e-12)
+        // right at the edge: a quarter of the bend's width
+        beyond(x = 0.20, easy = 0.2, soft = 0.05) shouldBe (0.0125 plusOrMinus 1e-12)
+        // the same on the other side, with its sign
+        beyond(x = -0.30, easy = 0.2, soft = 0.05) shouldBe (-0.10 plusOrMinus 1e-12)
+        beyond(x = -0.20, easy = 0.2, soft = 0.05) shouldBe (-0.0125 plusOrMinus 1e-12)
+
+        // it never falls as x grows, and never steps
+        val rise = (0..400).map { beyond(x = -0.4 + it * 0.002, easy = 0.2, soft = 0.05) }
+
+        rise.zipWithNext().all { (a, b) -> b >= a && b - a <= 0.002 + 1e-12 } shouldBe true
+    }
+
+    "beyond with no bend: a sharp corner at the edge" {
+        beyond(x = 0.20, easy = 0.2, soft = 0.0) shouldBe 0.0
+        beyond(x = 0.25, easy = 0.2, soft = 0.0) shouldBe (0.05 plusOrMinus 1e-12)
+        beyond(x = -0.25, easy = 0.2, soft = 0.0) shouldBe (-0.05 plusOrMinus 1e-12)
+    }
 })

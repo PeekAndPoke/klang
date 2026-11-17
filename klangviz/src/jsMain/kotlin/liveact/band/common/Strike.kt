@@ -107,10 +107,24 @@ fun strokeAt(
  * the upper arm and that bone reach for the tip, and the wrist lies on that bone. [mesh] is the stick, its length
  * [length] along its own y, held at [grip] of its length from the tip. [pole] (a world direction) is where the
  * elbow bends to.
+ *
+ * A hand with more than one stick (a marimba player's two mallets) gives no [mesh] and sets its sticks itself:
+ * [tip] is then the place between their heads, [reach] how far that is from the hand, and what comes back is where
+ * the hand holds them (in the world).
  */
-fun holdStick(rig: Rig, side: Side, tip: Vector3, bend: Double, length: Double, pole: Vector3, mesh: Object3D, grip: Double = 0.72) {
+fun holdStick(
+    rig: Rig,
+    side: Side,
+    tip: Vector3,
+    bend: Double,
+    length: Double,
+    pole: Vector3,
+    mesh: Object3D?,
+    grip: Double = 0.72,
+    reach: Double = length * grip,
+): Vector3 {
     val tipWorld = rig.root.localToWorld(tip.clone())
-    val held = length * grip
+    val held = reach
     val shoulder = rig.at("elbow$side")
     val elbowNow = rig.at("wrist$side")
     val upper = shoulder.distanceTo(elbowNow)
@@ -143,8 +157,13 @@ fun holdStick(rig: Rig, side: Side, tip: Vector3, bend: Double, length: Double, 
     val points = vec(0.0, 1.0, 0.0).applyQuaternion(hand.getWorldQuaternion(quat()))
 
     rig.turnWorld("hand$side", quat().setFromUnitVectors(points, d))
-    mesh.position.copy(at).addScaledVector(d, length * (grip - 0.5))
-    mesh.quaternion.setFromUnitVectors(Y_AXIS, d)
+
+    if (mesh != null) {
+        mesh.position.copy(at).addScaledVector(d, length * (grip - 0.5))
+        mesh.quaternion.setFromUnitVectors(Y_AXIS, d)
+    }
+
+    return at
 }
 
 /**

@@ -118,11 +118,15 @@ FIGURES = {
                             ("hair5", "hair4", (0, 0.02, -0.14), 0.010, 1.0, True)]),
     # the rhythm guitar: the shorter, heavier one: a belly, a broad face, a flat cap
     "guitar2": dict(height=0.94, scale=dict(torso=1.25, waist=1.55, chest=1.18, shoulder=1.15, arm=1.2, hand=1.1,
-                                            thigh=1.25, leg=1.2, neck=1.4, head=1.08),
-                    # the shoulders a little lower than plain and a short neck: between pulled up (as first built) and
-                    # hanging (too much, the maintainer)
+                                            thigh=1.25, leg=1.2, neck=0.95, head=1.08),
+                    # the shoulders a little lower than plain: between pulled up (as first built) and hanging (too much,
+                    # the maintainer)
                     move=dict(shoulderL=(0, 0, -0.020), shoulderR=(0, 0, -0.020)),
-                    hips=1.2, shoulders=1.06, neck=0.84, eye=(1.0, 0.6, 0.1),
+                    # a bit of a neck, not as thick as it was, and a chin seen from the side: the throat is set back
+                    # under it, so the chest no longer runs straight up into the face (the maintainer, 2026-11-17: "we
+                    # need a little Kinn when seen from the side"); broad rather than pointed, and not much of it
+                    hips=1.2, shoulders=1.06, neck=1.06, eye=(1.0, 0.6, 0.1), face=dict(taper=0.0, throat=0.034),
+                    jaw=0.8, chin=dict(wide=1.7, square=True, drop=0.5),
                     extras=[("gut", "belly", (0, -0.09, -0.01), 0.165, 1.0, False),
                             ("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
                             ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
@@ -395,18 +399,22 @@ def soften_weights(body):
                 body.vertex_groups[g].add([i], x / total, 'REPLACE')
 
 
-def draw_chin(body, head, hs, strength):
+def draw_chin(body, head, hs, strength, wide=1.0, square=False, drop=1.0):
     # The chin is no added piece but the head's own skin, drawn out: the point of the real surface under the front of
     # the face is found, and the skin round it is pulled forward and down, most at that point and fading smoothly
     # round it, narrower across than along, so it comes to a soft point and runs back into the jaw without an edge.
+    # [wide]: how many times as broad the chin is. [square]: across, it stays full nearly to its sides and falls off
+    # quickly there, so it reads as a broad flat chin with corners and not as a point. [drop]: how much of the usual
+    # way down the skin is pulled (less: the chin juts forward and the face is no longer).
     near = [v for v in body.data.vertices if (v.co - head.pos).length < 1.05 * head.radius and v.co.z < head.pos.z]
     if near:
         tip = max(near, key=lambda v: -0.62 * (v.co.y - head.pos.y) - 0.78 * (v.co.z - head.pos.z) - 6.0 * abs(v.co.x)).co.copy()
-        pull = Vector((0, -0.80, -0.60)) * (0.050 * hs * strength)
+        pull = Vector((0, -0.80, -0.60 * drop)) * (0.050 * hs * strength)
         for v in body.data.vertices:
             d = v.co - tip
             if d.length < 0.16 * hs:
-                w = math.exp(-((d.x / (0.028 * hs)) ** 2 + (d.y / (0.042 * hs)) ** 2 + (d.z / (0.034 * hs)) ** 2) / 2)
+                across = abs(d.x) / (0.028 * hs * wide)
+                w = math.exp(-((across ** 4 if square else across ** 2) + (d.y / (0.042 * hs)) ** 2 + (d.z / (0.034 * hs)) ** 2) / 2)
                 v.co += pull * w
 
 
@@ -596,7 +604,7 @@ def build(key):
     hs = head.radius / 0.092
     if p.get("face"):
         shape_face(body, head, hs, **p["face"])
-    draw_chin(body, head, hs, p.get("jaw", 1.0))
+    draw_chin(body, head, hs, p.get("jaw", 1.0), **p.get("chin", {}))
     # a long skull, where one is worn, before the eyes: they have to find the forehead it makes
     back = None
     if p.get("skull"):
