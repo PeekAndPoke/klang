@@ -6,22 +6,24 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.song.Song
+import io.peekandpoke.klang.viz.liveact.sound.Energy
+import io.peekandpoke.klang.viz.liveact.sound.Music
 
 /**
  * The switches a show can be given, as a page's address gives them (`?seed=7&t=62.1&still`): what is frozen, what
  * is left out, where the camera stands. All of them are for trying things out and for stills; a show without any
- * is the show as it is meant.
+ * is the show as it is meant. Each is read through its entry in [Switch], the list of them all.
  */
 data class Switches(private val values: Map<String, String> = emptyMap()) {
-    fun has(name: String): Boolean = name in values
+    fun has(switch: Switch): Boolean = switch.key in values
 
-    operator fun get(name: String): String? = values[name]
+    operator fun get(switch: Switch): String? = values[switch.key]
 
-    fun double(name: String): Double? = values[name]?.toDoubleOrNull()
+    fun double(switch: Switch): Double? = values[switch.key]?.toDoubleOrNull()
 
     /** Three numbers with commas between them (`cam=1,2,3`); null where there are not three. */
-    fun triple(name: String): Triple<Double, Double, Double>? {
-        val parts = values[name]?.split(",")?.mapNotNull { it.toDoubleOrNull() } ?: return null
+    fun triple(switch: Switch): Triple<Double, Double, Double>? {
+        val parts = values[switch.key]?.split(",")?.mapNotNull { it.toDoubleOrNull() } ?: return null
 
         return if (parts.size == 3) Triple(parts[0], parts[1], parts[2]) else null
     }
@@ -60,7 +62,7 @@ class Show(
     val bar: Double = 240.0 / bpm
 
     /** The time the show is frozen at (`?t=`), for stills; null where it runs. */
-    val frozen: Double? = switches.double("t")
+    val frozen: Double? = switches.double(Switch.Time)
 
     /**
      * The sound's energy right now: set every frame, before anyone moves. The nod is as strong as the sound: nearly

@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.viz.liveact.stage
+package io.peekandpoke.klang.viz.liveact.theatre
 
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.mat4
+import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Blending
 import io.peekandpoke.klang.workshop.threejs.ShaderMaterialParameters

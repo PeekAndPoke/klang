@@ -9,8 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.viz.liveact.stage.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.stage.Stage
+import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.isLight
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons

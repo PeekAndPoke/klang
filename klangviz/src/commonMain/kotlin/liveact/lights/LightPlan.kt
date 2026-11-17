@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.lights
 
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.smooth
 import kotlin.math.PI
@@ -248,7 +249,7 @@ class LightPlan(private val show: Show) {
     }
 
     /** `?rig=outer` (or inner, or all): the rig held all through, to look at it; null where the show decides. */
-    private val held: BackRig? = show.switches["rig"]?.let { name -> BackRig.entries.firstOrNull { it.name.lowercase() == name } }
+    private val held: BackRig? = show.switches[Switch.Rig]?.let { name -> BackRig.entries.firstOrNull { it.name.lowercase() == name } }
 
     /**
      * The rigs at [t]: the one that holds, going over into the next in its last bars. Before the song: the first.
@@ -272,7 +273,7 @@ class LightPlan(private val show: Show) {
             return FrontColors.TRY[tried]
         }
 
-        val chosen = show.switches["fcolor"]
+        val chosen = show.switches[Switch.FrontColor]
 
         if (chosen != null) {
             // as parseInt(..., 16) in the prototype; what is no number is black, as three.js makes of NaN
@@ -304,9 +305,9 @@ class LightPlan(private val show: Show) {
             return FrontLight(level = 1.0, strobing = false)
         }
 
-        if (show.switches.has("front")) {
+        if (show.switches.has(Switch.Front)) {
             // as parseFloat in the prototype: what is no number stays no number
-            return FrontLight(level = show.switches.double("front") ?: Double.NaN, strobing = false)
+            return FrontLight(level = show.switches.double(Switch.Front) ?: Double.NaN, strobing = false)
         }
 
         if (t < 0) {
@@ -319,7 +320,7 @@ class LightPlan(private val show: Show) {
         // and full on was too hard, the maintainer, 2026-11-16). Flashing this fast over the whole picture can
         // trigger seizures in people with photosensitive epilepsy: a public showing needs a warning before it.
         // ?nostrobe switches it off.
-        if (!show.switches.has("nostrobe") && runs.any { t >= it.from - 0.02 && t < it.to + 0.08 }) {
+        if (!show.switches.has(Switch.NoStrobe) && runs.any { t >= it.from - 0.02 && t < it.to + 0.08 }) {
             val sixteenth = (t * show.bpm / 60 * 4) % 1
 
             return FrontLight(level = if (sixteenth < 0.28) 1.0 else Strobe.LOW, strobing = true)

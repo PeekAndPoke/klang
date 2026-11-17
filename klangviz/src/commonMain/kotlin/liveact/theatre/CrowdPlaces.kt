@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.viz.liveact.stage
+package io.peekandpoke.klang.viz.liveact.theatre
 
 import io.peekandpoke.klang.viz.liveact.hash01
 import kotlin.math.PI

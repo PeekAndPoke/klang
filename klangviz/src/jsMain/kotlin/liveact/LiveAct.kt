@@ -14,6 +14,7 @@ import io.peekandpoke.klang.viz.liveact.band.common.eyesWaver
 import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
+import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
 import io.peekandpoke.klang.workshop.threejs.info
@@ -133,7 +134,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      * and the glitter. 2x and 4x are the number of pixels drawn (so 1.41 and 2 times as many each way); the cost in
      * frames grows about as much. The key o steps through them; `?oversample=2` starts with one.
      */
-    private var over: Int = maxOf(0, SAMPLES.indexOf(props.show.switches["oversample"]?.toIntOrNull() ?: 1))
+    private var over: Int = maxOf(0, SAMPLES.indexOf(props.show.switches[Switch.Oversample]?.toIntOrNull() ?: 1))
 
     /**
      * How finely the picture is drawn: it follows the frame rate (see [Sharpness]). Not where the picture is frozen
@@ -142,7 +143,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      */
     private val sharpness = Sharpness(full = screenRatio())
 
-    private val adapts: Boolean get() = over == 0 && props.show.frozen == null && !props.show.switches.has("sharp")
+    private val adapts: Boolean get() = over == 0 && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
 
     /** The line that says what the camera does, once it was looked up, and when it was last written. */
     private var hud: HTMLElement? = null
@@ -207,7 +208,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             div {
                 id = HUD_ID
                 style = "position: fixed; left: 12px; top: 8px; font: 12px monospace; color: #8a93a8; " +
-                    "pointer-events: none; white-space: pre;" + (if (props.show.switches.has("nohud")) " display: none;" else "")
+                    "pointer-events: none; white-space: pre;" + (if (props.show.switches.has(Switch.NoHud)) " display: none;" else "")
             }
         }
     }
@@ -288,7 +289,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         now.band.play(t)
         eyeContact(show = show, rigs = now.band.rigs, herNotes = herNotes, t = t)
         // (`?warm=1` holds everyone's eyes at their full colour, `?warm=0` at rest: to look at them)
-        val held = show.switches.double("warm")?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
+        val held = show.switches.double(Switch.Warm)?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
 
         eyesWarm(rigs = now.band.rigs) { player -> held ?: eyeWarmth.at(notes = now.band.playsAt(player), t = t) }
         eyesWaver(show = show, rigs = now.band.rigs, t = t)
@@ -328,7 +329,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
 
         // the line is written ten times a second, not with every frame: writing it makes the page lay itself out
-        if (nowMs - hudAt >= HUD_MS && !show.switches.has("nohud")) {
+        if (nowMs - hudAt >= HUD_MS && !show.switches.has(Switch.NoHud)) {
             hudAt = nowMs
 
             val line = hud ?: element(HUD_ID).also { hud = it }

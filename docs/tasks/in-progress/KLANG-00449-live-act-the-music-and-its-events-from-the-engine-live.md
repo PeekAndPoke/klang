@@ -21,7 +21,7 @@ also while its code is edited.
   stretch, at any moment; the recording was made by exactly this. So the app can hand the live act the playing
   song's events for the bars to come.
 - **The seam is built** (KLANG-00446, step 1 of this ticket): `Music` (the song's events ahead, the sound's energy
-  at a time, `listen()` for a `Transport`), in `klangviz/src/commonMain/kotlin/liveact/Music.kt`. The recording is
+  at a time, `listen()` for a `Transport`), in `klangviz/src/commonMain/kotlin/liveact/sound/Music.kt`. The recording is
   a `RecordedMusic`; the live act depends on nothing else of whoever plays.
 - **Everything plans from the whole song when it is made** (the review of step 1): the show's tempo, the light
   plan's bass drum runs, the camera's choreography, the players' plans (which string for which pitch, the marimba's

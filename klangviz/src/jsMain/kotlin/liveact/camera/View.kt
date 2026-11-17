@@ -5,12 +5,13 @@
 
 package io.peekandpoke.klang.viz.liveact.camera
 
-import io.peekandpoke.klang.viz.liveact.fromTyping
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.common.Place
 import io.peekandpoke.klang.viz.liveact.band.common.Rig
+import io.peekandpoke.klang.viz.liveact.fromTyping
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.smoother
 import io.peekandpoke.klang.viz.liveact.vec
@@ -71,26 +72,26 @@ class View(
     private val looks: Map<Player, List<Placement>> = looksOn(homes)
 
     /** The camera's choreography, when the song is there (`?still`: the wide view only). */
-    private val choreography: Choreography? = if (show.song != null && !switches.has("still")) {
+    private val choreography: Choreography? = if (show.song != null && !switches.has(Switch.Still)) {
         Choreography(
             show = show,
             rigs = rigs,
             looks = looks,
             activity = activity,
-            force = forcedKind(switches["move"]),
+            force = forcedKind(switches[Switch.Move]),
         )
     } else {
         null
     }
 
     /** `?view=side`, or stadium, or a player's name: a fixed camera. */
-    private val view: String = switches["view"].takeUnless { it.isNullOrEmpty() } ?: "front"
+    private val view: String = switches[Switch.View].takeUnless { it.isNullOrEmpty() } ?: "front"
 
     /**
      * `?head=<player>[&from=side|front|back|threequarter]`: a close look at one head, with a plain inspection light,
      * to judge a head's shape (a still for the maintainer; no part of the show).
      */
-    private val inspect: DirectionalLight? = if (switches.has("head")) {
+    private val inspect: DirectionalLight? = if (switches.has(Switch.Head)) {
         scene.add(Three.addon.createAmbientLight(0xffffff, 0.9))
 
         val light = Three.addon.createDirectionalLight(0xffffff, 2.2)
@@ -99,7 +100,7 @@ class View(
         scene.add(light.target)
 
         // &outline: the bare shape, black on white (pattern and glitter hide a profile)
-        if (switches.has("outline")) {
+        if (switches.has(Switch.Outline)) {
             scene.background = Three.addon.createColor(0xffffff)
             scene.fog = null
         }
@@ -264,16 +265,16 @@ class View(
     private fun place(t: Double) {
         clock = t
 
-        val headRig = if (switches.has("head")) Player.of(switches["head"])?.let { rigs[it] } else null
+        val headRig = if (switches.has(Switch.Head)) Player.of(switches[Switch.Head])?.let { rigs[it] } else null
         val viewRig = Player.of(view)?.let { rigs[it] }
         val choreography = choreography
 
         when {
             headRig != null -> inspectHead(headRig)
 
-            switches.has("cam") -> {
-                val c = numbers(switches["cam"].orEmpty())
-                val a = numbers(switches["at"].takeUnless { it.isNullOrEmpty() } ?: "0,1,0")
+            switches.has(Switch.Cam) -> {
+                val c = numbers(switches[Switch.Cam].orEmpty())
+                val a = numbers(switches[Switch.At].takeUnless { it.isNullOrEmpty() } ?: "0,1,0")
 
                 camera.position.set(c(0), c(1), c(2))
                 camera.lookAt(a(0), a(1), a(2))
@@ -329,16 +330,16 @@ class View(
     /** The close look at [rig]'s head (`?head=`). */
     private fun inspectHead(rig: Rig) {
         // &down=0.3: look that far below the head (the chest); &far=1.8: from that far off
-        val down = switches.double("down") ?: 0.0
+        val down = switches.double(Switch.Down) ?: 0.0
         val at = rig.bone("head").getWorldPosition(vec()).add(vec(0.0, 0.07 * rig.height / 1.6 - down, 0.0))
-        val fromKey = switches["from"].takeUnless { it.isNullOrEmpty() } ?: "side"
+        val fromKey = switches[Switch.From].takeUnless { it.isNullOrEmpty() } ?: "side"
         val from = InspectFrom.of(fromKey) ?: error("No such side to look at a head from: '$fromKey'")
         // by where the face looks just now, not the body: a profile stays a profile when the head is turned
         val ahead = rig.faceAhead.clone().applyQuaternion(rig.bone("head").getWorldQuaternion(quat())).setY(0.0).normalize()
         val side = vec(0.0, 1.0, 0.0).cross(ahead)
         val toward = side.multiplyScalar(from.x).addScaledVector(ahead, from.z).add(vec(0.0, from.y, 0.0))
 
-        camera.position.copy(at).addScaledVector(toward.normalize(), switches.double("far") ?: 1.2)
+        camera.position.copy(at).addScaledVector(toward.normalize(), switches.double(Switch.Far) ?: 1.2)
         camera.lookAt(at)
 
         if (camera.fov != 24.0) {
@@ -346,7 +347,7 @@ class View(
             camera.updateProjectionMatrix()
         }
 
-        if (switches.has("outline")) {
+        if (switches.has(Switch.Outline)) {
             // nothing but this figure: no light, no stage, no instrument, nobody else
             scene.traverse { o ->
                 val light = o.asLight

@@ -6,10 +6,13 @@
 package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.common.dressLevel
-import io.peekandpoke.klang.viz.liveact.band.common.wall
 import io.peekandpoke.klang.viz.liveact.lights.Lights
+import io.peekandpoke.klang.viz.liveact.theatre.Crowd
+import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
+import io.peekandpoke.klang.viz.liveact.theatre.NightSky
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.ToneMapping
 import io.peekandpoke.klang.workshop.threejs.createColor
@@ -130,11 +133,11 @@ class Stage(
         scene.add(riser)
 
         crowd = Crowd(scene)
-        sky = if (show.switches.has("nosky")) null else NightSky(scene)
+        sky = if (show.switches.has(Switch.NoSky)) null else NightSky(scene)
         // fog on the floor (?nofog: none; ?fullfog: every pixel works it out for itself, to compare)
         groundFog = when {
-            show.switches.has("nofog") -> null
-            else -> GroundFog(scene = scene, renderer = renderer, mapped = !show.switches.has("fullfog"))
+            show.switches.has(Switch.NoFog) -> null
+            else -> GroundFog(scene = scene, renderer = renderer, mapped = !show.switches.has(Switch.FullFog))
         }
     }
 

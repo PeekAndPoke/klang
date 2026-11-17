@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.band.common
 
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.Timed
 import io.peekandpoke.klang.viz.liveact.X_AXIS
@@ -550,7 +551,7 @@ class StringPlayer(
         rig.moveHips(vec(0.03 * sway * s, -(0.04 + bounce * body * parts.knees) * rig.pelvis.y, 0.0))
         // now and then the player straightens up from the instrument: the back comes up (a little past upright, and
         // not forward of where a player who leans back already is), the chest opens, the head lifts and looks out
-        val up = show.switches.double("straight")?.coerceIn(0.0, 1.0)
+        val up = show.switches.double(Switch.Straight)?.coerceIn(0.0, 1.0)
             ?: straighten?.at(t - straightenFrom) { stretch, purpose -> show.own(stretch * 3 + purpose, seed + 31.5) }
             ?: 0.0
         val straight = min(lean, 0.0) - 0.05

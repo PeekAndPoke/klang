@@ -10,6 +10,10 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.song.RecordedEvent
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
+import io.peekandpoke.klang.viz.liveact.sound.Energy
+import io.peekandpoke.klang.viz.liveact.sound.Music
+import io.peekandpoke.klang.viz.liveact.sound.Transport
+import io.peekandpoke.klang.viz.liveact.sound.TransportControls
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement

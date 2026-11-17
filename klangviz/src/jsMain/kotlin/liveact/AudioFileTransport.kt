@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import io.peekandpoke.klang.viz.liveact.sound.Transport
+import io.peekandpoke.klang.viz.liveact.sound.TransportControls
 import kotlinx.browser.document
 import org.w3c.dom.HTMLAudioElement
 import kotlin.math.max

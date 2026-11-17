@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.band.common
 
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
@@ -119,8 +120,8 @@ class MarimbaPlayer(
      * to look at them, with `?snakes`.
      */
     private val snakes: ShadowHair? = when {
-        show.switches.has("nosnakes") -> null
-        else -> ShadowHair(rig = rig, shown = show.switches.has("snakes"))
+        show.switches.has(Switch.NoSnakes) -> null
+        else -> ShadowHair(rig = rig, shown = show.switches.has(Switch.Snakes))
     }
 
     /** The stage's floor where she stands: the marimba hovers above it. */

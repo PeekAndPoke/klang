@@ -5,23 +5,23 @@
 
 package io.peekandpoke.klang.visuals
 
-import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_be.AudioAnalyzer
+import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.analyzer.SPECTRUM_FFT_SIZE
 import io.peekandpoke.klang.audio_bridge.analyzer.createAnalyzerBuffer
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.spine.spine
 import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.viz.liveact.Energy
 import io.peekandpoke.klang.viz.liveact.LiveAct
-import io.peekandpoke.klang.viz.liveact.LiveLoudness
-import io.peekandpoke.klang.viz.liveact.Music
 import io.peekandpoke.klang.viz.liveact.Show
-import io.peekandpoke.klang.viz.liveact.Transport
-import io.peekandpoke.klang.viz.liveact.TransportControls
 import io.peekandpoke.klang.viz.liveact.song.RecordedEvent
 import io.peekandpoke.klang.viz.liveact.song.Song
+import io.peekandpoke.klang.viz.liveact.sound.Energy
+import io.peekandpoke.klang.viz.liveact.sound.LiveLoudness
+import io.peekandpoke.klang.viz.liveact.sound.Music
+import io.peekandpoke.klang.viz.liveact.sound.Transport
+import io.peekandpoke.klang.viz.liveact.sound.TransportControls
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp

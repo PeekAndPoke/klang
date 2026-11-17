@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.viz.liveact
+package io.peekandpoke.klang.viz.liveact.sound
 
 import kotlin.math.exp
 import kotlin.math.max

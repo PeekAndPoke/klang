@@ -7,12 +7,13 @@ package io.peekandpoke.klang.viz.demo
 
 import io.peekandpoke.klang.viz.liveact.AudioFileTransport
 import io.peekandpoke.klang.viz.liveact.LiveAct
-import io.peekandpoke.klang.viz.liveact.Loudness
-import io.peekandpoke.klang.viz.liveact.RecordedMusic
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
+import io.peekandpoke.klang.viz.liveact.sound.Loudness
+import io.peekandpoke.klang.viz.liveact.sound.RecordedMusic
 import io.peekandpoke.kraft.addons.registry.addons
 import io.peekandpoke.kraft.addons.threejs.threeJs
 import io.peekandpoke.kraft.kraftApp
@@ -25,7 +26,7 @@ import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
 // The demo: the live act alone on a page, playing a recording and its recorded events.
-// The page's switches (`?seed=7&t=62.1&still`) are the show's: see the prototype's list in prototypes/band/web/show.js.
+// The page's switches (`?seed=7&t=62.1&still`) are the show's: see Switch for the list of them all.
 
 /** Where the recording lies, beside the page (git-ignored: see resources/recording/README.md). */
 private const val RECORDING = "recording/schmetterling"
@@ -55,11 +56,11 @@ fun main() {
 
     // Another performance every time the page is opened: one seed for all of the choreography. A frozen time
     // without a seed takes seed 0, so stills stay comparable.
-    val seed = switches["seed"]?.toIntOrNull() ?: if (switches.has("t")) 0 else Random.nextInt(100_000)
+    val seed = switches[Switch.Seed]?.toIntOrNull() ?: if (switches.has(Switch.Time)) 0 else Random.nextInt(100_000)
 
     MainScope().launch {
         // The song as recorded, when it is there (?test: the test notes instead), and its loudness
-        val song = if (switches.has("test")) null else textAt("$RECORDING-events.json")?.let { Song(Recording.parse(it)) }
+        val song = if (switches.has(Switch.Test)) null else textAt("$RECORDING-events.json")?.let { Song(Recording.parse(it)) }
         val loudness = song?.let { textAt("$RECORDING-energy.json") }?.let {
             Json { ignoreUnknownKeys = true }.decodeFromString(Loudness.serializer(), it)
         }
