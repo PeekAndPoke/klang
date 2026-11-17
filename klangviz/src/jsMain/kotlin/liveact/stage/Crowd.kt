@@ -70,8 +70,8 @@ class Crowd(scene: Scene) {
         points.frustumCulled = false
         scene.add(points)
 
-        // The terraces they stand on, where the ground climbs: nothing is seen of them in the dark, but they are
-        // there, and what lies behind them is hidden: the sky shows above the last row only, between the lights of
+        // The terraces they stand on, where the ground climbs, and they themselves: nothing is seen of them in the
+        // dark, but they are there, and what lies behind them is hidden: the sky shows above the last row only, between the lights of
         // those who stand on the theatre's rim, and not down among the audience (the moon's glow did: the
         // maintainer, 2026-11-17).
         val top = CrowdPlaces.LAST + 0.8
@@ -89,7 +89,10 @@ class Crowd(scene: Scene) {
             },
         )
 
-        terraces.position.y = -CrowdPlaces.PIT + climbs / 2
+        // up to the people's shoulders: they stand there, dark, and only their held-up lights are above them. (At
+        // the ground's own height the sky showed through the last rows, between the ground and the lights two
+        // metres above it: the maintainer, 2026-11-17, "the moon glow reaching too deep into the audience".)
+        terraces.position.y = -CrowdPlaces.PIT + climbs / 2 + SHOULDERS
         scene.add(terraces)
     }
 
@@ -106,6 +109,9 @@ class Crowd(scene: Scene) {
     }
 
     private companion object {
+        /** How high the people stand who hold the lights up, to their shoulders, in metres: the lowest light is at 1.95 m. */
+        const val SHOULDERS = 1.65
+
         val VERTEX = """
   attribute float seed, group;
   uniform float uTime, uSize, uEnergy, uLow, uBeat;
