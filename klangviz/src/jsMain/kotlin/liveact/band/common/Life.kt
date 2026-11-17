@@ -31,16 +31,16 @@ import kotlin.math.sin
  * to each other: the rhythm section, neighbours, the frontwoman and whoever she passes.
  */
 val PAIRS: List<Pair<Player, Player>> = listOf(
-    Player.Bass to Player.Drums,
-    Player.Guitar1 to Player.Bass,
-    Player.Eimer to Player.Guitar1,
-    Player.Marimba to Player.Guitar2,
-    Player.Drums to Player.Marimba,
-    Player.Eimer to Player.Marimba,
-    Player.Eimer to Player.Drums,
-    Player.Bass to Player.Eimer,
-    Player.Guitar2 to Player.Drums,
-    Player.Guitar1 to Player.Guitar2,
+    Player.Beben to Player.Wucht,
+    Player.Skalpell to Player.Beben,
+    Player.Sirene to Player.Skalpell,
+    Player.Rune to Player.Klaue,
+    Player.Wucht to Player.Rune,
+    Player.Sirene to Player.Rune,
+    Player.Sirene to Player.Wucht,
+    Player.Beben to Player.Sirene,
+    Player.Klaue to Player.Wucht,
+    Player.Skalpell to Player.Klaue,
 )
 
 /** How often eye contact may happen: a chance every [every] seconds, of which [chance] are taken. */
@@ -86,7 +86,7 @@ private fun contactAt(show: Show, t: Double, herNotes: List<Double>): Contact? {
     val away = meet + hold                         // when the first one looks away again
 
     // she does not look away while she plays: the trumpet is at her lips
-    val hers = pair.first == Player.Eimer || pair.second == Player.Eimer
+    val hers = pair.first == Player.Sirene || pair.second == Player.Sirene
 
     if (hers && herNotes.any { x -> x > start - 3 && x < start + away + 3 }) {
         return null

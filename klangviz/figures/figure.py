@@ -1,18 +1,13 @@
 # Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# The band's figures (KLANG-00446): a human skeleton of points with a thickness each (Skin modifier), shaped by extra
-# points along the limbs and the trunk, flattened front to back, with an armature of the real joints only.
-# One skeleton, six characters by their build.
-#
-#   blender -b --factory-startup -P figures.py -- <previews dir> [preview] [export]
-import bpy, math, os, sys
+# What the band's figures share (KLANG-00446): a human skeleton of points with a thickness each (Skin modifier),
+# shaped by extra points along the limbs and the trunk, flattened front to back, with an armature of the real joints
+# only; and the steps a character shapes its body with. Every figure has this one skeleton, so every motion of the
+# show fits everyone. What makes a character is in its own file (sirene.py, skalpell.py, ...): its measures on this
+# skeleton and its own shaping, written out step by step.
+import bpy, math
 from mathutils import Vector
-
-args = sys.argv[sys.argv.index("--") + 1:]
-OUT = args[0]
-PREVIEW = "preview" in args
-EXPORT = "export" in args
 
 # The base figure, a man of 1.78 m looking along -Y, Z up; the left side (x > 0), the right is mirrored.
 # name: (parent, (x, y, z), radius, depth (front to back, as a share of the radius), is a joint, group)
@@ -55,93 +50,14 @@ BASE = dict(
     stoop=0.0,             # how far the head is ahead of the hips, in m
     extras=[],             # (name, parent, offset, radius, depth, is a joint)
     eye=(1.0, 0.35, 0.05), eye_size=1.0,
+    # also read where set: eye_drop (how much lower the eyes sit, in m), eye_shape (an eye's scale) and long_skull
+    # (the eyes sit where a long skull's forehead is)
 )
 
 # The right hand of who picks strings is a little shorter than a plain hand: held half closed, it reaches less far.
 # (A hand modelled closed, with fingers, a thumb and a plectrum, was tried and looked crippled: the maintainer,
-# 2026-11-16; see 6d4c101b7.)
-def with_pick(figure):
-    """[figure] with its right hand shortened."""
-    out = dict(figure)
-    out["move"] = {**figure.get("move", {}), "handR": (0, 0, 0.032)}
-    return out
-
-
-FIGURES = {
-    # the lead guitar: slim, a little stooped, long hair worn open
-    "guitar1": dict(height=1.02, scale=dict(torso=0.90, waist=0.88, chest=0.92, arm=0.88, thigh=0.86, leg=0.88),
-                    stoop=0.07, eye=(1.0, 0.15, 0.1),
-                    # a plain round back of the head: the hair alone left it flat
-                    skull=dict(long=1.0, high=0.094, back=0.034, rise=0.022, tilt=8.0, wide=0.086),
-                    # long hair: combed straight back over the skull as a pattern in the light (`pattern.js`, the page),
-                    # and from there one smooth mane down his back, see mane(). (Hanging locks were tried and not
-                    # wanted: hair() in the history, see 0eb7378ad^.)
-                    mane=dict(length=0.46)),
-    # the bass: the tall thin one, a long neck, stooped
-    "bass": dict(height=1.10, scale=dict(torso=0.80, waist=0.78, chest=0.82, shoulder=0.85, arm=0.78, thigh=0.76,
-                                         leg=0.80, neck=0.85, head=0.94),
-                 shoulders=0.92, hips=0.88, neck=1.35, stoop=0.11, eye=(0.3, 0.6, 1.0), eye_size=0.9,
-                 eye_drop=0.016),                      # his eyes sit lower in the face
-    # the drums: the muscular one: wide shoulders, a deep chest over a small waist, heavy arms, a thick neck
-    "drums": dict(height=1.04, scale=dict(torso=1.08, waist=1.02, chest=1.30, shoulder=1.55, arm=1.55, hand=1.25,
-                                          thigh=1.25, leg=1.25, neck=1.7, head=1.24),
-                  # a head to match the frame: a quarter bigger, on a real neck: short and thick, but a neck (sunk
-                  # into the shoulders he had none, the maintainer, 2026-11-16)
-                  move=dict(crown=(0, 0, 0.004)),
-                  radius=dict(bicep=1.25, ribs=1.18), shoulders=1.30, hips=1.05, neck=1.25, stoop=0.03,
-                  eye=(1.0, 0.25, 0.02), jaw=1.5),
-    # the trumpet (the song's "trommel"), the frontwoman: small, a little athletic, a waist and hips
-    "eimer": dict(height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86,
-                                          thigh=1.07, leg=0.91, neck=0.76, head=0.98),
-                  shoulders=0.93, hips=1.08, neck=1.32, eye=(0.9, 1.0, 0.2), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
-                  # a face that comes to a small chin, the throat set back under it (see shape_face())
-                  face=dict(taper=0.24, throat=0.030), jaw=0.7, eye_drop=-0.012,
-                  # the chin sits low: drawn down more than forward, as large as it was (it pointed up, the maintainer,
-                  # 2026-11-17)
-                  chin=dict(drop=1.6, fore=0.6),
-                  # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16):
-                  # see skull(). A long neck, carried forward. (A sea shell for a hat was tried and taken off:
-                  # shell() in the history, see 0eb7378ad^.)
-                  radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06), skull=True,
-                  move=dict(head=(0, -0.022, 0), crown=(0, -0.030, 0.004), chin=(0, -0.022, -0.004),
-                            # proud shoulders: level, not sloping, and held back a little
-                            shoulderL=(0, 0.014, 0.026), shoulderR=(0, 0.014, 0.026)),
-                  bust=dict(apart=0.054, down=0.045, out=0.036, size=0.050),
-                  extras=[("nose", "head", (0, -0.094, -0.014), 0.014, 1.0, False)]),
-    # the marimba: a woman: narrow shoulders, a waist, hips, long legs, a long tail of hair
-    "marimba": dict(height=0.97, scale=dict(torso=0.90, waist=0.74, chest=0.80, shoulder=0.72, arm=0.70, hand=0.82,
-                                            thigh=1.0, leg=0.80, neck=0.72, head=0.95),
-                    radius=dict(hips=1.20, ribs=0.86, hip=1.06, calf=0.95), shoulders=0.84, hips=1.06, neck=1.15,
-                    eye=(0.4, 1.0, 0.8), eye_size=1.0,
-                    bust=dict(apart=0.056, down=0.045, out=0.038, size=0.052),
-                    extras=[("hair1", "crown", (0, 0.085, 0.015), 0.062, 1.0, False),
-                            ("hair2", "hair1", (0, 0.06, -0.14), 0.050, 1.0, True),
-                            ("hair3", "hair2", (0, 0.02, -0.18), 0.040, 1.0, True),
-                            ("hair4", "hair3", (0, 0.01, -0.18), 0.026, 1.0, True),
-                            ("hair5", "hair4", (0, 0.02, -0.14), 0.010, 1.0, True)]),
-    # the rhythm guitar: the shorter, heavier one: a belly, a broad face, a flat cap
-    "guitar2": dict(height=0.94, scale=dict(torso=1.25, waist=1.55, chest=1.18, shoulder=1.15, arm=1.2, hand=1.1,
-                                            thigh=1.25, leg=1.2, neck=0.95, head=1.08),
-                    # the shoulders a little lower than plain: between pulled up (as first built) and hanging (too much,
-                    # the maintainer)
-                    # the belly is the trunk's own, carried forward and full: a piece of its own set before the trunk left
-                    # a hard edge across the chest and corners at its sides, a box on the upper body (the maintainer,
-                    # 2026-11-17: "this rectangular thing needs to go away")
-                    move=dict(shoulderL=(0, 0, -0.020), shoulderR=(0, 0, -0.020), belly=(0, -0.050, -0.010),
-                              ribs=(0, -0.022, 0), hips=(0, -0.012, 0)),
-                    radius=dict(belly=1.22),
-                    # a bit of a neck, not as thick as it was, and a chin seen from the side: the throat is set back
-                    # under it, so the chest no longer runs straight up into the face (the maintainer, 2026-11-17: "we
-                    # need a little Kinn when seen from the side"). Nothing is drawn out of the face for it: a chin pulled
-                    # forward left a hollow above it that read as a mouth wide open, and the face is to stay flat
-                    hips=1.2, shoulders=1.06, neck=1.06, eye=(1.0, 0.6, 0.1), face=dict(taper=0.0, throat=0.040),
-                    jaw=0.0, flat_face=True,
-                    extras=[("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
-                            ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)]),
-}
-for _key in ("guitar1", "bass", "guitar2"):
-    FIGURES[_key] = with_pick(FIGURES[_key])
-ORDER = ["guitar1", "bass", "drums", "eimer", "marimba", "guitar2"]
+# 2026-11-16; see 6d4c101b7.) For a character's `move`.
+PICK_HAND = {"handR": (0, 0, 0.032)}
 
 
 class Point:
@@ -181,7 +97,7 @@ def points(p):
     return out
 
 
-# The skin's colour, and the hair's: near black. (Two materials of one colour: the page tells them apart by name.)
+# The skin's colour, and the hair's: near black. (Two materials of one colour: the show tells them apart by name.)
 DARK = (0.012, 0.012, 0.016)
 
 
@@ -407,14 +323,12 @@ def soften_weights(body):
                 body.vertex_groups[g].add([i], x / total, 'REPLACE')
 
 
-def draw_chin(body, head, hs, strength, wide=1.0, square=False, drop=1.0, fore=1.0):
+def draw_chin(body, head, hs, strength, drop=1.0, fore=1.0):
     # The chin is no added piece but the head's own skin, drawn out: the point of the real surface under the front of
     # the face is found, and the skin round it is pulled forward and down, most at that point and fading smoothly
     # round it, narrower across than along, so it comes to a soft point and runs back into the jaw without an edge.
-    # [wide]: how many times as broad the chin is. [square]: across, it stays full nearly to its sides and falls off
-    # quickly there, so it reads as a broad flat chin with corners and not as a point. [drop]: how much of the usual
-    # way down the skin is pulled (less: the chin juts forward and the face is no longer), [fore]: how much of the
-    # usual way forward.
+    # [strength]: how far. [drop]: how much of the usual way down the skin is pulled (less: the chin juts forward and
+    # the face is no longer), [fore]: how much of the usual way forward.
     near = [v for v in body.data.vertices if (v.co - head.pos).length < 1.05 * head.radius and v.co.z < head.pos.z]
     if near:
         tip = max(near, key=lambda v: -0.62 * (v.co.y - head.pos.y) - 0.78 * (v.co.z - head.pos.z) - 6.0 * abs(v.co.x)).co.copy()
@@ -422,8 +336,7 @@ def draw_chin(body, head, hs, strength, wide=1.0, square=False, drop=1.0, fore=1
         for v in body.data.vertices:
             d = v.co - tip
             if d.length < 0.16 * hs:
-                across = abs(d.x) / (0.028 * hs * wide)
-                w = math.exp(-((across ** 4 if square else across ** 2) + (d.y / (0.042 * hs)) ** 2 + (d.z / (0.034 * hs)) ** 2) / 2)
+                w = math.exp(-((d.x / (0.028 * hs)) ** 2 + (d.y / (0.042 * hs)) ** 2 + (d.z / (0.034 * hs)) ** 2) / 2)
                 v.co += pull * w
 
 
@@ -500,12 +413,12 @@ MUSCLES = {
 }
 
 
-def shape_muscles(body, P, H, strength=1.0, only=None):
+def shape_muscles(body, P, H, only=None):
     """
     A little more of a body under the skin (the maintainer, 2026-11-16: "a little butt", "a little more emphasis on
     the musculature everywhere, but not too much"): the buttocks, the calves, the thighs' fronts, the shoulders,
     the upper arms, the shoulder blades and the chest (see MUSCLES; [only]: just these of them), the small of the
-    back drawn in above the buttocks, and a shallow groove down the spine. [strength] scales all of it.
+    back drawn in above the buttocks, and a shallow groove down the spine.
     """
     for name, (point, offset, direction, height, size, half) in MUSCLES.items():
         if only is not None and name not in only:
@@ -514,7 +427,7 @@ def shape_muscles(body, P, H, strength=1.0, only=None):
             at = P[point + side] if point + side in P else P[point]
             R = at.radius
             centre = at.pos + Vector((sx * offset[0], offset[1], offset[2])) * R
-            rise = Vector((sx * direction[0], direction[1], direction[2])).normalized() * (height * R * strength)
+            rise = Vector((sx * direction[0], direction[1], direction[2])).normalized() * (height * R)
             for v in body.data.vertices:
                 d = v.co - centre
                 q = (d.x / (size[0] * R)) ** 2 + (d.y / (size[1] * R)) ** 2 + (d.z / (size[2] * R)) ** 2
@@ -537,7 +450,7 @@ def shape_muscles(body, P, H, strength=1.0, only=None):
             low = min(1.0, max(0.0, (v.co.z - hips.pos.z) / (0.06 * H)))
             high = min(1.0, max(0.0, (chest.pos.z + 0.06 * H - v.co.z) / (0.06 * H)))
             groove = low * high * math.exp(-(v.co.x / (0.018 * H)) ** 2 / 2)
-            v.co.y -= (0.012 * hollow + 0.006 * groove) * H * strength
+            v.co.y -= (0.012 * hollow + 0.006 * groove) * H
 
 
 def shape_bust(body, chest, H, apart, down, out, size):
@@ -570,7 +483,7 @@ def add_eyes(body, p, head, hs, surface, skins):
     # The eyes: narrow, in the face, part of the body, moved by the head. Each is set on the real surface: the skin
     # (and the skull) is looked up in front of the eye's place, and the eye sits half sunk into it, from every side
     size = p["eye_size"] * hs
-    low = (-0.008 if p.get("skull") is True else 0.012) - p.get("eye_drop", 0.0)
+    low = (-0.008 if p.get("long_skull") else 0.012) - p.get("eye_drop", 0.0)
     for s in (1.0, -1.0):
         x, z = head.pos.x + 0.034 * s * size, head.pos.z + low * size
         front = [c.y for c in surface if abs(c.x - x) < 0.020 * hs and abs(c.z - z) < 0.016 * hs]
@@ -616,100 +529,67 @@ def make_rig(key, P, names, body):
     return rig
 
 
-def build(key):
-    """One figure: its body and its rig. The steps' order matters; each step says what it needs."""
-    p = dict(BASE); p.update(FIGURES[key])
-    P = points(p)
-    names = list(P.keys())
-    body = skin_body(key, P, names)
-    name_pieces(body, P, names)
-    flatten(body, P)
-    bind_to_joints(body, P, names, p["extras"])
-    subdivide(body)
-    soften_weights(body)
-    # the materials, in the order the page knows them by: the dark skin, the eyes (and the hair, where there is some)
-    body.data.materials.append(material(key + "_dark", DARK))
-    body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
-
-    # who has a bust has no chest muscle drawn over it
-    shape_muscles(body, P, p["height"], strength=p.get("muscle", 1.0),
-                  only=[m for m in MUSCLES if m != "pec"] if p.get("bust") else None)
-    if p.get("bust"):
-        shape_bust(body, P["chest"], p["height"], **p["bust"])
-    head = P["head"]
-    hs = head.radius / 0.092
-    if p.get("face"):
-        shape_face(body, head, hs, **p["face"])
-    draw_chin(body, head, hs, p.get("jaw", 1.0), **p.get("chin", {}))
-    if p.get("flat_face"):
-        flatten_face(body, head, hs)
-    # a long skull, where one is worn, before the eyes: they have to find the forehead it makes
-    back = None
-    if p.get("skull"):
-        shape = p["skull"] if isinstance(p["skull"], dict) else {}
-        back = skull(head.pos, hs, body.data.materials[0], **shape)
-    surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
-    if back:
-        surface += [v.co.copy() for v in back.data.vertices]
-    add_eyes(body, p, head, hs, surface, [body] + ([back] if back else []))
-    if back:
-        join_into(body, back)
-    if p.get("mane"):
-        hair_mat = material(key + "_hair", DARK)
-        body.data.materials.append(hair_mat)
-        join_into(body, mane(head.pos, hs, hair_mat, **p["mane"]))
-
-    rig = make_rig(key, P, names, body)
-    missing = [g.name for g in body.vertex_groups if g.name not in rig.data.bones]
-    print("BUILT", key, "bones", len(rig.data.bones), "verts", len(body.data.vertices), "groups without a bone", missing)
-    return body, rig
+class Work:
+    """A figure while it is built: its [body], its points [P] by name, the [head]'s point, the head's size against
+    a plain one ([hs]) and the figure's [height]."""
+    def __init__(self, body, P, p):
+        self.body, self.P = body, P
+        self.head = P["head"]
+        self.hs = self.head.radius / 0.092
+        self.height = p["height"]
 
 
-def spot(loc, at, color, energy, size=0.8):
-    bpy.ops.object.light_add(type='SPOT', location=loc)
-    l = bpy.context.object
-    l.data.energy = energy; l.data.color = color; l.data.spot_size = size; l.data.spot_blend = 0.7
-    l.rotation_euler = (Vector(at) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
+class Figure:
+    """
+    One character of the band. It says who it is ([key]: its file's name and its name in the show), its measures on
+    the shared skeleton ([frame], see BASE) and how its body is shaped: [sculpt] (muscles, bust, face, chin), the
+    back of its head where it has one of its own ([back_of_head]) and its hair ([hair]). [build] makes the figure:
+    the shared steps in their fixed order, the character's own between them.
+    """
+    key = None
+    frame = {}
 
+    def sculpt(self, w):
+        """The body's own shape, on the smooth skin: called before the eyes are set."""
+        raise NotImplementedError
 
-def camera(loc, at, lens):
-    bpy.ops.object.camera_add(location=loc)
-    cam = bpy.context.object
-    cam.rotation_euler = (Vector(at) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
-    cam.data.lens = lens
-    bpy.context.scene.camera = cam
+    def back_of_head(self, w):
+        """A skull of its own behind the head, as a mesh; None for the plain round head."""
+        return None
 
+    def hair(self, w):
+        """Hair joined to the body, after the eyes."""
 
-bpy.ops.wm.read_factory_settings(use_empty=True)
-for i, key in enumerate(ORDER):
-    body, rig = build(key)
-    if EXPORT:
-        bpy.ops.object.select_all(action='DESELECT')
-        body.select_set(True); rig.select_set(True)
-        bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, "..", "models", key + ".glb"), use_selection=True)
-    rig.location.x = (i - (len(ORDER) - 1) / 2) * 1.05
+    def build(self):
+        """The figure: its body and its rig. The steps' order matters; each step says what it needs."""
+        key = self.key
+        p = dict(BASE); p.update(self.frame)
+        P = points(p)
+        names = list(P.keys())
+        body = skin_body(key, P, names)
+        name_pieces(body, P, names)
+        flatten(body, P)
+        bind_to_joints(body, P, names, p["extras"])
+        subdivide(body)
+        soften_weights(body)
+        # the materials, in the order the show knows them by: the dark skin, the eyes (and the hair, where there is some)
+        body.data.materials.append(material(key + "_dark", DARK))
+        body.data.materials.append(material(key + "_eyes", (0, 0, 0), emission=p["eye"], strength=25.0))
 
-if PREVIEW:
-    bpy.ops.mesh.primitive_plane_add(size=60)
-    bpy.context.object.data.materials.append(material("floor", (0.02, 0.02, 0.025), rough=0.22))
-    # a dim glowing backdrop: the figures stand against it as silhouettes
-    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 5, 3))
-    back = bpy.context.object
-    back.scale = (30, 8, 1); back.rotation_euler = (1.5708, 0, 0)
-    back.data.materials.append(material("back", (0, 0, 0), emission=(0.10, 0.20, 0.55), strength=0.22))
-    for x, c in ((-3.3, (0.2, 0.5, 1.0)), (-1.1, (1.0, 0.2, 0.5)), (1.1, (0.2, 0.5, 1.0)), (3.3, (1.0, 0.2, 0.5))):
-        spot((x, 3.0, 3.6), (x * 0.8, 0, 1.2), c, 3000)
-    spot((-2, -6, 4), (0, 0, 1), (1.0, 0.9, 0.8), 500, size=1.4)
-    world = bpy.data.worlds.new("W"); bpy.context.scene.world = world
-    world.use_nodes = True
-    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.003, 0.003, 0.006, 1)
-    s = bpy.context.scene
-    s.render.engine = 'CYCLES'; s.cycles.samples = 40; s.cycles.device = 'CPU'; s.cycles.use_denoising = True
-    s.render.resolution_x = 1500; s.render.resolution_y = 700
-    camera((0, -9.5, 1.3), (0, 0, 0.98), 50)
-    s.render.filepath = os.path.join(OUT, "lineup-front.png")
-    bpy.ops.render.render(write_still=True)
-    camera((6.5, -7.0, 1.7), (0, 0, 0.95), 50)
-    s.render.filepath = os.path.join(OUT, "lineup-side.png")
-    bpy.ops.render.render(write_still=True)
-print("DONE")
+        w = Work(body, P, p)
+        self.sculpt(w)
+        # a skull of its own, where one is worn, before the eyes: they have to find the forehead it makes
+        back = self.back_of_head(w)
+        head = w.head
+        surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
+        if back:
+            surface += [v.co.copy() for v in back.data.vertices]
+        add_eyes(body, p, head, w.hs, surface, [body] + ([back] if back else []))
+        if back:
+            join_into(body, back)
+        self.hair(w)
+
+        rig = make_rig(key, P, names, body)
+        missing = [g.name for g in body.vertex_groups if g.name not in rig.data.bones]
+        print("BUILT", key, "bones", len(rig.data.bones), "verts", len(body.data.vertices), "groups without a bone", missing)
+        return body, rig

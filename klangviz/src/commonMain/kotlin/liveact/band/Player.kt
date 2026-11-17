@@ -10,18 +10,28 @@ package io.peekandpoke.klang.viz.liveact.band
  * everyone in turn (breath, the eyes' waver) goes by it, so it must not depend on which figure's file arrived
  * first.
  *
- * [key] is the player's name in a figure's file (`drums.glb`), in a page's switches (`?head=eimer`) and in the
- * prototype this was ported from.
+ * Each has a name of their own (the maintainer, 2026-11-17). [key] is that name in a figure's file (`wucht.glb`),
+ * in the script that builds the figure (`klangviz/figures/`) and in a page's switches (`?head=sirene`). Which part
+ * of the song each one plays is said where the band is put together.
  */
 enum class Player(val key: String) {
-    Drums("drums"),
-    Bass("bass"),
-    Guitar1("guitar1"),
+    /** The drummer: the muscular one. */
+    Wucht("wucht"),
 
-    /** The frontwoman: she plays the song's "trommel" on a trumpet. The key is the part's first name. */
-    Eimer("eimer"),
-    Marimba("marimba"),
-    Guitar2("guitar2");
+    /** The bass player: tall and thin. */
+    Beben("beben"),
+
+    /** The lead guitarist: slim, long hair, the virtuoso. */
+    Skalpell("skalpell"),
+
+    /** The frontwoman: she plays the song's "trommel" on a trumpet. */
+    Sirene("sirene"),
+
+    /** The marimba player: the riddle of the band. */
+    Rune("rune"),
+
+    /** The rhythm guitarist: the heavier one with the cap, less fine than [Skalpell] and with the power. */
+    Klaue("klaue");
 
     companion object {
         /** The player with [key]; null where there is none. */

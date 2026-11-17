@@ -127,12 +127,12 @@ val STANDING_LOOKS: List<Placement> = listOf(
 
 /** Looks at the players who do not stand ([looksOf] gives everyone else [STANDING_LOOKS]), as [STANDING_LOOKS]. */
 val LOOKS: Map<Player, List<Placement>> = mapOf(
-    Player.Drums to listOf(
+    Player.Wucht to listOf(
         Placement(pos = Triple(1.2, 1.0, 3.1), at = Triple(0.0, 0.95, 0.4), fov = 40.0),    // over the kick drum
         Placement(pos = Triple(-1.1, 2.2, -1.5), at = Triple(0.0, 0.85, 0.7), fov = 55.0),  // over his shoulder, down on the kit
         Placement(pos = Triple(2.4, 1.25, 0.7), at = Triple(0.0, 0.95, 0.4), fov = 38.0),   // from his left
     ),
-    Player.Marimba to listOf(
+    Player.Rune to listOf(
         Placement(pos = Triple(0.2, 2.2, 2.3), at = Triple(0.0, 0.90, 0.5), fov = 42.0),    // down on the bars
         Placement(pos = Triple(1.9, 1.15, 1.5), at = Triple(0.0, 1.05, 0.5), fov = 38.0),   // along the bars
         Placement(pos = Triple(-0.8, 1.5, 2.2), at = Triple(0.0, 1.25, 0.2), fov = 32.0),
@@ -165,8 +165,8 @@ private val STANDING_ARC = Orbit(far = 2.7, high = 1.35, at = Triple(0.0, 1.15, 
 
 /** Round the players who do not stand, as [STANDING_ARC]. */
 private val ARCS: Map<Player, Orbit> = mapOf(
-    Player.Drums to Orbit(far = 3.4, high = 1.30, at = Triple(0.0, 0.95, 0.4), fov = 40.0),
-    Player.Marimba to Orbit(far = 3.1, high = 1.60, at = Triple(0.0, 1.00, 0.4), fov = 40.0),
+    Player.Wucht to Orbit(far = 3.4, high = 1.30, at = Triple(0.0, 0.95, 0.4), fov = 40.0),
+    Player.Rune to Orbit(far = 3.1, high = 1.60, at = Triple(0.0, 1.00, 0.4), fov = 40.0),
 )
 
 // A round in bars: where the looks begin, where the way back begins, where the circle begins
@@ -189,7 +189,7 @@ private const val LOOKS_A_ROUND = 5
 private fun opens(i: Int): Int = if (i < 3) FIRST + 3 * i else EARLY + 3 * (i - 3)
 
 /** The players in the order the camera tries them, and the keys 1 to 6 choose them. */
-val ORDER: List<Player> = listOf(Player.Drums, Player.Guitar1, Player.Eimer, Player.Bass, Player.Guitar2, Player.Marimba)
+val ORDER: List<Player> = listOf(Player.Wucht, Player.Skalpell, Player.Sirene, Player.Beben, Player.Klaue, Player.Rune)
 
 /**
  * The camera's choreography under [show]: a bar is its cycle, and every seed gives another show (who is looked at,
@@ -271,7 +271,7 @@ class Choreography(
         }
 
         // the marimba and the trumpet play seldom: when one of them does, the round's first look is theirs
-        val rare = listOf(Player.Marimba, Player.Eimer).filter { plays(it, a, b) > 2 }
+        val rare = listOf(Player.Rune, Player.Sirene).filter { plays(it, a, b) > 2 }
         var player: Player? = if (rare.isNotEmpty() && i == 0) pick(rare, 3) else null
         // else someone who plays just then, and not the one the look before showed
         val before = if (!leads) subject(n, i - 1).player else null
@@ -311,7 +311,7 @@ class Choreography(
         }
         val player = subject(n, 0).player
 
-        return if (kind == RoundKind.Arc && (player == null || player == Player.Eimer)) RoundKind.Looks else kind
+        return if (kind == RoundKind.Arc && (player == null || player == Player.Sirene)) RoundKind.Looks else kind
     }
 
     /**
@@ -550,7 +550,7 @@ class Choreography(
         // a look that looks away from the total (over the drummer's shoulder): the dolly would swing the camera right
         // round, so it cuts. And from the frontwoman, who may stroll off and turn while the camera travels: the way
         // back hangs on her place, and would jump
-        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == Player.Eimer
+        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == Player.Sirene
 
         if (away(shot) || strolls) {
             label = "total"

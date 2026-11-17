@@ -72,12 +72,12 @@ class View(
             rigs = rigs,
             activity = { player ->
                 when (player) {
-                    Player.Drums -> show.times("kick", "snare")
-                    Player.Bass -> show.times("bass")
-                    Player.Guitar1 -> show.times("guitar1")
-                    Player.Guitar2 -> show.times("guitar2", "guitar3")
-                    Player.Marimba -> show.times("lead")
-                    Player.Eimer -> show.times("trommel")
+                    Player.Wucht -> show.times("kick", "snare")
+                    Player.Beben -> show.times("bass")
+                    Player.Skalpell -> show.times("guitar1")
+                    Player.Klaue -> show.times("guitar2", "guitar3")
+                    Player.Rune -> show.times("lead")
+                    Player.Sirene -> show.times("trommel")
                 }
             },
             force = forcedKind(switches["move"]),
@@ -116,7 +116,7 @@ class View(
     private var hand: Hand? = null
     private var shown: Shot? = null
     private var clock: Double = 0.0
-    private var player: Player = Player.Guitar1
+    private var player: Player = Player.Skalpell
     private val lookOf: MutableMap<Player, Int> = mutableMapOf()
     private var way: Int = 1
 

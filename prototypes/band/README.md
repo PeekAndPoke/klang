@@ -54,8 +54,7 @@ The audio and the events must come from one render: the song is seeded by the ti
 | `web/song.js` | Reads the recording; who plays which event |
 | `web/pattern.js` | The cloth: each body's pattern in the light, the glitter, the wall's two faces |
 | `web/util.js` | The few numeric helpers everything shares |
-| `blender/figures.py` | Builds the six figures and exports them (below) |
-| `models/*.glb` | The exported figures (rebuilt by the script; kept so the page runs without Blender) |
+| `models/*.glb` | The figures as this page last had them (below) |
 | `check/stills.py`, `check/models.py` | Proof for a change that must not change the show (below) |
 | `energy.py`, `serve.py` | The recording's loudness; the page's server |
 | `INVENTORY.md` | What the show holds, by kind of movement, and what is uneven |
@@ -66,13 +65,13 @@ alone, so any moment can be shown on its own and always looks the same.
 
 ## The figures
 
-```
-blender -b --factory-startup -P prototypes/band/blender/figures.py -- prototypes/band/ignored export
-```
+The script that builds the figures has moved to the show: `klangviz/figures/` (2026-11-17), with a file for each
+character, who have names of their own now (Wucht, Beben, Skalpell, Sirene, Rune, Klaue). It writes its models into
+the show's resources. `models/*.glb` here are the figures as this page last had them, under their old names
+(`drums`, `bass`, `guitar1`, `eimer`, `marimba`, `guitar2`); they are no longer rebuilt.
 
-writes `models/*.glb` (the folder named is only where previews go; the models land beside it, in `../models`).
-Blender does not keep the order of the vertices from run to run, so two exports differ as files though they are
-the same figures; `check/models.py` compares them by content.
+`check/models.py` compares two folders of models by content (Blender does not keep the order of the vertices from
+run to run, so two exports differ as files though they are the same figures).
 
 ## Changing the code without changing the show
 
@@ -83,7 +82,7 @@ python3 prototypes/band/check/stills.py take before      # 18 stills: fixed mome
 # ... change the code ...
 python3 prototypes/band/check/stills.py take after
 python3 prototypes/band/check/stills.py compare before after     # every pixel
-python3 -I prototypes/band/check/models.py <models before> prototypes/band/models   # after a change to figures.py
+python3 -I prototypes/band/check/models.py <models before> klangviz/src/jsMain/resources/liveact/notstrom   # after a change to klangviz/figures/
 ```
 
 The stills are frozen moments: they do not see the click to start, the audio's clock or anything that depends on
