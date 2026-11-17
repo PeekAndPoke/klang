@@ -59,6 +59,7 @@ data class Character(val seed: Double, val traits: Traits)
 
 /**
  * How a member carries themselves over an instrument on a strap: [lean], how the trunk leans (back is negative);
- * [bang], how much the head goes; [bounce], how far the hips dip on the beat.
+ * [bang], how much the head goes; [bounce], how far the hips dip on the beat; [step], how much they dance from one
+ * leg to the other, two beats on each (0: the feet stay planted; 1: the weight goes right over each leg in turn).
  */
-data class Bearing(val lean: Double, val bang: Double, val bounce: Double)
+data class Bearing(val lean: Double, val bang: Double, val bounce: Double, val step: Double = 0.0)

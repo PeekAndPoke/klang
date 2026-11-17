@@ -36,6 +36,7 @@ import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.klang.workshop.threejs.worldToLocal
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
@@ -115,6 +116,7 @@ class StringPlayer(
     private val lean: Double = bearing?.lean ?: 0.06
     private val bang: Double = bearing?.bang ?: 0.2
     private val bounce: Double = bearing?.bounce ?: 0.03
+    private val step: Double = bearing?.step ?: 0.0
 
     /**
      * When this player's stretches of straightening up begin, in seconds into the song: each player's at another
@@ -273,7 +275,17 @@ class StringPlayer(
 
         rig.reset()
         rig.update()
-        rig.moveHips(vec(0.03 * sway * s, -(0.04 + bounce * body * parts.knees) * rig.pelvis.y, 0.0))
+        // one who dances from leg to leg: the weight goes over one leg, then the other, two beats on each; it dwells
+        // on a leg and crosses over quickly, the hips tilt with it, and the free leg comes up onto its toes
+        val over = sin(PI * beat / 2)
+        val weight = step * drive * over / (0.35 + 0.65 * abs(over))
+
+        rig.moveHips(vec((0.03 * sway + 0.065 * weight) * s, -(0.04 + bounce * body * parts.knees) * rig.pelvis.y, 0.0))
+
+        if (step > 0) {
+            rig.turn("hips", Z_AXIS, -0.06 * weight)
+            rig.turn("belly", Z_AXIS, 0.05 * weight)
+        }
         // now and then the player straightens up from the instrument: the back comes up (a little past upright, and
         // not forward of where a player who leans back already is), the chest opens, the head lifts and looks out
         val up = show.switches.double(Switch.Straight)?.coerceIn(0.0, 1.0)
@@ -318,6 +330,7 @@ class StringPlayer(
             val foot = rig.ankle.getValue(side).clone()
 
             foot.x += 0.07 * sign * s
+            foot.y += 0.035 * s * max(0.0, -weight * sign)
             rig.foot(side, rig.root.localToWorld(foot), rig.dir(0.3 * sign, 0.0, 1.0))
         }
 

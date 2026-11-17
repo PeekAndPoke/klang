@@ -27,11 +27,12 @@ val KLAUE: Member = Member(
             fits = Traits.Fits(every = 12.0, share = 0.22, calm = 0.30),
             depth = 0.85, beats = listOf(1.0, 0.85, 1.0, 0.85), lag = -0.03, soft = 0.11, chance = 0.25,
             look = 0.08, tilt = 0.05, lean = 0.02,
-            // all head, planted feet
+            // all head
             parts = Traits.Parts(head = 1.15, trunk = 0.9, knees = 0.8, sway = 0.6),
         ),
     ),
-    bearing = Bearing(lean = 0.10, bang = 0.24, bounce = 0.028),
+    // he dances from one leg to the other (the maintainer, 2026-11-17)
+    bearing = Bearing(lean = 0.10, bang = 0.24, bounce = 0.028, step = 1.0),
     // he answers a look, and looks at the camera every now and then: a chance every eleven seconds, half of them
     // taken, each look held for two to four seconds
     skills = listOf(
