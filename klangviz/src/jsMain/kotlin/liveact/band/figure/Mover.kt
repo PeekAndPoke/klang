@@ -118,10 +118,13 @@ class Mover(private val show: Show, private val seed: Double, val traits: Traits
      */
     fun burst(): Double = traits.depth * 0.25 * show.energy.burst * strength() * (1 - traits.steady)
 
-    /** The slow wandering at [t] (seconds): the head looks about and tilts, the trunk leans; applied on top of the pose. */
-    fun apply(rig: Rig, t: Double) {
+    /**
+     * The slow wandering at [t] (seconds): the head looks about and tilts, the trunk leans; applied on top of the
+     * pose. [calm]: how much less of it there is just now (0: all of it, 1: none), as while a member stares.
+     */
+    fun apply(rig: Rig, t: Double, calm: Double = 0.0) {
         val c = traits
-        val alive = 0.5 + 0.5 * min(1.0, show.energy.slow / 0.6)
+        val alive = (0.5 + 0.5 * min(1.0, show.energy.slow / 0.6)) * (1 - calm)
 
         rig.turn("head", Y_AXIS, c.look * alive * show.drift(t * 0.23, seed + 11))
         rig.turn("head", Z_AXIS, c.tilt * alive * show.drift(t * 0.31, seed + 12))

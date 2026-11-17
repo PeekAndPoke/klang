@@ -14,8 +14,9 @@ The maintainer (2026-11-16): all tickets of the live act go into this epic.
 
 - `klangviz/`: the module (package `io.peekandpoke.klang.viz.liveact`; why it is cut so: KLANG-00456). `band/`
   holds `members/` (a sheet per member: dress, character, bearing, skills), `skills/` (what a member can do on
-  their own, equipped on the sheet: the eye contact, the glance at the camera; Rune's shadow snakes are her
-  dress), `StagePlot.kt` (who stands where, the walk-in), `figure/` (the skeleton and how it moves), `dress/`,
+  their own, equipped on the sheet in the order of rank: the eye contact, and the looks, each timed by chance: the
+  glance at the camera, the stare at it, the glance at one of the band, the gaze over the crowd; Rune's shadow
+  snakes are her dress), `StagePlot.kt` (who stands where, the walk-in), `figure/` (the skeleton and how it moves), `dress/`,
   `instruments/` (a folder each for drums, marimba, guitar, bass and trumpet, and `strings/` for what guitar and
   bass share) and `notstrom/` (the band put together). Beside it: `stage/`, `theatre/`, `sound/`, `song/`, `lights/`, `camera/`, and `refactorme/`, what
   ties the live act to the one song (who plays which part, the song's tags, the test notes). Shared arithmetic is

@@ -20,6 +20,7 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.blend
 import io.peekandpoke.klang.viz.liveact.band.figure.capture
 import io.peekandpoke.klang.viz.liveact.band.figure.enter
+import io.peekandpoke.klang.viz.liveact.band.figure.eyesAt
 import io.peekandpoke.klang.viz.liveact.band.figure.stepLegs
 import io.peekandpoke.klang.viz.liveact.band.figure.walkPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.drums.Drummer
@@ -28,9 +29,12 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
 import io.peekandpoke.klang.viz.liveact.band.members.Members
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.band.skills.LookPlaces
+import io.peekandpoke.klang.viz.liveact.band.skills.crowdSpots
 import io.peekandpoke.klang.viz.liveact.band.skills.lookAt
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Gltf
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
@@ -162,12 +166,23 @@ class Notstrom private constructor(
         seed = character(SchmetterlingCast.MARIMBA).seed,
     )
 
+    /**
+     * Where a look can go: the camera (the viewer, as the show keeps it), the members' eyes as they are posed now,
+     * and the crowd's spots.
+     */
+    private val places = LookPlaces(
+        camera = viewer,
+        eyes = { player -> eyesAt(rig(player)) },
+        crowd = crowdSpots(CrowdPlaces.all),
+    )
+
     val frontwoman = TrumpetPlayer(
         show = show,
         rig = rig(SchmetterlingCast.TRUMPET),
         part = SchmetterlingCast.trumpetNotes(show),
         traits = character(SchmetterlingCast.TRUMPET).traits,
         seed = character(SchmetterlingCast.TRUMPET).seed,
+        looks = headLooksOf(SchmetterlingCast.TRUMPET),
     )
 
     /** The string players, in the order they are moved each frame. */
@@ -187,13 +202,13 @@ class Notstrom private constructor(
 
     /**
      * Where [player]'s skills ask the head to look at a time (see [lookAt]): by the skills on their sheet, with their
-     * own chance (the show's under their character's seed), toward the camera where the show keeps it.
+     * own chance (the show's under their character's seed), toward the [places] a look can go to.
      */
-    private fun headLooksOf(player: Player): (Double) -> Look? {
+    private fun headLooksOf(player: Player): (Double) -> List<Look> {
         val member = Members.of(player)
         val roll = { index: Double -> show.own(index, member.character.seed) }
 
-        return { t -> lookAt(skills = member.skills, t = t, roll = roll, camera = viewer) }
+        return { t -> lookAt(who = player, skills = member.skills, t = t, roll = roll, places = places) }
     }
 
     /**
@@ -221,18 +236,6 @@ class Notstrom private constructor(
         marimba.update(t)
         stepLegs(rig(SchmetterlingCast.MARIMBA), walks.getValue(SchmetterlingCast.MARIMBA))
 
-        // the frontwoman: put where her walk-in has her; once there she is her own (her place, her strolls)
-        val herRig = rig(SchmetterlingCast.TRUMPET)
-        val herWalk = walks.getValue(SchmetterlingCast.TRUMPET)
-        val her = if (herWalk.since < 0) {
-            TrumpetPlayer.Walk(at = herRig.root.position.clone(), turn = herRig.root.rotation.y, speed = 0.0, going = 0.0)
-        } else {
-            null
-        }
-
-        frontwoman.update(t, her)
-        stepLegs(herRig, herWalk)
-
         // the drummer walks in with the sticks in his hands, and sits down once he is at the stool
         drummer.update(t)
 
@@ -254,5 +257,18 @@ class Notstrom private constructor(
                 stick.quaternion.setFromUnitVectors(Y_AXIS, d)
             }
         }
+
+        // the frontwoman, last: her looks may go to the others' eyes, as they are posed in this frame. Put where her
+        // walk-in has her; once there she is her own (her place, her strolls)
+        val herRig = rig(SchmetterlingCast.TRUMPET)
+        val herWalk = walks.getValue(SchmetterlingCast.TRUMPET)
+        val her = if (herWalk.since < 0) {
+            TrumpetPlayer.Walk(at = herRig.root.position.clone(), turn = herRig.root.rotation.y, speed = 0.0, going = 0.0)
+        } else {
+            null
+        }
+
+        frontwoman.update(t, her)
+        stepLegs(herRig, herWalk)
     }
 }

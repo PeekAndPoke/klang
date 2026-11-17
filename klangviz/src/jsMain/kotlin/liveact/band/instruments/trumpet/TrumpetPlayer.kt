@@ -14,6 +14,8 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -61,7 +63,11 @@ private object Raise {
 
 /**
  * The frontwoman with her trumpet. [part]: her notes, sorted by time, as far as the song is known; the beat for the nod is the [show]'s.
- * [traits] and [seed] make her [Mover] (the prototype's fallback seed is 3; the band gives her her own).
+ * [traits] and [seed] make her [Mover] (the prototype's fallback seed is 3; the band gives her her own). [looks]:
+ * where her skills ask the head to look at a time (see `lookAt`, the last in rank first; none unless given): the
+ * head turns to each as far as it is asked, each over the ones before it, only as far as she is free to look (never
+ * with the trumpet at her lips, see [freeToLook]) and, but for a look at one behind her, as far as the place is in
+ * sight.
  */
 class TrumpetPlayer(
     private val show: Show,
@@ -69,6 +75,7 @@ class TrumpetPlayer(
     private val part: Part<Note>,
     traits: Traits,
     seed: Double = 3.0,
+    private val looks: (Double) -> List<Look> = { emptyList() },
 ) {
     /**
      * Where she is and how she walks: [at] her place on the stage, [turn] which way she faces, [speed] how fast she
@@ -145,7 +152,7 @@ class TrumpetPlayer(
     /** Which way she faces at her place. */
     val homeTurn: Double
 
-    /** Where a phrase begins: a note after six seconds of silence or more (and her first note). */
+    /** Where a phrase begins: a note after more than six seconds of silence (and her first note). */
     val phrases: List<Double> get() = planned.phrases
 
     // where she stands to play, and the stretches in which she has nothing to play and strolls about the front of the
@@ -253,6 +260,30 @@ class TrumpetPlayer(
         return Sound(note = note, sounding = sounding, high = high, blow = if (before != null) before.v * sounding else 0.0)
     }
 
+    /** A [look] as far as she takes it ([share]), toward [yaw]: off the way she faces, as far as a head turns. */
+    private class Turn(val look: Look, val share: Double, val yaw: Double)
+
+    /**
+     * The looks her skills ask for at [t], as far as she takes each: as far as she is free to look ([freeToLook]),
+     * and as far as the place is in sight where she stands and faces ([walk]); a look at one behind her goes over
+     * her shoulder, and lets go where they are straight behind her.
+     */
+    private fun looksAt(t: Double, walk: Walk): List<Turn> {
+        val free = freeToLook(notes = notes, t = t)
+
+        if (free <= 0) {
+            return emptyList()
+        }
+
+        return looks(t).map { look ->
+            val off = atan2(look.at.x - walk.at.x, look.at.z - walk.at.z) - walk.turn
+            val yaw = atan2(sin(off), cos(off))
+            val share = look.share * free * headReach(angle = yaw, behind = look.behind)
+
+            Turn(look = look, share = share, yaw = max(-1.25, min(1.25, yaw)))
+        }.filter { it.share > 0 }
+    }
+
     /** [put]: where she is put from outside (her walk-in); else she is at her place, or strolling. */
     fun update(t: Double, put: Walk? = null) {
         if (part.refresh()) {
@@ -283,20 +314,21 @@ class TrumpetPlayer(
         high /= weights
         breath /= weights
 
-        val until = if (after != null) after.t - t else 99.0
-        val since = if (before != null) t - before.t - before.d else 99.0
-        val up = max(smooth(1 - (until - 0.15) / 0.7), 1 - smooth((since - 0.9) / 0.8))
+        val up = trumpetUp(notes = notes, t = t)
         val blow = now.blow
 
+        // strolling: the whole figure goes along her way and turns into it; the legs step by the way made
+        val walk = put ?: walkAt(t)
+        // where her skills ask the head to look, each as far as she may: a stare calms the nod and the wander
+        val turns = looksAt(t = t, walk = walk)
+        val calm = turns.filter { it.look.still }.maxOfOrNull { it.share } ?: 0.0
+
         val beat = t * bpm / 60
-        val nod = mover.nod(beat) * (1 - 0.7 * up)
+        val nod = mover.nod(beat) * (1 - 0.7 * up) * (1 - 0.7 * calm)
         val body = nod + mover.burst()
         val parts = mover.parts
         val sway = sin(PI * beat / 2) * parts.sway
         val back = up * (0.08 + 0.16 * high) + 0.04 * breath
-
-        // strolling: the whole figure goes along her way and turns into it; the legs step by the way made
-        val walk = put ?: walkAt(t)
 
         rig.root.position.copy(walk.at)
         rig.root.rotation.y = walk.turn
@@ -330,7 +362,22 @@ class TrumpetPlayer(
         rig.turn("chest", Y_AXIS, 0.30 * up)
         rig.turn("head", Y_AXIS, 0.38 * up)
         rig.turn("head", X_AXIS, -0.04 * (1 - up) + 0.09 * nod * parts.head - 0.45 * back)
-        mover.apply(rig, t)
+        mover.apply(rig = rig, t = t, calm = 0.8 * calm)
+
+        if (turns.isNotEmpty()) {
+            // the chest turns a little with the looks, the face the rest of the way, each over the ones before
+            var chest = 0.0
+
+            for (turn in turns) {
+                chest += (0.3 * turn.yaw - chest) * turn.share
+            }
+
+            rig.turn("chest", Y_AXIS, chest)
+
+            for (turn in turns) {
+                rig.faceTo(turn.look.at, turn.share)
+            }
+        }
 
         for (side in Side.entries) {
             val sign = side.sign

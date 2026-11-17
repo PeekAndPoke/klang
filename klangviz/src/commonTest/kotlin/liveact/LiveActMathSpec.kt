@@ -10,6 +10,8 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import kotlin.math.PI
+import kotlin.math.abs
 
 private data class At(override val t: Double) : Timed
 
@@ -82,6 +84,47 @@ class LiveActMathSpec : StringSpec({
         a.own(5, 11.0) shouldBe a.own(5.0, 11.0)
         a.bpm shouldBe 120.0
         a.bar shouldBe 2.0
+    }
+
+    "a look over the shoulder lets go at one straight behind, so it never jumps from one shoulder to the other" {
+        overShoulder(0.0) shouldBe 1.0
+        overShoulder(2.6) shouldBe 1.0
+        overShoulder(-2.6) shouldBe 1.0
+        // straight behind, from either side, there is no look left to jump
+        overShoulder(PI) shouldBe 0.0
+        overShoulder(-PI) shouldBe 0.0
+        overShoulder(PI - 0.01) shouldBeLessThan 0.01
+        overShoulder(-PI + 0.01) shouldBeLessThan 0.01
+
+        // and it goes steadily, the same on both sides
+        val fade = (0..50).map { overShoulder(PI - 0.5 + it * 0.01) }
+
+        fade.zipWithNext().all { (a, b) -> b <= a } shouldBe true
+        fade[25] shouldBe (0.5 plusOrMinus 1e-9)
+        overShoulder(-(PI - 0.25)) shouldBe (fade[25] plusOrMinus 1e-12)
+    }
+
+    "a head's reach: over the shoulder for a look that may go behind, in sight for any other; no turn ever steps" {
+        val angles = (-3141..3141).map { it / 1000.0 } + listOf(-PI, PI)
+
+        for (angle in angles) {
+            headReach(angle = angle, behind = false) shouldBe inSight(angle)
+            headReach(angle = angle, behind = true) shouldBe overShoulder(angle)
+        }
+
+        // the two differ where it matters: beside and behind
+        headReach(angle = 2.0, behind = false) shouldBe 0.0
+        headReach(angle = 2.0, behind = true) shouldBe 1.0
+
+        // the head's turn to one behind (as far as a head goes, 1.25 either way) times its reach, as the one looked
+        // at passes straight behind: from one shoulder to the other without a step
+        fun turn(angle: Double) = headReach(angle = angle, behind = true) * angle.coerceIn(-1.25, 1.25)
+
+        val sweep = (0..2000).map { PI - 1.0 + it * 0.001 }.map { if (it > PI) it - 2 * PI else it }
+
+        sweep.map { turn(it) }.zipWithNext { a, b -> abs(b - a) }.max() shouldBeLessThan 0.01
+        turn(PI - 0.6) shouldBe 1.25
+        turn(-PI + 0.6) shouldBe -1.25
     }
 
     "a head turns fully to what is before or beside someone, and not at all to what is behind them" {

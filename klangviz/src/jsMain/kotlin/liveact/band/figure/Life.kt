@@ -143,10 +143,8 @@ fun eyeContact(show: Show, rigs: Map<Player, Rig>, herNotes: List<Double>, t: Do
     a.update()
     b.update()
 
-    fun eyes(rig: Rig): Vector3 = rig.bone("head").getWorldPosition(vec()).add(vec(0.0, 0.08, 0.0))
-
-    val ea = eyes(a)
-    val eb = eyes(b)
+    val ea = eyesAt(a)
+    val eb = eyesAt(b)
 
     if (firstTurns) {
         a.faceTo(eb, contact.wFirst)
@@ -164,6 +162,9 @@ fun eyeContact(show: Show, rigs: Map<Player, Rig>, herNotes: List<Double>, t: Do
         b.turn("head", X_AXIS, 0.09 * contact.nodSecond)
     }
 }
+
+/** Where the eyes of [rig] are as it is posed now, in the world: what another looks at (a little above the head's bone). */
+fun eyesAt(rig: Rig): Vector3 = rig.bone("head").getWorldPosition(vec()).add(vec(0.0, 0.08, 0.0))
 
 /** The rigs in the players' order ([Player.entries]), those there are. */
 private fun inOrder(rigs: Map<Player, Rig>): List<Rig> = Player.entries.mapNotNull { rigs[it] }

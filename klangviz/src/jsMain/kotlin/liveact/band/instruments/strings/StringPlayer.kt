@@ -18,7 +18,7 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.members.Bearing
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
-import io.peekandpoke.klang.viz.liveact.inSight
+import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -94,7 +94,8 @@ private class Fret(val along: Double, val hold: Double, val across: Double, val 
  * band gives each player one of their own). [bearing]: how the player carries themselves over the instrument, the
  * member's own (see [Bearing]), or a plain one where none is given; [outline]: the body's
  * outline, the [design]'s own unless given; [looks]: where the member's skills ask the head to look at a time (see
- * `lookAt`; none unless given): the head comes up from the instrument and turns to it as far as it is asked;
+ * `lookAt`, the last in rank first; none unless given): the head comes up from the instrument and turns to each as
+ * far as it is asked, each over the ones before it;
  * [straighten]: when the player straightens up from the instrument (null: never; `?straight=1` holds everyone
  * straight, to look at the pose).
  */
@@ -107,7 +108,7 @@ class StringPlayer(
     private val seed: Double = 4.0,
     bearing: Bearing? = null,
     outline: BodyOutline = design.outline,
-    private val looks: (Double) -> Look? = { null },
+    private val looks: (Double) -> List<Look> = { emptyList() },
     private val straighten: Straighten? = Straighten(every = 21.0, chance = 0.55),
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
@@ -299,21 +300,30 @@ class StringPlayer(
         rig.turn("chest", Y_AXIS, 0.18)
 
         // where the member's skills ask the head to look (a glance at the camera every now and then): the head comes
-        // up from the instrument and turns to it as far as it is asked, and goes back
-        val asked = looks(t)
-        var look = asked?.share ?: 0.0
+        // up from the instrument and turns to each look as far as it is asked, each over the ones before it, and
+        // goes back
+        var look = 0.0
         var yaw = 0.35
         var pitch = 0.0
 
-        if (look > 0 && asked != null) {
+        for (asked in looks(t)) {
             val eye = rig.root.worldToLocal(asked.at.clone())
             val from = rig.height + 0.10 * s
-            val toward = atan2(eye.x, eye.z)
+            var toward = atan2(eye.x, eye.z)
+            var share = asked.share
 
-            // nobody looks at a camera behind their back: the head would have to turn right round
-            look *= inSight(toward)
-            yaw = 0.35 + (toward - 0.18 - 0.35) * look     // the chest is turned 0.18 already
-            pitch = atan2(eye.y - from, hypot(eye.x, eye.z)) * look
+            // nobody looks at a camera behind their back: the head would have to turn right round. At one who stands
+            // behind (another member) the look goes over the shoulder, and not at all at one straight behind
+            share *= headReach(angle = toward, behind = asked.behind)
+
+            if (asked.behind) {
+                // the head turned as far as a head can (as `Rig.faceTo` does)
+                toward = max(-1.25, min(1.25, toward))
+            }
+
+            yaw += (toward - 0.18 - yaw) * share     // the chest is turned 0.18 already
+            pitch += (atan2(eye.y - from, hypot(eye.x, eye.z)) - pitch) * share
+            look = max(look, share)
         }
 
         rig.turn("neck", X_AXIS, bang * 0.4 * nod * parts.head * (1 - 0.7 * look))

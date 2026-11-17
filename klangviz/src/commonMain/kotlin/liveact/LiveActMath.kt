@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.floor
@@ -34,6 +35,19 @@ fun smoother(x: Double): Double {
  * all the way (1) up to some 70 degrees, not at all (0) from some 95 degrees on, where it is behind them.
  */
 fun inSight(angle: Double): Double = smooth((cos(angle) + 0.1) / 0.4)
+
+/**
+ * How far someone looks over their shoulder at one who stands at [angle] off straight ahead of them (radians,
+ * either side): all the way (1) but for the last half radian, and not at all (0) at one straight behind them. There
+ * the nearer shoulder changes sides, so a look let go of in between never jumps from one shoulder to the other.
+ */
+fun overShoulder(angle: Double): Double = smooth((PI - abs(angle)) / 0.5)
+
+/**
+ * How far a head takes a look at what stands at [angle] off straight ahead (radians, either side), 0 to 1: a look
+ * that may go [behind] (at another member) goes [overShoulder], any other only as far as the place is [inSight].
+ */
+fun headReach(angle: Double, behind: Boolean): Double = if (behind) overShoulder(angle) else inSight(angle)
 
 /**
  * How far [x] lies beyond [easy] on either side of 0, with its sign: 0 well within, and from [soft] before the edge

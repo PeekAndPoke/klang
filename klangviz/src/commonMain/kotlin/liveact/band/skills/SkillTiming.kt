@@ -47,6 +47,12 @@ data class SkillTiming(
         }
     }
 
+    /**
+     * The slot [t] (seconds into the show) lies in, a whole number: each slot has one chance, and a use ends within
+     * its slot, so the slot names the use (what a use chooses, it chooses by its slot).
+     */
+    fun slotOf(t: Double): Double = floor(t / every)
+
     /** One use: when it [start]s and how long it [hold]s (see [SkillTiming]). */
     private class Use(val start: Double, val hold: Double)
 
@@ -74,7 +80,7 @@ data class SkillTiming(
      * of the show gives the same answer whenever it is asked for.
      */
     fun inUse(t: Double, roll: (Double) -> Double): Double {
-        val slot = floor(t / every)
+        val slot = slotOf(t)
         val use = useOf(slot = slot, roll = roll) ?: return 0.0
         var earlier = slot - 1
 
