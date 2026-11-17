@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -25,6 +26,12 @@ fun smoother(x: Double): Double {
 
     return c * c * c * (c * (6 * c - 15) + 10)
 }
+
+/**
+ * How far someone can turn their head to what stands at [angle] off straight ahead of them (radians, either side):
+ * all the way (1) up to some 70 degrees, not at all (0) from some 95 degrees on, where it is behind them.
+ */
+fun inSight(angle: Double): Double = smooth((cos(angle) + 0.1) / 0.4)
 
 /** A number from 0 to 1 that belongs to [arg], always the same one: the chance behind every seeded choice. */
 fun hash01(arg: Double): Double {

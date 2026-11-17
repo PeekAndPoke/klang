@@ -7,6 +7,8 @@ package io.peekandpoke.klang.viz.liveact
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 
 private data class At(override val t: Double) : Timed
@@ -182,5 +184,22 @@ class LiveActMathSpec : StringSpec({
         // at index 1 the level is 0.6 above the slow one; the five before it (all index 0) are not above
         loudness.at(0.5).burst shouldBe (0.1 plusOrMinus 1e-12)
         loudness.at(1.0).burst shouldBe (0.1 plusOrMinus 1e-12)
+    }
+
+    "a head turns fully to what is before or beside someone, and not at all to what is behind them" {
+        inSight(0.0) shouldBe 1.0
+        inSight(1.2) shouldBe 1.0
+        inSight(-1.2) shouldBe 1.0
+
+        // between 70 and 95 degrees to the side it fades, the same on both sides and never back up
+        val fade = (0..50).map { inSight(1.22 + it * 0.009) }
+
+        fade[25] shouldBeGreaterThan 0.0
+        fade[25] shouldBeLessThan 1.0
+        fade.zipWithNext().all { (a, b) -> b <= a } shouldBe true
+        inSight(-1.4835) shouldBe inSight(1.4835)
+        inSight(1.7) shouldBe 0.0
+        inSight(-2.55) shouldBe 0.0
+        inSight(3.14159) shouldBe 0.0
     }
 })

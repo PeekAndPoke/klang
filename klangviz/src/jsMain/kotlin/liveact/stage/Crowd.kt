@@ -20,11 +20,13 @@ import io.peekandpoke.kraft.utils.jsObject
 
 // The audience, as far as it is seen: the small lights people hold up, nothing more. They stand in half a circle
 // around the stage, as in a giant open-air theatre, in loose rows below the stage's edge and a few metres off it,
-// the ground rising toward the back. Each light flickers on its own and moves as its arm does: a slow sway when the
-// music is quiet, wider and with a bounce on the beat the louder it gets. They light nothing. The show's camera
-// stands before the first row, so those straight ahead of the stage are seen only when it looks back from behind
-// the band, or from far away (the stadium shot); those at the stage's sides also stand behind the band when it is
-// seen from the other side.
+// the ground rising toward the back. The lights differ: each has its own colour (amber to warm white, a few of
+// them a cool white), its own size and brightness, and flickers on its own, unevenly, as a small flame or a tired
+// lamp does. All of that is worked out on the graphics card from the light's own number, so it costs the page
+// nothing. Each light moves as its arm does: a slow sway when the music is quiet, wider and with a soft rise on
+// the beat the louder it gets. They light nothing. The show's camera stands before the first row, so those
+// straight ahead of the stage are seen only when it looks back from behind the band, or from far away (the
+// stadium shot); those at the stage's sides also stand behind the band when it is seen from the other side.
 
 /** Adds the audience's lights to [scene] (where they stand: [CrowdPlaces]). Each frame: [update]. */
 class Crowd(scene: Scene) {
@@ -82,6 +84,7 @@ class Crowd(scene: Scene) {
   attribute float seed, group;
   uniform float uTime, uSize, uEnergy, uLow, uBeat;
   varying float vGlow;
+  varying vec3 vTint;
   void main() {
     vec3 p = position;
     // the arm. People stand in groups, and a group moves as one: the same sway, the same beat, the same
@@ -99,22 +102,34 @@ class Crowd(scene: Scene) {
     p.xz += along * lively * (0.03 + 0.11 * uEnergy) * sin(uTime * (0.7 + 0.5 * g) * (0.94 + 0.12 * own) + g * 40.0 + off);
     p.y += 0.03 * sin(uTime * (0.9 + 0.4 * g) + g * 71.0 + off);
     float beat = uBeat * (fract(g * 7.0) > 0.7 ? 0.5 : 1.0) + fract(g * 13.0) + 0.20 * (seed - 0.5);
-    p.y += lively * uEnergy * (0.08 + 0.10 * uLow) * abs(sin(3.14159 * beat));
-    // a small flame: never steady, and now and then it nearly goes out
-    float flicker = 0.75 + 0.17 * sin(uTime * (7.0 + 5.0 * seed) + seed * 90.0) + 0.08 * sin(uTime * 23.0 + seed * 13.0);
+    // (a hand that rises and sinks softly with the beat, by a hand's width, 12 cm at the very most: they hold a
+    // light up, they do not jump; the maintainer, 2026-11-17: "too jumpy... as if they would jump 2m high")
+    p.y += lively * uEnergy * (0.025 + 0.03 * uLow) * (0.5 - 0.5 * cos(6.28318 * beat));
+    // a small flame, analog: its brightness wanders slowly on its own, shivers faintly on top of that, and now and
+    // then it nearly goes out; some are brighter than others to begin with
+    float wander = 0.5 + 0.5 * sin(uTime * (0.31 + 0.4 * fract(seed * 43.0)) + seed * 37.0)
+      * sin(uTime * (0.17 + 0.2 * seed) + seed * 11.0);
+    float shiver = 0.10 * sin(uTime * (7.0 + 5.0 * seed) + seed * 90.0) + 0.05 * sin(uTime * 23.0 + seed * 13.0);
+    float flicker = 0.62 + 0.30 * wander + shiver;
     float gust = smoothstep(0.92, 1.0, sin(uTime * (0.13 + 0.1 * seed) + seed * 55.0));
-    vGlow = flicker * (1.0 - 0.8 * gust);
+    vGlow = (0.75 + 0.5 * fract(seed * 29.0)) * flicker * (1.0 - 0.8 * gust);
+    // its colour: from amber to a warm white, and about one in twelve a cool white
+    vTint = fract(seed * 97.0) > 0.92
+      ? vec3(0.86, 0.92, 1.0)
+      : mix(vec3(1.0, 0.58, 0.22), vec3(1.0, 0.84, 0.58), fract(seed * 71.0));
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = max(1.5, uSize / -mv.z);
+    // its size: from seven tenths to thirteen tenths of a hand's width
+    gl_PointSize = max(1.5, uSize * (0.7 + 0.6 * fract(seed * 53.0)) / -mv.z);
   }"""
 
         val FRAGMENT = """
   varying float vGlow;
+  varying vec3 vTint;
   void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
     float a = (1.0 - smoothstep(0.0, 1.0, d)) * vGlow;
-    gl_FragColor = vec4(vec3(1.0, 0.70, 0.32) * a * 1.6, 1.0);
+    gl_FragColor = vec4(vTint * a * 1.6, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""

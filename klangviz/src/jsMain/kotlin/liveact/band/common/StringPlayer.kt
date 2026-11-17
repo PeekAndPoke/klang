@@ -12,6 +12,7 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.inSight
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -531,7 +532,7 @@ class StringPlayer(
 
         // a look at the viewer every now and then: the head comes up from the instrument and turns to the camera,
         // holds it a few seconds and goes back
-        val look = glanceAt(t)
+        var look = glanceAt(t)
         var yaw = 0.35
         var pitch = 0.0
         val g = glance
@@ -539,8 +540,11 @@ class StringPlayer(
         if (look > 0 && g != null) {
             val eye = rig.root.worldToLocal(g.at.clone())
             val from = rig.height + 0.10 * s
+            val toward = atan2(eye.x, eye.z)
 
-            yaw = 0.35 + (atan2(eye.x, eye.z) - 0.18 - 0.35) * look     // the chest is turned 0.18 already
+            // nobody looks at a camera behind their back: the head would have to turn right round
+            look *= inSight(toward)
+            yaw = 0.35 + (toward - 0.18 - 0.35) * look     // the chest is turned 0.18 already
             pitch = atan2(eye.y - from, hypot(eye.x, eye.z)) * look
         }
 

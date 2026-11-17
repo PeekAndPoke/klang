@@ -46,9 +46,11 @@ import kotlin.math.min
  * also closes what the live act is shown in, as in the app, only 0 is of use).
  * ```
  *   q the total    w the stadium shot    e from the left    r from above    t from the right    y (or z) from the floor
+ *   u the reverse total, from behind the drummer (hovering)
  *   1 to 6 a player (drums, lead guitar, frontwoman, bass, rhythm guitar, marimba); the same key again: their next look
  *   a a flight round the whole band (again: the other way round)    s a slow way round the last player chosen
- *   d a dolly zoom back to the total from wherever the camera is
+ *   d a dolly zoom back to the total from wherever the camera is; a plain cut where the camera looks away from the
+ *     total (the reverse total, the drummer over his shoulder, behind the band): the dolly would swing it right round
  * ```
  * The keys are heard from the window until [dispose].
  */
@@ -216,7 +218,12 @@ class View(
             }
 
             k == "d" && last != null -> {
-                hand = Hand.Back(from = clock, shot = Shot(pos = last.pos.clone(), at = last.at.clone(), fov = last.fov))
+                // a camera that looks away from the total would be swung right round on the way: it cuts
+                hand = if (choreography != null && !choreography.away(last)) {
+                    Hand.Back(from = clock, shot = Shot(pos = last.pos.clone(), at = last.at.clone(), fov = last.fov))
+                } else {
+                    Hand.Home
+                }
             }
 
             else -> Unit
@@ -232,7 +239,12 @@ class View(
         label = "by hand: " + now.words
 
         when (now) {
-            is Hand.Fixed -> return choreography.shot(now.subject)
+            is Hand.Fixed -> {
+                val subject = now.subject
+
+                // the reverse total hovers here too
+                return if (subject is Subject.Angle && subject.angle === REVERSE) choreography.reverse(t) else choreography.shot(subject)
+            }
 
             is Hand.Circle -> if (u < 16 * bar) {
                 return choreography.circleBy(way = now.way, u = smoother(u / (16 * bar)), home = home)
@@ -373,7 +385,10 @@ class View(
     private companion object {
         /** The keys for a fixed angle on the stage. */
         val ANGLE_KEYS: Map<String, Placement> =
-            mapOf("e" to ANGLES[0], "r" to ANGLES[1], "t" to ANGLES[2], "y" to ANGLES[3], "z" to ANGLES[3], "w" to STADIUM)
+            mapOf(
+                "e" to ANGLES[0], "r" to ANGLES[1], "t" to ANGLES[2], "y" to ANGLES[3], "z" to ANGLES[3], "w" to STADIUM,
+                "u" to REVERSE,
+            )
 
         /**
          * `?move=`: the kind every round is made. The prototype takes any word here: an empty one leaves it to the

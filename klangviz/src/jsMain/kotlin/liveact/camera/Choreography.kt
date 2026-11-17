@@ -27,7 +27,7 @@ import kotlin.math.sin
 import kotlin.math.tan
 
 // The camera's choreography. Mostly the total: the wide view from the audience, the start position. The song is cut
-// into rounds of 48 cycles (bars, about 79 s), and a round is one of four kinds, by the seed:
+// into rounds of 48 cycles (bars, about 79 s), and a round is one of five kinds, by the seed:
 //   looks   34 bars on the total, then three looks in a row, three bars each, with a cut between them (close on one
 //           player, or the stage from another angle)
 //   arc     the same, but the nine bars are one look: the camera goes slowly round one player, across their front
@@ -35,12 +35,15 @@ import kotlin.math.tan
 //           back to it, with no cut at all
 //   flight  20 bars on the total, then out backward over the audience to the mixing desk far back (the FOH), a
 //           while there, and back in; one of the two ways may be a cut instead (see Flight)
-// A round of looks or with an arc also has two looks in a row in its first half (bars 12 to 18, back to the total
-// by a plain cut), so such a round never holds the total longer than some 17 bars (the maintainer, 2026-11-17:
-// "could use more camera cuts and movements. not too much but a little more").
-// From the late looks or an arc it comes back to the total by a plain cut in two rounds of three, and in the third by a slow
-// dolly zoom over five bars (the camera travels back while its lens opens, so the player keeps much of their size
-// at first as the stage grows round them).
+//   reverse 32 bars on the total, then twelve bars on the reverse total: from behind the drummer, over his
+//           shoulder, the band from the back and the audience before it; as from a hovering drone, almost steady
+// A round of looks, with an arc or with the reverse total also has two looks in a row in its first half (bars 12 to
+// 18, back to the total by a plain cut), so such a round never holds the total longer than some 17 bars (the
+// maintainer, 2026-11-17: "could use more camera cuts and movements. not too much but a little more").
+// From the late looks or an arc it comes back to the total by a plain cut in two rounds of three, and in the third
+// by a slow dolly zoom over five bars (the camera travels back while its lens opens, so the player keeps much of
+// their size at first as the stage grows round them). Always by a cut from a look that looks away from the total
+// (the drummer over his shoulder), and from the frontwoman, who may stroll off meanwhile.
 // Calm on purpose (the maintainer, 2026-11-16: fast moves "make dizzy"; "do not cut too often to the people, but
 // maybe multiple in a row"; "the camera must mostly show the total"; "cut back to the total without camera
 // movement, not always though").
@@ -71,7 +74,10 @@ enum class RoundKind(val key: String) {
     Circle("circle"),
 
     /** Out over the audience to the mixing desk far back, and back in. */
-    Flight("flight");
+    Flight("flight"),
+
+    /** A long look from behind the drummer at the audience. */
+    Reverse("reverse");
 
     companion object {
         /** The kind named [key]; null where there is none. */
@@ -91,7 +97,12 @@ sealed class Subject {
     class Angle(val angle: Placement) : Subject() {
         override val player: Player? get() = null
 
-        override val words: String get() = if (angle === STADIUM) "stadium" else "the stage from elsewhere"
+        override val words: String
+            get() = when {
+                angle === STADIUM -> "stadium"
+                angle === REVERSE -> "reverse total"
+                else -> "the stage from elsewhere"
+            }
     }
 
     /** The [player], by [look] (in the player's own space). */
@@ -134,6 +145,12 @@ fun looksOf(player: Player): List<Placement> = LOOKS[player] ?: STANDING_LOOKS
 /** The stadium shot: from far back and high in the audience, the whole stage small above a field of held-up lights. */
 val STADIUM: Placement = Placement(pos = Triple(5.0, 11.0, 46.0), at = Triple(0.0, 0.0, 14.0), fov = 27.0)
 
+/**
+ * The reverse total: from behind the drummer, over his left shoulder, the band from the back and the audience's
+ * lights before it (the maintainer, 2026-11-17: "so the crowd can be seen for longer").
+ */
+val REVERSE: Placement = Placement(pos = Triple(1.1, 2.4, -4.6), at = Triple(-0.8, 0.6, 12.0), fov = 40.0)
+
 /** The stage from elsewhere. */
 val ANGLES: List<Placement> = listOf(
     Placement(pos = Triple(-7.2, 1.1, 5.6), at = Triple(0.0, 1.0, 0.6), fov = 40.0),        // from the left, low
@@ -157,6 +174,10 @@ private const val FIRST = 34
 private const val BACK = 43
 private const val CIRCLE = 24
 private const val ROUND = 48
+
+/** The reverse total begins and ends, in bars. */
+private const val REVERSE_FROM = 32
+private const val REVERSE_TO = 44
 
 /** Where the two looks of a round's first half begin, in bars. */
 private const val EARLY = 12
@@ -276,14 +297,16 @@ class Choreography(
     }
 
     /**
-     * What kind the round [n] is: about a fifth each are a circle, an arc and a flight, the rest looks. An arc needs
-     * a player who stays at their place (the frontwoman strolls and turns: the camera would swing with her).
+     * What kind the round [n] is: about a fifth each are a circle, an arc and a flight, about one in seven has the
+     * reverse total, the rest are looks. An arc needs a player who stays at their place (the frontwoman strolls and
+     * turns: the camera would swing with her).
      */
     fun kind(n: Int): RoundKind {
         val kind = force ?: when {
             chance(n, 0, 7) < 0.2 -> RoundKind.Circle
             chance(n, 0, 7) < 0.4 -> RoundKind.Arc
             chance(n, 0, 7) < 0.6 -> RoundKind.Flight
+            chance(n, 0, 7) < 0.75 -> RoundKind.Reverse
             else -> RoundKind.Looks
         }
         val player = subject(n, 0).player
@@ -321,6 +344,21 @@ class Choreography(
             at = home.at.clone().lerp(vec(STADIUM.at), share),
             fov = home.fov + (STADIUM.fov - home.fov) * share,
         )
+    }
+
+    /**
+     * The reverse total at [t], as from a drone that hovers: the camera's place drifts by a centimetre or so and
+     * its look by a few centimetres some 17 m away, very slowly (see [hover]).
+     */
+    fun reverse(t: Double): Shot {
+        val shot = shot(Subject.Angle(REVERSE))
+
+        shot.pos.x += 0.015 * hover(t = t, phase = 0.0)
+        shot.pos.y += 0.010 * hover(t = t, phase = 1.7)
+        shot.at.x += 0.03 * hover(t = t, phase = 0.9)
+        shot.at.y += 0.02 * hover(t = t, phase = 4.0)
+
+        return shot
     }
 
     /** The slow way round the player of round [n], [u] of it (0 to 1): across their front, 43 degrees to each side. */
@@ -400,6 +438,14 @@ class Choreography(
         return Shot(pos = pos, at = shot.at.clone().lerp(home.at, u * u), fov = held + (home.fov - held) * u * u)
     }
 
+    /** Whether [shot] looks away from the total (see [looksAway]): the way back from it is a cut. */
+    fun away(shot: Shot): Boolean = looksAway(
+        aheadX = shot.at.x - shot.pos.x,
+        aheadZ = shot.at.z - shot.pos.z,
+        totalX = HOME.at.x - HOME.pos.x,
+        totalZ = HOME.at.z - HOME.pos.z,
+    )
+
     /** The camera at [t]. */
     fun at(t: Double): Shot {
         val home = home(t)
@@ -455,6 +501,16 @@ class Choreography(
             return early
         }
 
+        if (roundKind == RoundKind.Reverse) {
+            if (x < REVERSE_FROM || x >= REVERSE_TO) {
+                return home
+            }
+
+            label = "reverse total, over the drummer's shoulder"
+
+            return reverse(t)
+        }
+
         val dolly = chance(n, 0, 6) < 0.34
 
         if (x < FIRST || (x >= BACK && !dolly)) {
@@ -489,6 +545,17 @@ class Choreography(
 
             // the way back starts where the last look's slide ended
             slide(shot, i, 1.0)
+        }
+
+        // a look that looks away from the total (over the drummer's shoulder): the dolly would swing the camera right
+        // round, so it cuts. And from the frontwoman, who may stroll off and turn while the camera travels: the way
+        // back hangs on her place, and would jump
+        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == Player.Eimer
+
+        if (away(shot) || strolls) {
+            label = "total"
+
+            return home
         }
 
         // back by a dolly zoom over five bars, leaving and arriving very softly
