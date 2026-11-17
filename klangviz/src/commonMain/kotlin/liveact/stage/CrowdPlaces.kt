@@ -21,9 +21,13 @@ import kotlin.math.sqrt
  * Where they stand: in half a ring around the stage's middle, on the side the band looks to (z from 0 up), from
  * [FIRST] m off it to [LAST]; from [RISE] m off on the ground climbs ([SLOPE] m a metre). The stage stands [PIT] m
  * above the ground they stand on, so a held-up light is about level with the stage's floor.
+ *
+ * The first row is as near as the cameras allow: the widest way a camera goes round the band is some 9.7 m from the
+ * stage's middle, and the total stands 9.5 m before it. (16 m at first left a wide empty ring before the stage: the
+ * maintainer, 2026-11-17, "the crowd could be closer".)
  */
 object CrowdPlaces {
-    const val FIRST = 16.0
+    const val FIRST = 11.5
     const val LAST = 62.0
     const val RISE = 26.0
     const val SLOPE = 0.25
