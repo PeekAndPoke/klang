@@ -23,7 +23,7 @@ class Klaue(Figure):
         ),
         radius=dict(belly=1.12),
         # a bit of a neck, not as thick as it was
-        hips=1.2, shoulders=1.06, neck=1.06, eye=(1.0, 0.6, 0.1),
+        hips=1.2, shoulders=1.06, neck=1.06, eye=(0.15, 1.0, 0.20),
         extras=[("cap", "crown", (0, 0.0, 0.035), 0.088, 1.15, False),
                 ("brim", "cap", (0, -0.13, -0.015), 0.022, 1.0, False)],
     )

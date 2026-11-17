@@ -77,17 +77,19 @@ data class EyeLook(val own: Double, val glow: Double) {
         /** From this warmth on the eyes have all of their colour: after a lot of playing. */
         const val FULL = 0.9
 
-        /** The eyes' glow while their player rests: pale, and clearly there. */
-        const val REST_GLOW = 1.8
-
         /**
-         * The eyes' glow in their own colour, where their player sets the least ([LEAST]), and how much of what is
-         * set beyond that is added: low enough that the colour is seen and not white, high enough that they shine
-         * and are not painted on (the maintainer, 2026-11-17: "too obvious ... they can shine more"). On a loud
-         * note they flare toward white.
+         * The eyes' glow, the same whether their player rests or plays: every eye is as bright as its colour can be
+         * on a screen, all the time, and only its hue says how warm its player is (dimmer while playing than at
+         * rest was the wrong way round: the maintainer, 2026-11-17, "needs to be bright for everyone"). It is set
+         * so that the eyes' own waver, which takes away up to a good half, never brings the colour's strongest
+         * part under full. A pure red or violet still carries less light than a cyan or a green: that is the
+         * screen's, and adding white to make up for it would turn the red pink.
          */
-        const val GLOW = 1.8
-        const val FLARE = 0.08
+        const val REST_GLOW = 2.25
+        const val GLOW = 2.25
+
+        /** How much of what a player sets beyond the least is added: a loud note flares the eyes a little toward white. */
+        const val FLARE = 0.04
         const val LEAST = 2.0
 
         /**
