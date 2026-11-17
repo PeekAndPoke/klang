@@ -6,35 +6,31 @@
 package io.peekandpoke.klang.viz.liveact.band.notstrom
 
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.common.BodyOutline
-import io.peekandpoke.klang.viz.liveact.band.common.ClothPattern
-import io.peekandpoke.klang.viz.liveact.band.common.Drummer
-import io.peekandpoke.klang.viz.liveact.band.common.Entrance
-import io.peekandpoke.klang.viz.liveact.band.common.Glance
-import io.peekandpoke.klang.viz.liveact.band.common.HairPart
-import io.peekandpoke.klang.viz.liveact.band.common.MarimbaPlayer
-import io.peekandpoke.klang.viz.liveact.band.common.Place
-import io.peekandpoke.klang.viz.liveact.band.common.Rig
-import io.peekandpoke.klang.viz.liveact.band.common.Side
-import io.peekandpoke.klang.viz.liveact.band.common.StringKind
-import io.peekandpoke.klang.viz.liveact.band.common.StringPlayer
-import io.peekandpoke.klang.viz.liveact.band.common.Traits
-import io.peekandpoke.klang.viz.liveact.band.common.TrumpetPlayer
-import io.peekandpoke.klang.viz.liveact.band.common.blend
-import io.peekandpoke.klang.viz.liveact.band.common.capture
-import io.peekandpoke.klang.viz.liveact.band.common.enter
-import io.peekandpoke.klang.viz.liveact.band.common.pattern
-import io.peekandpoke.klang.viz.liveact.band.common.stepLegs
-import io.peekandpoke.klang.viz.liveact.band.common.testBeat
-import io.peekandpoke.klang.viz.liveact.band.common.walkPose
+import io.peekandpoke.klang.viz.liveact.band.StagePlot
+import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.dress.HairPart
+import io.peekandpoke.klang.viz.liveact.band.dress.ShadowHair
+import io.peekandpoke.klang.viz.liveact.band.dress.pattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Rig
+import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.figure.blend
+import io.peekandpoke.klang.viz.liveact.band.figure.capture
+import io.peekandpoke.klang.viz.liveact.band.figure.enter
+import io.peekandpoke.klang.viz.liveact.band.figure.stepLegs
+import io.peekandpoke.klang.viz.liveact.band.figure.walkPose
+import io.peekandpoke.klang.viz.liveact.band.instruments.drums.Drummer
+import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
+import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Glance
+import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
+import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
+import io.peekandpoke.klang.viz.liveact.band.members.Extra
+import io.peekandpoke.klang.viz.liveact.band.members.Members
+import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
-import io.peekandpoke.klang.viz.liveact.song.Note
-import io.peekandpoke.klang.viz.liveact.song.Part
-import io.peekandpoke.klang.viz.liveact.song.Strum
-import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Gltf
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
@@ -50,139 +46,21 @@ import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlin.math.floor
 
 /**
- * Notstrom, the band: who stands where, what each one looks like and how each one moves, the figures themselves,
- * the players with their instruments, and how they come onto the stage.
- *
- * Six players on one skeleton: the drummer on his riser, the bass, the lead guitar ([Player.Skalpell]), the rhythm
- * guitar ([Player.Klaue], who plays the song's `guitar2` and `guitar3`), the marimba player (the song's `lead`)
- * and the frontwoman ([Player.Sirene], who plays the song's `trommel` on a trumpet).
+ * Notstrom, the band: it loads the six figures by their sheets (see [Members]), dresses them, places them by the
+ * stage plot ([StagePlot]), and gives each the instrument and the part the cast names ([SchmetterlingCast]); then it
+ * moves them, every frame, from the walk-in on.
  */
 class Notstrom private constructor(
     private val show: Show,
     /** Every player's rig, in the players' order. */
     val rigs: Map<Player, Rig>,
-    viewer: Vector3,
+    private val viewer: Vector3,
 ) {
-    /** A player's character with the seed of their own chance. */
-    private class Character(val seed: Double, val traits: Traits)
-
     companion object {
         /** The band's name, as it stands on the bass drum. */
         const val NAME = "NOTSTROM"
-
-        /** The walk-in: the stage's clock starts this many seconds before the song. */
-        const val INTRO = 15.0
-
-        /**
-         * Where each player stands: x to the audience's right, z toward the audience, the turn, and how high (the
-         * riser).
-         */
-        val PLACES: Map<Player, Place> = mapOf(
-            Player.Wucht to Place(x = 0.1, z = -2.1, turn = 0.0, y = Stage.RISER),
-            Player.Beben to Place(x = -2.15, z = 0.4, turn = 0.15),
-            Player.Skalpell to Place(x = -3.0, z = 1.7, turn = 0.3),
-            Player.Sirene to Place(x = -0.7, z = 2.2, turn = 0.1),
-            Player.Rune to Place(x = 1.7, z = 0.4, turn = -0.15),
-            Player.Klaue to Place(x = 3.0, z = 1.7, turn = -0.3),
-        )
-
-        /** Each player's pattern, seen only in how the body throws back the light. */
-        private val SKINS = mapOf(
-            Player.Wucht to ClothPattern.Tiger,
-            Player.Beben to ClothPattern.Pinstripe,
-            Player.Skalpell to ClothPattern.Spiral,
-            Player.Klaue to ClothPattern.Claws,
-            Player.Rune to ClothPattern.Diamonds,
-            Player.Sirene to ClothPattern.Braid,
-        )
-
-        /** Who wears hair as a pattern in the light, combed straight back. */
-        private val HAIR = setOf(Player.Skalpell)
-
-        /** Everyone glitters; the two women a little more (the share of spangles in the skin). */
-        private val GLITTER = mapOf(Player.Sirene to 0.21, Player.Rune to 0.21)
-
-        /** Each player's character: how they move with the music apart from playing (see `Mover`). */
-        private val CHARACTERS: Map<Player, Character> = mapOf(
-            // the engine of the band: on every beat, steady, a touch ahead
-            Player.Wucht to Character(
-                seed = 11.0,
-                traits = Traits(
-                    depth = 1.0, beats = listOf(1.0, 0.7, 0.9, 0.7), lag = -0.02, soft = 0.10, chance = 0.15,
-                    look = 0.05, tilt = 0.03, lean = 0.01,
-                    // from the trunk: his whole upper body goes
-                    parts = Traits.Parts(head = 1.0, trunk = 1.3, knees = 0.8),
-                ),
-            ),
-            // the steady one: late, mostly on one and three, always the same whatever the band does; looks about slowly
-            Player.Beben to Character(
-                seed = 23.0,
-                traits = Traits(
-                    steady = 0.9, depth = 0.9, beats = listOf(1.0, 0.2, 0.7, 0.2), lag = 0.07, soft = 0.18, chance = 0.12,
-                    skip = 0.0, look = 0.22, tilt = 0.06, lean = 0.02,
-                    // from the knees and hips, the head hardly
-                    parts = Traits.Parts(head = 0.6, trunk = 0.8, knees = 1.0, sway = 1.3),
-                ),
-            ),
-            // loose and restless: uneven, looks round a lot, skips nods
-            Player.Skalpell to Character(
-                seed = 37.0,
-                traits = Traits(
-                    depth = 0.8, beats = listOf(0.9, 0.55, 0.9, 0.55), lag = 0.02, soft = 0.13, chance = 0.6, skip = 0.18,
-                    look = 0.30, tilt = 0.10, lean = 0.03,
-                    // leans his whole trunk into it
-                    parts = Traits.Parts(head = 0.9, trunk = 1.5, knees = 0.7, sway = 1.2),
-                ),
-            ),
-            // the headbanger, but only in fits: about a quarter of the time he goes all the way, else he nods like the
-            // others
-            Player.Klaue to Character(
-                seed = 41.0,
-                traits = Traits(
-                    fits = Traits.Fits(every = 12.0, share = 0.22, calm = 0.30),
-                    depth = 0.85, beats = listOf(1.0, 0.85, 1.0, 0.85), lag = -0.03, soft = 0.11, chance = 0.25,
-                    look = 0.08, tilt = 0.05, lean = 0.02,
-                    // all head, planted feet
-                    parts = Traits.Parts(head = 1.15, trunk = 0.9, knees = 0.8, sway = 0.6),
-                ),
-            ),
-            // composed: modest nods (a little more than at first: the maintainer, 2026-11-16), her head tilting from
-            // side to side
-            Player.Rune to Character(
-                seed = 53.0,
-                traits = Traits(
-                    depth = 0.68, beats = listOf(1.0, 0.25, 0.6, 0.25), lag = 0.03, soft = 0.18, chance = 0.35,
-                    look = 0.10, tilt = 0.12, lean = 0.015,
-                    // upright, quiet below the neck
-                    parts = Traits.Parts(head = 1.0, trunk = 0.6, knees = 0.5),
-                ),
-            ),
-            // the frontman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
-            Player.Sirene to Character(
-                seed = 67.0,
-                traits = Traits(
-                    depth = 0.9, beats = listOf(1.0, 0.5, 0.8, 0.5), lag = 0.0, soft = 0.13, chance = 0.2, skip = 0.0,
-                    look = 0.14, tilt = 0.04, lean = 0.02,
-                    parts = Traits.Parts(head = 1.0, trunk = 1.0, knees = 1.0, sway = 1.0),
-                ),
-            ),
-        )
-
-        /**
-         * The walk-in: each player comes from off the stage between two times; the drummer first, from the back and
-         * up onto the riser, the frontwoman last. In this order they are placed each frame.
-         */
-        private val ENTRANCES: Map<Player, Entrance> = linkedMapOf(
-            Player.Wucht to Entrance(fromX = 0.1, fromZ = -7.5, start = -15.0, end = -9.0),
-            Player.Beben to Entrance(fromX = -8.5, fromZ = 0.9, start = -13.5, end = -7.5),
-            Player.Klaue to Entrance(fromX = 8.5, fromZ = 2.0, start = -12.5, end = -6.5),
-            Player.Skalpell to Entrance(fromX = -8.5, fromZ = 2.1, start = -11.5, end = -5.5),
-            Player.Rune to Entrance(fromX = 8.5, fromZ = 0.9, start = -10.5, end = -4.8),
-            Player.Sirene to Entrance(fromX = -8.5, fromZ = 2.9, start = -8.5, end = -2.4),
-        )
 
         /** The head's middle and size, in the body's rest space: a little above and behind where the head's bone starts. */
         private fun hairOf(rig: Rig): HairPart {
@@ -204,13 +82,13 @@ class Notstrom private constructor(
             val loader = Three.addon.gltfLoader()
 
             val loaded: List<Gltf> = coroutineScope {
-                Player.entries.map { player -> async { loader.load("$models${player.key}.glb") } }.awaitAll()
+                Player.entries.map { player -> async { loader.load("$models${Members.of(player).figure}") } }.awaitAll()
             }
 
             val rigs = linkedMapOf<Player, Rig>()
 
             Player.entries.forEachIndexed { index, player ->
-                val place = PLACES.getValue(player)
+                val place = StagePlot.PLACES.getValue(player)
                 val figure = loaded[index].scene
 
                 figure.position.set(place.x, place.y, place.z)
@@ -218,6 +96,7 @@ class Notstrom private constructor(
                 scene.add(figure)
 
                 val rig = Rig(figure)
+                val dress = Members.of(player).dress
                 rigs[player] = rig
 
                 figure.traverse { o ->
@@ -232,11 +111,11 @@ class Notstrom private constructor(
                         if (m.name.endsWith("_dark")) {
                             pattern(
                                 material = material,
-                                kind = SKINS.getValue(player),
+                                kind = dress.cloth,
                                 gloss = 0.12,
                                 matt = 0.85,
-                                hair = if (player in HAIR) hairOf(rig) else null,
-                                glitter = GLITTER[player] ?: 0.14,
+                                hair = if (dress.combedBack) hairOf(rig) else null,
+                                glitter = dress.glitter,
                             )
                         }
                     }
@@ -245,120 +124,87 @@ class Notstrom private constructor(
 
             return Notstrom(show = show, rigs = rigs, viewer = viewer)
         }
-
-        ////  Test notes, for a show without a recording  //////////////////////////////////////////////////////////////
-
-        private fun testTune(): List<Note> = List(256) { i ->
-            Note(
-                t = i * 0.25,
-                midi = 64 + listOf(0, 3, 7, 10, 12, 10, 7, 3)[i % 8] + (if (i % 32 >= 16) 5 else 0),
-                v = if (i % 4 == 0) 1.0 else 0.6,
-                // the prototype's test tune names no length; nothing reads it for the marimba
-                d = 0.0,
-            )
-        }
-
-        private fun testCall(): List<Note> = List(128) { i ->
-            Note(
-                t = 1 + i * 0.75 + (if (i % 8 >= 6) 3 else 0),
-                d = 0.6,
-                midi = 65 + listOf(0, 2, 3, 7, 5, 3, 10, 12)[i % 8],
-                v = 1.0,
-            )
-        }.sortedBy { it.t }
-
-        private fun testRiff(step: Double, low: Int): List<Strum> = List(512) { i ->
-            val midi = low + listOf(0, 0, 3, 0, 5, 0, 7, 3)[floor(i * step * 2).toInt() % 8]
-
-            // the prototype's riff names no length and no chord: its player takes 0.3 s and the one note then
-            Strum(t = i * step, d = 0.3, midi = midi, v = if (i % 2 == 0) 1.0 else 0.7, all = listOf(midi))
-        }
     }
 
-    private fun character(player: Player) = CHARACTERS.getValue(player)
+    private fun character(player: Player) = Members.of(player).character
 
     private fun rig(player: Player) = rigs.getValue(player)
 
-    private val song = show.song
-
     /** When [player] begins a note, sorted, as far as the song is known: what the camera and the eyes go by. */
-    fun playsAt(player: Player): List<Double> = when (player) {
-        Player.Wucht -> show.times("kick", "snare")
-        Player.Beben -> show.times("bass")
-        Player.Skalpell -> show.times("guitar1")
-        Player.Klaue -> show.times("guitar2", "guitar3")
-        Player.Rune -> show.times("lead")
-        Player.Sirene -> show.times("trommel")
-    }
+    fun playsAt(player: Player): List<Double> = SchmetterlingCast.playsAt(show = show, player = player)
 
     val drummer = Drummer(
         show = show,
-        rig = rig(Player.Wucht),
-        hits = song?.part { drumHits() } ?: Part.fixed(testBeat(64, show.bpm)),
-        traits = character(Player.Wucht).traits,
-        seed = character(Player.Wucht).seed,
+        rig = rig(SchmetterlingCast.DRUMS),
+        hits = SchmetterlingCast.drumHits(show),
+        traits = character(SchmetterlingCast.DRUMS).traits,
+        seed = character(SchmetterlingCast.DRUMS).seed,
         name = NAME,
     )
 
+    /**
+     * Medusa's snakes, in the shadow of whoever's sheet names them (see [Extra.ShadowSnakes]). They are made here,
+     * after the drummer and before the marimba, as when the marimba player made them: three.js numbers what is made
+     * in order, and the picture depends on it.
+     */
+    private val snakes: List<ShadowHair> = when {
+        show.switches.has(Switch.NoSnakes) -> emptyList()
+        else -> Player.entries
+            .filter { player -> Extra.ShadowSnakes in Members.of(player).extras }
+            .map { player -> ShadowHair(rig = rig(player), shown = show.switches.has(Switch.Snakes)) }
+    }
+
     val marimba = MarimbaPlayer(
         show = show,
-        rig = rig(Player.Rune),
-        part = song?.part { notesOf("lead") } ?: Part.fixed(testTune()),
-        traits = character(Player.Rune).traits,
-        seed = character(Player.Rune).seed,
+        rig = rig(SchmetterlingCast.MARIMBA),
+        part = SchmetterlingCast.marimbaNotes(show),
+        traits = character(SchmetterlingCast.MARIMBA).traits,
+        seed = character(SchmetterlingCast.MARIMBA).seed,
     )
 
     val frontwoman = TrumpetPlayer(
         show = show,
-        rig = rig(Player.Sirene),
-        part = song?.part { notesOf("trommel") } ?: Part.fixed(testCall()),
-        traits = character(Player.Sirene).traits,
-        seed = character(Player.Sirene).seed,
+        rig = rig(SchmetterlingCast.TRUMPET),
+        part = SchmetterlingCast.trumpetNotes(show),
+        traits = character(SchmetterlingCast.TRUMPET).traits,
+        seed = character(SchmetterlingCast.TRUMPET).seed,
     )
 
     /** The string players, in the order they are moved each frame. */
-    val strings: List<Pair<Player, StringPlayer>> = listOf(
-        Player.Beben to StringPlayer(
+    val strings: List<Pair<Player, StringPlayer>> = SchmetterlingCast.STRINGS.map { cast ->
+        cast.player to StringPlayer(
             show = show,
-            rig = rig(Player.Beben),
-            kind = StringKind.Bass,
-            part = song?.part { strumsOf(listOf("bass")) } ?: Part.fixed(testRiff(step = 0.5, low = 28)),
-            traits = character(Player.Beben).traits,
-            seed = character(Player.Beben).seed,
-            lean = 0.10,
-            bang = 0.16,
-            bounce = 0.045,
-        ),
-        Player.Skalpell to StringPlayer(
-            show = show,
-            rig = rig(Player.Skalpell),
-            kind = StringKind.Guitar,
-            part = song?.part { strumsOf(listOf("guitar1")) } ?: Part.fixed(testRiff(step = 0.25, low = 52)),
-            traits = character(Player.Skalpell).traits,
-            seed = character(Player.Skalpell).seed,
-            lean = -0.05,
-            bang = 0.14,
-            bounce = 0.025,
-        ),
-        Player.Klaue to StringPlayer(
-            show = show,
-            rig = rig(Player.Klaue),
-            kind = StringKind.Guitar,
-            part = song?.part { strumsOf(listOf("guitar2", "guitar3")) } ?: Part.fixed(testRiff(step = 0.125, low = 40)),
-            traits = character(Player.Klaue).traits,
-            seed = character(Player.Klaue).seed,
-            lean = 0.10,
-            bang = 0.24,
-            bounce = 0.028,
-            outline = BodyOutline.SingleCutaway,
-            glance = Glance(at = viewer, every = 11.0, chance = 0.5),
-        ),
-    )
+            rig = rig(cast.player),
+            design = cast.design,
+            part = cast.part(show),
+            traits = character(cast.player).traits,
+            seed = character(cast.player).seed,
+            bearing = Members.of(cast.player).bearing,
+            outline = cast.outline ?: cast.design.outline,
+            glance = glanceOf(cast.player),
+        )
+    }
+
+    /** How [player] glances at the camera, where their sheet says they do (see [Extra.GlanceAtCamera]). */
+    private fun glanceOf(player: Player): Glance? = Members.of(player).extras
+        .filterIsInstance<Extra.GlanceAtCamera>()
+        .firstOrNull()
+        ?.let { glance -> Glance(at = viewer, every = glance.every, chance = glance.chance) }
+
+    /**
+     * What goes with the figures as they are posed at last: the snakes on a head. Call it once everything that turns
+     * a head has done so for this frame (the looks between the players come after [play]).
+     */
+    fun afterPose(t: Double) {
+        for (hair in snakes) {
+            hair.update(t)
+        }
+    }
 
     /** The band at [t]: everyone where their walk-in has them, playing; the legs of those who walk step. */
     fun play(t: Double) {
-        val walks = ENTRANCES.mapValues { (player, entrance) ->
-            enter(rig = rig(player), entrance = entrance, home = PLACES.getValue(player), t = t)
+        val walks = StagePlot.ENTRANCES.mapValues { (player, entrance) ->
+            enter(rig = rig(player), entrance = entrance, home = StagePlot.PLACES.getValue(player), t = t)
         }
 
         // the string players and the marimba player walk as they stand, the legs stepping
@@ -368,11 +214,11 @@ class Notstrom private constructor(
         }
 
         marimba.update(t)
-        stepLegs(rig(Player.Rune), walks.getValue(Player.Rune))
+        stepLegs(rig(SchmetterlingCast.MARIMBA), walks.getValue(SchmetterlingCast.MARIMBA))
 
         // the frontwoman: put where her walk-in has her; once there she is her own (her place, her strolls)
-        val herRig = rig(Player.Sirene)
-        val herWalk = walks.getValue(Player.Sirene)
+        val herRig = rig(SchmetterlingCast.TRUMPET)
+        val herWalk = walks.getValue(SchmetterlingCast.TRUMPET)
         val her = if (herWalk.since < 0) {
             TrumpetPlayer.Walk(at = herRig.root.position.clone(), turn = herRig.root.rotation.y, speed = 0.0, going = 0.0)
         } else {
@@ -385,8 +231,8 @@ class Notstrom private constructor(
         // the drummer walks in with the sticks in his hands, and sits down once he is at the stool
         drummer.update(t)
 
-        val drumRig = rig(Player.Wucht)
-        val drumWalk = walks.getValue(Player.Wucht)
+        val drumRig = rig(SchmetterlingCast.DRUMS)
+        val drumWalk = walks.getValue(SchmetterlingCast.DRUMS)
         val sit = smooth(drumWalk.since / 1.6)
 
         if (sit < 1) {
@@ -397,9 +243,9 @@ class Notstrom private constructor(
 
             for (side in Side.entries) {
                 val d = drumRig.axisOf("hand$side")
-                val stick = drummer.sticks.getValue(side)
+                val stick = drummer.kit.sticks.getValue(side)
 
-                stick.position.copy(drumRig.bone("hand$side").getWorldPosition(vec())).addScaledVector(d, drummer.stickLength * 0.22)
+                stick.position.copy(drumRig.bone("hand$side").getWorldPosition(vec())).addScaledVector(d, drummer.kit.stickLength * 0.22)
                 stick.quaternion.setFromUnitVectors(Y_AXIS, d)
             }
         }

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.lights
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.hash01
+import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingTags
 import io.peekandpoke.klang.viz.liveact.smooth
 import kotlin.math.PI
 import kotlin.math.floor
@@ -183,7 +184,7 @@ class LightPlan(private val show: Show) {
     /** Where the bass drum runs fast: the stroboscope's stretches. */
     val runs: List<Run>
         get() {
-            val kicks = show.times("kick")
+            val kicks = show.times(SchmetterlingTags.KICK)
 
             // the same list as long as the song has not grown
             if (kicks !== runsOf) {

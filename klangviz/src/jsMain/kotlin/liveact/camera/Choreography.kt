@@ -7,9 +7,9 @@ package io.peekandpoke.klang.viz.liveact.camera
 
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
+import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.common.Place
-import io.peekandpoke.klang.viz.liveact.band.common.Rig
+import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.smoother
 import io.peekandpoke.klang.viz.liveact.vec

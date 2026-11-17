@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.viz.liveact.stage
 
-import io.peekandpoke.klang.viz.liveact.band.common.ClothPattern
-import io.peekandpoke.klang.viz.liveact.band.common.jsText
+import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.dress.jsText
 import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.workshop.threejs.CompiledShader
 import io.peekandpoke.klang.workshop.threejs.onBeforeCompile

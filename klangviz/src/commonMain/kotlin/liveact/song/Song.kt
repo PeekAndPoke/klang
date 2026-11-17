@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.song
 
 import io.peekandpoke.klang.viz.liveact.Timed
+import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingTags
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
@@ -267,7 +268,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
 
         var foot: DrumHit? = kickBefore
 
-        for (e in merged(tagged("kick")) { "k" }) {
+        for (e in merged(tagged(SchmetterlingTags.KICK)) { "k" }) {
             val before = foot
             val run = before != null && e.t - before.t < 0.45
             val limb = if (run && before.limb == Limb.KickR) Limb.KickL else Limb.KickR
@@ -277,7 +278,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
 
         var previous: DrumHit? = snareBefore
 
-        for (e in merged(tagged("snare")) { "s" }) {
+        for (e in merged(tagged(SchmetterlingTags.SNARE)) { "s" }) {
             val before = previous
             val fast = before != null && e.t - before.t < 0.22
             val limb = if (fast && before.limb == Limb.L) Limb.R else Limb.L
@@ -291,7 +292,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
                 near(times = cymbalHits.getValue(limb), t = t, within = within)
         }
 
-        val cymbals = (tagged("hats") + tagged("countin")).sortedBy { it.t }
+        val cymbals = (tagged(SchmetterlingTags.HATS) + tagged(SchmetterlingTags.COUNT_IN)).sortedBy { it.t }
 
         for (e in merged(cymbals) { it.sound.orEmpty() }) {
             val drum = cymbalOf(e)

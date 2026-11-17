@@ -8,7 +8,7 @@ package io.peekandpoke.klang.viz.liveact.stage
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
-import io.peekandpoke.klang.viz.liveact.band.common.dressLevel
+import io.peekandpoke.klang.viz.liveact.band.dress.dressLevel
 import io.peekandpoke.klang.viz.liveact.lights.Lights
 import io.peekandpoke.klang.viz.liveact.theatre.Crowd
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces

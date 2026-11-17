@@ -5,12 +5,13 @@
 
 package io.peekandpoke.klang.viz.liveact
 
-import io.peekandpoke.klang.viz.liveact.band.EyeWarmth
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.common.breathing
-import io.peekandpoke.klang.viz.liveact.band.common.eyeContact
-import io.peekandpoke.klang.viz.liveact.band.common.eyesWarm
-import io.peekandpoke.klang.viz.liveact.band.common.eyesWaver
+import io.peekandpoke.klang.viz.liveact.band.StagePlot
+import io.peekandpoke.klang.viz.liveact.band.dress.EyeWarmth
+import io.peekandpoke.klang.viz.liveact.band.figure.breathing
+import io.peekandpoke.klang.viz.liveact.band.figure.eyeContact
+import io.peekandpoke.klang.viz.liveact.band.figure.eyesWarm
+import io.peekandpoke.klang.viz.liveact.band.figure.eyesWaver
 import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
@@ -104,9 +105,6 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
     /** Where the camera is: who looks at the viewer looks there. */
     private val viewer by lazy { HOME.pos.clone() }
-
-    /** When the frontwoman plays: she looks at nobody then. */
-    private val herNotes: List<Double> get() = props.show.times("trommel")
 
     // frames a second, counted over each half second, and the longest single frame in it (a stutter shows there)
     private var fps = 0.0
@@ -254,19 +252,19 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 return@launch
             }
 
-            stage.shade(band.drummer.kit)
+            stage.shade(band.drummer.kit.group)
 
             val view = View(
                 show = show,
                 scene = ctx.scene,
                 camera = lens,
                 rigs = band.rigs,
-                homes = Notstrom.PLACES,
+                homes = StagePlot.PLACES,
                 activity = band::playsAt,
             )
             // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
             // fail before it is kept (and with it given up on unmount)
-            val clock = ShowClock(show = show, notice = element(NOTICE_ID), intro = Notstrom.INTRO)
+            val clock = ShowClock(show = show, notice = element(NOTICE_ID), intro = StagePlot.INTRO)
 
             clock.start()
 
@@ -287,7 +285,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         show.energy = energy
         now.band.play(t)
-        eyeContact(show = show, rigs = now.band.rigs, herNotes = herNotes, t = t)
+        eyeContact(show = show, rigs = now.band.rigs, herNotes = now.band.playsAt(Player.Sirene), t = t)
         // (`?warm=1` holds everyone's eyes at their full colour, `?warm=0` at rest: to look at them)
         val held = show.switches.double(Switch.Warm)?.takeIf { it.isFinite() }?.coerceIn(0.0, 1.0)
 
@@ -295,7 +293,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         eyesWaver(show = show, rigs = now.band.rigs, t = t)
         // what goes with a head as it is held at last: after every turn of it above, and before the breath, which
         // widens bones and would blur how the head is read
-        now.band.marimba.afterPose(t)
+        now.band.afterPose(t)
         breathing(show = show, rigs = now.band.rigs, t = t, slow = energy.slow)
         now.stage.light(t = t, house = now.clock.houseAt(), waiting = now.clock.waiting())
         now.view.look(t)

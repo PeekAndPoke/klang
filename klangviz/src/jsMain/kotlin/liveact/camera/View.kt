@@ -8,9 +8,9 @@ package io.peekandpoke.klang.viz.liveact.camera
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
+import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.common.Place
-import io.peekandpoke.klang.viz.liveact.band.common.Rig
+import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.fromTyping
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.smoother

@@ -10,7 +10,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
+import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.camera.CLEAR
 import io.peekandpoke.klang.viz.liveact.camera.looksOf
 import io.peekandpoke.klang.viz.liveact.camera.looksOn
@@ -21,7 +21,7 @@ import kotlin.math.sin
 /** The band's own looks against the band's own places: a check for the future, for whoever moves a player or sets a look. */
 class LooksSpec : StringSpec({
 
-    val homes = Notstrom.PLACES
+    val homes = StagePlot.PLACES
     val looks = looksOn(homes)
 
     "every player has their looks, as many as are set" {

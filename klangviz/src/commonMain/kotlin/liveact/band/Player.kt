@@ -12,7 +12,8 @@ package io.peekandpoke.klang.viz.liveact.band
  *
  * Each has a name of their own (the maintainer, 2026-11-17). [key] is that name in a figure's file (`wucht.glb`),
  * in the script that builds the figure (`klangviz/figures/`) and in a page's switches (`?head=sirene`). Which part
- * of the song each one plays is said where the band is put together.
+ * of the song each one plays, and on which instrument, is the cast's (`SchmetterlingCast`); what is each one's own
+ * is on their sheet (`Members`).
  */
 enum class Player(val key: String) {
     /** The drummer: the muscular one. */
