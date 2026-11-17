@@ -70,10 +70,38 @@ Done:
 
 Not measured yet: what the MacBook does now. Candidates after that, by what they should give:
 
-- The fog at half size, laid over the picture (idea 1 below): the fog would cost a quarter.
-- Fewer shadow lookups a pixel: every lit pixel reads four shadow maps, several samples each.
 - The instruments as fewer meshes: about 150 calls a pass, five passes.
-- Shadow maps of 1024 for the lamps that matter less.
+
+The shadows stay as they are (the maintainer, 2026-11-16: "keep the shadows as they are please"): no smaller maps,
+no fewer lookups.
+
+The fog keeps its twelve sheets (the maintainer, 2026-11-16: "we keep 12").
+
+## Measured and done, round 2 (2026-11-16)
+
+The maintainer's MacBook Air after round 1: 60 frames a second, and 20 with 2x oversampling. Asked for: the fog at
+half size.
+
+The fog is drawn into a picture of half the width and half the height and laid over the finished one (`GroundFog`,
+`?fullfog` draws it the old way to compare). So that what stands in front still hides it, the small picture first
+takes the depths of everything solid (the scene drawn once more without colour, about 190 draw calls, no shadows
+redrawn). The fog hooks into the scene (`onAfterRender`), since Kraft's component draws the scene itself.
+
+- Software renderer, 720 by 450 at 2x: a frame about 320 ms with the half-size fog, 570 ms with full-size, 240 ms
+  without fog. The fog's cost: about a quarter of what it was.
+- The picture: the same but for thin lines along the edges of what stands in the fog (legs, the marimba's bars),
+  where the fog's edge is half as fine. Stills side by side: 0.1 to 0.5 of 255 mean difference.
+- A trap met: three.js clears to a scene's background colour, fully opaque, whatever `autoClear` says. The depth
+  pass takes the background off.
+- The status line counts all of a frame's draw calls (the renderer's count is set back once a frame, by the live
+  act).
+
+- Each sheet is drawn once a frame, where three.js drew it twice (see-through and two-sided); the picture is the
+  same pixel for pixel.
+- Reviewed: one round, clean; its minor points went in as one batch. Specs: 137 in klangviz, 259 in the app, five
+  mutants killed.
+
+Not measured: the gain on a real graphics card. The maintainer's MacBook is the judge again.
 
 ## Decide before implementing
 
@@ -86,10 +114,10 @@ Ideas, in the order they look worth trying:
 
 1. Draw the fog at half or quarter size and lay it over the picture: it is soft by nature and needs no
    oversampling.
-2. Cheaper fog: its noise read from a small prepared texture, fewer sheets.
+2. Cheaper fog: its noise read from a small prepared texture (done, round 1). Fewer sheets: dropped, twelve stay.
 3. Fix the flicker where it arises: glitter and patterns that soften with distance, strings never thinner than a
    pixel. Then 1x or 2x may look as 4x does now.
-4. Shadows: smaller maps for the lamps that matter less; not every map every frame.
+4. Shadows: dropped, they stay as they are (see round 1's candidates).
 
 ## Acceptance
 
@@ -102,3 +130,6 @@ maintainer's machine.
 - 2026-11-16: the maintainer's direction for the long run noted: web workers for KlangScript with sprudel, and for the visuals.
 - 2026-11-16: IN PROGRESS. The maintainer saw 22 frames a second on a MacBook Air and asked for the low hanging fruit: a first round (the fog's noise from a texture, a dark lamp's shadow not drawn, the resolution follows the frame rate).
 - 2026-11-16: round 1 done and reviewed (three rounds: the vanished band behind a never drawn shadow, the background tab in Firefox, a fast half second taken for proof); 18 mutants on the new specs, all caught.
+- 2026-11-16: round 2: the fog at half size, laid over the picture (the maintainer: "Try the half size fog first").
+- 2026-11-16: the maintainer: the shadows stay as they are. Both shadow candidates dropped.
+- 2026-11-16: the maintainer: the fog keeps its twelve sheets.

@@ -111,3 +111,4 @@ The maintainer watches Der Schmetterling played by the band and says it is good 
   demo app `klangviz-demo` that plays the recording, and the three.js types it needs in `workshop/threejs`. The same
   picture as the prototype: of 18 fixed stills 17 are identical pixel for pixel, one differs in one pixel. Next:
   the music and its events from the engine, live (no ticket yet; see the epic, KLANG-00447).
+- 2026-11-16: the audience stands in half a circle around the stage (the maintainer: "as if they are in a giant open air theater - half a big circle"); `CrowdPlaces`, with a spec.

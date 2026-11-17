@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.stage.Stage
@@ -135,13 +134,43 @@ class StageSpec : StringSpec({
 
                 // the ambient light, four lamps above and the one low at the front
                 lamps shouldBe 6
-                scene.children.size shouldBeGreaterThan 20
+                // floor, wall, riser, the lamps with their targets, the crowd; the fog's sheets are not among them
+                scene.children.size shouldBe 15
 
                 // a frame's light step runs on it, before the song and in it
                 stage.light(t = -5.0, house = 0.07, waiting = true)
                 stage.light(t = 62.0, house = 1.0, waiting = false)
             } finally {
                 stage.dispose()
+            }
+        }
+    }
+
+    "the fog draws apart, after the scene, until the stage is given up; with ?fullfog its sheets are in the scene" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val plain: dynamic = three.createScene().asDynamic().onAfterRender
+
+            val scene = three.createScene()
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+
+            (scene.asDynamic().onAfterRender !== plain) shouldBe true
+            stage.dispose()
+            // given up: nothing of the stage is called after the scene is drawn
+            (scene.asDynamic().onAfterRender === plain) shouldBe true
+
+            val full = three.createScene()
+            val show = Show(seed = 1, switches = Switches.parse("?fullfog"))
+            val other = Stage(show = show, scene = full, camera = camera, renderer = standInRenderer())
+
+            try {
+                (full.asDynamic().onAfterRender === plain) shouldBe true
+                // the twelve sheets
+                full.children.size shouldBe 15 + 12
+            } finally {
+                other.dispose()
             }
         }
     }

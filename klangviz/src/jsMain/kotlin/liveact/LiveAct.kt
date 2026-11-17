@@ -214,6 +214,10 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         renderer = ctx.renderer
         camera = lens
+        // a frame is drawn in several goes (the fog has its own): what was drawn is counted over all of them, and
+        // set back to nothing in frame(), with every frame that is counted (after loading or a hidden page the
+        // line's first number is too high, for a tenth of a second)
+        ctx.renderer.asDynamic().info.autoReset = false
 
         val stage = Stage(show = show, scene = ctx.scene, camera = lens, renderer = ctx.renderer)
 
@@ -321,6 +325,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 "beat ${fixed(t * show.bpm / 60, 2)}",
             ).joinToString("  |  ")
         }
+
+        // what the next drawing counts is this frame's alone (see build())
+        renderer?.asDynamic()?.info?.reset()
 
         frames++
 

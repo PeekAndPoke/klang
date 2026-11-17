@@ -126,8 +126,11 @@ class Stage(
         scene.add(riser)
 
         crowd = Crowd(scene)
-        // fog on the floor (?nofog: none)
-        groundFog = if (show.switches.has("nofog")) null else GroundFog(scene)
+        // fog on the floor (?nofog: none; ?fullfog: drawn at the picture's own size, to compare)
+        groundFog = when {
+            show.switches.has("nofog") -> null
+            else -> GroundFog(scene = scene, renderer = renderer, half = !show.switches.has("fullfog"))
+        }
     }
 
     /**
@@ -203,7 +206,7 @@ class Stage(
         scene.add(mesh)
     }
 
-    /** Stops what the stage listens for (the key f, which tries the front lamp's colours) and frees the fog's noise. */
+    /** Stops what the stage listens for (the key f, which tries the front lamp's colours) and frees what the fog holds. */
     fun dispose() {
         lights.dispose()
         groundFog?.dispose()

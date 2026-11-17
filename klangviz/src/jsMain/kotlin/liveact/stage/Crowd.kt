@@ -18,11 +18,13 @@ import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.utils.jsObject
 
-// The audience, as far as it is seen: the small lights people hold up, nothing more. They stand before the stage in
-// loose rows, below the stage's edge and a few metres off it, the ground rising toward the back as in a stadium;
-// each light flickers on its own and moves as its arm does: a slow sway when the music is quiet, wider and with a
-// bounce on the beat the louder it gets. They light nothing. The show's camera stands before the first row, so they are seen only
-// when it looks back from behind the band, or from far away (the stadium shot).
+// The audience, as far as it is seen: the small lights people hold up, nothing more. They stand in half a circle
+// around the stage, as in a giant open-air theatre, in loose rows below the stage's edge and a few metres off it,
+// the ground rising toward the back. Each light flickers on its own and moves as its arm does: a slow sway when the
+// music is quiet, wider and with a bounce on the beat the louder it gets. They light nothing. The show's camera
+// stands before the first row, so those straight ahead of the stage are seen only when it looks back from behind
+// the band, or from far away (the stadium shot); those at the stage's sides also stand behind the band when it is
+// seen from the other side.
 
 /** Adds the audience's lights to [scene] (where they stand: [CrowdPlaces]). Each frame: [update]. */
 class Crowd(scene: Scene) {
@@ -92,7 +94,9 @@ class Crowd(scene: Scene) {
     float own = fract(seed * 17.0);
     float lively = (0.5 + g) * (0.6 + 0.8 * own);
     float off = 1.5 * (seed - 0.5);
-    p.x += lively * (0.03 + 0.11 * uEnergy) * sin(uTime * (0.7 + 0.5 * g) * (0.94 + 0.12 * own) + g * 40.0 + off);
+    // (the sway goes along the row, which is a circle round the stage: sideways for whoever looks at the stage)
+    vec2 along = normalize(vec2(position.z, -position.x));
+    p.xz += along * lively * (0.03 + 0.11 * uEnergy) * sin(uTime * (0.7 + 0.5 * g) * (0.94 + 0.12 * own) + g * 40.0 + off);
     p.y += 0.03 * sin(uTime * (0.9 + 0.4 * g) + g * 71.0 + off);
     float beat = uBeat * (fract(g * 7.0) > 0.7 ? 0.5 : 1.0) + fract(g * 13.0) + 0.20 * (seed - 0.5);
     p.y += lively * uEnergy * (0.08 + 0.10 * uLow) * abs(sin(3.14159 * beat));

@@ -6,28 +6,32 @@
 package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.hash01
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.sin
+import kotlin.math.sqrt
 
-// Where the audience's lights are: they stand before the stage in loose rows, below the stage's edge and a few
-// metres off it, the ground rising toward the back as in a stadium. How they move is the crowd's shader (Crowd).
+// Where the audience's lights are: as in a giant open-air theatre, in half a circle around the stage, from its left
+// side around the front to its right. They stand in loose rows, each row an arc, below the stage's edge and a few
+// metres off it, the ground rising toward the back. How they move is the crowd's shader (Crowd).
 
 /**
- * Where they stand: from [FIRST] m before the stage's middle to [LAST], [WIDE] to each side; from [RISE] on the ground
- * climbs ([SLOPE] m a metre). The stage stands [PIT] m above the ground they stand on, so a held-up light is about
- * level with the stage's floor.
+ * Where they stand: in half a ring around the stage's middle, on the side the band looks to (z from 0 up), from
+ * [FIRST] m off it to [LAST]; from [RISE] m off on the ground climbs ([SLOPE] m a metre). The stage stands [PIT] m
+ * above the ground they stand on, so a held-up light is about level with the stage's floor.
  */
 object CrowdPlaces {
     const val FIRST = 16.0
     const val LAST = 62.0
-    const val WIDE = 28.0
     const val RISE = 26.0
     const val SLOPE = 0.25
     const val PIT = 1.4
 
     /**
-     * Every held-up light: loose rows, a place about every metre, moved about, and not everyone holds a light up.
+     * Every held-up light: loose rows, a place about every [APART] m along a row and the rows [ROWS] m apart, moved
+     * about, and not everyone holds a light up.
      * Always the same ones, whatever the seed.
      */
     val all: List<CrowdLight> by lazy { build() }
@@ -51,7 +55,7 @@ object CrowdPlaces {
             lights.add(
                 CrowdLight(
                     x = x + 0.6 * (hash01(n * 3.1) - 0.5),
-                    y = 1.95 + 0.35 * hash01(n * 4.7) - PIT + SLOPE * max(0.0, at - RISE),
+                    y = 1.95 + 0.35 * hash01(n * 4.7) - PIT + SLOPE * max(0.0, sqrt(x * x + at * at) - RISE),
                     z = at,
                     seed = hash01(n * 5.9),
                     group = hash01(gx * 12.9898 + gz * 78.233 + 0.5),
@@ -59,21 +63,29 @@ object CrowdPlaces {
             )
         }
 
-        var z = FIRST
+        var off = FIRST
 
-        while (z < LAST) {
-            var x = -WIDE
+        while (off < LAST) {
+            // the row: half a circle, [off] m from the stage's middle
+            val places = floor(PI * off / APART).toInt()
 
-            while (x < WIDE) {
-                place(x, z)
-                x += 0.7
+            for (i in 0 until places) {
+                val angle = PI * ((i + 0.5) / places - 0.5)
+
+                place(x = off * sin(angle), z = off * cos(angle))
             }
 
-            z += 0.85
+            off += ROWS
         }
 
         return lights
     }
+
+    /** A place about every so many metres along a row. */
+    private const val APART = 0.7
+
+    /** The rows are this far apart, in metres. */
+    private const val ROWS = 0.85
 }
 
 /**
