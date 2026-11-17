@@ -128,12 +128,12 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  3.10)        // thump: closed-back box resonance
+    .band(freq =  180, q = 0.6, db =  3.30)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  4.90)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  2.60)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105, 0.707, x => x.passes(2)))
+  .highpass(80, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = Ign.fn(x => x
@@ -184,7 +184,7 @@ let makeGuitar = (rig) => {
  
   let signal = saw.mul(Ign.slot.pregain)
     // Simulate plucked string
-    .pitchEnvelope(0.2, x => x.adsr(0.030, 0.05, 0, 0))
+    .pitchEnvelope(0.2, x => x.adsr(0.001, 0.060, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
     .plus(Ign.pinknoise().adsr(pAttack, 0.3, 0.05, pRelease).highpass(Ign.perlin(1).mul(200).add(2000)).mul(0.05))
@@ -305,6 +305,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.cylinder(1)  // . solo()
+  .compressor(threshold = -24, ratio = 4, knee = 6, attack = 0.001, release = 0.12)
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.175)  // .mute()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
@@ -326,7 +327,8 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
   .body(material = "maple", wet = 0.15)
 
 export guitar2_arrange = x => x.cylinder(2)  // . solo()
-  .scale("<e2:minor>").gain(0.0925).mute("<0!128 1!16 0!16>") // .mute()
+  .compressor(threshold = -24, ratio = 4, knee = 6, attack = 0.001, release = 0.12)
+  .scale("<e2:minor>").gain(0.0975).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
@@ -346,7 +348,8 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .body(material = "mahogany", wet = 0.15)
 
 export guitar3_arrange = x => x.cylinder(3) //  . solo()
-  .scale("<e2:minor>").gain(0.0900).mute("<0!128 1!16 0!16>") //.mute()
+  .compressor(threshold = -24, ratio = 4, knee = 6, attack = 0.001, release = 0.12)
+  .scale("<e2:minor>").gain(0.0950).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
