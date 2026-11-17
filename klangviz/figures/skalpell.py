@@ -9,7 +9,7 @@ class Skalpell(Figure):
     key = "skalpell"
     frame = dict(
         height=1.02, scale=dict(torso=0.90, waist=0.88, chest=0.92, arm=0.88, thigh=0.86, leg=0.88),
-        stoop=0.07, eye=(1.0, 0.15, 0.1), move=dict(PICK_HAND),
+        stoop=0.07, eye=(1.0, 0.32, 0.24), move=dict(PICK_HAND),
     )
 
     def sculpt(self, w):

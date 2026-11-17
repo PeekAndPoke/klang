@@ -193,8 +193,8 @@ class Rig(val root: Object3D) {
     }
 
     /**
-     * Colours the eyes by how warm their player is ([warmth], 0 to 1): a pale, almost white light while they rest,
-     * their own colour the longer they play (see EyeWarmth). It sets the glow from what the player set this frame,
+     * Colours the eyes by how warm their player is ([warmth], 0 to 1): their own colour, subtly, while they rest,
+     * and almost white the longer they play (see EyeWarmth). It sets the glow from what the player set this frame,
      * so it runs once a frame, after the players.
      */
     fun warmEyes(warmth: Double) {

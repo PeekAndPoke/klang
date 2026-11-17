@@ -69,27 +69,30 @@ class EyesSpec : StringSpec({
         sparse shouldBeGreaterThan 0.1
     }
 
-    "cold eyes are all pale and glow as eyes at rest do, whatever their player sets" {
-        EyeLook.of(warmth = 0.0, set = 2.0) shouldBe EyeLook(own = 0.0, glow = EyeLook.REST_GLOW)
-        EyeLook.of(warmth = 0.0, set = 20.0) shouldBe EyeLook(own = 0.0, glow = EyeLook.REST_GLOW)
+    "cold eyes have their own colour, subtly, and glow as eyes at rest do, whatever their player sets" {
+        EyeLook.of(warmth = 0.0, set = 2.0) shouldBe EyeLook(own = EyeLook.TINT, glow = EyeLook.REST_GLOW)
+        EyeLook.of(warmth = 0.0, set = 20.0) shouldBe EyeLook(own = EyeLook.TINT, glow = EyeLook.REST_GLOW)
+        // a tint, not the whole colour, and far more of it than hot eyes keep
+        (EyeLook.TINT < 1.0) shouldBe true
+        (EyeLook.TINT > 4 * EyeLook.HOT) shouldBe true
     }
 
-    "from nine tenths warm on the eyes have all of their colour, and flare with what their player sets" {
+    "from nine tenths warm on the eyes are almost white, and flare with what their player sets" {
         for (warmth in listOf(0.9, 0.95, 1.0)) {
-            EyeLook.of(warmth = warmth, set = 2.0).own shouldBe 1.0
+            EyeLook.of(warmth = warmth, set = 2.0).own shouldBe (EyeLook.HOT plusOrMinus 1e-12)
             EyeLook.of(warmth = warmth, set = 2.0).glow shouldBe (EyeLook.GLOW plusOrMinus 1e-12)
             EyeLook.of(warmth = warmth, set = 12.0).glow shouldBe (EyeLook.GLOW + 10 * EyeLook.FLARE plusOrMinus 1e-12)
         }
     }
 
-    "between, the colour comes steadily, half of it at half the way" {
+    "between, the colour goes steadily, half of the way at half the way" {
         val own = (0..90).map { EyeLook.of(warmth = it / 100.0, set = 2.0).own }
 
-        own.zipWithNext().all { (a, b) -> b > a } shouldBe true
-        EyeLook.of(warmth = 0.45, set = 2.0).own shouldBe (0.5 plusOrMinus 1e-12)
+        own.zipWithNext().all { (a, b) -> b < a } shouldBe true
+        EyeLook.of(warmth = 0.45, set = 2.0).own shouldBe ((EyeLook.TINT + EyeLook.HOT) / 2 plusOrMinus 1e-12)
         // a warmth beyond what there is does no harm
-        EyeLook.of(warmth = -0.2, set = 2.0).own shouldBe 0.0
-        EyeLook.of(warmth = 1.7, set = 2.0).own shouldBe 1.0
+        EyeLook.of(warmth = -0.2, set = 2.0).own shouldBe EyeLook.TINT
+        EyeLook.of(warmth = 1.7, set = 2.0).own shouldBe (EyeLook.HOT plusOrMinus 1e-12)
     }
 
     "a cooling time and a hold are times: none of them is 0 or less" {

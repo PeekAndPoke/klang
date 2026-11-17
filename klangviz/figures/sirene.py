@@ -10,7 +10,7 @@ class Sirene(Figure):
     frame = dict(
         height=0.92, scale=dict(torso=0.94, waist=0.75, chest=0.86, shoulder=0.83, arm=0.80, hand=0.86, thigh=1.07,
                                 leg=0.91, neck=0.76, head=0.98),
-        shoulders=0.93, hips=1.08, neck=1.32, eye=(1.0, 0.02, 0.09), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
+        shoulders=0.93, hips=1.08, neck=1.32, eye=(1.0, 0.24, 0.32), eye_size=1.0, eye_shape=(1.42, 0.6, 0.66),
         eye_drop=-0.012, long_skull=True,
         radius=dict(hips=1.20, ribs=0.88, hip=1.08, calf=1.05, bicep=1.08, crown=1.06),
         # a long neck, carried forward

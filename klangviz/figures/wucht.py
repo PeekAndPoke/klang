@@ -14,7 +14,7 @@ class Wucht(Figure):
         # shoulders he had none, the maintainer, 2026-11-16)
         move=dict(crown=(0, 0, 0.004)),
         radius=dict(bicep=1.25, ribs=1.18), shoulders=1.30, hips=1.05, neck=1.25, stoop=0.03,
-        eye=(1.0, 0.20, 0.0),
+        eye=(1.0, 0.46, 0.22),
     )
 
     def sculpt(self, w):

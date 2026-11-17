@@ -9,9 +9,9 @@ import kotlin.math.exp
 import kotlin.math.min
 
 /**
- * How warm a player is from their playing, which colours their eyes: almost white while they rest, the more their
- * own colour the longer they play; the warmth never quite gets to 1, as they cool all the while (the maintainer,
- * 2026-11-17). What the eyes make of a warmth is [EyeLook]: they have all of their colour a little before that.
+ * How warm a player is from their playing, which colours their eyes: their own colour while they rest, the whiter
+ * the longer they play; the warmth never quite gets to 1, as they cool all the while (the maintainer, 2026-11-17).
+ * What the eyes make of a warmth is [EyeLook]: they are as white as they get a little before that.
  *
  * A player is playing from each note they begin for [hold] seconds on (or till the next one). The warmth is how
  * much of the last while they played, the nearer past counting more: what was [cools] seconds ago counts a third of
@@ -69,40 +69,46 @@ class EyeWarmth(val cools: Double = 7.0, val hold: Double = 2.0) {
 }
 
 /**
- * A pair of eyes at one moment: how much of their own colour they have ([own], 0 to 1; the rest is the pale,
- * almost white light of a player at rest) and how brightly they glow ([glow]).
+ * A pair of eyes at one moment: how much of their own colour they have ([own], 0 to 1; the rest is a pale, almost
+ * white light) and how brightly they glow ([glow]).
  */
 data class EyeLook(val own: Double, val glow: Double) {
     companion object {
-        /** From this warmth on the eyes have all of their colour: after a lot of playing. */
+        /** From this warmth on the eyes are as white as they get: after a lot of playing. */
         const val FULL = 0.9
 
         /**
-         * The eyes' glow, the same whether their player rests or plays: every eye is as bright as its colour can be
-         * on a screen, all the time, and only its hue says how warm its player is (dimmer while playing than at
-         * rest was the wrong way round: the maintainer, 2026-11-17, "needs to be bright for everyone"). It is set
-         * so that the eyes' own waver, which takes away up to a good half, never brings the colour's strongest
-         * part under full. A pure red or violet still carries less light than a cyan or a green: that is the
-         * screen's, and adding white to make up for it would turn the red pink.
+         * How much of their own colour the eyes have while their player rests, and how much is left once they are
+         * hot: a subtle tint at rest (the maintainer, 2026-11-17: "the eye colors need to all be subtler ...
+         * meaning brighter all of them"), almost white in action ("idle color ... in action almost white").
          */
-        const val REST_GLOW = 2.25
+        const val TINT = 0.85
+        const val HOT = 0.08
+
+        /**
+         * The eyes' glow at rest and in action. At rest it is what shows a colour best: the colour's strongest part
+         * about full, not far over it, since a light driven harder goes white on a screen whatever its colour. In
+         * action it is higher: the eyes are white then anyway, and bright.
+         */
+        const val REST_GLOW = 1.5
         const val GLOW = 2.25
 
-        /** How much of what a player sets beyond the least is added: a loud note flares the eyes a little toward white. */
+        /** How much of what a player sets beyond the least is added: a loud note flares the eyes a little. */
         const val FLARE = 0.04
         const val LEAST = 2.0
 
         /**
          * The eyes of a player who is [warmth] warm (0 to 1) and whose playing sets their glow to [set] this frame
-         * ([LEAST] at rest, up to some 20 on a loud note). That glow is brought down to what a colour can be seen
-         * in: a light that bright is white on a screen whatever its colour.
+         * ([LEAST] at rest, up to some 20 on a loud note): their own colour, subtly, while they rest, and whiter the
+         * warmer they are, as what glows goes white when it is hot. That glow is brought down to what a colour can
+         * be seen in: a light that bright is white on a screen whatever its colour.
          */
         fun of(warmth: Double, set: Double): EyeLook {
             val x = (warmth / FULL).coerceIn(0.0, 1.0)
-            val own = x * x * (3 - 2 * x)
+            val heat = x * x * (3 - 2 * x)
             val playing = GLOW + FLARE * (set - LEAST)
 
-            return EyeLook(own = own, glow = REST_GLOW + (playing - REST_GLOW) * own)
+            return EyeLook(own = TINT + (HOT - TINT) * heat, glow = REST_GLOW + (playing - REST_GLOW) * heat)
         }
     }
 }
