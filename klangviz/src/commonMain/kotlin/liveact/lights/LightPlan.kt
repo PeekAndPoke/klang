@@ -55,6 +55,44 @@ enum class LampGroup {
     }
 }
 
+/** Where a lamp behind the band hangs: one of the two main ones at the sides, or the one between them. */
+enum class BackPlace {
+    OUTER,
+    INNER,
+}
+
+/**
+ * Which of the lamps behind the band are on. Mostly all three; for a while only the two at the sides, or only the
+ * one between them (the maintainer, 2026-11-17: "sometimes only the two others or only the inner one").
+ */
+enum class BackRig {
+    ALL,
+    OUTER,
+    INNER;
+
+    /**
+     * The share of its light a lamp at [place] gives in this rig. The inner one alone is turned up. It lights the
+     * middle of the stage: the two guitarists at the sides stand in the dark then, as the drummer does while only
+     * the outer two are on.
+     */
+    fun share(place: BackPlace): Double = when (this) {
+        ALL -> 1.0
+        OUTER -> if (place == BackPlace.OUTER) 1.0 else 0.0
+        INNER -> if (place == BackPlace.INNER) INNER_ALONE else 0.0
+    }
+
+    companion object {
+        /** The inner lamp's light when it is the only one behind, against its light among the three. */
+        const val INNER_ALONE = 1.4
+    }
+}
+
+/** The rigs at a moment: going over [from] one [to] the next, by [share] (0: all the first). */
+class BackRigMix(val from: BackRig, val to: BackRig, val share: Double) {
+    /** The share of its light a lamp at [place] gives just now. */
+    fun share(place: BackPlace): Double = from.share(place) + (to.share(place) - from.share(place)) * share
+}
+
 /**
  * The front lamp's colours: each time it comes up it has one of them, the seed's choice; the stroboscope is
  * always the cold blue. The amber is a deep one (a paler one looked like a building site's lamp, the maintainer,
@@ -184,6 +222,50 @@ class LightPlan(private val show: Show) {
         return MoodMix(from = moodOf(k), to = moodOf(k + 1), share = u)
     }
 
+    /** The rigs in the order they come, as far as asked for: the show opens with all the lamps. */
+    private val rigs = mutableListOf(BackRig.ALL)
+
+    /**
+     * The [k]th rig of the show, the seed's choice. Never the same few lamps twice in a row: all of them come on
+     * between. The chance picks all the lamps half the time and each of the two others a quarter; with that rule
+     * it comes to three rigs in five with all the lamps, and one in five each with only the outer two and only the
+     * inner one.
+     */
+    fun rigOf(k: Int): BackRig {
+        while (rigs.size <= k) {
+            val n = rigs.size
+            val chance = hash01(n * 7.3 + show.seed * 0.53 + 1.9)
+            val pick = when {
+                chance < 0.5 -> BackRig.ALL
+                chance < 0.75 -> BackRig.OUTER
+                else -> BackRig.INNER
+            }
+
+            rigs.add(if (pick == rigs[n - 1]) BackRig.ALL else pick)
+        }
+
+        return rigs[max(0, k)]
+    }
+
+    /** `?rig=outer` (or inner, or all): the rig held all through, to look at it; null where the show decides. */
+    private val held: BackRig? = show.switches["rig"]?.let { name -> BackRig.entries.firstOrNull { it.name.lowercase() == name } }
+
+    /**
+     * The rigs at [t]: the one that holds, going over into the next in its last bars. Before the song: the first.
+     * With `?rig=` the one held.
+     */
+    fun rigAt(t: Double): BackRigMix {
+        if (held != null) {
+            return BackRigMix(from = held, to = held, share = 0.0)
+        }
+
+        val x = max(0.0, t) / show.bar
+        val k = floor(x / (RIG_HOLD + RIG_TURN)).toInt()
+        val u = smooth((x - k * (RIG_HOLD + RIG_TURN) - RIG_HOLD) / RIG_TURN)
+
+        return BackRigMix(from = rigOf(k), to = rigOf(k + 1), share = u)
+    }
+
     /** The front lamp's colour at [t]; [tried]: the colour tried by hand (an index into [FrontColors.TRY]), -1 for none. */
     fun frontColor(t: Double, tried: Int): Int {
         if (tried >= 0) {
@@ -250,6 +332,13 @@ class LightPlan(private val show: Show) {
         /** A mood stays for [HOLD] bars; over the next [TURN] it goes over into another. */
         const val HOLD = 24
         const val TURN = 4
+
+        /**
+         * A rig (which lamps behind are on) stays for [RIG_HOLD] bars; over the next [RIG_TURN] it goes over into
+         * another. Its round is not the moods': so the two fall together differently each time.
+         */
+        const val RIG_HOLD = 14
+        const val RIG_TURN = 2
 
         /**
          * The moods: the colours of the two main lamps behind (the left one, the right one), and where each seems to

@@ -6,8 +6,10 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.stage.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.isLight
@@ -125,7 +127,10 @@ class StageSpec : StringSpec({
 
             try {
                 camera.fov shouldBe 35.0
-                camera.far shouldBe 60.0
+                camera.far shouldBe Stage.FAR
+                // the audience's last row is seen from wherever the camera goes: up to some 9 m behind the stage's
+                // middle or beside it, with room to spare
+                Stage.FAR shouldBeGreaterThan CrowdPlaces.LAST + 30.0
                 scene.fog.shouldNotBeNull().far shouldBe 22.0
                 renderer.asDynamic().shadowMap.enabled.unsafeCast<Boolean>() shouldBe true
 

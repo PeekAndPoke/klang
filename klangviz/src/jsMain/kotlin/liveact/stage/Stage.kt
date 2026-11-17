@@ -80,7 +80,7 @@ class Stage(
         // The lens and its limits; the aspect is the picture's, as the component that makes the camera sets it
         camera.fov = 35.0
         camera.near = 0.1
-        camera.far = 60.0
+        camera.far = FAR
         camera.updateProjectionMatrix()
 
         val floor = Three.addon.createMesh(
@@ -215,6 +215,14 @@ class Stage(
     companion object {
         /** The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others. */
         const val RISER = 0.40
+
+        /**
+         * How far the camera sees, in metres. The audience stands up to [CrowdPlaces.LAST] m from the stage's
+         * middle, and the camera goes up to some 9 m behind it or to its side (the flight round the band, the
+         * reverse total); from the mixing desk the lights at the far sides are some 82 m off. 60 m, as it was at
+         * first, cut the last rows off whenever the camera went round (the maintainer, 2026-11-17).
+         */
+        const val FAR = 110.0
 
         /** three.js's PCFSoftShadowMap: not in the workshop's ShadowMapType, as r186 removed it. */
         private const val PCF_SOFT_SHADOW_MAP = 2

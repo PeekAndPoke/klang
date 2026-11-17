@@ -21,13 +21,14 @@ import org.w3c.dom.events.KeyboardEvent
 
 /**
  * A lamp of the stage: its [light], the intensity it gives at full ([base]), its own number for its flicker
- * ([seed]), and the lamps it belongs to ([group]).
+ * ([seed]), the lamps it belongs to ([group]), and for a lamp behind the band where it hangs ([place]).
  */
-class Lamp(val light: SpotLight, val base: Double, val seed: Double, val group: LampGroup)
+class Lamp(val light: SpotLight, val base: Double, val seed: Double, val group: LampGroup, val place: BackPlace? = null)
 
 /**
  * The stage's lamps: the back light (two main lamps behind and one between them), a faint fill from the front, the
- * low front lamp, and the stroboscope it becomes while the bass drum runs fast. Adds them to [scene].
+ * low front lamp, and the stroboscope it becomes while the bass drum runs fast. Adds them to [scene]. Of the three
+ * behind not all are always on (see [BackRig]).
  *
  * The lamps are analog: old stage lamps on a tired supply. Each one's brightness wanders slowly on its own,
  * breathes a little, shivers faintly, and now and then sags for a moment as if something else drew current; none
@@ -76,6 +77,7 @@ class Lights(show: Show, scene: Scene) {
             targetX: Double,
             targetZ: Double,
             shadow: Boolean,
+            place: BackPlace?,
         ) {
             val light = Three.addon.createSpotLight(
                 color = color, intensity = intensity, distance = 30.0, angle = 0.5, penumbra = 0.7, decay = 1.2,
@@ -92,14 +94,27 @@ class Lights(show: Show, scene: Scene) {
                     base = intensity,
                     seed = all.size * 7.31 + 1.7,
                     group = if (z < 0) LampGroup.BACK else LampGroup.FILL,
+                    place = place,
                 )
             )
         }
 
-        spot(x = -4.5, y = 5.0, z = -4.0, color = 0x3070ff, intensity = 260.0, targetX = -2.0, targetZ = 0.0, shadow = true)
-        spot(x = 4.5, y = 5.0, z = -4.0, color = 0xff3070, intensity = 260.0, targetX = 2.0, targetZ = 0.0, shadow = true)
-        spot(x = 0.0, y = 5.5, z = -4.5, color = 0x70a0ff, intensity = 180.0, targetX = 0.0, targetZ = -1.0, shadow = true)
-        spot(x = 0.0, y = 6.0, z = 8.0, color = 0xfff0e0, intensity = 25.0, targetX = 0.0, targetZ = 0.0, shadow = false)
+        spot(
+            x = -4.5, y = 5.0, z = -4.0, color = 0x3070ff, intensity = 260.0, targetX = -2.0, targetZ = 0.0, shadow = true,
+            place = BackPlace.OUTER,
+        )
+        spot(
+            x = 4.5, y = 5.0, z = -4.0, color = 0xff3070, intensity = 260.0, targetX = 2.0, targetZ = 0.0, shadow = true,
+            place = BackPlace.OUTER,
+        )
+        spot(
+            x = 0.0, y = 5.5, z = -4.5, color = 0x70a0ff, intensity = 180.0, targetX = 0.0, targetZ = -1.0, shadow = true,
+            place = BackPlace.INNER,
+        )
+        spot(
+            x = 0.0, y = 6.0, z = 8.0, color = 0xfff0e0, intensity = 25.0, targetX = 0.0, targetZ = 0.0, shadow = false,
+            place = null,
+        )
 
         // the lamp at the front: on the floor before the stage, looking up at the band and the wall, wide
         val low = Three.addon.createSpotLight(
@@ -153,14 +168,20 @@ class Lights(show: Show, scene: Scene) {
      * front lamp takes its colour; each lamp flickers on its own.
      */
     fun shine(t: Double, house: Double, front: FrontLight) {
+        val rig = plan.rigAt(t)
+
         for (lamp in lamps) {
             if (lamp.group == LampGroup.FRONT) {
                 lamp.light.color.setHex(if (front.strobing) FrontColors.BLUE else plan.frontColor(t, tried))
             }
 
             val own = plan.own(lamp.seed)
-            lamp.light.intensity = lamp.base * lampFlicker(t, own) * house * lamp.group.share(front.level, front.strobing)
-            // the front lamp is dark most of the show: its shadow is not drawn then (see shadowDrawn)
+            val place = lamp.place
+            val lit = if (place != null) rig.share(place) else 1.0
+
+            lamp.light.intensity = lamp.base * lampFlicker(t, own) * house * lamp.group.share(front.level, front.strobing) * lit
+            // the front lamp is dark most of the show, and so is a lamp behind that its rig leaves out: a dark lamp's
+            // shadow is not drawn (see shadowDrawn)
             val shadow: dynamic = lamp.light.asDynamic().shadow
 
             shadow.autoUpdate = shadowDrawn(intensity = lamp.light.intensity, made = shadow.map != null)

@@ -12,6 +12,7 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.Straighten
 import io.peekandpoke.klang.viz.liveact.inSight
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
@@ -188,7 +189,9 @@ private class Fret(val along: Double, val across: Double, val pick: Double, val 
  * moves with the music, with the show's chance under [seed] (the player's own; the prototype's fallback is 4, the
  * band gives each player one of their own). [lean]: how the trunk leans (back is
  * negative); [bang]: how much the head goes; [bounce]: how far the hips dip on the beat; [outline]: the body's
- * outline, the [kind]'s own unless given; [glance]: whether and how the player looks at the viewer.
+ * outline, the [kind]'s own unless given; [glance]: whether and how the player looks at the viewer; [straighten]:
+ * when the player straightens up from the instrument (null: never; `?straight=1` holds everyone straight, to look
+ * at the pose).
  */
 class StringPlayer(
     private val show: Show,
@@ -202,8 +205,15 @@ class StringPlayer(
     private val bounce: Double = 0.03,
     outline: BodyOutline = kind.outline,
     private val glance: Glance? = null,
+    private val straighten: Straighten? = Straighten(every = 21.0, chance = 0.55),
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
+
+    /**
+     * When this player's stretches of straightening up begin, in seconds into the song: each player's at another
+     * moment, so they do not all rise together, and nobody in the song's first seconds.
+     */
+    private val straightenFrom: Double = straighten?.let { it.every * (0.3 + 0.7 * show.own(0, seed + 32.5)) } ?: 0.0
     private val s = rig.s
     private val bridge = -0.10 * s
     private val nut = bridge + kind.scale * s
@@ -526,7 +536,15 @@ class StringPlayer(
         rig.reset()
         rig.update()
         rig.moveHips(vec(0.03 * sway * s, -(0.04 + bounce * body * parts.knees) * rig.pelvis.y, 0.0))
-        rig.turn("belly", X_AXIS, lean + 0.04 * body * parts.trunk)
+        // now and then the player straightens up from the instrument: the back comes up (a little past upright, and
+        // not forward of where a player who leans back already is), the chest opens, the head lifts and looks out
+        val up = show.switches.double("straight")?.coerceIn(0.0, 1.0)
+            ?: straighten?.at(t - straightenFrom) { stretch, purpose -> show.own(stretch * 3 + purpose, seed + 31.5) }
+            ?: 0.0
+        val straight = min(lean, 0.0) - 0.05
+
+        rig.turn("belly", X_AXIS, lean + (straight - lean) * up + 0.04 * body * parts.trunk)
+        rig.turn("chest", X_AXIS, -0.06 * up)
         rig.turn("chest", Z_AXIS, -0.05 * sway)
         rig.turn("chest", Y_AXIS, 0.18)
 
@@ -549,7 +567,7 @@ class StringPlayer(
         }
 
         rig.turn("neck", X_AXIS, bang * 0.4 * nod * parts.head * (1 - 0.7 * look))
-        rig.turn("head", X_AXIS, (0.12 + bang * nod * parts.head) * (1 - 0.8 * look) - pitch)
+        rig.turn("head", X_AXIS, (0.12 - 0.18 * up + bang * nod * parts.head) * (1 - 0.8 * look) - pitch)
 
         if (look < 0.5) {
             mover.apply(rig, t)

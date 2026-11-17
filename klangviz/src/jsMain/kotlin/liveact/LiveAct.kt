@@ -189,7 +189,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 createCamera = { aspect ->
                     Three.addon = threeAddon ?: error("three.js is not loaded")
 
-                    Three.addon.createPerspectiveCamera(fov = 35.0, aspect = aspect, near = 0.1, far = 60.0)
+                    Three.addon.createPerspectiveCamera(fov = 35.0, aspect = aspect, near = 0.1, far = Stage.FAR)
                 },
             )
 
