@@ -476,7 +476,10 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         Visuals and editor effects are powered by these libraries (integrated via Kraft addons):
 
                         - **[PixiJS](https://pixijs.com)** — WebGL-accelerated rendering of live playback highlights in the editor
-                        - **[Three.js](https://threejs.org)** — 3D graphics for the animated Motor background and visualizations
+                        - **[Three.js](https://threejs.org)** by Ricardo Cabello (mrdoob) and its contributors: 3D graphics for the
+                        animated Motor background, the visualizations and the band on its stage
+                        - **[Blender](https://www.blender.org)** by the Blender Foundation and its contributors: the band's figures
+                        are built in it by script and exported as glTF
                         - **[OKLab](https://bottosson.github.io/posts/oklab/)** by Björn Ottosson: the perceptual colour space
                         a look's spectrum steps blend in, so Copper's blue fades into its copper through a warm grey, not a
                         green one
