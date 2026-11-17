@@ -128,12 +128,12 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  180, q = 0.6, db =  3.30)        // thump: closed-back box resonance
+    .band(freq =  160, q = 0.6, db =  3.30)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  4.90)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  2.60)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(80, 0.707, x => x.passes(2)))
+  .highpass(100, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = Ign.fn(x => x
@@ -201,7 +201,7 @@ let makeGuitar = (rig) => {
 }
 
 // The Mircophone for the guitar
-let guitarShape = Ign.fn(x => x.mul(0.18).parallel(c => c, c => c.shape("soft")).mul(0.35))
+let guitarShape = Ign.fn(x => x.mul(0.18).parallel(c => c, c => c.shape("soft")))
 
 // The rigs: the signal path after the string, stage by stage. A/B one stage at a time:
 //   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck
@@ -309,8 +309,8 @@ export guitar1_arrange = x => x.cylinder(1)  // . solo()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
   // Shaping
-  .compressor(threshold = -24, ratio = 4, knee = 6, attack = 0.001, release = 0.12)
-  .katp("gain.gain", 1.3)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.44)
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
 
@@ -332,8 +332,8 @@ export guitar2_arrange = x => x.cylinder(2)  // . solo()
   .scale("<e2:minor>").gain(0.1850).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
   // Shaping
-  .compressor(threshold = -24, ratio = 4, knee = 6, attack = 0.001, release = 0.12)
-  .katp("gain.gain", 1.3)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.44)
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
 
@@ -355,8 +355,8 @@ export guitar3_arrange = x => x.cylinder(3) //  . solo()
   .scale("<e2:minor>").gain(0.1800).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
   // Shaping
-  .compressor(threshold = -24, ratio = 4, knee = 6, attack = 0.001, release = 0.12)
-  .katp("gain.gain", 1.3)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.44)
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
 
@@ -367,7 +367,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.25) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.22) // . mute()
     .ignp("sub", 0.92).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
@@ -573,13 +573,13 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 7500)
-    .mul(0.675)
+    .mul(0.75)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.001, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.40)
+    .mul(4.70)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )
