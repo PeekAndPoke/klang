@@ -17,11 +17,22 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.members.Bearing
+import io.peekandpoke.klang.viz.liveact.band.skills.BrowWipe
+import io.peekandpoke.klang.viz.liveact.band.skills.CapTug
 import io.peekandpoke.klang.viz.liveact.band.skills.HandGoal
 import io.peekandpoke.klang.viz.liveact.band.skills.HeadScratch
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleInUse
+import io.peekandpoke.klang.viz.liveact.band.skills.IdleSkill
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.band.skills.NeckScratch
+import io.peekandpoke.klang.viz.liveact.band.skills.NeckStretch
+import io.peekandpoke.klang.viz.liveact.band.skills.ShakeOut
 import io.peekandpoke.klang.viz.liveact.band.skills.Slouch
+import io.peekandpoke.klang.viz.liveact.band.skills.StickTwirl
+import io.peekandpoke.klang.viz.liveact.band.skills.TuneUp
+import io.peekandpoke.klang.viz.liveact.band.skills.browHand
+import io.peekandpoke.klang.viz.liveact.band.skills.capHand
+import io.peekandpoke.klang.viz.liveact.band.skills.capTugAt
 import io.peekandpoke.klang.viz.liveact.band.skills.scratchHand
 import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
@@ -34,6 +45,7 @@ import io.peekandpoke.klang.workshop.threejs.Quaternion
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.angleTo
 import io.peekandpoke.klang.workshop.threejs.applyAxisAngle
+import io.peekandpoke.klang.workshop.threejs.applyQuaternion
 import io.peekandpoke.klang.workshop.threejs.crossVectors
 import io.peekandpoke.klang.workshop.threejs.dot
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
@@ -117,8 +129,9 @@ private class IdleHand(
  * `lookAt`, the last in rank first; none unless given): the head comes up from the instrument and turns to each as
  * far as it is asked, each over the ones before it;
  * [idles]: the member's idle skills in use at a time, in the order of rank (see `idlesAt`; none unless given): the
- * strumming hand leaves the strings for them (a scratch of the head, a slouch), each over
- * the ones after it, and a slouch settles the body;
+ * strumming hand leaves the strings for them (a scratch of the head, a tug at the cap, a wipe of the brow, a slouch),
+ * the fretting hand leaves the neck (a shake out, a peg to tune), each hand's over the ones after it; a slouch
+ * settles the body, the head leans in to tune, and dips into a wipe of the brow or with a tug at the cap;
  * [straighten]: when the player straightens up from the instrument (null: never; `?straight=1` holds everyone
  * straight, to look at the pose).
  */
@@ -290,9 +303,12 @@ class StringPlayer(
         instrument.light(lit)
 
         val playing = min(1.0, energy)
-        // what the member does with the strumming hand while the part pauses, and how far a slouch settles the body
+        // what the member does with the hands, the body and the head while the part pauses (see [rightGoal],
+        // [leftGoal]), and how far a slouch settles the body
         val idle = idles(t)
         val settle = idle.filter { it.skill is Slouch }.maxOfOrNull { it.share } ?: 0.0
+        // tuning up: how far the head leans in to listen
+        val tune = idle.filter { it.skill is TuneUp }.maxOfOrNull { it.share } ?: 0.0
 
         // the body: knees giving on the beat, the trunk leaning, the head going with the beat
         val beat = t * show.bpm / 60
@@ -378,6 +394,13 @@ class StringPlayer(
 
         rig.turn("head", Y_AXIS, yaw)
 
+        val dip = headDipOf(idle)
+
+        if (dip > 0) {
+            // into the arm that wipes the brow, or with the tug at the cap
+            rig.turn("head", X_AXIS, dip)
+        }
+
         for (side in Side.entries) {
             val sign = side.sign
             val foot = rig.ankle.getValue(side).clone()
@@ -404,6 +427,12 @@ class StringPlayer(
         fun place(x: Double, y: Double, z: Double): Vector3 =
             at.clone().addScaledVector(axisX, x).addScaledVector(axisY, y).addScaledVector(axisZ, z)
 
+        if (tune > 0) {
+            // tuning up: the head leans in toward the head of the neck, and tilts as if listening
+            rig.faceTo(place(nut + PEG * s, 0.0, 0.0), TUNE_LOOK * tune)
+            rig.turn("head", Z_AXIS, TUNE_TILT * tune)
+        }
+
         // the left hand: under the neck at the note's place, the fingers coming up over the strings
         val fret = fretAt(t)
         // for an upper (lower-sounding) string the fingers reach further round the neck: the wrist comes up and out
@@ -417,11 +446,41 @@ class StringPlayer(
             .addScaledVector(axisY, -0.07 * s + 0.10 * cross)
             .addScaledVector(axisZ, -0.03 * s + 0.15 * cross)
 
-        rig.hand(Side.L, wristL, rig.dir(0.4, -1.0, -0.3))
-        aim(Side.L, onNeck.clone().sub(wristL), 0.75)
+        // the idle skills that take the fretting hand off the neck, each with how far
+        val leftGoals = if (idle.isEmpty()) {
+            emptyList()
+        } else {
+            val peg = place(nut + PEG * s, -0.04 * s, 0.0)
+
+            idle.mapNotNull { used -> leftGoal(used = used, peg = peg)?.let { goal -> goal to used.share } }
+        }
+
+        if (leftGoals.isEmpty()) {
+            rig.hand(Side.L, wristL, rig.dir(0.4, -1.0, -0.3))
+            aim(Side.L, onNeck.clone().sub(wristL), 0.75)
+        } else {
+            // the fretting hand leaves the neck for what the idle skills ask, each over the ones after it on the sheet
+            val wrist = wristL.clone()
+            val pole = rig.dir(0.4, -1.0, -0.3)
+            val points = onNeck.clone().sub(wristL).normalize()
+
+            for ((goal, w) in leftGoals.asReversed()) {
+                goal.blend(wrist = wrist, pole = pole, w = w)
+                points.lerp(goal.points, w).normalize()
+            }
+
+            rig.hand(Side.L, wrist, pole)
+            aim(Side.L, points, 0.75)
+        }
 
         // the right hand: over the strings between the bridge and the neck, through them on every note
-        val strum = strumAt(t)
+        var strum = strumAt(t)
+
+        if (tune > 0) {
+            // tuning up: the strumming hand plucks a string softly now and then
+            strum += pluckOf(idle)
+        }
+
         val onStrings = place(bridge + 0.13 * s, fret.pick - strum * k.swing * fret.wide * s, 0.03 * s)
         // a guitarist strums from the wrist: the arm goes only a little of the way, the hand turns for the rest
         val wristR = place(bridge + 0.13 * s, fret.pick - strum * k.swing * fret.wide * k.arm * s, 0.03 * s)
@@ -447,7 +506,7 @@ class StringPlayer(
 
             placeIdleHand(hand)
 
-            if (idle.any { it.skill is HeadScratch }) {
+            if (idle.any { atHead(it.skill) }) {
                 idleHand = hand
             }
         }
@@ -484,7 +543,7 @@ class StringPlayer(
         val pole = hand.pole.clone()
 
         for (used in hand.idle.asReversed()) {
-            val goal = idleHand(used)
+            val goal = rightGoal(used) ?: continue
             val w = used.share
 
             goal.blend(wrist = wrist, pole = pole, w = w)
@@ -516,11 +575,16 @@ class StringPlayer(
 
     /**
      * Where the strumming hand goes for the idle skill [used], at the time of its use: at the head (as the head is
-     * posed now) for a scratch, before the strings for a slouch.
+     * posed now) for a scratch, a tug at the cap and a wipe of the brow; before the strings for a slouch. Null for a
+     * skill that leaves the strumming hand where it is (or that a string player does not show).
      */
-    private fun idleHand(used: IdleInUse): HandGoal {
-        return when (used.skill) {
+    private fun rightGoal(used: IdleInUse): HandGoal? {
+        return when (val skill = used.skill) {
             is HeadScratch -> scratchHand(rig = rig, side = Side.R, since = used.since)
+
+            is CapTug -> capHand(rig = rig, side = Side.R, since = used.since, rise = skill.timing.rise)
+
+            is BrowWipe -> browHand(rig = rig, side = Side.R, since = used.since, rise = skill.timing.rise)
 
             is Slouch -> {
                 // the hand off the strings, hanging limp before the body of the instrument
@@ -531,7 +595,92 @@ class StringPlayer(
 
                 HandGoal(wrist = wrist, points = rig.dir(0.0, -1.0, 0.25), pole = rig.dir(-0.9, -0.3, -0.5), round = vec(), drop = vec())
             }
+
+            is ShakeOut, is TuneUp, is NeckStretch, is StickTwirl, is NeckScratch -> null
         }
+    }
+
+    /**
+     * Where the fretting hand goes for the idle skill [used], at the time of its use: hanging out beside the neck and
+     * shaken loosely for a shake out; at a tuning peg ([peg], in the world) for tuning. Null for a skill that leaves
+     * the fretting hand on the neck (or that a string player does not show).
+     */
+    private fun leftGoal(used: IdleInUse, peg: Vector3): HandGoal? {
+        return when (used.skill) {
+            is ShakeOut -> {
+                // the hand hangs out beside the neck, below it, and shakes loosely from the wrist
+                val shake = sin(2 * PI * SHAKE_RATE * used.since)
+                val wrist = rig.at("elbowL")
+                    .addScaledVector(rig.dir(1.0, 0.0, 0.0), (SHAKE_OUT + SHAKE_WRIST * shake) * s)
+                    .addScaledVector(rig.dir(0.0, 1.0, 0.0), -SHAKE_DOWN * s)
+                    .addScaledVector(rig.dir(0.0, 0.0, 1.0), SHAKE_AHEAD * s)
+
+                HandGoal(
+                    wrist = wrist,
+                    points = rig.dir(SHAKE_FLOP * sin(2 * PI * SHAKE_RATE * used.since + 1.0), -1.0, 0.2),
+                    pole = rig.dir(0.8, -0.5, -0.4),
+                    round = rig.dir(0.3, 0.0, 1.0).multiplyScalar(0.06 * s),
+                    drop = vec(),
+                )
+            }
+
+            is TuneUp -> {
+                // the hand under the head of the neck, the fingers at a peg, turning it a little to and fro
+                val along = vec(1.0, 0.0, 0.0).applyQuaternion(instrument.group.quaternion)
+                val across = vec(0.0, 1.0, 0.0).applyQuaternion(instrument.group.quaternion)
+                val wrist = peg.clone().addScaledVector(across, -0.07 * s).addScaledVector(along, -0.03 * s)
+                val points = peg.clone().sub(wrist).applyAxisAngle(along, TURN * sin(2 * PI * TURN_RATE * used.since))
+
+                HandGoal(
+                    wrist = wrist,
+                    points = points,
+                    pole = rig.dir(0.7, -1.0, -0.2),
+                    round = rig.dir(0.0, 0.3, 1.0).multiplyScalar(0.06 * s),
+                    drop = vec(),
+                )
+            }
+
+            is HeadScratch, is Slouch, is CapTug, is BrowWipe, is NeckStretch, is StickTwirl, is NeckScratch -> null
+        }
+    }
+
+    /** Whether the idle [skill] takes the strumming hand to the head: placed again from the head held at last. */
+    private fun atHead(skill: IdleSkill): Boolean = skill is HeadScratch || skill is CapTug || skill is BrowWipe
+
+    /** How far the head dips at the time of the idle skills [idle] (radians): into a wipe of the brow, with a tug at the cap. */
+    private fun headDipOf(idle: List<IdleInUse>): Double {
+        var dip = 0.0
+
+        for (used in idle) {
+            val skill = used.skill
+
+            if (skill is BrowWipe) {
+                dip = max(dip, BROW_DIP * used.share)
+            }
+
+            if (skill is CapTug) {
+                dip = max(dip, CAP_DIP * used.share * capTugAt(since = used.since, rise = skill.timing.rise))
+            }
+        }
+
+        return dip
+    }
+
+    /** The soft plucks while tuning (see [TuneUp]): where the strumming hand is across the strings, as by [strumAt]. */
+    private fun pluckOf(idle: List<IdleInUse>): Double {
+        var pluck = 0.0
+
+        for (used in idle) {
+            if (used.skill is TuneUp) {
+                for (at in PLUCKS) {
+                    val d = (used.since - at) / PLUCK_TIME
+
+                    pluck += PLUCK * used.share * exp(-d * d)
+                }
+            }
+        }
+
+        return pluck
     }
 
     private companion object {
@@ -551,5 +700,32 @@ class StringPlayer(
         const val SLOUCH_ASIDE = 0.10
         const val SLOUCH_UP = 0.10
         const val SLOUCH_AHEAD = 0.10
+
+        /** Tuning up: the peg, so far past the nut; how far the head turns to it and tilts; the peg turned so far, so often. */
+        const val PEG = 0.10
+        const val TUNE_LOOK = 0.5
+        const val TUNE_TILT = 0.12
+        const val TURN = 0.35
+        const val TURN_RATE = 0.8
+
+        /** Tuning up: the soft plucks, so many seconds into the use, each so long, so far across the strings. */
+        val PLUCKS = listOf(1.6, 2.9)
+        const val PLUCK_TIME = 0.12
+        const val PLUCK = 0.5
+
+        /**
+         * The fretting hand shaken out: where it hangs, from the shoulder, so far out, down and ahead; how far the
+         * wrist goes and the hand flops with each shake, and how many shakes a second.
+         */
+        const val SHAKE_OUT = 0.10
+        const val SHAKE_DOWN = 0.40
+        const val SHAKE_AHEAD = 0.20
+        const val SHAKE_WRIST = 0.012
+        const val SHAKE_FLOP = 0.6
+        const val SHAKE_RATE = 5.0
+
+        /** How far the head dips into a wipe of the brow, and with a tug at the cap (radians). */
+        const val BROW_DIP = 0.12
+        const val CAP_DIP = 0.08
     }
 }

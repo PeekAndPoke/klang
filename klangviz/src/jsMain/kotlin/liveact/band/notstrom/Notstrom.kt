@@ -29,7 +29,9 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
 import io.peekandpoke.klang.viz.liveact.band.members.Members
+import io.peekandpoke.klang.viz.liveact.band.skills.CountIn
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
+import io.peekandpoke.klang.viz.liveact.band.skills.IDLE_MARGIN
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleInUse
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleSkill
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
@@ -71,6 +73,9 @@ class Notstrom private constructor(
     companion object {
         /** The band's name, as it stands on the bass drum. */
         const val NAME = "NOTSTROM"
+
+        /** How long the drummer takes to sit down once he is at the stool, in seconds. */
+        private const val SIT = 1.6
 
         /** The head's middle and size, in the body's rest space: a little above and behind where the head's bone starts. */
         private fun hairOf(rig: Rig): HairPart {
@@ -150,6 +155,12 @@ class Notstrom private constructor(
         traits = character(SchmetterlingCast.DRUMS).traits,
         seed = character(SchmetterlingCast.DRUMS).seed,
         name = NAME,
+        // only once he sits: he sits down over the first SIT seconds after he is at the stool (see [play])
+        idles = idlesOf(
+            player = SchmetterlingCast.DRUMS,
+            part = SchmetterlingCast.drumHits(show),
+            arrives = StagePlot.ENTRANCES.getValue(SchmetterlingCast.DRUMS).end + SIT,
+        ),
     )
 
     /**
@@ -164,14 +175,24 @@ class Notstrom private constructor(
             .map { player -> ShadowHair(rig = rig(player), shown = show.switches.has(Switch.Snakes)) }
     }
 
+    /** The marimba player's crossed mallets, where her sheet has them. */
+    private val runeCrossing: CrossedMallets? =
+        Members.of(SchmetterlingCast.MARIMBA).skills.filterIsInstance<CrossedMallets>().firstOrNull()
+
     val marimba = MarimbaPlayer(
         show = show,
         rig = rig(SchmetterlingCast.MARIMBA),
         part = SchmetterlingCast.marimbaNotes(show),
         traits = character(SchmetterlingCast.MARIMBA).traits,
         seed = character(SchmetterlingCast.MARIMBA).seed,
-        crossing = Members.of(SchmetterlingCast.MARIMBA).skills.filterIsInstance<CrossedMallets>().firstOrNull(),
+        crossing = runeCrossing,
         arrives = StagePlot.ENTRANCES.getValue(SchmetterlingCast.MARIMBA).end,
+        counting = Members.of(SchmetterlingCast.MARIMBA).skills.filterIsInstance<CountIn>().firstOrNull(),
+        idles = idlesOf(
+            player = SchmetterlingCast.MARIMBA,
+            part = SchmetterlingCast.marimbaNotes(show),
+            margin = MarimbaPlayer.idleMargin(bpm = show.bpm, crossing = runeCrossing),
+        ),
     )
 
     /**
@@ -225,10 +246,16 @@ class Notstrom private constructor(
     /**
      * Which of [player]'s idle skills are in use at a time (see [idlesAt]): by the skills on their sheet, with their own
      * chance (as for [headLooksOf]), within the pauses of [part] (their part of the song, read on its own: it is
-     * refreshed here, apart from the one they play from), and only once they are at their place (not on their
-     * walk-in, see [StagePlot.ENTRANCES]). None ever where the sheet has no idle skill.
+     * refreshed here, apart from the one they play from), keeping [margin] seconds from a note (see [idlesAt]), and
+     * only from [arrives] on (by default once they are at their place, not on their walk-in: see
+     * [StagePlot.ENTRANCES]). None ever where the sheet has no idle skill.
      */
-    private fun idlesOf(player: Player, part: Part<out Timed>): (Double) -> List<IdleInUse> {
+    private fun idlesOf(
+        player: Player,
+        part: Part<out Timed>,
+        arrives: Double = StagePlot.ENTRANCES.getValue(player).end,
+        margin: Double = IDLE_MARGIN,
+    ): (Double) -> List<IdleInUse> {
         val member = Members.of(player)
 
         if (member.skills.none { it is IdleSkill }) {
@@ -236,23 +263,24 @@ class Notstrom private constructor(
         }
 
         val roll = { index: Double -> show.own(index, member.character.seed) }
-        val arrives = StagePlot.ENTRANCES.getValue(player).end
 
         return { t ->
             part.refresh()
-            idlesAt(skills = member.skills, t = t, roll = roll, plays = part.events, arrives = arrives)
+            idlesAt(skills = member.skills, t = t, roll = roll, plays = part.events, arrives = arrives, margin = margin)
         }
     }
 
     /**
-     * What goes with the figures as they are posed at last: a string player's hand at the head (an idle skill, see
-     * `StringPlayer.afterPose`), and the snakes on a head. Call it once everything that turns a head has done so for
-     * this frame (the looks between the players come after [play]).
+     * What goes with the figures as they are posed at last: a hand at the head or the neck (an idle skill, see
+     * `StringPlayer.afterPose` and `Drummer.afterPose`), and the snakes on a head. Call it once everything that turns
+     * a head has done so for this frame (the looks between the players come after [play]).
      */
     fun afterPose(t: Double) {
         for ((_, stringPlayer) in strings) {
             stringPlayer.afterPose()
         }
+
+        drummer.afterPose()
 
         for (hair in snakes) {
             hair.update(t)
@@ -279,7 +307,7 @@ class Notstrom private constructor(
 
         val drumRig = rig(SchmetterlingCast.DRUMS)
         val drumWalk = walks.getValue(SchmetterlingCast.DRUMS)
-        val sit = smooth(drumWalk.since / 1.6)
+        val sit = smooth(drumWalk.since / SIT)
 
         if (sit < 1) {
             val seated = capture(drumRig)

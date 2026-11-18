@@ -18,7 +18,11 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.StickPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.Stroke
 import io.peekandpoke.klang.viz.liveact.band.instruments.holdStick
 import io.peekandpoke.klang.viz.liveact.band.instruments.strokeAt
+import io.peekandpoke.klang.viz.liveact.band.skills.CountIn
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
+import io.peekandpoke.klang.viz.liveact.band.skills.IDLE_MARGIN
+import io.peekandpoke.klang.viz.liveact.band.skills.IdleInUse
+import io.peekandpoke.klang.viz.liveact.band.skills.NeckStretch
 import io.peekandpoke.klang.viz.liveact.beyond
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -64,7 +68,10 @@ private class MalletHit(
  *
  * [crossing]: where her sheet has the skill, she crosses her mallets below her head for a moment before a phrase and
  * after it (see [CrossedMallets]); without it, never. [arrives]: when she is at her place (her walk-in's end): before
- * her first note the mallets cross only from then on.
+ * her first note the mallets cross only from then on. [counting]: where her sheet has the skill, her head counts in
+ * the last bar before a phrase (see [CountIn]); without it, never. [idles]: the member's idle skills in use at a time
+ * (see `idlesAt`; none unless given): of them she shows a stretch of the neck ([NeckStretch]). Her idle skills keep
+ * clear of the crossed mallets and the rise to play (see [idleMargin]).
  */
 class MarimbaPlayer(
     private val show: Show,
@@ -74,6 +81,8 @@ class MarimbaPlayer(
     seed: Double = 2.0,
     private val crossing: CrossedMallets? = null,
     private val arrives: Double = Double.NEGATIVE_INFINITY,
+    private val counting: CountIn? = null,
+    private val idles: (Double) -> List<IdleInUse> = { emptyList() },
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
     private val s: Double = rig.s
@@ -267,6 +276,27 @@ class MarimbaPlayer(
             rig.faceTo(rig.root.localToWorld(vec(0.0, rig.height + 0.10 * s, 4.0 * s)), bones)
         }
 
+        // the count in: a small nod on each beat of the last bar before a phrase
+        val count = counting?.at(t = t, plays = notes, beat = 60 / show.bpm, arrives = arrives) ?: 0.0
+
+        if (count > 0) {
+            rig.turn("head", X_AXIS, COUNT_NOD * count)
+        }
+
+        // the neck stretched: the head tilts ear to shoulder, to one side and the other, the neck a little with it
+        var stretch = 0.0
+
+        for (used in idles(t)) {
+            if (used.skill is NeckStretch) {
+                stretch += STRETCH * used.share * sin(2 * PI * used.since / STRETCH_EVERY)
+            }
+        }
+
+        if (stretch != 0.0) {
+            rig.turn("neck", Z_AXIS, STRETCH_NECK * stretch)
+            rig.turn("head", Z_AXIS, (1 - STRETCH_NECK) * stretch)
+        }
+
         for (side in listOf(Side.L, Side.R)) {
             val foot = rig.ankle.getValue(side).clone()
 
@@ -347,22 +377,44 @@ class MarimbaPlayer(
         rig.point("hand$side", heads[0].clone().add(heads[1]).multiplyScalar(0.5).sub(grip))
     }
 
-    private companion object {
+    companion object {
+        /**
+         * How far from her notes an idle skill's use keeps (see `idleAt`), at [bpm] beats a minute, where she crosses
+         * her mallets with [crossing] (null: she does not): clear of the rise to play before a phrase and the fall
+         * after it, of the crossing on top of them, and the common margin past them; but never more than
+         * [IDLE_MARGIN_MOST]. The cap gives up a little: at a slow tempo (below about 136 beats a minute) a use may
+         * run into the start of the crossing or the rise. It keeps a use within what a song played live is known
+         * around now (see `IdleSkill`), so that no use is cut off halfway.
+         */
+        fun idleMargin(bpm: Double, crossing: CrossedMallets?): Double {
+            val crossed = if (crossing != null) crossing.hold + crossing.move else 0.0
+            val before = (READY + RISE) * 240 / bpm + crossed
+            val after = DONE + FALL + crossed
+
+            return min(IDLE_MARGIN_MOST, max(before, after) + IDLE_MARGIN)
+        }
+
+        /**
+         * The most an idle skill's use of hers keeps from her notes, in seconds: with her longest use (a stretch of the
+         * neck, 4.5 s) it stays within the fourteen seconds a song played live is known ahead.
+         */
+        const val IDLE_MARGIN_MOST = 9.0
+
         /** Where along a mallet the hand holds it, from its head, as a share of its length. */
-        const val GRIP = 0.80
+        private const val GRIP = 0.80
 
         /**
          * When she is up to play: ready over the bars [READY] cycles before a note, rising to it over the [RISE]
          * cycles before that; after a note she stays up [DONE] seconds and comes down over [FALL] seconds.
          */
-        const val READY = 1.2
-        const val RISE = 1.8
-        const val DONE = 1.4
-        const val FALL = 1.2
+        private const val READY = 1.2
+        private const val RISE = 1.8
+        private const val DONE = 1.4
+        private const val FALL = 1.2
 
         /** How the body weighs where the hands play: this many moments either side of now, this many seconds apart. */
-        const val WEIGH_STEPS = 6
-        const val WEIGH_STEP = 0.45
+        private const val WEIGH_STEPS = 6
+        private const val WEIGH_STEP = 0.45
 
         /**
          * The crossed mallets (see [crossMallets]), in the figure's measure: the hand so far out from her middle and
@@ -371,17 +423,28 @@ class MarimbaPlayer(
          * two heads so far apart (before and behind each other: nearly closed). On the way the heads swing by a place
          * so far out, down from the shoulder and further ahead, and the hand goes so far ahead of the straight way.
          */
-        const val SKULL_HAND_X = 0.09
-        const val SKULL_HAND_DOWN = 0.06
-        const val SKULL_AHEAD = 0.14
-        const val SKULL_APART = 0.035
-        const val SKULL_ACROSS = 0.85
-        const val SKULL_RISE = 0.45
-        const val SKULL_BACK = 0.15
-        const val SKULL_CLOSED = 0.012
-        const val SKULL_VIA_X = 0.26
-        const val SKULL_VIA_DOWN = 0.02
-        const val SKULL_VIA_AHEAD = 0.12
-        const val SKULL_GRIP_AHEAD = 0.06
+        private const val SKULL_HAND_X = 0.09
+        private const val SKULL_HAND_DOWN = 0.06
+        private const val SKULL_AHEAD = 0.14
+        private const val SKULL_APART = 0.035
+        private const val SKULL_ACROSS = 0.85
+        private const val SKULL_RISE = 0.45
+        private const val SKULL_BACK = 0.15
+        private const val SKULL_CLOSED = 0.012
+        private const val SKULL_VIA_X = 0.26
+        private const val SKULL_VIA_DOWN = 0.02
+        private const val SKULL_VIA_AHEAD = 0.12
+        private const val SKULL_GRIP_AHEAD = 0.06
+
+        /** How far the head goes down in a nod of the count in (radians, at its deepest). */
+        private const val COUNT_NOD = 0.12
+
+        /**
+         * The neck stretched: how far the head tilts to a side (radians), how much of it is the neck's, and how long
+         * one stretch takes, to one side, the other, and back to the middle (a use as long shows one).
+         */
+        private const val STRETCH = 0.35
+        private const val STRETCH_NECK = 0.4
+        private const val STRETCH_EVERY = 4.5
     }
 }

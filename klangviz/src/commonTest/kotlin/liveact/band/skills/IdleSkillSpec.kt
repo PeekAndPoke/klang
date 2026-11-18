@@ -73,7 +73,7 @@ class IdleSkillSpec : StringSpec({
         withClue("no notes at all") {
             val used = at(t = 5.0, plays = emptyList())
 
-            used shouldBe IdleInUse(skill = scratch, share = 1.0, since = 1.0)
+            used shouldBe IdleInUse(skill = scratch, share = 1.0, since = 1.0, length = 2.5)
             during.map { at(t = it, plays = emptyList())?.share } shouldBe during.map { timing.inUse(t = it, roll = half) }
         }
 
@@ -104,6 +104,17 @@ class IdleSkillSpec : StringSpec({
         // and a little nearer on either side, not
         during.map { at(t = it, plays = listOf(before + 0.01)) } shouldBe listOf(null, null, null)
         during.map { at(t = it, plays = listOf(after - 0.01)) } shouldBe listOf(null, null, null)
+    }
+
+    "a pose may keep the uses further from the notes: a wider margin, on either side alike" {
+        // the use is from 4 s to 6.5 s; with a margin of 3 s no note may begin from 1 s to 9.5 s (the edges allowed)
+        fun kept(note: Double): Double? =
+            idleAt(skill = scratch, t = 5.0, roll = half, plays = listOf(IdlePlay(note)), margin = 3.0)?.share
+
+        listOf(1.1, 7.6, 9.4).map { kept(it) } shouldBe listOf(null, null, null)
+        listOf(0.9, 1.0, 9.5, 9.6).map { kept(it) } shouldBe listOf(1.0, 1.0, 1.0, 1.0)
+        // and handed through for every skill on the sheet
+        idlesAt(skills = listOf(scratch), t = 5.0, roll = half, plays = listOf(IdlePlay(9.4)), margin = 3.0) shouldBe emptyList()
     }
 
     "never in a use that begins before the member has arrived; from then on as before" {
@@ -148,7 +159,17 @@ class IdleSkillSpec : StringSpec({
         val show = Show(seed = 2)
         val roll = { i: Double -> show.own(i, 11.0) }
         val every = timing.copy(chance = 0.5)
-        val kinds: List<IdleSkill> = listOf(HeadScratch(every), Slouch(every))
+        val kinds: List<IdleSkill> = listOf(
+            HeadScratch(every),
+            Slouch(every),
+            NeckStretch(every),
+            ShakeOut(every),
+            TuneUp(every),
+            CapTug(every),
+            BrowWipe(every),
+            StickTwirl(every),
+            NeckScratch(every),
+        )
         val times = (0 until 20000).map { it * 0.05 }
 
         for (kind in kinds) {
@@ -168,7 +189,7 @@ class IdleSkillSpec : StringSpec({
     "a skill fits a member at most the fit's width apart in wildness, either way" {
         // for each kind, the members it fits: from its own wildness the fit's width down and up (looked at past 10 as
         // well, so the upper bound is seen too)
-        for (kind in listOf(Slouch(timing), HeadScratch(timing))) {
+        for (kind in listOf<Mannerism>(Slouch(timing), HeadScratch(timing), CountIn())) {
             withClue("${kind::class.simpleName}, as wild as ${kind.wildness}") {
                 (-20..20).filter { fits(skill = kind, wildness = it) } shouldBe
                     ((kind.wildness - WILDNESS_FIT)..(kind.wildness + WILDNESS_FIT)).toList()

@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleSkill
+import io.peekandpoke.klang.viz.liveact.band.skills.Mannerism
 import io.peekandpoke.klang.viz.liveact.band.skills.fits
 
 /** The band's sheets: a check for the future, for whoever adds a member or edits a sheet. */
@@ -35,7 +36,7 @@ class MembersSpec : StringSpec({
         Members.of(Player.Sirene).figure shouldBe "sirene.glb"
     }
 
-    "the crossed mallets are Rune's only; every idle skill fits its member's wildness; no kind on two sheets" {
+    "the crossed mallets are Rune's only; every skill with a wildness fits its member's; no idle kind on two sheets" {
         // the maintainer, 2026-11-18: the crossed mallets "only Rune will get it for now"; "0 = elegant and 10 = animal
         // ... Depending on that stat we assign the skills"; "keep a good split, so that everyone has a different set"
         fun idles(player: Player): List<IdleSkill> = Members.of(player).skills.filterIsInstance<IdleSkill>()
@@ -45,8 +46,9 @@ class MembersSpec : StringSpec({
         for (player in Player.entries) {
             val wildness = Members.of(player).character.wildness
 
-            withClue("the idle skills of $player, as wild as $wildness") {
-                idles(player).filterNot { fits(skill = it, wildness = wildness) } shouldBe emptyList()
+            withClue("the skills of $player with a wildness, as wild as $wildness") {
+                Members.of(player).skills.filterIsInstance<Mannerism>().filterNot { fits(skill = it, wildness = wildness) } shouldBe
+                    emptyList()
             }
         }
 

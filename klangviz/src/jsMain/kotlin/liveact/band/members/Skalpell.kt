@@ -9,8 +9,15 @@ import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
+import io.peekandpoke.klang.viz.liveact.band.skills.ShakeOut
+import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
+import io.peekandpoke.klang.viz.liveact.band.skills.TuneUp
 
-/** Skalpell's sheet: slim, long hair, the virtuoso. */
+/**
+ * Skalpell's sheet: slim, long hair, the virtuoso. Where his part pauses (the whole middle of the song) he tunes up
+ * ([TuneUp]) and shakes out his fretting hand ([ShakeOut]): a player's habits, between elegant and animal as he is
+ * (see [Character.wildness]).
+ */
 val SKALPELL: Member = Member(
     player = Player.Skalpell,
     dress = Dress(cloth = ClothPattern.Spiral, glitter = 0.14, combedBack = true),
@@ -27,5 +34,35 @@ val SKALPELL: Member = Member(
         ),
     ),
     bearing = Bearing(lean = -0.05, bang = 0.14, bounce = 0.025),
-    skills = listOf(EyeContact),
+    // he answers a look. Where his part pauses: he tunes up now and then (a chance every 15 s, half of them taken,
+    // held three and a half to five seconds) and shakes out his fretting hand (every 9 s, half, two to three seconds)
+    skills = listOf(
+        EyeContact,
+        TuneUp(
+            SkillTiming(
+                every = 15.0,
+                chance = 0.5,
+                cooldown = 0.0,
+                least = 3.5,
+                most = 5.0,
+                earliest = 0.5,
+                reserve = 6.8,
+                rise = 0.8,
+                fall = 0.9,
+            ),
+        ),
+        ShakeOut(
+            SkillTiming(
+                every = 9.0,
+                chance = 0.5,
+                cooldown = 0.0,
+                least = 2.0,
+                most = 3.0,
+                earliest = 0.5,
+                reserve = 4.6,
+                rise = 0.6,
+                fall = 0.7,
+            ),
+        ),
+    ),
 )

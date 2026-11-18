@@ -8,13 +8,18 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.CountIn
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
+import io.peekandpoke.klang.viz.liveact.band.skills.NeckStretch
+import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
 
 /**
  * Rune's sheet: the riddle of the band, with Medusa's snakes in her shadow (see [Dress.shadowSnakes]). Before she
  * plays and when she is done, she crosses her mallets below her head for a moment, like a skull and bones
- * ([CrossedMallets]; the maintainer, 2026-11-18: only she has it for now).
+ * ([CrossedMallets]; the maintainer, 2026-11-18: only she has it for now). Her head counts in the last bar before a
+ * phrase ([CountIn]), and where her part pauses she stretches her neck now and then ([NeckStretch]): elegant, as she
+ * is (see [Character.wildness]).
  */
 val RUNE: Member = Member(
     player = Player.Rune,
@@ -34,6 +39,25 @@ val RUNE: Member = Member(
     ),
     bearing = null,
     // she answers a look; before a phrase and after it her mallets cross, held a second and a half, a little more
-    // than a second into the pose and out of it
-    skills = listOf(EyeContact, CrossedMallets(hold = 1.5, move = 1.2)),
+    // than a second into the pose and out of it; her head counts in the last bar before a phrase (a phrase begins
+    // after a pause of two bars or more); and where her part pauses she now and then stretches her neck, one slow
+    // stretch to a use (a chance every 29 s, a little under half of them taken)
+    skills = listOf(
+        EyeContact,
+        CrossedMallets(hold = 1.5, move = 1.2),
+        CountIn(pause = 2.0),
+        NeckStretch(
+            SkillTiming(
+                every = 29.0,
+                chance = 0.45,
+                cooldown = 0.0,
+                least = 3.8,
+                most = 3.8,
+                earliest = 0.5,
+                reserve = 5.5,
+                rise = 0.7,
+                fall = 0.8,
+            ),
+        ),
+    ),
 )

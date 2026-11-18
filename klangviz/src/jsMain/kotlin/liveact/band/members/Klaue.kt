@@ -8,13 +8,16 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.skills.BrowWipe
 import io.peekandpoke.klang.viz.liveact.band.skills.CameraGlance
+import io.peekandpoke.klang.viz.liveact.band.skills.CapTug
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
 
 /**
  * Klaue's sheet: the heavier one with the cap, less fine than [Player.Skalpell] and with the power. The one who
- * glances at the camera ([CameraGlance]).
+ * glances at the camera ([CameraGlance]). Where his part pauses he tugs the peak of his cap ([CapTug]) and wipes his
+ * brow with his forearm ([BrowWipe]): animal, as he is (see [Character.wildness]).
  */
 val KLAUE: Member = Member(
     player = Player.Klaue,
@@ -36,7 +39,8 @@ val KLAUE: Member = Member(
     // he dances from one leg to the other (the maintainer, 2026-11-17)
     bearing = Bearing(lean = 0.10, bang = 0.24, bounce = 0.028, step = 0.6),
     // he answers a look, and looks at the camera every now and then: a chance every eleven seconds, half of them
-    // taken, each look held for two to four seconds
+    // taken, each look held for two to four seconds. Where his part pauses: a tug at the cap (a chance every 10 s, a
+    // little over half of them taken, held a second or two) and a wipe of the brow (every 17 s, the same share)
     skills = listOf(
         EyeContact,
         CameraGlance(
@@ -50,6 +54,32 @@ val KLAUE: Member = Member(
                 reserve = 6.0,
                 rise = 0.7,
                 fall = 0.9,
+            ),
+        ),
+        CapTug(
+            SkillTiming(
+                every = 10.0,
+                chance = 0.55,
+                cooldown = 0.0,
+                least = 1.2,
+                most = 1.8,
+                earliest = 0.5,
+                reserve = 3.4,
+                rise = 0.6,
+                fall = 0.7,
+            ),
+        ),
+        BrowWipe(
+            SkillTiming(
+                every = 17.0,
+                chance = 0.55,
+                cooldown = 0.0,
+                least = 1.2,
+                most = 1.6,
+                earliest = 0.5,
+                reserve = 3.2,
+                rise = 0.6,
+                fall = 0.7,
             ),
         ),
     ),

@@ -9,8 +9,15 @@ import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
+import io.peekandpoke.klang.viz.liveact.band.skills.NeckScratch
+import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
+import io.peekandpoke.klang.viz.liveact.band.skills.StickTwirl
 
-/** Wucht's sheet: the muscular one. */
+/**
+ * Wucht's sheet: the muscular one. Where his part pauses he twirls a stick, showing off ([StickTwirl]), and scratches
+ * the back of his neck with the butt of the other ([NeckScratch]): the most animal of the band (see
+ * [Character.wildness]).
+ */
 val WUCHT: Member = Member(
     player = Player.Wucht,
     dress = Dress(cloth = ClothPattern.Tiger, glitter = 0.14),
@@ -27,5 +34,36 @@ val WUCHT: Member = Member(
         ),
     ),
     bearing = null,
-    skills = listOf(EyeContact),
+    // he answers a look. Where his part pauses: a stick twirled (a chance every 17 s, a little over half of them
+    // taken, held two and a half to three and a half seconds) and the neck scratched (every 22 s, the same share,
+    // two seconds or so)
+    skills = listOf(
+        EyeContact,
+        StickTwirl(
+            SkillTiming(
+                every = 17.0,
+                chance = 0.55,
+                cooldown = 0.0,
+                least = 2.5,
+                most = 3.5,
+                earliest = 0.5,
+                reserve = 5.1,
+                rise = 0.6,
+                fall = 0.7,
+            ),
+        ),
+        NeckScratch(
+            SkillTiming(
+                every = 22.0,
+                chance = 0.55,
+                cooldown = 0.0,
+                least = 1.8,
+                most = 2.6,
+                earliest = 0.5,
+                reserve = 4.3,
+                rise = 0.7,
+                fall = 0.8,
+            ),
+        ),
+    ),
 )

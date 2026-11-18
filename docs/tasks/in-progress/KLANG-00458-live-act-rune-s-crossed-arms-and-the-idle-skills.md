@@ -1,6 +1,6 @@
 # KLANG-00458: Live act: Rune's crossed arms and the idle skills
 
-> **Status (2026-11-18): IN PROGRESS.** Part one is in review.
+> **Status (2026-11-18): IN PROGRESS.** Both parts are built; the idle skills wait for the maintainer's eye.
 >
 > **Part of:** KLANG-00447 (Live act: a band on a stage, played by the song)
 
@@ -33,9 +33,11 @@ split, so that everyone has a different set."
 2. Done in part one: the idle skills' machinery (used by chance like the timed looks, but only where the member's
    part pauses for the whole use and a margin either side, and only once the member has arrived), and Beben's two:
    `HeadScratch` and `Slouch`.
-3. Part two, the rest of the split: Rune: stretching the neck, counting in. Skalpell: shaking out the fretting hand,
-   tuning, hitching the strap. Klaue: tugging the cap, wiping the brow. Wucht: twirling a stick, scratching the neck
-   with the stick's butt.
+3. Done in part two, the rest of the split: Rune: `NeckStretch`, and `CountIn` (four nods in the last bar before a
+   phrase; by her part, not by chance). Skalpell: `ShakeOut`, `TuneUp`. Klaue: `CapTug`, `BrowWipe`. Wucht:
+   `StickTwirl`, `NeckScratch` (with the stick's butt). Left out: Skalpell's strap hitch, which did not read as one
+   (the figures have no strap).
+4. Open: the maintainer looks at the idle skills in motion.
 
 ## Acceptance
 
