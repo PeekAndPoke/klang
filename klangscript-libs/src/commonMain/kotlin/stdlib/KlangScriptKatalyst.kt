@@ -59,7 +59,8 @@ internal object KlangScriptKatalyst {
 
     /**
      * Builds a chain (for a cylinder or the output): the lambda receives a [KatalystBuilder] and appends stages in order
-     * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `distort`, `eq`, `gain`, and
+     * (`body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `duck`, `distort`, `eq`, `lowpass`,
+     * `highpass`, `bandpass`, `notch`, `shape`, `drive`, `gain`, and
      * `classic` for the whole familiar block at once, at most once per builder). No lambda, or an
      * empty one, is the empty chain.
      *
@@ -136,6 +137,24 @@ internal object KlangScriptKatalyst {
     @KlangScript.Method
     fun param(name: String, default: Double, description: String = ""): KatalystKnobDsl =
         KotlinKat.param(name = name, default = default, description = description)
+
+    // ── A function of a chain ───────────────────────────────────────────────
+
+    /**
+     * Returns [f] as it is: a function from a chain builder to a chain builder, typed, the twin of `Ignitor.fn`. Written
+     * as `let amp = k => k...`, the editor cannot know what `k` is; written as `Kat.fn(k => k...)`, `k` is a chain
+     * builder, so the Quick help and the completion show the chain's own doors. The part plays the same either way.
+     * A rig part becomes a value a chain runs through `serial`:
+     *
+     * ```KlangScript
+     * let amp = Kat.fn(k => k.highpass(120).drive(0.3).shape("tube").lowpass(4000, 0.707, x => x.passes(2)))
+     * note("c2 e2 g2").s("supersaw").cylinder(1).katalyst(Katalyst(k => k.serial(amp).gain(0.8)))
+     * ```
+     *
+     * @param f the function, from a chain builder to a chain builder
+     */
+    @KlangScript.Method
+    fun fn(f: (KatalystBuilder) -> KatalystBuilder): (KatalystBuilder) -> KatalystBuilder = KotlinKat.fn(f)
 
     // ── The modulators: a bus LFO, on any knob that takes a Kat.param ─────────────────────────────────────────────
     //

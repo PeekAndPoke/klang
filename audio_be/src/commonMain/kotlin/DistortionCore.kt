@@ -8,6 +8,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.utils.nanGuard
+import io.peekandpoke.klang.audio_bridge.driveGain
 import kotlin.math.pow
 
 /**
@@ -235,9 +236,11 @@ internal class DistortionCore(
     companion object {
         /**
          * The drive GAIN of a distort amount, `10^(amount * 1.2)`: exponential for a perceptually even
-         * knob. The one conversion; the Ignitor `drive` door reads it too.
+         * knob. The law's one home is [driveGain] in `audio_bridge` (KLANG-00467: the Katalyst chain's `drive` door
+         * builds its gain there, and the bridge cannot reach this module); this is that function, for the engine's
+         * hosts. The Ignitor `drive` door reads it too.
          */
-        fun drive(amount: Double): Double = 10.0.pow(amount * 1.2)
+        fun drive(amount: Double): Double = driveGain(amount)
 
         /**
          * The DC blocker's pole [coefficient] at `2^stages` times the rate it was chosen for, so the knee stays where it

@@ -58,6 +58,8 @@ class KatalystClassicPipelineOrderSpec : StringSpec({
         is KatalystStageDsl.Gain -> "KatalystGainEffect"
         // The bus distort (2026-10-09) never had a per-voice twin either, and the classic chain does not carry it.
         is KatalystStageDsl.Distort -> "KatalystDistortEffect"
+        // The waveshaper alone (KLANG-00467); the classic chain does not carry it.
+        is KatalystStageDsl.Shape -> "KatalystShapeEffect"
         // Branches side by side (2026-10-10); the classic chain does not carry it either.
         is KatalystStageDsl.Parallel -> "KatalystParallelEffect"
         // The oversampling regions (KLANG-00214); the classic chain carries none.

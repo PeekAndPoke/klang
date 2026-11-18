@@ -329,6 +329,12 @@ object KatalystChainBuilder {
                     writers.add(KatalystDistortWriter(fx = fx, amount = amount))
                 }
 
+                // The waveshaper alone (KLANG-00467): the distort stage's core at unity drive, never off, no knob, so no
+                // writer. The shape is fixed per chain; the DC pole is mapped to the region's rate as the distort's is.
+                is KatalystStageDsl.Shape -> {
+                    pipeline.add(KatalystShapeEffect(sampleRate = sampleRate, shapeIndex = stage.shape, firstStage = stages))
+                }
+
                 // Declared in the list, run outside it: `Cylinders` applies it after every cylinder,
                 // because it needs cross-cylinder access to the sidechain source. The last
                 // declaration wins, so a second Duck stage replaces the first; its instance is built
@@ -492,7 +498,8 @@ object KatalystChainBuilder {
 
             // Exhaustive on purpose, as in [lastDuck]: only a region can be stepless.
             is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
-            is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Duck,
+            is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Shape,
+            is KatalystStageDsl.Duck,
             is KatalystStageDsl.Eq, is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus,
             is KatalystStageDsl.Times, is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min,
             is KatalystStageDsl.Max, is KatalystStageDsl.Abs, is KatalystStageDsl.Parallel -> listOf(stage)
@@ -511,7 +518,8 @@ object KatalystChainBuilder {
                 is KatalystStageDsl.OversampleBy -> last = stage.body.stages.lastDuck() ?: last
                 is KatalystStageDsl.OversampleAtLeast -> last = stage.body.stages.lastDuck() ?: last
                 is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
-                is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
+                is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Shape,
+                is KatalystStageDsl.Eq,
                 is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus, is KatalystStageDsl.Times,
                 is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min, is KatalystStageDsl.Max,
                 is KatalystStageDsl.Abs -> Unit
@@ -531,7 +539,8 @@ object KatalystChainBuilder {
                 is KatalystStageDsl.OversampleAtLeast -> stage.copy(body = stage.body.withoutDucks())
                 // Exhaustive on purpose, as in [lastDuck].
                 is KatalystStageDsl.Body, is KatalystStageDsl.Vowel, is KatalystStageDsl.Delay, is KatalystStageDsl.Reverb,
-                is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Eq,
+                is KatalystStageDsl.Phaser, is KatalystStageDsl.Compressor, is KatalystStageDsl.Distort, is KatalystStageDsl.Shape,
+                is KatalystStageDsl.Eq,
                 is KatalystStageDsl.Gain, is KatalystStageDsl.Plus, is KatalystStageDsl.Minus, is KatalystStageDsl.Times,
                 is KatalystStageDsl.Div, is KatalystStageDsl.Pow, is KatalystStageDsl.Min, is KatalystStageDsl.Max,
                 is KatalystStageDsl.Abs -> stage

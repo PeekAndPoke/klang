@@ -12,7 +12,11 @@ KLANG-00238 (phase3 step12 master as katalyst).
   (`audio_be/.../katalyst/`). `KatalystDsl.classic` is `body, vowel, delay, reverb, phaser, compressor,
   gain`, with `duck` declared last and run OUTSIDE the list in the cross-cylinder pass (so a ducked cylinder is ducked
   after its own fader; every duck reads its source's mix as the source's chain left it, before any duck writes, so
-  rent order does not matter, KLANG-00428). `Eq` is a stage type that the classic chain does not carry.
+  rent order does not matter, KLANG-00428). `Eq` is a stage type that the classic chain does not carry; besides
+  `k.eq(...)` the chain's filter doors write it (`lowpass`, `highpass`, `bandpass`, `notch`, KLANG-00467): one `eq`
+  stage per call holding the voice's sections, a `passes` cascade on the voice's Butterworth q ladder, so a chain filter
+  is the voice's fused filter section for section. The chain's `shape` is a stage of its own (`Shape`), its `drive` a
+  `times` stage by the voice's drive law (`driveGain` in `audio_bridge`, the law's one home).
 - **The cylinder host** is `Cylinder`: every cylinder is born with the classic chain, a pattern declares another with
   `katalyst(...)`. `Katalyst(k => k.classic())` is a bit-exact no-op (`ChainHost.chainFor` hands back the born-with
   classic chain).
@@ -49,7 +53,9 @@ KLANG-00238 (phase3 step12 master as katalyst).
   and every `parallel` branch modulate; its clocks run over the blocks the chain processes (paused while the cylinder
   sleeps, not reset), and the n-th noise of a chain is seeded by its position. A slot leaf that reads a non-finite
   value unsets the whole knob, and an unset knob's clocks pause. The build-time knobs (`lookahead`, `distort`'s
-  `shape`, a region's factor) are numbers, and an `eq` section takes a number or a `Kat.param` only (decision Q2, E2).
+  and `shape`'s `shape`, a region's factor, a chain filter's `passes`) are numbers, and an `eq` section takes a number or
+  a `Kat.param` only (decision Q2, E2), the filter doors' sections too; a slot `q` in a cascade of more than one pass is
+  refused at the door (D3 of KLANG-00466).
 - **A non-finite slot value is never a write** (`KatalystKnob.written` is false for it). A stage gated on its `wet`
   being written is off for any non-finite `wet`, for the whole cylinder: not a pure improvement over the old field
   path, accepted so that "non-finite is unset" holds on every wet. A knob a stage reads by its value follows that
@@ -80,8 +86,9 @@ and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a si
 | phaser | the wet and floor coefficients glide to identity; the cascade is dropped only on the landing | `wet`, `floor` per sample; `center`, `sweep` per block with alpha continuous across the seam (`PhaserCore.prepareBlock`); `rate` at once |
 | duck | a weight rides the reduction to 0 dB (`gain = 1 + w * (g - 1)`), then lets go of the source cylinder | `depth` per sample; `release` at once; a `duck.cylinder` switch has no mechanism (open: KLANG-00247 (duck orbit switch click)) |
 | distort | the compressor's law: a linear blend with the dry mix over `KNOB_GLIDE_SECONDS`; ON fades reset cores in; it runs at the rate it is in (its own oversampling factor, 2x by default, retired 2026-11-03 with KLANG-00214 step 4: a region is the way up) | `amount` glides linear in the amount over `KNOB_GLIDE_SECONDS`, the drive ramped per sample within a block; `shape` is fixed with the chain |
+| shape (KLANG-00467) | never off: no knob and no switch; the chain swap's fade is its only edge, and its DC blocker's decay is a declared tail (`KatalystShapeEffect.hasTail`) | none: the shape is fixed with the chain |
 | gain | never off | per-sample glide over `KNOB_GLIDE_SECONDS` |
-| arithmetic (`plus`, `minus`, `times`, `div`, `pow`, `min`, `max`, `abs`; 2026-10-11) | never off, memoryless: the Ignitor's per-sample law (`_arithmetic_laws.kt`) on every sample; an unset operand is the operator's identity, an unset cap or floor passes the bus | the operand glides per sample over `KNOB_GLIDE_SECONDS`, the law taken with the operand at each sample; a divisor glides as its reciprocal (a level) and divides again once settled; a cap's or a floor's first operand after unset arrives at once, and a cleared one lets go at the next block (`KatalystArithmeticEffect`) |
+| arithmetic (`plus`, `minus`, `times`, `div`, `pow`, `min`, `max`, `abs`; 2026-10-11; `drive` is a `times`, 2026-11-18, whose slot amount glides linearly in the GAIN over the knob glide, where the bus `distort` glides linearly in the amount and a voice reads its amount once per block: halfway through a move from 0 to 1 the chain's drive stands at a gain of 8.4, the distort's at 3.98) | never off, memoryless: the Ignitor's per-sample law (`_arithmetic_laws.kt`) on every sample; an unset operand is the operator's identity, an unset cap or floor passes the bus | the operand glides per sample over `KNOB_GLIDE_SECONDS`, the law taken with the operand at each sample; a divisor glides as its reciprocal (a level) and divides again once settled; a cap's or a floor's first operand after unset arrives at once, and a cleared one lets go at the next block (`KatalystArithmeticEffect`) |
 | parallel | none of its own: each branch is a chain whose stages switch as above | none of its own: the cylinder's param state reaches every branch's stages (`KatalystNestedChainsWriter`) |
 | region (`oversampleBy`, `oversampleAtLeast`; KLANG-00214 step 3a) | none of its own: the body is a chain at the region's rate whose stages switch as above; the converters run while the cylinder does. At a chain's head it takes the cylinder's rate buses in (step 3b) | none of its own: the param state reaches the body's stages (`KatalystNestedChainsWriter`); the knobs keep the cylinder's clock |
 
@@ -97,6 +104,23 @@ in KLANG-00302 (katalyst knob expressions), "5b built"). Two traps for the next 
   3.2 Hz). A glided knob patterned faster than a few Hz loses depth.
 
 The glide time itself is an open question for the maintainer's ear: KLANG-00213 (transition times).
+
+## An amp on a chain (KLANG-00467)
+
+A guitar amp on a cylinder is the voice's rig words on a chain: `highpass`, `drive`, `shape`, `lowpass` (and `distort`,
+`eq`). Facts for writing one, measured where a source is named:
+
+- **Aliasing at high drive, and what a region buys.** The aliasing meter's bus `distort` rows at 1244.5 Hz and amount
+  2.0, the non-harmonic energy below 5 kHz re the fundamental (`nonh<5k`), at 1x, then inside `oversampleBy` 2x, 4x,
+  8x, 16x: `soft` -24.7, -32.4, -42.0, -60.5, -97.0 dB; `hard` -24.3, -31.5, -39.9, -54.8, -63.7 dB (probe run of
+  2026-11-18). A chain `drive(a).shape(s)` renders the same samples as `distort(a, s)` (`KatalystDriveSpec`), and its
+  1x rows in that run equal the `distort` rows. An amp that should alias less goes inside `oversampleAtLeast(...)`.
+- **Filters inside a region run at the region's rate** and keep their cutoff in Hz (`KatalystStageDsl.OversampleBy`).
+- **`tube` at unity drive is quiet**: the stage probe reads an impulse peak of 0.316 and a full-scale sweep peak of 0.578
+  for `shape("tube")` (2026-11-18), so a `tube` shape without a `drive` before it takes the level down.
+- **A drive raises the voices' cull floor with them** (computed, not measured): a note ends when its own output stays
+  under 1e-5 (`SILENCE_FLOOR`), so behind a chain `drive` the last thing heard of a note is that floor times the gain,
+  about 2.3e-5 at `drive(0.3)` and 2.5e-3 (-52 dBFS) at `drive(2)`.
 
 ## When a cylinder may stop, and when a chain leaves
 

@@ -252,8 +252,11 @@ private fun fuseSerialFilters(
  * the Butterworth pole ladder `√2 / (2·cos((2k+1)π/(4N)))` (identically 1.0 at N = 1) —
  * the same math as the engine's `butterworthQLadder`, duplicated here because the bridge
  * cannot depend on audio_be; `PassesLadderParitySpec` pins the two against each other.
+ *
+ * Internal since KLANG-00467 (cylinder amp step 1): the Katalyst chain's `lowpass` and `highpass` doors expand their
+ * `passes` with it too (`KatalystBuilder.lowpass`), so a cascade on a chain is the voice's sections, one law.
  */
-private fun passesLadderRel(k: Int, n: Int): Double =
+internal fun passesLadderRel(k: Int, n: Int): Double =
     sqrt(2.0) / (2.0 * cos((2.0 * k + 1.0) * PI / (4.0 * n)))
 
 /**

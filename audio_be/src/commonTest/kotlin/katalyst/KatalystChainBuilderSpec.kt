@@ -7,6 +7,7 @@ package io.peekandpoke.klang.audio_be.katalyst
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -14,12 +15,15 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.warehouse.ReverbUnits
 import io.peekandpoke.klang.audio_be.warehouse.SizedBuffers
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.Kat
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystStageDsl
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.SLOT_UNSET
+import io.peekandpoke.klang.audio_bridge.kat
 import io.peekandpoke.klang.common.infra.klangMapOf
 import io.peekandpoke.klang.common.infra.toKlangMap
 
@@ -106,6 +110,8 @@ class KatalystChainBuilderSpec : StringSpec({
         build(KatalystDsl.of(KatalystStageDsl.Phaser())).declaresTail shouldBe false
         // The distort stage's DC blocker decays after its input stops (review round 2 of the distort stage).
         build(KatalystDsl.of(KatalystStageDsl.Distort())).declaresTail shouldBe true
+        // The shape stage's too (KLANG-00467): the same core at unity drive.
+        build(KatalystDsl.of(KatalystStageDsl.Shape())).declaresTail shouldBe true
 
         // Every other stage the classic chain declares (body, vowel, phaser, compressor, gain, duck), none a tail.
         val noTail = KatalystDsl.classic.stages.filter { it !is KatalystStageDsl.Reverb && it !is KatalystStageDsl.Delay }
@@ -215,7 +221,7 @@ class KatalystChainBuilderSpec : StringSpec({
     "every stage variant the DSL has builds a stage, and every stage states its own lifecycle" {
         // The real guard for the lifecycle is the compiler: `reset` and `hasTail` are abstract on
         // [KatalystEffect], so a stage that forgets one does not compile. What a test can add is
-        // that the builder still covers all nine variants, so no kind silently loses its stage.
+        // that the builder still covers all ten variants, so no kind silently loses its stage.
         val all = KatalystDsl.of(
             KatalystStageDsl.Body(),
             KatalystStageDsl.Vowel(),
@@ -225,12 +231,13 @@ class KatalystChainBuilderSpec : StringSpec({
             KatalystStageDsl.Compressor(),
             KatalystStageDsl.Eq(),
             KatalystStageDsl.Gain(),
+            KatalystStageDsl.Shape(),
             KatalystStageDsl.Duck(),
         )
 
         val chain = build(all)
 
-        // Eight in the serial list (the duck runs outside it), one stage per declared variant.
+        // Nine in the serial list (the duck runs outside it), one stage per declared variant.
         chain.pipeline.size shouldBe all.stages.size - 1
         chain.duck.shouldNotBeNull()
 
@@ -300,6 +307,135 @@ class KatalystChainBuilderSpec : StringSpec({
             withClue("frame $i") {
                 ctx.mixBuffer.left[i] shouldBe mixL[i]
                 ctx.mixBuffer.right[i] shouldBe mixR[i]
+            }
+        }
+    }
+
+    // ── The chain's filter doors and its shape stage (KLANG-00467, cylinder amp step 1) ───────────────────────────
+
+    /** A deterministic stereo fill for [blocks] blocks, the two sides different. */
+    fun noiseInput(blocks: Int): Pair<DoubleArray, DoubleArray> {
+        var x = 0x5EED
+
+        fun next(): Double {
+            x = x * 1103515245 + 12345
+
+            return ((x ushr 8) and 0xFFFF) / 65535.0 - 0.5
+        }
+
+        return DoubleArray(blocks * blockFrames) { next() } to DoubleArray(blocks * blockFrames) { next() }
+    }
+
+    /** Renders [chain] over [input], configured from authored values, both channels. */
+    fun render(chain: KatalystChain, input: Pair<DoubleArray, DoubleArray>): Pair<DoubleArray, DoubleArray> {
+        val ctx = ctx()
+        val frames = input.first.size
+        val outL = DoubleArray(frames)
+        val outR = DoubleArray(frames)
+
+        for (b in 0 until frames / blockFrames) {
+            val from = b * blockFrames
+
+            val to = from + blockFrames
+
+            input.first.copyInto(destination = ctx.mixBuffer.left, destinationOffset = 0, startIndex = from, endIndex = to)
+            input.second.copyInto(destination = ctx.mixBuffer.right, destinationOffset = 0, startIndex = from, endIndex = to)
+            chain.applyParams(null)
+            chain.process(ctx)
+            ctx.mixBuffer.left.copyInto(destination = outL, destinationOffset = from, startIndex = 0, endIndex = blockFrames)
+            ctx.mixBuffer.right.copyInto(destination = outR, destinationOffset = from, startIndex = 0, endIndex = blockFrames)
+        }
+
+        return outL to outR
+    }
+
+    "a chain holding a shape stage builds the shape effect, with no writer, and renders the curve" {
+        val chain = build(KatalystDsl.of(KatalystStageDsl.Shape(shape = 10)))
+
+        chain.pipeline.map { it::class.simpleName } shouldBe listOf("KatalystShapeEffect")
+        // Never off and no knob: nothing to configure.
+        chain.writerCount shouldBe 0
+
+        val input = noiseInput(blocks = 8)
+        val (left, right) = render(chain, input)
+
+        // A bare core of the same shape and pole renders the same samples, so the arm handed the shape over.
+        val alone = KatalystShapeEffect(sampleRate = sampleRate, shapeIndex = 10)
+        val (aloneL, aloneR) = render(
+            KatalystChain(serial = arrayOf(alone), writers = emptyArray(), duck = null, duckWriter = null, firstStage = 0),
+            input,
+        )
+
+        left.toList() shouldBe aloneL.toList()
+        right.toList() shouldBe aloneR.toList()
+        (left.indices.any { left[it] != input.first[it] }) shouldBe true
+    }
+
+    "the four filter doors render the same samples as the same sections written into one eq stage by hand" {
+        val doors = Kat {
+            it.highpass(freq = 90.kat, q = 0.8.kat) { f -> f.passes(2.0) }
+                .bandpass(freq = 700.kat, q = 1.5.kat)
+                .notch(freq = 3100.kat, q = 4.kat)
+                .lowpass(freq = 5000.kat, q = 1.1.kat) { f -> f.passes(3.0) }
+        }
+
+        fun c(value: Double) = IgnitorDsl.Constant(value)
+
+        // The seven sections written out, the cascades' q on the Butterworth ladder as literals: 0.8 times
+        // sqrt(2) / (2 cos(pi / 8)) and (3 pi / 8); 1.1 times the three factors of N = 3, the middle exactly 1.
+        val byHand = KatalystDsl.of(
+            KatalystStageDsl.Eq(
+                sections = listOf(
+                    IgnitorDsl.EqSection.Highpass(freq = c(90.0), q = c(0.6122934917841437)),
+                    IgnitorDsl.EqSection.Highpass(freq = c(90.0), q = c(1.4782072520180587)),
+                    IgnitorDsl.EqSection.Bandpass(freq = c(700.0), q = c(1.5)),
+                    IgnitorDsl.EqSection.Notch(freq = c(3100.0), q = c(4.0)),
+                    IgnitorDsl.EqSection.Lowpass(freq = c(5000.0), q = c(0.8052558883257651)),
+                    IgnitorDsl.EqSection.Lowpass(freq = c(5000.0), q = c(1.1)),
+                    IgnitorDsl.EqSection.Lowpass(freq = c(5000.0), q = c(3.005255888325766)),
+                ),
+            ),
+        )
+
+        doors.stages.size shouldBe 4
+
+        val input = noiseInput(blocks = 16)
+        val (doorsL, doorsR) = render(build(doors), input)
+        val (handL, handR) = render(build(byHand), input)
+
+        // A tolerance for the literals' last bit (the door computes q times the factor); a wrong section is far off.
+        for (k in doorsL.indices) {
+            withClue("frame $k") {
+                doorsL[k] shouldBe (handL[k] plusOrMinus 1e-12)
+                doorsR[k] shouldBe (handR[k] plusOrMinus 1e-12)
+            }
+        }
+
+        // ...and the filters do something: the output is not the input.
+        (doorsL.indices.any { doorsL[it] != input.first[it] }) shouldBe true
+    }
+
+    "a shape stage inside oversampleBy(4) runs at the region's rate with its DC pole mapped (firstStage = 2)" {
+        val chain = build(Kat { it.oversampleBy(4) { r -> r.shape("tube") } })
+        val input = noiseInput(blocks = 16)
+        val (left, right) = render(chain, input)
+
+        // The same region built by hand around a bare shape effect at four times the rate, its pole mapped by 2 steps.
+        val body = KatalystChain(
+            serial = arrayOf(KatalystShapeEffect(sampleRate = sampleRate * 4, shapeIndex = 10, firstStage = 2)),
+            writers = emptyArray(),
+            duck = null,
+            duckWriter = null,
+            firstStage = 2,
+        )
+        val region = KatalystRegionEffect(body = body, steps = 2, firstStage = 0, blockFrames = blockFrames)
+        val byHand = KatalystChain(serial = arrayOf(region), writers = emptyArray(), duck = null, duckWriter = null, firstStage = 0)
+        val (handL, handR) = render(byHand, input)
+
+        for (k in left.indices) {
+            withClue("frame $k") {
+                left[k] shouldBe handL[k]
+                right[k] shouldBe handR[k]
             }
         }
     }

@@ -1,6 +1,6 @@
 # KLANG-00467: Cylinder amp step 1: lowpass, highpass, bandpass, notch and shape on a Katalyst chain
 
-> **Status (2026-11-18): IN PROGRESS.** Klang-Main-Dev: step 1 starts, decisions settled 2026-11-18
+> **Status (2026-11-18): DONE.** Klang-Main-Dev: built, reviewed clean, committed
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -246,7 +246,8 @@ Run the error rows on JS too (`:klangscript-libs:jsBrowserTest`): a null check c
   configure`, builder `passes`), `bandpass`, `notch` (`freq, q = 0.707`), `shape` (`shape = "soft"`), `Kat.fn`.
 - `.claude/skills/dsl-design/SKILL.md`, section 4, the recorded asymmetries, one clause each: the chain filters
   have no sprudel twin; they have no `analog`, `humanize`, `env`, `adsr`; `passes` is a plain number fixed with the
-  chain, a slot knob on a voice; a slot `q` with more than one pass is refused; a chain has no `drive` (D6).
+  chain, a slot knob on a voice; a slot `q` with more than one pass is refused. (Corrected 2026-11-18 to the rework:
+  no clause on `drive`, which the chain has; D6 is reversed.)
 - `audio/ref/katalyst.md` (the new stage and the doors), `audio/ref/off-values.md` (a chain filter is always
   built; `Shape` is never off), `audio/MEMORY.md` (its section in place, one History line),
   `klangscript-libs/CLAUDE.md` (the layout rows), the `KatalystStageDsl.Eq` KDoc (the doors that build it).
@@ -260,7 +261,8 @@ Run the error rows on JS too (`:klangscript-libs:jsBrowserTest`): a null check c
 ## Out of this step
 
 - Merging the stages: KLANG-00468 (step 2).
-- Section words inside `eq(...)`, `drive` on a chain, a tremolo stage, any sprudel door.
+- Section words inside `eq(...)`, a tremolo stage, any sprudel door. (`drive` on a chain left this list with the
+  rework of 2026-11-18: it is part of this step.)
 - The songs.
 
 ## Acceptance
@@ -278,3 +280,30 @@ Run the error rows on JS too (`:klangscript-libs:jsBrowserTest`): a null check c
 - 2026-11-18: created, as step 1 of KLANG-00466.
 - 2026-11-18: the maintainer's rework: decisions settled, `drive` added to this step.
 - 2026-11-18: IN PROGRESS. Klang-Main-Dev: step 1 starts, decisions settled 2026-11-18
+
+## Done (2026-11-18)
+
+Built by an Opus worker, coordinated and checked by Klang-Main-Dev.
+
+- On a chain, from both doors: `lowpass`, `highpass` (`freq, q, configure` with `passes`), `bandpass`, `notch`,
+  `shape`, `drive`, `Kat.fn`. The filters are `eq` stages holding the sections; `Shape` is the one new stage
+  (`KatalystShapeEffect`); `drive` is a `times` stage by the voice's law, whose home is now
+  `audio_bridge/src/commonMain/kotlin/_drive_law.kt` (`DistortionCore.drive` calls it; the voice renders the same
+  bits).
+- One departure from the text above: the script knob `passes` takes any value and refuses a slot with a message of
+  its own, where a plain `Double` gave only the language's conversion error.
+- The wire's schema hash moved (a new stage), pinned in `WireCodecRoundTripSpec`.
+- Checks: `:audio_bridge:jvmTest` 175, `:audio_be:jvmTest` 3201 (run twice, once by the coordinator),
+  `:klangscript-libs:jvmTest` 1150, `:klangscript-libs:jsBrowserTest` 925, `:audio_bridge:jsBrowserTest` 314, 0 failed;
+  `:sprudel:jvmTest` 3529 and `:apps:common:jvmTest` 28 before the review's fixes, not again after. 20 mutants killed
+  in two campaigns. Review round 1, code and audio (`reviewer-fable-medium`), both CLEAN; their 9 MINOR and 12 NIT
+  applied.
+- Probes for `Shape`: stage, click (chain swap in and out), aliasing, cost, the JS allocation probe (0 B per block on
+  the drive, distort and shape rows). The tables' facts for an amp are in `audio/ref/katalyst.md`, "An amp on a
+  chain".
+- Not done: no one has listened. The seven new script examples are tagged playable, and no spec compiles stdlib
+  examples. The new aliasing rows for `shape` inside a region are in the catalogue and were not run. `:audio_be`'s
+  JS tests and a song corpus render were not run.
+- The allocation check of `full-check` is red for two cases this step does not touch (`E-kat-perlin` over its V8
+  budget, `spluck-a` silent), as in the run before this step.
+- 2026-11-18: DONE. Klang-Main-Dev: built, reviewed clean, committed

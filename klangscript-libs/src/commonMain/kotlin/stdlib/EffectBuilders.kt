@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_bridge.FilterBuilder
 import io.peekandpoke.klang.audio_bridge.FmBuilder
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KatalystEqBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystFilterBuilder
 import io.peekandpoke.klang.audio_bridge.LfoShapes
 import io.peekandpoke.klang.audio_bridge.ModAdsrBuilder
 import io.peekandpoke.klang.audio_bridge.PhaserBuilder
@@ -26,6 +27,7 @@ import io.peekandpoke.klang.audio_bridge.VibratoBuilder
 import io.peekandpoke.klang.audio_bridge.constants.MOD_ENV_CURVE
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /*
  * Builders for the wrappers that carry secondary knobs: the four filters, the equalizer's
@@ -123,6 +125,26 @@ internal fun ModAdsrBuilder.scriptCurves(
  */
 @KlangScript.Function(name = "passes")
 internal fun FilterBuilder.scriptPasses(n: IgnitorDslLike): FilterBuilder = this.passes(n = n.toIgnitorDsl())
+
+/**
+ * Cascade count of a chain's `lowpass` or `highpass` (KLANG-00467): `2` = 24 dB/oct, `3` = 36. Rounded, coerced to
+ * 1..16 when the chain is built (not finite is one pass). The voice's `passes` on a cylinder, the same ladder: every
+ * pass is one section with its q staggered on the Butterworth ladder, so at the default q the cascade stays -3 dB at the
+ * cutoff, and a resonant q compounds across the passes.
+ *
+ * A plain number, fixed with the chain: on a chain the number of sections is the chain's structure (on a voice it is
+ * a slot read per note), so a `Katalyst.param` here is a script error.
+ */
+@KlangScript.Function(name = "passes")
+internal fun KatalystFilterBuilder.scriptPasses(n: IgnitorDslLike): KatalystFilterBuilder = when (n) {
+    is Number -> this.passes(n = n.toDouble())
+    // A plain number only, with the script's own words (the maintainer, 2026-11-18: "a clear script error"), where the
+    // language's conversion would say "Cannot convert ... to Double".
+    else -> throw KlangScriptTypeError(
+        "passes on a Katalyst filter takes a number, fixed with the chain; got ${describeArgument(n)}",
+        operation = "Katalyst passes",
+    )
+}
 
 /**
  * Analog character, 0..10. `0` (the default) is the clean linear filter; higher values engage

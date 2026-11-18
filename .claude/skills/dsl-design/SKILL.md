@@ -440,6 +440,16 @@ the bug.
     exposes it, every door is wet first;
   - material and vowel as a number: an index on the Katalyst doors, while sprudel's `body` / `vowel` read a number
     as a name (`5` is the name "5.0", index 0, off).
+  Recorded with the chain's filter, shape and drive doors (KLANG-00467, cylinder amp step 1, 2026-11-18; decisions D1
+  to D7 of KLANG-00466), one clause each, the detail in `door-shapes.md`:
+  - the chain's `lowpass`, `highpass`, `bandpass`, `notch`, `shape` and `drive` have no sprudel twin: sprudel's `lpf`,
+    `hpf`, `bpf`, `notch` and `distort` are the voice's doors; the cylinder route is
+    `katalyst(Katalyst(k => k.lowpass(...)))`;
+  - a chain filter has no `analog`, `humanize`, `env` or `adsr`: they belong to a note, and a cylinder has none (an
+    `analog` chain filter was closed as won't implement, KLANG-00473);
+  - `passes` is a plain number fixed with the chain on a chain filter, a slot knob read per note on a voice filter;
+  - a slot `q` with more than one pass is refused on a chain filter (every pass has its own q, and a section holds a
+    number or a slot), where the voice multiplies the slot per stage.
 
   See KLANG-00137 (master dsl followups) section 1 for the parity audit brief.
 

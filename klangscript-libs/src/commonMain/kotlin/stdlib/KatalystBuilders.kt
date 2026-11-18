@@ -15,6 +15,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDelayBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
 import io.peekandpoke.klang.audio_bridge.KatalystEqBuilder
+import io.peekandpoke.klang.audio_bridge.KatalystFilterBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystKnobDsl
 import io.peekandpoke.klang.audio_bridge.KatalystPhaserBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystRampBuilder
@@ -26,6 +27,7 @@ import io.peekandpoke.klang.audio_bridge.KatalystTriBuilder
 import io.peekandpoke.klang.audio_bridge.KatalystVowelBuilder
 import io.peekandpoke.klang.audio_bridge.VowelBands
 import io.peekandpoke.klang.audio_bridge.abs
+import io.peekandpoke.klang.audio_bridge.coercePasses
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_ATTACK_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.AUTHORED_LIMITER_LOOKAHEAD_SECONDS
 import io.peekandpoke.klang.audio_bridge.constants.BODY_WET
@@ -154,13 +156,40 @@ internal fun IgnitorDslLike.toKatalystKnob(): KatalystKnobDsl = when (this) {
  * it at build time (Q49 of KLANG-00314 (kotlin typed doors); `/dsl-design` section 3, the typed-door pattern,
  * point 5).
  */
-internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatalystKnob().also { knob ->
-    if (knob.eqSectionKnobOrNull() == null) {
+internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl =
+    toEqSectionKatalystKnob(what = "eq section", operation = "Katalyst eq")
+
+/**
+ * [toEqSectionKatalystKnob] for a chain filter door (`lowpass`, `highpass`, `bandpass`, `notch`, KLANG-00467): the same
+ * conversion and pre-check over the same section helper, the error naming [what] (`lowpass(freq = ...)`) and the door
+ * as its [operation], so the author reads which door and which argument refused the expression.
+ */
+internal fun IgnitorDslLike.toEqSectionKatalystKnob(what: String, operation: String): KatalystKnobDsl =
+    toKatalystKnob().also { knob ->
+        if (knob.eqSectionKnobOrNull() == null) {
+            throw KlangScriptTypeError(
+                "a Katalyst $what takes a number or a Kat.param; got a Kat expression",
+                operation = operation,
+            )
+        }
+    }
+
+/**
+ * The script's pre-check of the refusal of a slot `q` in a cascade (decision D3 of KLANG-00466): with more than one
+ * pass every section has its own q on the Butterworth ladder, and a section holds a number or a slot, never a slot
+ * times a factor. Run inside the filter door's checking wrapper, after the author's lambda, so it sees the `passes`
+ * the lambda set; the typed door refuses the same case with an `IllegalArgumentException`, and this turns it into a
+ * script error in the script's words first.
+ */
+private fun KatalystFilterBuilder.checkedCascadeQ(door: String, q: KatalystKnobDsl): KatalystFilterBuilder {
+    if (coercePasses(passes) > 1 && q !is KatalystKnobDsl.Constant) {
         throw KlangScriptTypeError(
-            "a Katalyst eq section takes a number or a Kat.param; got a Kat expression",
-            operation = "Katalyst eq",
+            "a Katalyst $door with more than one pass takes a number for q; got a Kat.param",
+            operation = "Katalyst $door",
         )
     }
+
+    return this
 }
 
 // ── The chain ────────────────────────────────────────────────────────────────
@@ -168,8 +197,10 @@ internal fun IgnitorDslLike.toEqSectionKatalystKnob(): KatalystKnobDsl = toKatal
 /*
  * [KatalystBuilder] (`audio_bridge`) is handed to the `configure` lambda of `Katalyst(...)`. Knobs:
  * `classic`, `body`, `vowel`, `delay`, `reverb`, `phaser`, `compressor`, `limiter`, `distort`, `duck`, `eq`,
- * `gain`, the arithmetic of the Ignitor (`plus`, `minus`, `times`, `div`, `neg`, `abs`, `pow`, `min`, `max`, with its
- * aliases), each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
+ * `lowpass`, `highpass`, `bandpass`, `notch` (each an `eq` stage holding the voice's filter sections), `shape`, `drive`
+ * (a `times` stage by the voice's drive law), `gain`, the arithmetic of the Ignitor (`plus`, `minus`, `times`, `div`,
+ * `neg`, `abs`, `pow`, `min`, `max`, with its aliases),
+ * each appending a stage (`limiter` appends a compressor with limiter numbers), `serial`,
  * which runs the builder through functions of stages in order, `parallel`, which runs branches side by side and
  * sums them, and `bands`, which splits the bus into frequency bands.
  */
@@ -489,6 +520,157 @@ internal fun KatalystBuilder.scriptDuck(
 @KlangScript.Function(name = "eq")
 internal fun KatalystBuilder.scriptEq(configure: ((KatalystEqBuilder) -> KatalystEqBuilder)? = null): KatalystBuilder =
     this.eq { it.configuredBy("Katalyst eq", configure) }
+
+/**
+ * Appends a lowpass on the cylinder's mix: what lies above [freq] is taken down, 12 dB per octave per pass. It is the
+ * voice's `lowpass` at the bus position, built from the same sections the voice's filter runs as (a cascade of
+ * `passes` sections, each with its q on the Butterworth ladder), so a voice's filter moves onto its cylinder with the
+ * same numbers. Each call appends one `eq` stage holding them.
+ *
+ * Inside the lambda, `passes`: `x => x.passes(2)` is 24 dB per octave. The voice's other filter knobs (`analog`,
+ * `humanize`, `env`, `adsr`) belong to a note and are not offered on a chain.
+ *
+ * There is no off value: a lowpass written is a lowpass built. A cutoff that is not finite reads as 1000 Hz, as on an
+ * `eq` band.
+ *
+ * ```KlangScript
+ * note("c2 e2 g2").s("supersaw").cylinder(1).katalyst(Katalyst(k => k.distort(0.4, "tube").lowpass(1800, 0.707, x => x.passes(2))))
+ * ```
+ *
+ * @param freq the cutoff in Hz: a number, or a `Katalyst.param` slot that a pattern moves with `katp` (the filter then
+ *   crossfades to the new cutoff). A Kat expression (a modulator, arithmetic) is a script error: a filter section takes
+ *   a number or a slot. No sprudel twin: sprudel's `lpf` is the voice's door, the cylinder route is
+ *   `katalyst(Katalyst(k => k.lowpass(...)))`.
+ * @param q the resonance (default 0.707, flat at the cutoff). Higher peaks at the cutoff, and in a cascade the peak
+ *   compounds across the passes (`q = 1.0` with two passes sits +3 dB there). A number or a `Katalyst.param` slot; with
+ *   more than one pass a number only, since every pass gets its own q.
+ * @param configure receives the [KatalystFilterBuilder] (knob: `passes`) and returns it.
+ */
+@KlangScript.Function(name = "lowpass")
+internal fun KatalystBuilder.scriptLowpass(
+    freq: IgnitorDslLike,
+    q: IgnitorDslLike = 0.707,
+    configure: ((KatalystFilterBuilder) -> KatalystFilterBuilder)? = null,
+): KatalystBuilder {
+    val sectionFreq = freq.toEqSectionKatalystKnob(what = "lowpass(freq = ...)", operation = "Katalyst lowpass")
+    val sectionQ = q.toEqSectionKatalystKnob(what = "lowpass(q = ...)", operation = "Katalyst lowpass")
+
+    return this.lowpass(freq = sectionFreq, q = sectionQ) {
+        it.configuredBy(door = "Katalyst lowpass", configure = configure, example = "x => x.passes(2)")
+            .checkedCascadeQ(door = "lowpass", q = sectionQ)
+    }
+}
+
+/**
+ * Appends a highpass on the cylinder's mix: what lies below [freq] is taken down, 12 dB per octave per pass. The
+ * voice's `highpass` at the bus position, the same sections, with [lowpass]'s knobs and rules: one `eq` stage per call,
+ * `passes` in the lambda, no off value (a cutoff that is not finite reads as 1000 Hz).
+ *
+ * ```KlangScript
+ * note("c2 e2 g2").s("supersaw").cylinder(1).katalyst(Katalyst(k => k.highpass(120, 0.707, x => x.passes(2)).distort(0.4, "tube")))
+ * ```
+ *
+ * @param freq the cutoff in Hz: a number or a `Katalyst.param` slot; a Kat expression is a script error. No sprudel
+ *   twin: sprudel's `hpf` is the voice's door, the cylinder route is `katalyst(Katalyst(k => k.highpass(...)))`.
+ * @param q the resonance (default 0.707, flat at the cutoff). A number or a `Katalyst.param` slot; with more than one
+ *   pass a number only.
+ * @param configure receives the [KatalystFilterBuilder] (knob: `passes`) and returns it.
+ */
+@KlangScript.Function(name = "highpass")
+internal fun KatalystBuilder.scriptHighpass(
+    freq: IgnitorDslLike,
+    q: IgnitorDslLike = 0.707,
+    configure: ((KatalystFilterBuilder) -> KatalystFilterBuilder)? = null,
+): KatalystBuilder {
+    val sectionFreq = freq.toEqSectionKatalystKnob(what = "highpass(freq = ...)", operation = "Katalyst highpass")
+    val sectionQ = q.toEqSectionKatalystKnob(what = "highpass(q = ...)", operation = "Katalyst highpass")
+
+    return this.highpass(freq = sectionFreq, q = sectionQ) {
+        it.configuredBy(door = "Katalyst highpass", configure = configure, example = "x => x.passes(2)")
+            .checkedCascadeQ(door = "highpass", q = sectionQ)
+    }
+}
+
+/**
+ * Appends a bandpass on the cylinder's mix: a band around [freq] passes, what lies away from it is taken down. The
+ * voice's `bandpass` at the bus position, the same section, one `eq` stage per call. No lambda: the voice's
+ * bandpass knobs belong to a note. No off value; a cutoff that is not finite reads as 1000 Hz.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("supersaw").cylinder(1).katalyst(Katalyst(k => k.bandpass(900, 1.5).gain(2)))
+ * ```
+ *
+ * @param freq the center in Hz: a number or a `Katalyst.param` slot; a Kat expression is a script error. No sprudel
+ *   twin: sprudel's `bpf` is the voice's door, the cylinder route is `katalyst(Katalyst(k => k.bandpass(...)))`.
+ * @param q how narrow the band is (default 0.707): higher is narrower. A number or a `Katalyst.param` slot.
+ */
+@KlangScript.Function(name = "bandpass")
+internal fun KatalystBuilder.scriptBandpass(freq: IgnitorDslLike, q: IgnitorDslLike = 0.707): KatalystBuilder = this.bandpass(
+    freq = freq.toEqSectionKatalystKnob(what = "bandpass(freq = ...)", operation = "Katalyst bandpass"),
+    q = q.toEqSectionKatalystKnob(what = "bandpass(q = ...)", operation = "Katalyst bandpass"),
+)
+
+/**
+ * Appends a notch on the cylinder's mix: a band around [freq] is cut out, the rest passes. The voice's `notch` at the
+ * bus position, the same section, one `eq` stage per call. No lambda: the voice's notch knobs belong to a note. No off
+ * value; a cutoff that is not finite reads as 1000 Hz.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("supersaw").cylinder(1).katalyst(Katalyst(k => k.notch(1200, 2)))
+ * ```
+ *
+ * @param freq the center of the cut in Hz: a number or a `Katalyst.param` slot; a Kat expression is a script error. No
+ *   sprudel twin: sprudel's `notch` is the voice's door, the cylinder route is `katalyst(Katalyst(k => k.notch(...)))`.
+ * @param q how narrow the cut is (default 0.707): higher is narrower. A number or a `Katalyst.param` slot.
+ */
+@KlangScript.Function(name = "notch")
+internal fun KatalystBuilder.scriptNotch(freq: IgnitorDslLike, q: IgnitorDslLike = 0.707): KatalystBuilder = this.notch(
+    freq = freq.toEqSectionKatalystKnob(what = "notch(freq = ...)", operation = "Katalyst notch"),
+    q = q.toEqSectionKatalystKnob(what = "notch(q = ...)", operation = "Katalyst notch"),
+)
+
+/**
+ * Appends a waveshaper on the cylinder's mix: the curve alone, at unity drive, then a DC blocker. The voice's `shape`
+ * at the bus position, the same curves; every note of the bus goes through one curve, so they meet in it, as in an amp
+ * fed by a whole chord. How hard the mix hits the curve is the level it arrives at: a boost before it is `drive`
+ * (gain without a curve, the voice's word) or `mul`.
+ *
+ * Never off: there is no amount to switch it with. Writing it in the chain is switching it on.
+ *
+ * ```KlangScript
+ * note("c2 e2 g2").s("supersaw").cylinder(1).katalyst(Katalyst(k => k.drive(0.3).shape("tube").lowpass(4000)))
+ * ```
+ *
+ * It shapes at the rate of the bus it is in: for less aliasing, write it inside a region,
+ * `k.oversampleAtLeast(2, r => r.drive(0.3).shape("tube"))`.
+ *
+ * @param shape the waveshaper by name, from the voice's list (`soft`, `hard`, `tube`, `softsat`, `gentle`, `asym`, ...;
+ *   default `soft`); an unknown name is `soft`. A name only, fixed with the chain, as `distort`'s shape. No sprudel
+ *   twin: the voice's `shape` is an Ignitor door; the cylinder route is `katalyst(Katalyst(k => k.shape(...)))`.
+ */
+@KlangScript.Function(name = "shape")
+internal fun KatalystBuilder.scriptShape(shape: String = "soft"): KatalystBuilder = this.shape(shape = shape)
+
+/**
+ * Appends gain without a curve, by the voice's drive law: the mix times `10^(amount * 1.2)` (0.1 is about +2.4 dB, 0.25
+ * about +6 dB, 0.5 about +12 dB). The voice's `drive` at the bus position, the word a voice chain says before its
+ * `shape`, so `drive(0.3).shape("tube")` ports from a voice to a cylinder as written. It appends a `times` stage.
+ *
+ * At or below 0, or not finite, it is unity (the mix passes at its level), as the voice's `drive` passes its input
+ * through there. Two edges differ from a voice: an amount so large that the gain is not finite (above about 257) is
+ * unity as a number and the engine's ceiling (1e15) as a `Katalyst.param`, and a value that is not finite, written over
+ * a slot's finite default, is unity, where a voice's slot falls back to its default.
+ *
+ * ```KlangScript
+ * note("c2 e2 g2").s("supersaw").cylinder(1).katalyst(Katalyst(k => k.drive(0.3).shape("tube")))
+ * ```
+ *
+ * @param amount the drive: a number, a `Katalyst.param` slot that a pattern moves with `katp`, or a Kat expression; a
+ *   move glides, as on `mul`. No sprudel twin: the voice's `drive` is an Ignitor door; the cylinder route is
+ *   `katalyst(Katalyst(k => k.drive(...)))`.
+ */
+@KlangScript.Function(name = "drive")
+internal fun KatalystBuilder.scriptDrive(amount: IgnitorDslLike): KatalystBuilder = this.drive(amount = amount.toKatalystKnob())
 
 /**
  * Appends make-up gain on the cylinder: the group fader, after the inserts.

@@ -200,6 +200,13 @@ fun katalystStageProbeCases(): List<StageProbeCase> = buildList {
         add(busCase(stage = "distort:$shape", knobs = "amount=3") { it.distort(amount = 3.0.kat, shape = shape) })
     }
 
+    // The waveshaper alone at unity drive (KLANG-00467), and behind the chain's drive.
+    for (shape in DistortionShapes.names) {
+        add(busCase(stage = "shape:$shape", knobs = "unity drive") { it.shape(shape) })
+    }
+
+    add(busCase(stage = "drive+shape", knobs = "drive 3 asym") { it.drive(3.0.kat).shape("asym") })
+
     add(busCase(stage = "gain", knobs = "default (1)") { it.gain() })
     add(busCase(stage = "gain", knobs = "gain=100") { it.gain(100.0.kat) })
 

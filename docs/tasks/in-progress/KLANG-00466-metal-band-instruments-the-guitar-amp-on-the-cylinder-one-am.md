@@ -89,7 +89,8 @@ Each is written with the choice the plan makes. A "no" to one of them changes th
 - **On a chain today:** `distort`, `eq` with `band` and `tap`, the arithmetic (`mul`, ...), `parallel`, `serial`,
   `blend`, `bands`, `oversampleBy`, `oversampleAtLeast`, `body`, `vowel`, `delay`, `reverb`, `phaser`,
   `compressor`, `limiter`, `duck`, `gain`, `classic()`. Inside a region every stage keeps its sound in seconds and
-  Hz, a filter its cutoff (`KatalystStageDsl.OversampleBy`'s KDoc).
+  Hz, a filter its cutoff (`KatalystStageDsl.OversampleBy`'s KDoc). (2026-11-18: step 1, KLANG-00467, added
+  `lowpass`, `highpass`, `bandpass`, `notch`, `shape`, `drive` and `Kat.fn`.)
 - **`classic()` can follow an amp.** It appends the cylinder's usual stages (body, vowel, delay, reverb, phaser,
   compressor, the fader), all listening to their slots, so the pattern's `body(...)`, `reverb(...)`,
   `compressor(...)` and `katp("gain.gain", ...)` keep working on a cylinder that declares an amp first.

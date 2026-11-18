@@ -196,6 +196,38 @@ class KotlinKatObjectParitySpec : StringSpec({
                 { b: KatalystBuilder -> b.distort(shape = "hard") },
                 KatalystStageDsl.Distort(amount = k(0.5), shape = 1),
             ),
+            // The chain's filter, shape and drive doors (KLANG-00467): q 0.707 and one pass on the filters, `soft` (0) on
+            // the shape; the drive has no default, and its amount 0 is unity.
+            Triple(
+                "lowpass(800)",
+                { b: KatalystBuilder -> b.lowpass(800.kat) },
+                KatalystStageDsl.Eq(
+                    sections = listOf(IgnitorDsl.EqSection.Lowpass(freq = IgnitorDsl.Constant(800.0), q = IgnitorDsl.Constant(0.707))),
+                ),
+            ),
+            Triple(
+                "highpass(800)",
+                { b: KatalystBuilder -> b.highpass(800.kat) },
+                KatalystStageDsl.Eq(
+                    sections = listOf(IgnitorDsl.EqSection.Highpass(freq = IgnitorDsl.Constant(800.0), q = IgnitorDsl.Constant(0.707))),
+                ),
+            ),
+            Triple(
+                "bandpass(800)",
+                { b: KatalystBuilder -> b.bandpass(800.kat) },
+                KatalystStageDsl.Eq(
+                    sections = listOf(IgnitorDsl.EqSection.Bandpass(freq = IgnitorDsl.Constant(800.0), q = IgnitorDsl.Constant(0.707))),
+                ),
+            ),
+            Triple(
+                "notch(800)",
+                { b: KatalystBuilder -> b.notch(800.kat) },
+                KatalystStageDsl.Eq(
+                    sections = listOf(IgnitorDsl.EqSection.Notch(freq = IgnitorDsl.Constant(800.0), q = IgnitorDsl.Constant(0.707))),
+                ),
+            ),
+            Triple("shape()", { b: KatalystBuilder -> b.shape() }, KatalystStageDsl.Shape(shape = 0)),
+            Triple("drive(0)", { b: KatalystBuilder -> b.drive(0.kat) }, KatalystStageDsl.Times(other = k(1.0))),
         ).forEach { (call, kotlin, stage) ->
             withClue("Kotlin $call") { Kat { kotlin(it) } shouldBe KatalystDsl.of(stage) }
             withClue("script $call") { ks("Kat(k => k.$call)") shouldBe KatalystDsl.of(stage) }

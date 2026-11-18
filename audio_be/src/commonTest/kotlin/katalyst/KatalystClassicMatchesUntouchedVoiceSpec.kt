@@ -100,6 +100,8 @@ class KatalystClassicMatchesUntouchedVoiceSpec : StringSpec({
 
                 is KatalystStageDsl.Duck -> listOf(stage.cylinder, stage.depth, stage.release)
                 is KatalystStageDsl.Distort -> listOf(stage.amount)
+                // The waveshaper alone has no knob (KLANG-00467), and the classic chain does not carry it.
+                is KatalystStageDsl.Shape -> emptyList()
                 is KatalystStageDsl.Eq -> emptyList()
                 is KatalystStageDsl.Gain -> listOf(stage.gain)
                 // The classic chain declares no parallel stage, and no region.

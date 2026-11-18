@@ -44,7 +44,8 @@ or measured.
 - **The amp cannot move to the cylinder today.** A cylinder chain has `distort`, `eq` (bells and taps), `parallel`,
   `serial` and oversampling, but no lowpass and no highpass stage, and the rig needs both (the highpasses between
   the gain stages, the cab's wall). The song's own comment that the cabs move to the cylinder "once the Katalyst
-  DSL lands" still waits on that.
+  DSL lands" still waits on that. (2026-11-18: no longer true. KLANG-00467 gave a chain `lowpass`, `highpass`,
+  `bandpass`, `notch`, `shape` and `drive`, the voice's words.)
 - **Within one voice it works already:** an oscillator a fifth above the string, summed before the rig, would give
   a power chord its intermodulation without any engine work. Not tried.
 - **The rig's tail is mixing, not amp.** `snareCut`, the cab and `guitarShape` come after the last hard clipper.

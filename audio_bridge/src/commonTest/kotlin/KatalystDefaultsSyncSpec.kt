@@ -82,6 +82,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
 
             is KatalystStageDsl.Duck -> listOf(stage.cylinder, stage.depth, stage.release)
             is KatalystStageDsl.Distort -> listOf(stage.amount)
+            // The waveshaper alone has no knob (KLANG-00467).
+            is KatalystStageDsl.Shape -> emptyList()
             is KatalystStageDsl.Eq -> emptyList()
             is KatalystStageDsl.Gain -> listOf(stage.gain)
             // The classic chain declares no parallel stage, and no region.
@@ -425,6 +427,8 @@ class KatalystDefaultsSyncSpec : StringSpec({
                     )
 
                     is KatalystStageDsl.Distort -> stage.copy(amount = freshKnob(stage.amount))
+                    // The classic chain declares no shape stage; the arm keeps the `when` exhaustive.
+                    is KatalystStageDsl.Shape -> stage.copy()
                     is KatalystStageDsl.Eq -> KatalystStageDsl.Eq(stage.sections.toList())
                     is KatalystStageDsl.Gain -> KatalystStageDsl.Gain(freshKnob(stage.gain))
                     // The classic chain declares no parallel stage; the arm keeps the `when` exhaustive.

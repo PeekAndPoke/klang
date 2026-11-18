@@ -20,6 +20,8 @@ import io.peekandpoke.klang.audio_bridge.constants.DELAY_WET
 import io.peekandpoke.klang.audio_bridge.constants.DISTORT_AMOUNT
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_DEPTH
 import io.peekandpoke.klang.audio_bridge.constants.DUCK_RELEASE_SECONDS
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_PASSES
+import io.peekandpoke.klang.audio_bridge.constants.FILTER_Q
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_KNEE_DB
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RATIO
 import io.peekandpoke.klang.audio_bridge.constants.LIMITER_RELEASE_SECONDS
@@ -210,6 +212,97 @@ data class KatalystBuilder(val node: KatalystDsl = KatalystDsl(emptyList())) {
     fun eq(configure: ((KatalystEqBuilder) -> KatalystEqBuilder)? = null): KatalystBuilder =
         append(KatalystStageDsl.Eq(sections = KatalystEqBuilder().configured(configure).sections))
 
+    // ── The voice's filters and its shaper, at the bus position (KLANG-00467, cylinder amp step 1) ───────────────────
+    //
+    // The Ignitor's words and argument order, so a voice chain ports word for word. Each filter door appends ONE `eq`
+    // stage holding that filter's sections, the sections the voice's optimizer fuses a plain filter into (decision D1
+    // of KLANG-00466): no new filter stage. A section knob takes a number or a `Kat.param` (Q49); `passes` is a plain
+    // number fixed with the chain (D2), and a slot `q` with more than one pass is refused (D3). No `analog`,
+    // `humanize`, `env` or `adsr`: they belong to a note (D4).
+
+    /**
+     * Appends a lowpass of the bus mix: one [KatalystStageDsl.Eq] stage holding the voice's lowpass sections, a
+     * `passes` cascade on the voice's q ladder ([filterSections]). A Kat expression, and a slot [q] with more than one
+     * pass, are an [IllegalArgumentException] (script knob `lowpass`).
+     */
+    fun lowpass(
+        freq: KatalystKnobDsl,
+        q: KatalystKnobDsl = FILTER_Q.kat,
+        configure: ((KatalystFilterBuilder) -> KatalystFilterBuilder)? = null,
+    ): KatalystBuilder = append(
+        KatalystStageDsl.Eq(
+            sections = filterSections(
+                door = "lowpass",
+                freq = freq,
+                q = q,
+                passes = KatalystFilterBuilder().configured(configure).passes,
+            ) { f, stageQ -> IgnitorDsl.EqSection.Lowpass(freq = f, q = stageQ) },
+        ),
+    )
+
+    /** [lowpass]'s twin: a highpass of the bus mix, the voice's highpass sections (script knob `highpass`). */
+    fun highpass(
+        freq: KatalystKnobDsl,
+        q: KatalystKnobDsl = FILTER_Q.kat,
+        configure: ((KatalystFilterBuilder) -> KatalystFilterBuilder)? = null,
+    ): KatalystBuilder = append(
+        KatalystStageDsl.Eq(
+            sections = filterSections(
+                door = "highpass",
+                freq = freq,
+                q = q,
+                passes = KatalystFilterBuilder().configured(configure).passes,
+            ) { f, stageQ -> IgnitorDsl.EqSection.Highpass(freq = f, q = stageQ) },
+        ),
+    )
+
+    /** Appends a bandpass of the bus mix: one `eq` stage holding the voice's bandpass section (script knob `bandpass`). */
+    fun bandpass(freq: KatalystKnobDsl, q: KatalystKnobDsl = FILTER_Q.kat): KatalystBuilder = append(
+        KatalystStageDsl.Eq(
+            sections = filterSections(door = "bandpass", freq = freq, q = q, passes = FILTER_PASSES) { f, stageQ ->
+                IgnitorDsl.EqSection.Bandpass(freq = f, q = stageQ)
+            },
+        ),
+    )
+
+    /** Appends a notch of the bus mix: one `eq` stage holding the voice's notch section (script knob `notch`). */
+    fun notch(freq: KatalystKnobDsl, q: KatalystKnobDsl = FILTER_Q.kat): KatalystBuilder = append(
+        KatalystStageDsl.Eq(
+            sections = filterSections(door = "notch", freq = freq, q = q, passes = FILTER_PASSES) { f, stageQ ->
+                IgnitorDsl.EqSection.Notch(freq = f, q = stageQ)
+            },
+        ),
+    )
+
+    /**
+     * Appends the waveshaper alone, the curve at unity drive ([KatalystStageDsl.Shape]); [shape] is a NAME through
+     * [DistortionShapes.indexOf], the script knob's lookup (unknown = `soft`), fixed with the chain (script knob
+     * `shape`).
+     */
+    fun shape(shape: String = DistortionShapes.names[DistortionShapes.SOFT_INDEX]): KatalystBuilder =
+        append(KatalystStageDsl.Shape(shape = DistortionShapes.indexOf(shape).toInt()))
+
+    /**
+     * Appends gain without a curve, by the voice's drive law ([driveGain], `10^(amount * 1.2)`): a [times] stage. A
+     * number is folded here, at or below 0 or not finite to exactly 1.0, unity, as the voice's `drive` passes its
+     * input through there; any other knob multiplies by [driveGainKnob], the same law read while the chain runs
+     * (script knob `drive`). Its edges differ from the voice's, as [driveGainKnob] says: a gain too large to be finite
+     * is unity through a number and the safe ceiling through a knob, and a non-finite value written over a finite
+     * default is unity, where a voice falls back to its default.
+     */
+    fun drive(amount: KatalystKnobDsl): KatalystBuilder {
+        if (amount is KatalystKnobDsl.Constant) {
+            val value = amount.value
+            // NaN-guard on a value the author can write: a non-finite amount is unset, and the voice's drive passes
+            // its input through for it, as for an amount at or below 0 (`audio/ref/off-values.md`, the `drive` row).
+            val gain = if (value > 0.0 && value.isFinite()) driveGain(value) else 1.0
+
+            return times(gain.kat)
+        }
+
+        return times(driveGainKnob(amount))
+    }
+
     /** Appends make-up gain, the group fader; unity is the stage's identity, not a tuned constant (script knob `gain`). */
     fun gain(gain: KatalystKnobDsl = 1.0.kat): KatalystBuilder = append(KatalystStageDsl.Gain(gain = gain))
 
@@ -369,7 +462,62 @@ private fun List<KatalystStageDsl>.containsInOrder(other: List<KatalystStageDsl>
     return false
 }
 
+/**
+ * The sections of one chain filter door: [passes] sections of one kind (built by [section]) at [freq], each with its
+ * q on the voice's Butterworth ladder ([passesLadderRel], the function the voice's optimizer expands a cascade with),
+ * so a chain filter is the voice's fused filter section for section. One pass is one section with [q] as given; the
+ * middle stage of an odd cascade has a ladder factor of exactly 1.0 and keeps [q] itself, as the optimizer passes it
+ * through there.
+ *
+ * [freq] and [q] go through [toEqSectionKnob] (a number or a `Kat.param`; a Kat expression is refused, Q49). A slot
+ * [q] with more than one pass is refused too (decision D3 of KLANG-00466): every stage of a cascade has its own q, and
+ * a section holds a number or a slot, never a slot times a factor. [passes] is rounded and coerced by [coercePasses]
+ * (1 to 16, not finite is one pass).
+ */
+private fun filterSections(
+    door: String,
+    freq: KatalystKnobDsl,
+    q: KatalystKnobDsl,
+    passes: Double,
+    section: (freq: IgnitorDsl, q: IgnitorDsl) -> IgnitorDsl.EqSection,
+): List<IgnitorDsl.EqSection> {
+    val sectionFreq = freq.toEqSectionKnob(knob = door, param = "freq")
+    val sectionQ = q.toEqSectionKnob(knob = door, param = "q")
+    val n = coercePasses(passes)
+
+    if (n == 1) {
+        return listOf(section(sectionFreq, sectionQ))
+    }
+
+    if (sectionQ !is IgnitorDsl.Constant) {
+        throw IllegalArgumentException(
+            "Katalyst eq $door(q = ...) with more than one pass takes a number; got a Kat.param",
+        )
+    }
+
+    return List(n) { k ->
+        val rel = passesLadderRel(k = k, n = n)
+        val stageQ = if (rel == 1.0) sectionQ else IgnitorDsl.Constant(sectionQ.value * rel)
+
+        section(sectionFreq, stageQ)
+    }
+}
+
 // ── The stage builders ───────────────────────────────────────────────────────
+
+/**
+ * Builder for `k.lowpass(freq, q, configure)` and `k.highpass(freq, q, configure)` on a chain. Knob: `passes`, a plain
+ * number fixed with the chain (the voice's is a slot knob read per note; decision D2 of KLANG-00466). `bandpass` and
+ * `notch` have no knob on a chain, so they have no builder.
+ */
+data class KatalystFilterBuilder(val passes: Double = FILTER_PASSES) {
+
+    /**
+     * Cascade count, rounded and coerced to 1..16 when the chain is built; the text is on the script knob `passes`
+     * (`scriptPasses` in `klangscript-libs`).
+     */
+    fun passes(n: Double): KatalystFilterBuilder = copy(passes = n)
+}
 
 /** Builder for a [KatalystStageDsl.Body] stage. Knob: `floor`. */
 data class KatalystBodyBuilder(val node: KatalystStageDsl.Body) {

@@ -219,6 +219,13 @@ fun aliasingShaperCases(pitch: Double): List<AliasingCase> = buildList {
                 knobs = "amount=$amount, 1x",
                 probe = katalystProbeStage(dsl = KatalystBuilder().distort(amount = amount.kat, shape = shape).node),
             )
+            // The chain's drive then shape (KLANG-00467), the bus twin of the drive().shape() row above.
+            shaper(
+                family = "katalyst",
+                stage = "shape(drive):$shape",
+                knobs = "the drive().shape() chain, amount=$amount, 1x",
+                probe = katalystProbeStage(dsl = KatalystBuilder().drive(amount.kat).shape(shape).node),
+            )
         }
     }
 
@@ -241,6 +248,12 @@ fun aliasingShaperCases(pitch: Double): List<AliasingCase> = buildList {
                     stage = "distort:$shape",
                     knobs = "in oversampleBy($factor), amount=$amount",
                     probe = katalystProbeStage(dsl = KatalystBuilder().oversampleBy(factor) { it.distort(amount = amount.kat, shape = shape) }.node),
+                )
+                shaper(
+                    family = "katalyst",
+                    stage = "shape(drive):$shape",
+                    knobs = "the drive().shape() chain in oversampleBy($factor), amount=$amount",
+                    probe = katalystProbeStage(dsl = KatalystBuilder().oversampleBy(factor) { it.drive(amount.kat).shape(shape) }.node),
                 )
             }
         }

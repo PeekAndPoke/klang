@@ -298,7 +298,10 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `DoorDistortionLawSpec`. The Katalyst `distort` stage (`KatalystDistortEffect`, 2026-10-09) runs the fused law
   on each channel of a bus, with the house DC pole (`HOUSE_DC_BLOCK_COEFF`, near 7 Hz; the voice's is near 35 Hz), and
   delays nothing (its 2x default, latency and phase twins went with the factor; the songs that relied on the 2x wrap
-  it in `oversampleAtLeast(2)`).
+  it in `oversampleAtLeast(2)`). The Katalyst `shape` stage (`KatalystShapeEffect`, KLANG-00467) is that stage's core at
+  unity drive, never off, its DC decay a declared tail; the chain's `drive` is a `times` stage by the one drive law
+  (`driveGain` in `audio_bridge`, which `DistortionCore.drive` delegates to); the chain's `lowpass`, `highpass`,
+  `bandpass` and `notch` write `eq` stages holding the voice's fused sections (`audio/ref/katalyst.md`).
 - **The oversampler is an IIR half-band** (2026-10-10, KLANG-00298 (iir oversampler)): two all-pass
   chains per 2x stage, 8 coefficients at the base-rate stage and 6 above; the round trip is flat (0.00 dB to 20 kHz),
   aliases and images about 95 to 100 dB down, latency 3.07, 4.40, 5.06 samples at 2x, 4x, 8x, rising toward the top
@@ -523,6 +526,7 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-18 The voice's filters, `shape` and `drive` on a Katalyst chain (`eq` stages of the voice's sections, a `Shape` stage, a `times` by the drive law, the law's home moved to `audio_bridge`), `Kat.fn`: KLANG-00467
 - 2026-11-11 The per-note rings pooled (the Karplus lines and the shimmer ring rented per voice from the warehouse, given back on every voice exit, 16 lines warmed, six note-ring counts on the wire), the reverb's `lowpass` glides on its pole (the closing run's click), the stale L4-02 reproductions deleted: KLANG-00429, KLANG-00420
 - 2026-11-11 Decisions pass C: the filter envelope's cutoff exact at knots of the note (half a semitone, 128 frames), the distort doors on the fused law (the soft cap gone), the aliasing meter's healthy limit on the health page: KLANG-00432, KLANG-00420
 - 2026-11-11 Decisions pass B2: the browser decodes at the engine's rate, the UI's clock hears an authored master, a sample crosses as one transferred buffer, the dropped and soundless counts monotone, the codec format in the schema hash, refused sends counted, crushed blocks counted, the offline render's head trimmed, `Long` refused on the wire, the worklet clock's frame counting dropped, the census models every gate, `scheduleVoice` removed: KLANG-00430, KLANG-00431, KLANG-00432, KLANG-00433

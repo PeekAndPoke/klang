@@ -34,6 +34,9 @@ lists, written in the author's order, are the answer to try.
   `q` (the bell also `db`, the raw tap `gain`), nothing else. The script `EqBuilder`
   (`klangscript-libs/.../stdlib/EffectBuilders.kt`) offers `band` and `tap` only; lowpass, highpass, bandpass and notch
   sections exist only as what the optimizer fuses, so on the door they would be new on both surfaces.
+  (2026-11-18, KLANG-00467: no longer only that. A Katalyst chain's `lowpass`, `highpass`, `bandpass` and `notch`
+  doors write these sections into an `eq` stage, one stage per call; section words INSIDE `eq(...)` are still not
+  offered, on either surface.)
 - **The optimizer** (`audio_bridge/.../IgnitorDslOptimizer.kt`, rule R1) fuses consecutive filter nodes into one
   `Eq`, and REFUSES a filter that carries any of: a non-zero `analog` (the saturating SVF branch), a cutoff envelope
   (`env`), the per-voice `humanize` lane, a non-constant `passes`. It decides once, at registration, so a `Param`

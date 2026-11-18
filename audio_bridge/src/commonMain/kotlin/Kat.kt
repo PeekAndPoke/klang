@@ -44,6 +44,12 @@ object Kat {
     fun param(name: String, default: Double, description: String = ""): KatalystKnobDsl.Param =
         KatalystKnobDsl.Param(name = name, default = default, description = description)
 
+    /**
+     * Returns [f] as it is, a function from a chain builder to a chain builder, typed: a rig part as a value
+     * (`Kat.fn { it.drive(0.3.kat).shape("tube") }`), the twin of `Ign.fn`. Script door: `Katalyst.fn(f)`.
+     */
+    fun fn(f: (KatalystBuilder) -> KatalystBuilder): (KatalystBuilder) -> KatalystBuilder = f
+
     // ── Modulators ───────────────────────────────────────────────────────────
     //
     // `freq` is required (a bus has no note to default to); `phase` and the square's `duty` are knobs on the builder.

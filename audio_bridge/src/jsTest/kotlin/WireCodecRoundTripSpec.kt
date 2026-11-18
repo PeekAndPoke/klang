@@ -115,6 +115,7 @@ class WireCodecRoundTripSpec : StringSpec({
             KatalystStageDsl.Compressor(threshold = p(), ratio = p(), knee = p(), attack = p(), release = p()),
             KatalystStageDsl.Distort(amount = k(), shape = 2),
             KatalystStageDsl.Distort(amount = p()),
+            KatalystStageDsl.Shape(shape = 10),
             KatalystStageDsl.Duck(cylinder = k(), depth = k(), release = k()),
             KatalystStageDsl.Duck(cylinder = p(), depth = p(), release = p()),
             KatalystStageDsl.Gain(gain = k()),
@@ -198,10 +199,29 @@ class WireCodecRoundTripSpec : StringSpec({
                     amount = KatalystKnobDsl.Param("drive", 0.15), shape = DistortionShapes.indexOf("tube").toInt(),
                 ),
                 KatalystStageDsl.Distort(),
+                // the waveshaper alone (KLANG-00467): the plain Int shape, set and bare
+                KatalystStageDsl.Shape(shape = DistortionShapes.indexOf("asym").toInt()),
+                KatalystStageDsl.Shape(),
                 KatalystStageDsl.Eq(
                     sections = listOf(
                         IgnitorDsl.EqSection.Bell(freq = IgnitorDsl.Constant(300.0), q = IgnitorDsl.Constant(0.8), db = IgnitorDsl.Constant(2.0)),
                         IgnitorDsl.EqSection.Lowpass(freq = IgnitorDsl.Constant(4000.0)),
+                    )
+                ),
+                // all six section kinds in one stage, as the chain's filter doors and `eq` write them (KLANG-00467),
+                // each kind with a value off its default and a slot on one knob
+                KatalystStageDsl.Eq(
+                    sections = listOf(
+                        IgnitorDsl.EqSection.Lowpass(freq = IgnitorDsl.Param("lpf", 1800.0), q = IgnitorDsl.Constant(0.5411961001461969)),
+                        IgnitorDsl.EqSection.Highpass(freq = IgnitorDsl.Constant(90.0), q = IgnitorDsl.Param("hpq", 1.3)),
+                        IgnitorDsl.EqSection.Bandpass(freq = IgnitorDsl.Constant(700.0), q = IgnitorDsl.Constant(2.5)),
+                        IgnitorDsl.EqSection.Notch(freq = IgnitorDsl.Constant(3100.0), q = IgnitorDsl.Constant(4.0)),
+                        IgnitorDsl.EqSection.Bell(
+                            freq = IgnitorDsl.Constant(450.0), q = IgnitorDsl.Constant(1.1), db = IgnitorDsl.Constant(-4.0),
+                        ),
+                        IgnitorDsl.EqSection.RawTap(
+                            freq = IgnitorDsl.Constant(2500.0), q = IgnitorDsl.Constant(3.0), gain = IgnitorDsl.Constant(0.6),
+                        ),
                     )
                 ),
                 KatalystStageDsl.Eq(),
@@ -414,8 +434,9 @@ class WireCodecRoundTripSpec : StringSpec({
         // and KLANG-00432's decisions pass B2 from 358149839, one change (the codec's format joined the signature, D8;
         // `Cmd.Sample.Chunk` left it, a sample crosses whole as one transferred buffer, D5; `Diagnostics.crushedBlocks`
         // and `Diagnostics.refusedFeedbackSends` joined it, L8-02 (c) and D10); KLANG-00429 from -1036617280 (the note
-        // rings' six counts joined `Diagnostics.WarehouseStats`, L5-03).
-        WIRE_SCHEMA_HASH shouldBe 1286855684
+        // rings' six counts joined `Diagnostics.WarehouseStats`, L5-03); KLANG-00467 from 1286855684 (the Katalyst's
+        // `Shape` stage joined it, cylinder amp step 1).
+        WIRE_SCHEMA_HASH shouldBe -1222323678
     }
 
     "ScheduledVoice round-trips a minimal (mostly-null) VoiceData" {

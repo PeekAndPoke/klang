@@ -18,8 +18,10 @@ import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
  * script-level error that names the door, instead of a cast failure deep inside the native.
  *
  * @param door the script-facing door name for the error message, e.g. `"Ignitor.supersaw"`.
+ * @param example a lambda the door's builder takes, shown in the "returned nothing" hint; the default fits the voice's
+ *   filter builders, a door whose builder has no `analog` passes its own (the chain's filters: `x => x.passes(2)`).
  */
-internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
+internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?, example: String = "x => x.analog(3)"): B {
     if (configure == null) {
         return this
     }
@@ -27,7 +29,7 @@ internal fun <B : Any> B.configuredBy(door: String, configure: ((B) -> B)?): B {
     val result: Any? = (configure as (B) -> Any?)(this)
     if (result == null) {
         throw KlangScriptTypeError(
-            message = "the configure lambda of $door returned nothing; return the builder it received (`x => x.analog(3)`)",
+            message = "the configure lambda of $door returned nothing; return the builder it received (`$example`)",
             operation = door,
         )
     }

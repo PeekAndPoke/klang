@@ -284,6 +284,7 @@ private fun swapCase(name: String, first: Pair<String, KatalystDsl>?, second: Pa
  */
 fun clickSwapCases(): List<ClickCase> {
     val half = "gain 0.5" to KatalystDsl.of(KatalystStageDsl.Gain(gain = KatalystKnobDsl.Constant(0.5)))
+    val tubeAmp = "drive 0.5, shape tube" to KatalystBuilder().drive(KatalystKnobDsl.Constant(0.5)).shape("tube").node
     val room = "room (reverb wet .5 size 3)" to KatalystDsl.of(
         KatalystStageDsl.Reverb(wet = KatalystKnobDsl.Constant(0.5), size = KatalystKnobDsl.Constant(3.0)),
     )
@@ -300,6 +301,10 @@ fun clickSwapCases(): List<ClickCase> {
         swapCase(name = "into a room", first = null, second = room),
         swapCase(name = "into a delay", first = null, second = echo),
         swapCase(name = "out of a room (drain)", first = room, second = half, config = drainConfig),
+        // The shape stage (KLANG-00467) has no switch of its own: the swap's fade is its only edge, in and out (its DC
+        // decay drains).
+        swapCase(name = "into a shape (drive 0.5, tube)", first = null, second = tubeAmp),
+        swapCase(name = "out of a shape (drive 0.5, tube)", first = tubeAmp, second = half, config = drainConfig),
     )
 }
 

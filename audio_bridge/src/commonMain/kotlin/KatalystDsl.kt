@@ -266,7 +266,7 @@ data class KatalystDsl(val stages: List<KatalystStageDsl>) {
  * coerced. The Motor stays raw, so a knob is never clamped beyond what
  * the underlying DSP already does. **The exceptions are the knobs fixed per chain**, plain numbers because they size
  * or pick something when the chain is built, so a slot there could never move, and the type says so:
- * [Compressor.lookahead] (a delay ring, phase 3 step 12 C2) and [Distort.shape]. The other is
+ * [Compressor.lookahead] (a delay ring, phase 3 step 12 C2), [Distort.shape] and [Shape.shape]. The other is
  * [Eq]: its sections stay the [IgnitorDsl.EqSection] the voice uses (decision Q2, E2).
  *
  * **Every knob keeps the name and the scale of its sprudel door**, so a number means the same
@@ -478,6 +478,26 @@ sealed interface KatalystStageDsl {
     ) : KatalystStageDsl
 
     /**
+     * The waveshaper alone: the voice's `shape` at the bus position (KLANG-00467, cylinder amp step 1). The curve at
+     * unity drive, then the DC blocker, the [Distort] stage's law with the drive at exactly 1 (`DistortionCore`), left
+     * and right each through a core of their own. A boost before it is the arithmetic (`mul`) or the chain's `drive`,
+     * which is gain without a curve, as on a voice: `k.drive(0.3).shape("tube")`.
+     *
+     * **Never off**: there is no amount to switch it with (an amount of 0 is not the identity for a curve; that is why
+     * [Distort] cannot write "the curve at unity drive", decision D5 of KLANG-00466). It runs for as long as its chain
+     * runs; a chain swap fades whole chains. Its DC blocker is the house pole, as [Distort]'s, and its decay after the
+     * input stops is a tail the chain reports.
+     *
+     * It runs at the bus's rate: for less aliasing, write it inside a region
+     * (`oversampleAtLeast(2) { it.drive(0.3.kat).shape("tube") }`).
+     *
+     * @param shape the waveshaper as an INDEX into [DistortionShapes.names]; the doors take a name. A plain number fixed
+     *   with the chain, never a slot, as [Distort.shape]. An unknown or out-of-range index is `soft`.
+     */
+    @WireName("shape")
+    data class Shape(val shape: Int = DistortionShapes.SOFT_INDEX) : KatalystStageDsl
+
+    /**
      * Sidechain duck: this cylinder is pulled down whenever the cylinder it listens to sounds.
      *
      * **Declared in the list, but run outside it**, as it is today: ducking needs every cylinder
@@ -526,6 +546,12 @@ sealed interface KatalystStageDsl {
      * signal AND what the room hears: the room hears the cab. The same `eq` written AFTER it shapes
      * dry and tail together, after the room. Both are legitimate mixes and the list order is how
      * they are told apart.
+     *
+     * **The doors that build it.** `k.eq(e => e.band(...).tap(...))` writes bells and taps; the filter doors
+     * `k.lowpass(freq, q, configure)`, `k.highpass(...)`, `k.bandpass(freq, q)` and `k.notch(freq, q)` (KLANG-00467,
+     * cylinder amp step 1) each append ONE stage of this kind holding that filter's sections, the voice's filter as its
+     * optimizer fuses it (a `passes` cascade as N sections on the Butterworth q ladder). Two doors in a row are two
+     * stages; merging them is the Katalyst optimizer's (KLANG-00468), not a door's.
      *
      * @param sections the sections in written order; an empty list is a transparent stage.
      */
