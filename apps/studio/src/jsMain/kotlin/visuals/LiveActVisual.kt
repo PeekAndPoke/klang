@@ -21,6 +21,7 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -38,23 +39,24 @@ fun Tag.LiveActVisual() = comp {
  * The live act for whatever plays in the app (KLANG-00449): the band Notstrom on its stage, playing the song on the
  * stage of the app (the Spine's `playbacks.nowPlaying`).
  *
- * The band needs the song a little ahead of the sound, so the playing code is read ahead as it plays ([SongReading],
- * which says how far and its limits). The band is there as soon as the first stretch is read, and plans on as the song
- * grows. The music itself is the app's: the live act follows the playback's time ([FollowedPlayback]) and starts and
+ * The band needs the song a little ahead of the sound, so the playback's cycles are read ahead as it plays
+ * ([SongReading], which says how far and its limits): the band plays the notes that sound (KLANG-00450). The band is
+ * there as soon as the first stretch is read, and plans on as the song grows. The music itself is the app's: the live act follows the playback's time ([FollowedPlayback]) and starts and
  * stops nothing, so there is no walk-in here. Its loudness is read from the player's analyser ([PlayingMusic]).
  *
- * Known limits of the studio's, for now (the reading's own are [SongReading]'s). A change of the code or of the tempo
- * makes the band anew. The stage says the code in the editor, not the code that plays: a song edited and not played
- * again is read as edited. And Esc closes the visual here, so of the live act's two keys that give the camera back
- * only 0 is of use.
+ * A change of the code while it plays reaches the band with the sound: the band plays on, and what it read ahead is
+ * read anew ([SongReading]). Known limits of the studio's, for now (the reading's own are [SongReading]'s). After a
+ * change of the tempo while it plays the notes are right at once, but the band's bar length (its nods, the lights'
+ * beat) stays the old tempo's until the song is played again: the tempo slider does not tell `nowPlaying`. And Esc
+ * closes the visual here, so of the live act's two keys that give the camera back only 0 is of use.
  */
 class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
 
     /** A show that is ready to be seen, and a key that is another one for every show. */
     private class Ready(val show: Show, val key: String)
 
-    /** What plays, as far as it matters to the band: another code, tempo or playback is another show. */
-    private data class Playing(val code: String, val rpm: Double, val playback: KlangCyclicPlayback)
+    /** What plays, as far as it matters to the band: another playback, or one played at another tempo, is another show. */
+    private data class Playing(val rpm: Double, val playback: KlangCyclicPlayback)
 
     private val scope = MainScope()
     private var shows = 0
@@ -71,18 +73,13 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
     private val songs = LatestRead<Playing, SongReading>(
         scope = scope,
         read = { now ->
-            SongReading.begin(
-                engine = spine.player.scriptEngine(),
-                code = now.code,
-                rpm = now.rpm,
-                heardSec = now.playback.heardSec() ?: 0.0,
-            )
+            SongReading.begin(now.playback)
         },
         changed = { before, now ->
             playing = now != null
 
-            // Another playback, or none: its band leaves at once. The same playback with another code or tempo: its
-            // band plays on, and its song is read on, until the new song's first stretch is read.
+            // Another playback, or none: its band leaves at once. The same playback at another tempo: its band plays
+            // on, and its song is read on, until the first stretch at the new tempo is read.
             if (now == null || now.playback !== before?.playback) {
                 following?.cancel()
                 following = null
@@ -92,7 +89,7 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
         done = { now, reading ->
             following?.cancel()
             following = reading?.let {
-                scope.launch { it.follow { now.playback.heardSec() ?: 0.0 } }
+                scope.launch(start = CoroutineStart.UNDISPATCHED) { it.follow() }
             }
 
             shows++
@@ -113,7 +110,7 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
 
     @Suppress("unused")
     private val nowPlaying by subscribingTo(spine.playbacks.nowPlaying) { now ->
-        songs.want(now?.let { Playing(code = it.code, rpm = it.rpm, playback = it.playback) })
+        songs.want(now?.let { Playing(rpm = it.rpm, playback = it.playback) })
     }
 
     init {

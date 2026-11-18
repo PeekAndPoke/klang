@@ -7,42 +7,6 @@ package io.peekandpoke.klang.apps.common.liveact
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.KlangPattern
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangCycleEvent
-import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
-import io.peekandpoke.ultra.streams.Stream
-import io.peekandpoke.ultra.streams.StreamSource
-
-/** A playback that is told where it is ([heard]) and remembers what it was asked to do. */
-private class FakePlayback : KlangCyclicPlayback {
-    var heard: Double? = null
-    var stops = 0
-
-    override val playbackId: String = "fake"
-    override val signals: Stream<KlangPlaybackSignal> = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle).readonly
-
-    override fun handleFeedback(feedback: KlangCommLink.Feedback) = Unit
-    override fun start() = Unit
-    override fun start(options: KlangCyclicPlayback.Options) = Unit
-
-    override fun stop() {
-        stops++
-    }
-
-    override fun updatePattern(pattern: KlangPattern) = Unit
-    override fun updateRpm(rpm: Double) = Unit
-    override fun reemitVoiceSignals() = Unit
-    override fun heardSec(): Double? = heard
-    override fun heardCycles(): Double? = null
-    override fun rpmAt(cycle: Double): Double = 30.0
-    override fun cycleEvents(cycle: Int): List<KlangCycleEvent> = emptyList()
-
-    override fun setGain(gain: Double, rampSec: Double) = Unit
-
-    override val gain: Double = 1.0
-}
 
 /** A [ShowPlayback] that counts how often it began its playback. */
 private class PlaybackBench {

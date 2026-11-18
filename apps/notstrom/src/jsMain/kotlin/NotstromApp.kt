@@ -43,6 +43,7 @@ import io.peekandpoke.ultra.html.key
 import kotlinx.browser.window
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -80,9 +81,9 @@ fun Tag.NotstromApp(query: String) = comp(
  * stroboscope, fullscreen) right above the button that starts it; `?notest` skips the tests ([skipsTests]) and shows
  * the choices on the start screen. Nothing of the result is sent or kept.
  *
- * For the show the song is compiled and read ahead for the band ([SongReading]) and played for the show alone
- * ([ShowPlayback]): the walk-in begins at once (the click was taken here), and the live act's clock starts the song
- * when the walk-in is over. The live act steps the oversampling down by itself where the frames stay slow. While the
+ * For the show the song is compiled once, its playback is made and read ahead for the band ([SongReading]: the band
+ * plays the notes that will sound), and it is played for the show alone ([ShowPlayback]): the walk-in begins at once
+ * (the click was taken here), and the live act's clock starts the song when the walk-in is over. The live act steps the oversampling down by itself where the frames stay slow. While the
  * show plays, a moving mouse brings up a drawer at the bottom ([ShowDrawer]: fullscreen, the oversampling, the volume). What fails on
  * the way is said on the start screen, in plain words.
  *
@@ -479,16 +480,17 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val player = ensurePlayer()
         val song = BuiltInSongs.derSchmetterling
         val pattern = compile(code = song.code)
-        val reading = SongReading.begin(
-            engine = createScriptEngine(),
-            code = song.code,
-            rpm = song.rpm,
-            heardSec = 0.0,
-        ) ?: throw NotStarted("The song could not be read for the band.")
+        // made now and started after the walk-in: it answers its cycles before it sounds, so the band reads the very
+        // notes that will sound (KLANG-00450). Its tempo is set first: the cycles are read at the tempo it starts at.
+        val playback = player.play(pattern)
+
+        playback.updateRpm(song.rpm)
+
+        val reading = SongReading.begin(playback)
 
         val transport = ShowPlayback(
             begin = {
-                player.play(pattern).also { it.start(KlangCyclicPlayback.Options(rpm = song.rpm)) }
+                playback.also { it.start(KlangCyclicPlayback.Options(rpm = song.rpm)) }
             },
         )
 
@@ -516,7 +518,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         )
 
         beside = scope.launch {
-            launch { reading.follow { transport.time } }
+            launch(start = CoroutineStart.UNDISPATCHED) { reading.follow() }
 
             // the figures load while the start screen still says that the show gets ready: where the band never stands,
             // the start screen says so instead of waiting for ever

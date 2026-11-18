@@ -202,6 +202,20 @@ class SongSpec : StringSpec({
         s.byTag.getValue("bass").map { it.v } shouldBe listOf(1.0, 0.5, 1.0, 0.5)
     }
 
+    "a song drops what starts at a moment or later, and is read anew only where something went" {
+        val s = Song(rpm = 30.0)
+
+        s.add(listOf(event(1.0, "lead", note = "c4"), event(2.0, "lead", note = "e4"), event(3.0, "kick")))
+        s.drop(from = 3.5)
+        s.version shouldBe 1
+
+        s.drop(from = 2.0)
+        s.version shouldBe 2
+        s.notesOf("lead").map { it.midi } shouldBe listOf(60)
+        s.times(listOf("lead", "kick")) shouldBe listOf(1.0)
+        s.drumHits() shouldBe emptyList()
+    }
+
     "a song forgets what starts before a moment, and is read anew only where something went" {
         val s = Song(rpm = 30.0)
 

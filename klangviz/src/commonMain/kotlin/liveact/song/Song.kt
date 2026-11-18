@@ -223,6 +223,23 @@ class Song(rpm: Double, val grows: Boolean = true) {
         changed()
     }
 
+    /**
+     * Drops the events that start at [from] (seconds) or later: what was read ahead and will not sound as it was read
+     * (the song's code or tempo changed while it plays). What began before stays, it has sounded. The new stretch is
+     * then [add]ed; asked for both before the band moves again, the band plans once.
+     */
+    fun drop(from: Double) {
+        if (known.values.none { list -> list.any { it.t >= from } }) {
+            return
+        }
+
+        for (list in known.values) {
+            list.removeAll { it.t >= from }
+        }
+
+        changed()
+    }
+
     /** What was read is to be read again. */
     private fun changed() {
         version++
