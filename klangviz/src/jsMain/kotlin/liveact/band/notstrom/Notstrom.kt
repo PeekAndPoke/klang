@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.notstrom
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
+import io.peekandpoke.klang.viz.liveact.Timed
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.StagePlot
@@ -28,12 +29,17 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
 import io.peekandpoke.klang.viz.liveact.band.members.Members
+import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
+import io.peekandpoke.klang.viz.liveact.band.skills.IdleInUse
+import io.peekandpoke.klang.viz.liveact.band.skills.IdleSkill
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
 import io.peekandpoke.klang.viz.liveact.band.skills.LookPlaces
 import io.peekandpoke.klang.viz.liveact.band.skills.crowdSpots
+import io.peekandpoke.klang.viz.liveact.band.skills.idlesAt
 import io.peekandpoke.klang.viz.liveact.band.skills.lookAt
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Gltf
@@ -164,6 +170,8 @@ class Notstrom private constructor(
         part = SchmetterlingCast.marimbaNotes(show),
         traits = character(SchmetterlingCast.MARIMBA).traits,
         seed = character(SchmetterlingCast.MARIMBA).seed,
+        crossing = Members.of(SchmetterlingCast.MARIMBA).skills.filterIsInstance<CrossedMallets>().firstOrNull(),
+        arrives = StagePlot.ENTRANCES.getValue(SchmetterlingCast.MARIMBA).end,
     )
 
     /**
@@ -199,6 +207,7 @@ class Notstrom private constructor(
             bearing = Members.of(cast.player).bearing,
             outline = cast.outline ?: cast.design.outline,
             looks = headLooksOf(cast.player),
+            idles = idlesOf(player = cast.player, part = cast.part(show)),
         )
     }
 
@@ -214,10 +223,37 @@ class Notstrom private constructor(
     }
 
     /**
-     * What goes with the figures as they are posed at last: the snakes on a head. Call it once everything that turns
-     * a head has done so for this frame (the looks between the players come after [play]).
+     * Which of [player]'s idle skills are in use at a time (see [idlesAt]): by the skills on their sheet, with their own
+     * chance (as for [headLooksOf]), within the pauses of [part] (their part of the song, read on its own: it is
+     * refreshed here, apart from the one they play from), and only once they are at their place (not on their
+     * walk-in, see [StagePlot.ENTRANCES]). None ever where the sheet has no idle skill.
+     */
+    private fun idlesOf(player: Player, part: Part<out Timed>): (Double) -> List<IdleInUse> {
+        val member = Members.of(player)
+
+        if (member.skills.none { it is IdleSkill }) {
+            return { emptyList() }
+        }
+
+        val roll = { index: Double -> show.own(index, member.character.seed) }
+        val arrives = StagePlot.ENTRANCES.getValue(player).end
+
+        return { t ->
+            part.refresh()
+            idlesAt(skills = member.skills, t = t, roll = roll, plays = part.events, arrives = arrives)
+        }
+    }
+
+    /**
+     * What goes with the figures as they are posed at last: a string player's hand at the head (an idle skill, see
+     * `StringPlayer.afterPose`), and the snakes on a head. Call it once everything that turns a head has done so for
+     * this frame (the looks between the players come after [play]).
      */
     fun afterPose(t: Double) {
+        for ((_, stringPlayer) in strings) {
+            stringPlayer.afterPose()
+        }
+
         for (hair in snakes) {
             hair.update(t)
         }

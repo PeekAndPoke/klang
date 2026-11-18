@@ -80,8 +80,27 @@ data class SkillTiming(
      * of the show gives the same answer whenever it is asked for.
      */
     fun inUse(t: Double, roll: (Double) -> Double): Double {
+        val use = takenAt(t = t, roll = roll) ?: return 0.0
+        val x = t - use.start
+
+        return smooth(x / rise) * smooth((use.hold + rise - x) / fall)
+    }
+
+    /**
+     * The use of the slot [t] lies in, from its start to the end of its fall (seconds into the show), where the
+     * chance is taken and no cool-down holds it back; null where it is not. It may lie before or after [t]: where
+     * [t] lies within it, the skill is in use at [t] (see [inUse]), else not. [roll]: as for [inUse].
+     */
+    fun spanAt(t: Double, roll: (Double) -> Double): ClosedFloatingPointRange<Double>? {
+        val use = takenAt(t = t, roll = roll) ?: return null
+
+        return use.start..(use.start + use.hold + rise)
+    }
+
+    /** The use of the slot [t] lies in, where its roll takes the chance and no cool-down holds it back; else null. */
+    private fun takenAt(t: Double, roll: (Double) -> Double): Use? {
         val slot = slotOf(t)
-        val use = useOf(slot = slot, roll = roll) ?: return 0.0
+        val use = useOf(slot = slot, roll = roll) ?: return null
         var earlier = slot - 1
 
         // an earlier use that ends within the cool-down before this one begins holds it back (a use ends within
@@ -90,14 +109,12 @@ data class SkillTiming(
             val before = useOf(slot = earlier, roll = roll)
 
             if (before != null && use.start - (before.start + before.hold + rise) < cooldown) {
-                return 0.0
+                return null
             }
 
             earlier -= 1
         }
 
-        val x = t - use.start
-
-        return smooth(x / rise) * smooth((use.hold + rise - x) / fall)
+        return use
     }
 }

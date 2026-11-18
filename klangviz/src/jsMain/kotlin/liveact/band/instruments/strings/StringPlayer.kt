@@ -17,7 +17,12 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.members.Bearing
+import io.peekandpoke.klang.viz.liveact.band.skills.HandGoal
+import io.peekandpoke.klang.viz.liveact.band.skills.HeadScratch
+import io.peekandpoke.klang.viz.liveact.band.skills.IdleInUse
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.band.skills.Slouch
+import io.peekandpoke.klang.viz.liveact.band.skills.scratchHand
 import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
@@ -25,6 +30,7 @@ import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.song.Strum
 import io.peekandpoke.klang.viz.liveact.vec
+import io.peekandpoke.klang.workshop.threejs.Quaternion
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.angleTo
 import io.peekandpoke.klang.workshop.threejs.applyAxisAngle
@@ -32,6 +38,7 @@ import io.peekandpoke.klang.workshop.threejs.crossVectors
 import io.peekandpoke.klang.workshop.threejs.dot
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
+import io.peekandpoke.klang.workshop.threejs.lerp
 import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.klang.workshop.threejs.worldToLocal
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
@@ -87,6 +94,19 @@ private class Pluck(
 private class Fret(val along: Double, val hold: Double, val across: Double, val pick: Double, val wide: Double)
 
 /**
+ * The strumming hand's idle skills in use in one frame ([idle]), and what it would do without them: the [wrist]'s
+ * place, where the hand [points] and where the elbow bends to ([pole]), all in the world; and how the [arm]'s bones
+ * were turned before the hand was placed (see `StringPlayer.ARM`), to place it again from there.
+ */
+private class IdleHand(
+    val idle: List<IdleInUse>,
+    val wrist: Vector3,
+    val points: Vector3,
+    val pole: Vector3,
+    val arm: List<Quaternion>,
+)
+
+/**
  * A string player: a strung instrument of the [design] (a bass, a guitar) on a strap, played by [rig].
  *
  * [notes]: sorted by time, one per pluck or strum; the nod goes by the [show]'s tempo. [traits]: how the player
@@ -96,6 +116,9 @@ private class Fret(val along: Double, val hold: Double, val across: Double, val 
  * outline, the [design]'s own unless given; [looks]: where the member's skills ask the head to look at a time (see
  * `lookAt`, the last in rank first; none unless given): the head comes up from the instrument and turns to each as
  * far as it is asked, each over the ones before it;
+ * [idles]: the member's idle skills in use at a time, in the order of rank (see `idlesAt`; none unless given): the
+ * strumming hand leaves the strings for them (a scratch of the head, a slouch), each over
+ * the ones after it, and a slouch settles the body;
  * [straighten]: when the player straightens up from the instrument (null: never; `?straight=1` holds everyone
  * straight, to look at the pose).
  */
@@ -109,6 +132,7 @@ class StringPlayer(
     bearing: Bearing? = null,
     outline: BodyOutline = design.outline,
     private val looks: (Double) -> List<Look> = { emptyList() },
+    private val idles: (Double) -> List<IdleInUse> = { emptyList() },
     private val straighten: Straighten? = Straighten(every = 21.0, chance = 0.55),
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
@@ -139,6 +163,9 @@ class StringPlayer(
      * past, the plucks begin with the last one forgotten: the hands stay where it left them.
      */
     private var planned: StringPlan = StringPlan()
+
+    /** This frame's strumming hand, where an idle skill at the head is in use: placed again in [afterPose]. */
+    private var idleHand: IdleHand? = null
 
     init {
         part.refresh()
@@ -263,6 +290,9 @@ class StringPlayer(
         instrument.light(lit)
 
         val playing = min(1.0, energy)
+        // what the member does with the strumming hand while the part pauses, and how far a slouch settles the body
+        val idle = idles(t)
+        val settle = idle.filter { it.skill is Slouch }.maxOfOrNull { it.share } ?: 0.0
 
         // the body: knees giving on the beat, the trunk leaning, the head going with the beat
         val beat = t * show.bpm / 60
@@ -287,6 +317,14 @@ class StringPlayer(
             rig.turn("hips", Z_AXIS, -0.06 * weight)
             rig.turn("belly", Z_AXIS, 0.05 * weight)
         }
+
+        if (settle > 0) {
+            // a slouch: the weight settles, down and over the right leg, the hips tilting with it
+            rig.moveHips(vec(-SETTLE_OVER * s * settle, -SETTLE_DOWN * rig.pelvis.y * settle, 0.0))
+            rig.turn("hips", Z_AXIS, SETTLE_TILT * settle)
+            rig.turn("belly", Z_AXIS, -SETTLE_TILT * settle)
+        }
+
         // now and then the player straightens up from the instrument: the back comes up (a little past upright, and
         // not forward of where a player who leans back already is), the chest opens, the head lifts and looks out
         val up = show.switches.double(Switch.Straight)?.coerceIn(0.0, 1.0)
@@ -298,6 +336,11 @@ class StringPlayer(
         rig.turn("chest", X_AXIS, -0.06 * up)
         rig.turn("chest", Z_AXIS, -0.05 * sway)
         rig.turn("chest", Y_AXIS, 0.18)
+
+        if (settle > 0) {
+            // and the shoulders drop: the chest sinks a little forward
+            rig.turn("chest", X_AXIS, SETTLE_SINK * settle)
+        }
 
         // where the member's skills ask the head to look (a glance at the camera every now and then): the head comes
         // up from the instrument and turns to each look as far as it is asked, each over the ones before it, and
@@ -361,23 +404,6 @@ class StringPlayer(
         fun place(x: Double, y: Double, z: Double): Vector3 =
             at.clone().addScaledVector(axisX, x).addScaledVector(axisY, y).addScaledVector(axisZ, z)
 
-        // a hand points toward what it plays, but a wrist only bends so far: never more than [most] radians off the
-        // line of its forearm (bent further it looked broken, the maintainer, 2026-11-16)
-        fun aim(side: Side, toward: Vector3, most: Double) {
-            val hand = rig.bone("hand$side").getWorldPosition(vec())
-            val forearm = hand.sub(rig.bone("wrist$side").getWorldPosition(vec())).normalize()
-            val want = toward.clone().normalize()
-            val angle = forearm.angleTo(want)
-
-            if (angle > most) {
-                val axis = vec().crossVectors(forearm, want).normalize()
-
-                want.copy(forearm).applyAxisAngle(axis, most)
-            }
-
-            rig.point("hand$side", want)
-        }
-
         // the left hand: under the neck at the note's place, the fingers coming up over the strings
         val fret = fretAt(t)
         // for an upper (lower-sounding) string the fingers reach further round the neck: the wrist comes up and out
@@ -403,11 +429,127 @@ class StringPlayer(
             .addScaledVector(axisY, 0.05 * s)
             .addScaledVector(axisZ, 0.05 * s)
 
-        rig.hand(Side.R, wristR, rig.dir(-0.9, -0.1, -0.7))
-        aim(Side.R, onStrings.clone().sub(wristR), 0.80)
+        idleHand = null
+
+        if (idle.isEmpty()) {
+            rig.hand(Side.R, wristR, rig.dir(-0.9, -0.1, -0.7))
+            aim(Side.R, onStrings.clone().sub(wristR), 0.80)
+        } else {
+            // the strumming hand leaves the strings for what the idle skills ask (see [placeIdleHand]); where one of
+            // them is at the head, the hand is placed again once the head is held at last (see [afterPose])
+            val hand = IdleHand(
+                idle = idle,
+                wrist = wristR,
+                points = onStrings.clone().sub(wristR).normalize(),
+                pole = rig.dir(-0.9, -0.1, -0.7),
+                arm = ARM.map { name -> rig.bone(name).quaternion.clone() },
+            )
+
+            placeIdleHand(hand)
+
+            if (idle.any { it.skill is HeadScratch }) {
+                idleHand = hand
+            }
+        }
 
         rig.eyes?.let { eyes ->
             eyes.emissiveIntensity = 2 + 13 * min(1.6, energy)
         }
+    }
+
+    /**
+     * Places the strumming hand again where an idle skill at the head is in use this frame, from the head as it is
+     * held at last (eye contact turns it after the poses): call it once everything that turns a head has done so. The
+     * arm is put back as it was before the hand was first placed, and placed anew, so the hand is where one placing
+     * from this head would put it. Nothing where no idle skill at the head is in use.
+     */
+    fun afterPose() {
+        val hand = idleHand ?: return
+
+        for ((name, turn) in ARM.zip(hand.arm)) {
+            rig.bone(name).quaternion.copy(turn)
+        }
+
+        rig.update()
+        placeIdleHand(hand)
+    }
+
+    /**
+     * The strumming hand where the idle skills of [hand] ask, each over the ones after it on the sheet: the first in
+     * rank has the hand where it is all there. A goal at the head is taken from the head as it is posed now.
+     */
+    private fun placeIdleHand(hand: IdleHand) {
+        val wrist = hand.wrist.clone()
+        val points = hand.points.clone()
+        val pole = hand.pole.clone()
+
+        for (used in hand.idle.asReversed()) {
+            val goal = idleHand(used)
+            val w = used.share
+
+            goal.blend(wrist = wrist, pole = pole, w = w)
+            points.lerp(goal.points, w).normalize()
+        }
+
+        rig.hand(Side.R, wrist, pole)
+        aim(Side.R, points, 0.80)
+    }
+
+    /**
+     * A hand of [side] points toward [toward] (a world direction), but a wrist only bends so far: never more than
+     * [most] radians off the line of its forearm (bent further it looked broken, the maintainer, 2026-11-16).
+     */
+    private fun aim(side: Side, toward: Vector3, most: Double) {
+        val hand = rig.bone("hand$side").getWorldPosition(vec())
+        val forearm = hand.sub(rig.bone("wrist$side").getWorldPosition(vec())).normalize()
+        val want = toward.clone().normalize()
+        val angle = forearm.angleTo(want)
+
+        if (angle > most) {
+            val axis = vec().crossVectors(forearm, want).normalize()
+
+            want.copy(forearm).applyAxisAngle(axis, most)
+        }
+
+        rig.point("hand$side", want)
+    }
+
+    /**
+     * Where the strumming hand goes for the idle skill [used], at the time of its use: at the head (as the head is
+     * posed now) for a scratch, before the strings for a slouch.
+     */
+    private fun idleHand(used: IdleInUse): HandGoal {
+        return when (used.skill) {
+            is HeadScratch -> scratchHand(rig = rig, side = Side.R, since = used.since)
+
+            is Slouch -> {
+                // the hand off the strings, hanging limp before the body of the instrument
+                val wrist = instrument.group.position.clone()
+                    .addScaledVector(rig.dir(-1.0, 0.0, 0.0), SLOUCH_ASIDE * s)
+                    .addScaledVector(rig.dir(0.0, 1.0, 0.0), SLOUCH_UP * s)
+                    .addScaledVector(rig.dir(0.0, 0.0, 1.0), SLOUCH_AHEAD * s)
+
+                HandGoal(wrist = wrist, points = rig.dir(0.0, -1.0, 0.25), pole = rig.dir(-0.9, -0.3, -0.5), round = vec(), drop = vec())
+            }
+        }
+    }
+
+    private companion object {
+        /** The bones of the strumming arm, from the shoulder to the hand: what placing the hand turns. */
+        val ARM = listOf("elbowR", "wristR", "handR")
+
+        /**
+         * A slouch: how far the hips go over the right leg and down (a share of their height), how far they tilt, how
+         * far the chest sinks.
+         */
+        const val SETTLE_OVER = 0.03
+        const val SETTLE_DOWN = 0.02
+        const val SETTLE_TILT = 0.04
+        const val SETTLE_SINK = 0.06
+
+        /** A slouch: where the hanging hand's wrist is, from the instrument's middle: to the right, up and ahead. */
+        const val SLOUCH_ASIDE = 0.10
+        const val SLOUCH_UP = 0.10
+        const val SLOUCH_AHEAD = 0.10
     }
 }

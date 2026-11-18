@@ -18,6 +18,7 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.StickPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.Stroke
 import io.peekandpoke.klang.viz.liveact.band.instruments.holdStick
 import io.peekandpoke.klang.viz.liveact.band.instruments.strokeAt
+import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.beyond
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -37,6 +38,7 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 // The marimba player: stands behind a marimba and plays notes with four mallets, two in each hand. Which bar is hit
@@ -59,6 +61,10 @@ private class MalletHit(
  * mallets, two in each hand: a single note with a hand's inner mallet, notes that sound together with as many
  * mallets as they need (which hand plays which: [planMarimba]). She moves with the music by her [traits], her chance
  * drawn under [seed].
+ *
+ * [crossing]: where her sheet has the skill, she crosses her mallets below her head for a moment before a phrase and
+ * after it (see [CrossedMallets]); without it, never. [arrives]: when she is at her place (her walk-in's end): before
+ * her first note the mallets cross only from then on.
  */
 class MarimbaPlayer(
     private val show: Show,
@@ -66,6 +72,8 @@ class MarimbaPlayer(
     private val part: Part<Note>,
     traits: Traits,
     seed: Double = 2.0,
+    private val crossing: CrossedMallets? = null,
+    private val arrives: Double = Double.NEGATIVE_INFINITY,
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
     private val s: Double = rig.s
@@ -174,7 +182,13 @@ class MarimbaPlayer(
         // into position a few cycles ahead: the arms start to rise three cycles before her first note and she stands
         // ready, mallets over the bars, a good cycle before it
         val cycle = 240 / show.bpm
-        val up = max(smooth(1 - (until - 1.2 * cycle) / (1.8 * cycle)), 1 - smooth((since - 1.4) / 1.2))
+        val up = max(smooth(1 - (until - READY * cycle) / (RISE * cycle)), 1 - smooth((since - DONE) / FALL))
+        // where she has the skill, she crosses her mallets below her head for a moment before a phrase and after
+        // it: they rise from there to play (as above, from three cycles before the note) and come down into it when
+        // she is done (as above, all down 2.6 s after the last note). How far the crossed mallets show: as far as
+        // they are crossed and she is not playing; 0 where they are not
+        val crossed = crossing?.at(t = t, plays = notes, rises = (READY + RISE) * cycle, falls = DONE + FALL, arrives = arrives) ?: 0.0
+        val bones = crossed * (1 - up)
 
         val hands = listOf(Side.L, Side.R).associateWith { side ->
             val shoulder = rig.shoulder.getValue(side)
@@ -248,6 +262,11 @@ class MarimbaPlayer(
         mover.apply(rig, t)
         rig.turn("head", Y_AXIS, 0.5 * (middle - shift) / s)
 
+        if (bones > 0) {
+            // the mallets crossed below her head: the head up, level and still, looking straight ahead
+            rig.faceTo(rig.root.localToWorld(vec(0.0, rig.height + 0.10 * s, 4.0 * s)), bones)
+        }
+
         for (side in listOf(Side.L, Side.R)) {
             val foot = rig.ankle.getValue(side).clone()
 
@@ -274,9 +293,13 @@ class MarimbaPlayer(
                 mesh = null,
                 reach = sqrt(max(0.25 * held * held, held * held - half.lengthSq())),
             )
+            val heads = listOf(1.0, -1.0).map { way -> rig.root.localToWorld(hand.tip.clone().addScaledVector(half, way)) }
 
-            for ((mallet, way) in marimba.mallets.getValue(side).zip(listOf(1.0, -1.0))) {
-                val head = rig.root.localToWorld(hand.tip.clone().addScaledVector(half, way))
+            if (bones > 0) {
+                crossMallets(side = side, grip = grip, heads = heads, share = bones)
+            }
+
+            for ((mallet, head) in marimba.mallets.getValue(side).zip(heads)) {
                 val along = head.clone().sub(grip).normalize()
 
                 mallet.position.copy(head).addScaledVector(along, -marimba.malletLength / 2)
@@ -291,12 +314,74 @@ class MarimbaPlayer(
         }
     }
 
+    /**
+     * The hand of [side] takes its mallets [share] of the way (0 to 1) from where they are ([grip], the hand, and the
+     * two [heads], all in the world; changed in place) to the crossed mallets below her head: the hand low before
+     * the chest on its own side, its two mallets nearly closed so they read as one bone, pointing up across to the
+     * other side, the heads out past the other shoulder; the other hand's the mirror, so the two bones cross in an X
+     * right below her chin, the left one a little before the right. On the way there and back the heads swing up on
+     * their own side first, before the body, so the two hands' never meet. The arm then reaches for the hand's place,
+     * the elbow low on its own side.
+     */
+    private fun crossMallets(side: Side, grip: Vector3, heads: List<Vector3>, share: Double) {
+        val shoulder = rig.shoulder.getValue(side)
+        val ahead = shoulder.z + (SKULL_AHEAD + (if (side == Side.L) SKULL_APART else 0.0)) * s
+        val hand = vec(side.sign * SKULL_HAND_X * s, shoulder.y - SKULL_HAND_DOWN * s, ahead)
+        val bone = vec(-side.sign * SKULL_ACROSS, SKULL_RISE, -SKULL_BACK).normalize()
+        val middle = hand.clone().addScaledVector(bone, marimba.malletLength * GRIP)
+        // on the way: up on its own side, before the body
+        val via = vec(side.sign * SKULL_VIA_X * s, shoulder.y - SKULL_VIA_DOWN * s, ahead + SKULL_VIA_AHEAD * s)
+        val b = share
+        val c = 1 - b
+
+        for ((head, way) in heads.zip(listOf(1.0, -1.0))) {
+            val crossed = rig.root.localToWorld(middle.clone().add(vec(0.0, 0.0, way * SKULL_CLOSED * s)))
+            val swing = rig.root.localToWorld(via.clone())
+
+            head.multiplyScalar(c * c).addScaledVector(swing, 2 * b * c).addScaledVector(crossed, b * b)
+        }
+
+        grip.lerp(rig.root.localToWorld(hand), b).addScaledVector(rig.dir(0.0, 0.0, 1.0), SKULL_GRIP_AHEAD * s * sin(PI * b))
+
+        rig.hand(side, grip, rig.dir(0.6 * side.sign, -1.0, -0.5).lerp(rig.dir(side.sign * 1.0, -1.0, -0.2), b).normalize())
+        rig.point("hand$side", heads[0].clone().add(heads[1]).multiplyScalar(0.5).sub(grip))
+    }
+
     private companion object {
         /** Where along a mallet the hand holds it, from its head, as a share of its length. */
         const val GRIP = 0.80
 
+        /**
+         * When she is up to play: ready over the bars [READY] cycles before a note, rising to it over the [RISE]
+         * cycles before that; after a note she stays up [DONE] seconds and comes down over [FALL] seconds.
+         */
+        const val READY = 1.2
+        const val RISE = 1.8
+        const val DONE = 1.4
+        const val FALL = 1.2
+
         /** How the body weighs where the hands play: this many moments either side of now, this many seconds apart. */
         const val WEIGH_STEPS = 6
         const val WEIGH_STEP = 0.45
+
+        /**
+         * The crossed mallets (see [crossMallets]), in the figure's measure: the hand so far out from her middle and
+         * down from the shoulder, so far ahead of the shoulder (the left one so much further, so the bones lie one
+         * before the other); the bone so much across for so much up and so much back toward the shoulder; a hand's
+         * two heads so far apart (before and behind each other: nearly closed). On the way the heads swing by a place
+         * so far out, down from the shoulder and further ahead, and the hand goes so far ahead of the straight way.
+         */
+        const val SKULL_HAND_X = 0.09
+        const val SKULL_HAND_DOWN = 0.06
+        const val SKULL_AHEAD = 0.14
+        const val SKULL_APART = 0.035
+        const val SKULL_ACROSS = 0.85
+        const val SKULL_RISE = 0.45
+        const val SKULL_BACK = 0.15
+        const val SKULL_CLOSED = 0.012
+        const val SKULL_VIA_X = 0.26
+        const val SKULL_VIA_DOWN = 0.02
+        const val SKULL_VIA_AHEAD = 0.12
+        const val SKULL_GRIP_AHEAD = 0.06
     }
 }

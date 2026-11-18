@@ -17,6 +17,8 @@ val SKALPELL: Member = Member(
     // loose and restless: uneven, looks round a lot, skips nods
     character = Character(
         seed = 37.0,
+        // how wild: a mix of both
+        wildness = 5,
         traits = Traits(
             depth = 0.8, beats = listOf(0.9, 0.55, 0.9, 0.55), lag = 0.02, soft = 0.13, chance = 0.6, skip = 0.18,
             look = 0.30, tilt = 0.10, lean = 0.03,

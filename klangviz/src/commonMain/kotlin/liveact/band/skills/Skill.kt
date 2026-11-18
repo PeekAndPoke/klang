@@ -25,6 +25,9 @@ import kotlin.math.min
  * head once it is all there, and one that begins while another is in use eases the head over from it instead of
  * snapping. The eye contact stays apart: it acts after the poses and over them (see `eyeContact`), as it did before
  * there were skills, and it stands first on every sheet that has it.
+ *
+ * Not every skill is timed: the crossed mallets ([CrossedMallets]) go by the member's part, and an idle skill
+ * ([IdleSkill]) by chance within the pauses of the part. The idle ones rank among themselves in the sheet's order.
  */
 sealed interface Skill
 

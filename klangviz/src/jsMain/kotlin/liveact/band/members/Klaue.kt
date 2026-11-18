@@ -23,6 +23,8 @@ val KLAUE: Member = Member(
     // others
     character = Character(
         seed = 41.0,
+        // how wild: animal
+        wildness = 8,
         traits = Traits(
             fits = Traits.Fits(every = 12.0, share = 0.22, calm = 0.30),
             depth = 0.85, beats = listOf(1.0, 0.85, 1.0, 0.85), lag = -0.03, soft = 0.11, chance = 0.25,

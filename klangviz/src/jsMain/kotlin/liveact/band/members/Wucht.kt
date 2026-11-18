@@ -17,6 +17,8 @@ val WUCHT: Member = Member(
     // the engine of the band: on every beat, steady, a touch ahead
     character = Character(
         seed = 11.0,
+        // how wild: the most animal of the band
+        wildness = 9,
         traits = Traits(
             depth = 1.0, beats = listOf(1.0, 0.7, 0.9, 0.7), lag = -0.02, soft = 0.10, chance = 0.15,
             look = 0.05, tilt = 0.03, lean = 0.01,

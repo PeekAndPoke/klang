@@ -53,9 +53,15 @@ data class Dress(
 
 /**
  * A member's character: how they move with the music apart from playing (see `Mover`), the [traits], with the [seed]
- * of their own chance.
+ * of their own chance; and how wild they are, [wildness], a whole number from 0 (elegant) to 10 (animal): the idle
+ * skills on their sheet fit it (see `fits`; the maintainer, 2026-11-18: "we should apply stats ... 0 = elegant and
+ * 10 = animal").
  */
-data class Character(val seed: Double, val traits: Traits)
+data class Character(val seed: Double, val traits: Traits, val wildness: Int) {
+    init {
+        require(wildness in 0..10) { "a wildness is from 0 to 10: $wildness" }
+    }
+}
 
 /**
  * How a member carries themselves over an instrument on a strap: [lean], how the trunk leans (back is negative);

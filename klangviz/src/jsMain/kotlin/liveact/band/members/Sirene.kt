@@ -28,6 +28,8 @@ val SIRENE: Member = Member(
     // the frontwoman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
     character = Character(
         seed = 67.0,
+        // how wild: elegant, with a little wildness
+        wildness = 2,
         traits = Traits(
             depth = 0.9, beats = listOf(1.0, 0.5, 0.8, 0.5), lag = 0.0, soft = 0.13, chance = 0.2, skip = 0.0,
             look = 0.14, tilt = 0.04, lean = 0.02,
