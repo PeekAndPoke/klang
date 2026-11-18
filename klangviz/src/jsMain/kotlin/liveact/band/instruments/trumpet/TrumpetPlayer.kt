@@ -89,39 +89,24 @@ class TrumpetPlayer(
      */
     class Sound(val note: Note?, val sounding: Double, val high: Double, val blow: Double)
 
+    private companion object {
+        /** Back at her place from a stroll, she turns to the front within this many seconds. */
+        const val TURN_HOME = 3.0
+    }
+
     /** Which way the stroll goes at one moment: how fast, how much it walks (0 to 1), and the turn into its way. */
     private class Facing(val speed: Double, val going: Double, val turn: Double)
 
     /**
      * A stretch in which she has nothing to play and strolls about the front of the stage, from [from] to [to]
-     * seconds. Which way she faces is worked out once per stroll in tenths of a second, as far as it is asked for: the
-     * direction of her way jumps where she turns round or nearly stands, so she follows it with a body's inertia, never
-     * faster than a calm turn.
+     * seconds. Which way she faces on it is worked out once per stroll (see [StrollTurn]): the direction of her way
+     * jumps where she turns round or nearly stands, so she follows it with a body's inertia.
      */
     private inner class Stroll(val from: Double, val to: Double) {
-        private val turns = mutableListOf<Double>()
-        private var now = 0.0
-        private var x = from
-        private val end = min(to, from + 1500) + 0.2
+        private val turn = StrollTurn(from = from, to = to) { x -> facing(this, x).turn }
 
         /** Which way she faces at [t], off the way she faces at her place. */
-        fun turnAt(t: Double): Double {
-            val at = max(0, floor((t - from) / 0.1).toInt())
-
-            while (turns.size < at + 2 && x < end) {
-                // by the shorter way round, and at most 57 degrees a second
-                val want = facing(this, x).turn - now
-
-                now += max(-0.10, min(0.10, atan2(sin(want), cos(want)) * 0.2))
-                turns.add(now)
-                x += 0.1
-            }
-
-            val i = min(turns.size - 2, at)
-            val u = min(1.0, max(0.0, (t - from) / 0.1 - i))
-
-            return turns[i] + (turns[i + 1] - turns[i]) * u
-        }
+        fun turnAt(t: Double): Double = turn.at(t)
     }
 
     private val mover = Mover(show = show, seed = seed, traits = traits)
@@ -191,7 +176,7 @@ class TrumpetPlayer(
         // The rounds differ in length, so it is no clockwork
         // (under the show's seed: the rounds start elsewhere in their order, and her way is another one)
         val z = show.seed
-        val rounds = listOf(listOf(47, 61, 53, 69), listOf(61, 53, 69, 47), listOf(53, 69, 47, 61), listOf(69, 47, 61, 53))[z % 4]
+        val rounds = listOf(listOf(47, 61, 53, 69), listOf(61, 53, 69, 47), listOf(53, 69, 47, 61), listOf(69, 47, 61, 53))[z.mod(4)]
         var x = t - k.from
         var round = 0
 
@@ -239,7 +224,18 @@ class TrumpetPlayer(
 
     /** Her place on the stage at [t], which way she walks, how fast, and how far she has walked in this stroll. */
     fun walkAt(t: Double): Walk {
-        val k = strolls.firstOrNull { t > it.from && t < it.to } ?: return Walk(at = home, turn = homeTurn, speed = 0.0)
+        val k = strolls.firstOrNull { t > it.from && t < it.to }
+
+        if (k == null) {
+            // back from a stroll she may still be turned the way she came (she follows her way with a body's
+            // inertia): she turns to the front over the next seconds, by the shorter way round, and does not snap
+            val ended = strolls.lastOrNull { t >= it.to && t < it.to + TURN_HOME } ?: return Walk(at = home, turn = homeTurn, speed = 0.0)
+            val left = ended.turnAt(ended.to)
+            val turn = atan2(sin(left), cos(left)) * (1 - smooth((t - ended.to) / TURN_HOME))
+
+            return Walk(at = home, turn = homeTurn + turn, speed = 0.0)
+        }
+
         val now = facing(k, t)
         val turn = k.turnAt(t)
 
