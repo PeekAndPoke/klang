@@ -1,6 +1,6 @@
 # KLANG-00451: Live act: the players' plans as plain functions with specs
 
-> **Status (2026-11-17): IN PROGRESS.** Parts 1 to 4 done with commit d699a4b40 (planMarimba, planStrings, planDrums, planTrumpet, each with its spec); part 5, the camera, is open.
+> **Status (2026-11-18): DONE.** Part 5, the camera, done with commit 0441b65cd (chooseLook, chooseKind, LookPlanSpec); all five plans are plain functions with specs.
 >
 > **Part of:** KLANG-00447 (Live act: a band on a stage, played by the song)
 
@@ -38,7 +38,7 @@ against the whole reading:
    **Done** (d699a4b40): `planTrumpet`, with `TrumpetPlanSpec`.
 4. The drummer's lists by limb (`Drummer.plan`). **Done** (d699a4b40): `planDrums`, with `DrumPlanSpec`.
 5. The camera's choice of a look (`Choreography.choose`, `subject`, `kind`): stable through a round whatever the
-   song forgets. **Done** (the commit after 6d065cd84): `chooseLook` and `chooseKind`, going on from a `LookPlan` (the looks begun),
+   song forgets. **Done** (0441b65cd): `chooseLook` and `chooseKind`, going on from a `LookPlan` (the looks begun),
    with `LookPlanSpec`. `Subject`, `Placement`, `RoundKind`, the looks tables, the angles and `ORDER` are in
    `commonMain`; the players who play seldom and the one who strolls are handed in (`Rounds`); the choreography
    asks for each look as before, so the stills are the same.
@@ -52,3 +52,4 @@ are the same as before (the 18 stills).
 
 - 2026-11-16: created.
 - 2026-11-17: IN PROGRESS. Parts 1 to 4 done with commit d699a4b40 (planMarimba, planStrings, planDrums, planTrumpet, each with its spec); part 5, the camera, is open.
+- 2026-11-18: DONE. Part 5, the camera, done with commit 0441b65cd (chooseLook, chooseKind, LookPlanSpec); all five plans are plain functions with specs.
