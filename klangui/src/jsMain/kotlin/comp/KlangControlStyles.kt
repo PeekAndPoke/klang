@@ -1530,12 +1530,11 @@ object KlangControlStyles : StyleSheet("kl-controls") {
     /**
      * The column and everything right of it, side by side, framed on every side in a well's black (the maintainer,
      * 2026-11-02: "Give the entire page a black spacing", "a bit bigger", "Keep the frame, but make it narrow on the
-     * bottom like the other sides", "a wider frame", then "Make the frame thin"), its inner corners cut as a screen's
-     * are ("black triangular corner please"): the [screenCorner] triangles, in the frame's black.
+     * bottom like the other sides", "a wider frame", then "Make the frame thin"), its inner corners square
+     * (2026-11-18: the cut corners of before did not look well in a browser window with rounded corners, "no round
+     * corners at all please").
      */
     val workbenchBody by rule {
-        put("--kl-screen-cut", "14px")
-        put("--kl-screen-bezel", "var(--kl-ground-sunken)")
         put("position", "relative")
         put("display", "flex")
         put("flex", "1")

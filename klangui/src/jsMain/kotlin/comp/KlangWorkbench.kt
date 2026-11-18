@@ -607,20 +607,6 @@ class KlangWorkbench(ctx: Ctx<Props>) : Component<KlangWorkbench.Props>(ctx) {
                 key = "body"
 
                 renderBody(tool = tool, bottom = bottom)
-
-                // The frame's inner corners, cut as a screen's: laid over them, never catching the mouse
-                val corners = listOf(
-                    styles.screenCornerTopLeft,
-                    styles.screenCornerTopRight,
-                    styles.screenCornerBottomLeft,
-                    styles.screenCornerBottomRight,
-                )
-
-                for (corner in corners) {
-                    div(classes = "${styles.screenCorner} $corner") {
-                        attributes["aria-hidden"] = "true"
-                    }
-                }
             }
         }
     }
