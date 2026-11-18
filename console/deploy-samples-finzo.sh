@@ -13,7 +13,7 @@ set -e
 # NOTE: adjust TARGET if the vhost docroot for klang-assets.finzo.de differs.
 
 SOURCE="$(cd "$(dirname "$0")/../../peekandpoke.github.io/klang" && pwd)/"
-TARGET="finzo:/www/htdocs/w0057ac0/finzo/klang-assets.finzo.de/samples/"
+TARGET="finzo:/www/htdocs/w0057ac0/assets/samples/"
 
 echo "Uploading sample mirror: $SOURCE -> $TARGET"
 

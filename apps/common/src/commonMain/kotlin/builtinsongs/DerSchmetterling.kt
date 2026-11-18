@@ -59,7 +59,7 @@ let pedalStock = Ign.fn(x => x)
 let pedalScreamer = Ign.fn(x => x.parallel(
     clean => clean,
     dirt => dirt
-      .highpass(550)
+      .highpass(720)
       .distort(0.20, "soft")
       .lowpass(4200) // the tone knob, half way
       .mul(0.4)  // the clipper only ever sees the mids, the clean bass carries, both aligned
@@ -96,16 +96,16 @@ let preampCrunch = Ign.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
   .distort(0.18, "asym").highpass(100)
-  .lowpass(5800)
+  .lowpass(5500)
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.08, "tube").highpass(120)
+  .distort(0.15, "tube").highpass(120)
   .distort(0.09, "asym").highpass(100)
   .distort(0.35, "soft")
-  .lowpass(5200)                                   // the fizz
+  .lowpass(4800)                                   // the fizz
   .mul(0.67))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
