@@ -38,8 +38,8 @@ to learn a new concept." Asked how far that goes, the maintainer chose:
   is stored and two refusals, not something an author has to learn. No new filter DSP.
 - **The note knobs** (`humanize`, `env`, `adsr`) are not offered on a chain filter. For `analog` the maintainer
   said "we should only offer analog I guess?": the analog filter is not something the EQ engine runs, it needs a
-  filter stage of its own, and no guitar of Der Schmetterling writes it. It is its own ticket, KLANG-00473, after
-  step 1; adding it later breaks nothing (the lambda gains a knob).
+  filter stage of its own, and no guitar of Der Schmetterling writes it. Told so, the maintainer decided the
+  same day: "ok no analog on the katalyst filters then" (KLANG-00473 is closed, not implemented).
 
 D1 to D5, D7 and D10 are confirmed with that; D6 is reversed.
 
@@ -140,3 +140,4 @@ acceptance.
 - 2026-11-18: rewritten as the index of the plan, with its decisions and steps (KLANG-00467 to KLANG-00472).
 - 2026-11-18: the maintainer's rework: the Ignitor's surface, `drive` added, `analog` to KLANG-00473; step 1 starts.
 - 2026-11-18: IN PROGRESS. Klang-Main-Dev, on the maintainer's word of 2026-11-18
+- 2026-11-18: no `analog` on the chain filters (the maintainer); KLANG-00473 closed.
