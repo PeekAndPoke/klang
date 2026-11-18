@@ -1,6 +1,6 @@
 # KLANG-00466: Metal band instruments: the guitar amp on the cylinder, one amp per guitarist
 
-> **Status (2026-11-18): IDEA.** 
+> **Status (2026-11-18): IN PROGRESS.** Klang-Main-Dev, on the maintainer's word of 2026-11-18
 >
 > **Part of:** KLANG-00459 (Metal band instruments: one band, the same instruments in every metal song)
 
@@ -25,6 +25,24 @@ of its own, written so that an agent can carry it out.
 6. A bass guitar rig is prepared in the same style.
 7. The notes on what may not be ideal in the current caricatures are written down.
 
+## Reworked by the maintainer (2026-11-18, to Klang-Main-Dev)
+
+"What I want is simple. I want to be able to express the ignitors of Schmetterling's guitars as Katalysts. So we
+need to add the missing filters. Let us keep the api-surface the same as for the ignitors, so the user does not need
+to learn a new concept." Asked how far that goes, the maintainer chose:
+
+- **The same words and argument order as the Ignitor**: `lowpass`, `highpass`, `bandpass`, `notch`, `eq`, `shape`,
+  and `drive` too (D6 is reversed: a voice chain that says `drive(0.3)` ports word for word).
+- **Numbers and one slot**: `freq` and `q` take a number or a `Kat.param`; `passes` a number. A slot as `passes`,
+  and a slot as `q` with more than one pass, give a clear script error. So D1 to D3 stand: they are how the filter
+  is stored and two refusals, not something an author has to learn. No new filter DSP.
+- **The note knobs** (`humanize`, `env`, `adsr`) are not offered on a chain filter. For `analog` the maintainer
+  said "we should only offer analog I guess?": the analog filter is not something the EQ engine runs, it needs a
+  filter stage of its own, and no guitar of Der Schmetterling writes it. It is its own ticket, KLANG-00473, after
+  step 1; adding it later breaks nothing (the lambda gains a knob).
+
+D1 to D5, D7 and D10 are confirmed with that; D6 is reversed.
+
 ## The steps
 
 | Step | Ticket | What | Needs |
@@ -39,7 +57,7 @@ of its own, written so that an agent can carry it out.
 Steps 1 and 2 are engine work and go through the full review loop. Steps 3 to 5 are song work: the maintainer
 listens, and nothing in them is done until the maintainer has.
 
-## Decisions the plan rests on (to confirm before step 1 starts)
+## Decisions the plan rests on (D1 to D7 and D10 settled 2026-11-18, see above)
 
 Each is written with the choice the plan makes. A "no" to one of them changes the step it names.
 
@@ -50,7 +68,7 @@ Each is written with the choice the plan makes. A "no" to one of them changes th
 | D3 | A slot as `q` with more than one pass | Refused, with a script error | A cascade gives every stage its own q (the Butterworth ladder), and a section holds a number or a slot, never an expression: the refusal of Q49 of KLANG-00314 (kotlin typed doors), one case more. |
 | D4 | `analog`, `humanize`, `env`, `adsr` on a chain filter | Not offered | They belong to a note; a cylinder has none. A builder offers only what its host can do. |
 | D5 | `shape` on a chain | A new stage, `Shape` | The `distort` stage is off at an amount of 0, so "the curve at unity drive" cannot be written with it. |
-| D6 | `drive` on a chain | Not added | `drive` is gain without a curve; a chain has `mul`. `powerStock`'s `drive(0.3)` becomes `mul(2.29)`. |
+| D6 | `drive` on a chain | REVERSED 2026-11-18: added, the voice's word. Was: not added | `drive` is gain without a curve; a chain has `mul`. `powerStock`'s `drive(0.3)` becomes `mul(2.29)`. |
 | D7 | `Kat.fn(k => ...)` | Added, the twin of `Ign.fn` | The maintainer's decision of 2026-10-28 for `Ign.fn`: written through it, the editor knows the argument's type and offers its doors. Rig parts become chain functions, so they need the same. |
 | D8 | What the optimizer merges | Adjacent `eq` stages whose knobs are all numbers; never an `eq` holding a `tap` into the one before it; no kill switch | A tap reads its EQ's input, so merging would move what it hears. A slot knob can move while the chain runs, and the stage answers a move as a whole, so merging would change how a move sounds. With both refusals the merged chain renders the same bits as the written one, always, so there is nothing to settle by ear. |
 | D9 | Where the optimizer runs | In the backend, when a chain is registered | The voice's optimizer runs there (`IgnitorRegistry`); the wire carries what was written. |
@@ -120,3 +138,5 @@ acceptance.
 
 - 2026-11-18: created, from the maintainer's question what a shared guitar amp needs.
 - 2026-11-18: rewritten as the index of the plan, with its decisions and steps (KLANG-00467 to KLANG-00472).
+- 2026-11-18: the maintainer's rework: the Ignitor's surface, `drive` added, `analog` to KLANG-00473; step 1 starts.
+- 2026-11-18: IN PROGRESS. Klang-Main-Dev, on the maintainer's word of 2026-11-18

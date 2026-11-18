@@ -1,6 +1,6 @@
 # KLANG-00467: Cylinder amp step 1: lowpass, highpass, bandpass, notch and shape on a Katalyst chain
 
-> **Status (2026-11-18): IDEA.** 
+> **Status (2026-11-18): IN PROGRESS.** Klang-Main-Dev: step 1 starts, decisions settled 2026-11-18
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -30,8 +30,27 @@ No new DSP is needed for the filters: the cylinder's EQ engine already runs all 
 
 ## Decide before implementing
 
-Decisions D1 to D7 and D10 of KLANG-00466 are this step's. Do not start before the maintainer has confirmed them.
-If the code shows one of them cannot hold, stop and report.
+Decisions D1 to D7 and D10 of KLANG-00466 are this step's. Settled by the maintainer on 2026-11-18 (KLANG-00466,
+"Reworked by the maintainer"): D1 to D5, D7 and D10 as written, D6 reversed. If the code shows one of them cannot
+hold, stop and report.
+
+### Added by the rework: `drive` on a chain
+
+The maintainer wants a voice chain to port word for word, and `powerStock` says `drive(0.3)`. So:
+
+- **Typed door** on `KatalystBuilder`: `fun drive(amount: KatalystKnobDsl): KatalystBuilder`, the voice's word
+  (`IgnitorDsl.drive`): gain without a curve, by the voice's drive law. Read the voice's `Drive` node and its
+  backend first and use the SAME law function (one place for the conversion, `/dsl-design` section 4); do not write
+  the formula a second time.
+- **How it is stored:** prefer what a chain already has (the arithmetic, `mul`) over a new stage, if the law can be
+  written with it for a number and for a `Kat.param`. If it cannot for a slot, a number-only door with the usual
+  refusal is acceptable; a new stage only if neither works. Report which it became and why.
+- **Script door** `scriptDrive(amount)`, with its KDoc and an audible example; a parity row from the script and from
+  Kotlin; a row that `drive(0.3)` on a chain and on a voice give the same gain; a mutant for the law.
+- The docs lists of this ticket get `drive` wherever they name `shape`; the recorded asymmetry "a chain has no
+  `drive`" is not written.
+- The amount of 0: what the voice does at 0 (off or unity) is what the chain does; say it in the KDoc and in
+  `audio/ref/off-values.md`.
 
 ## The work
 
@@ -257,3 +276,5 @@ Run the error rows on JS too (`:klangscript-libs:jsBrowserTest`): a null check c
 ## History
 
 - 2026-11-18: created, as step 1 of KLANG-00466.
+- 2026-11-18: the maintainer's rework: decisions settled, `drive` added to this step.
+- 2026-11-18: IN PROGRESS. Klang-Main-Dev: step 1 starts, decisions settled 2026-11-18
