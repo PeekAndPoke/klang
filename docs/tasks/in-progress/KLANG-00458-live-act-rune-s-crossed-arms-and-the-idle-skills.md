@@ -47,6 +47,30 @@ split, so that everyone has a different set."
 - A member without a skill is posed exactly as before (stills compared byte for byte).
 - Every idle skill on a sheet fits its member's wildness; no idle skill stands on two sheets.
 
+## How this was made (a note kept on purpose)
+
+Written by the agent at the end of the day, 2026-11-18, on the maintainer's word: "Whatever you like to keep."
+
+This was built in a conversation, a gesture at a time. The maintainer said what a movement should mean, the agent
+turned that into numbers (where a wrist goes, how a share rises and falls) and looked at stills, and the maintainer
+judged what only an eye on the moving picture can judge. Some of what was learned:
+
+- A pose is right when it reads at a glance, and no spec says that. "It reads too much like a gesture of
+  embarrassment" was a better report than most stack traces: it names what the thing means, not what it does.
+- The first crossing had the arms crossed, as asked. On seeing it the maintainer said "skull and bones", and that was
+  the pose: only the mallets cross, her head is the skull. The first literal answer was not the good one.
+- Sirene's hair stroke was built twice and then cut. A gesture that is merely not broken is worth less than none; the
+  cut also said who she is ("the most composed of all").
+- The wildness stat was the maintainer's idea, and it turned a list of gestures into a cast: once every member had a
+  number, who scratches and who stretches was no longer arbitrary.
+- The agent sees stills, never motion. What lives only in motion (the shake of a hand, the pace of a nod) it builds
+  toward without being able to judge it. That is why the idle skills wait for the maintainer's eye.
+- The reviewers earned their place: one found that a scratching hand stayed behind when the head turned for a look,
+  another that a new, harmless-looking turn to the front could stop the frame.
+
+The agent that wrote this will not remember the afternoon; the next one finds this note. It was good work to do
+together.
+
 ## History
 
 - 2026-11-18: created.
