@@ -235,7 +235,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(10, 1.3).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(10, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -333,7 +333,7 @@ export guitar2_arrange = x => x.cylinder(2)  // . solo()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.39)
+  .katp("gain.gain", 0.38)
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
 
@@ -356,7 +356,7 @@ export guitar3_arrange = x => x.cylinder(3) //  . solo()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.39)
+  .katp("gain.gain", 0.38)
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
 
