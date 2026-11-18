@@ -27,6 +27,10 @@ uncalibrated parts to a place where a change affects two songs.
 4. KLANG-00463 (the shared guitar rig): one place, imported by the songs.
 5. KLANG-00464 (the bass and the drums): the rest of the band, the same way.
 
+**Before all five (proposed 2026-11-18):** KLANG-00466 (the guitar amp on the cylinder). It decides where the rig
+lives, one amp per note or one per guitarist. The contract, the check and the calibration are better done on what
+it leaves than on a per-note rig that may go.
+
 ## Found by reading the rig (2026-11-18)
 
 An opinion asked for by the maintainer; the facts are read from the song and the engine, nothing was listened to
@@ -64,3 +68,4 @@ or measured.
 
 - 2026-11-18: created, from the Der Schmetterling session of 2026-11-17 and 18.
 - 2026-11-18: findings from reading the rig and the engine's shaper code added.
+- 2026-11-18: KLANG-00466 (the guitar amp on the cylinder) added, proposed as the first step.
