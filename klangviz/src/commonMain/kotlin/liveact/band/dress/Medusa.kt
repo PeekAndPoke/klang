@@ -27,7 +27,7 @@ data class HairPoint(val x: Double, val y: Double, val z: Double)
  * snakes are in step. The root stays where it is: well inside the head, so a snake comes out of the head and no
  * gap shows between the two, whatever the head's own shape. Everything goes by the time alone, so any moment looks the same whenever it is shown.
  */
-class MedusaHair(val snakes: Int = 9, val joints: Int = 11, val length: Double = 2.7) {
+class MedusaHair(val snakes: Int = 9, val joints: Int = 11, val length: Double = 3.3) {
 
     init {
         require(snakes >= 1) { "No snakes: $snakes" }
