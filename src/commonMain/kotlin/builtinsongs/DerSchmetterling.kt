@@ -58,10 +58,10 @@ let pedalStock = Ign.fn(x => x)
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
 let pedalScreamer = Ign.fn(x => x.parallel(
     clean => clean,
-    dirt => dirt.highpass(550).distort(0.20, "soft").mul(0.4)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+    dirt => dirt.highpass(580).distort(0.20, "soft").mul(0.4)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
-  .lowpass(4200)                                   // the tone knob, half way
-  .mul(0.60))                                       // level
+  .lowpass(4500)                                   // the tone knob, half way
+  .mul(0.50))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
 let pedalFuzz = Ign.fn(x => x
@@ -72,8 +72,8 @@ let pedalFuzz = Ign.fn(x => x
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
 let pedalBoost = Ign.fn(x => x.parallel(
   clean => clean, 
-  dirt => dirt.highpass(300).mul(1.3)
-).mul(0.7))
+  dirt => dirt.highpass(300).mul(1.4)
+).mul(0.6))
 
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
 // is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
@@ -305,7 +305,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.cylinder(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.300)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.250)  // .mute()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
   // Shaping
@@ -401,7 +401,7 @@ let gummiEimer = (() => {
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.25)
   let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
-  let beater = Ign.whitenoise().adsr(0.005, 0.025, 0.0, 0.015).lowpass(1500).mul(3.00)    
+  let beater = Ign.whitenoise().adsr(0.005, 0.050, 0.0, 0.015).lowpass(1500).mul(2.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .oversampleAtLeast(2, y => y.distort(0.90, "diode"))
@@ -525,7 +525,7 @@ export hats_arrange = x => x.cylinder(8).mute("<0!128 1!32>").late(berlin(0.0015
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
 export shaker_pat = `<white ~ white ~ white ~ white ~ white ~ white>*8`
-export shaker_shape = x => x.gain(0.06).velocity("<1.0 0.80 0.90 0.80>*8") //  . mute()
+export shaker_shape = x => x.gain(0.04).velocity("<1.0 0.80 0.90 0.80>*8") //  . mute()
   .hpf(freq = 8000, q = 0.7).lpf(16500, 0.5).clip("<1.0 1.0 1.5>*8") //  . solo()
   .pan(0.35).adsr(0.015, 0.10, 0.0, 0.01)
 export shaker_arrange = x => x.cylinder(10).late(berlin(0.0010, 0.0020).mul(drunk))
@@ -573,13 +573,13 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 7500)
-    .mul(0.75)
+    .mul(0.70)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5000)
+      .band(mid => mid.distort(0.100, "soft").mul(0.92)).cut(5000)
       .band(low => low.distort(0.001, "soft").mul(1.00))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.60)
+    .mul(4.80)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )
