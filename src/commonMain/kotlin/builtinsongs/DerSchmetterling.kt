@@ -20,7 +20,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =   12    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -4    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  207    // Where does the snare cut through?
@@ -99,7 +99,7 @@ let preampCrunch = Ign.fn(x => x
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Ign.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.10, "tube").highpass(120)
+  .distort(0.08, "tube").highpass(120)
   .distort(0.09, "asym").highpass(100)
   .distort(0.35, "soft")
   .lowpass(5200)                                   // the fizz
@@ -128,9 +128,9 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  160, q = 0.6, db =  3.30)        // thump: closed-back box resonance
+    .band(freq =  160, q = 0.6, db =  7.20)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  4.90)        // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  2.60)        // bark:  the upper-mid speaker peak
+    .band(freq = 2700, q = 1.8, db =  2.40)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
@@ -310,7 +310,7 @@ export guitar1_arrange = x => x.cylinder(1)  // . solo()
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.44)
+  .katp("gain.gain", 0.40)
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
 
@@ -333,7 +333,7 @@ export guitar2_arrange = x => x.cylinder(2)  // . solo()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.44)
+  .katp("gain.gain", 0.40)
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
 
@@ -356,7 +356,7 @@ export guitar3_arrange = x => x.cylinder(3) //  . solo()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.44)
+  .katp("gain.gain", 0.40)
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
 
@@ -401,10 +401,10 @@ let gummiEimer = (() => {
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.25)
   let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
   // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
-  let beater = Ign.whitenoise().adsr(0.010, 0.035, 0.0, 0.015).lowpass(1500).mul(1.00)    
+  let beater = Ign.whitenoise().adsr(0.005, 0.025, 0.0, 0.015).lowpass(1500).mul(3.00)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .oversampleAtLeast(2, y => y.distort(0.80, "diode"))
+    .oversampleAtLeast(2, y => y.distort(0.90, "diode"))
     .mul(0.1)
     .shape("hard")
     .classic()
@@ -415,14 +415,14 @@ export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 0] [~ 0 -1 0  ~ 0 ~
 
 export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(600).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.35)
+  .hpf(550).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.35)
   .apply(
     x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
     x => x.pan(0.62).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
   )
 
 export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
-  .scale("e5:minor").gain(0.50)
+  .scale("e5:minor").gain(0.46)
   .mute("<1!96 0!32 1!96>")                          
 
 export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
@@ -579,7 +579,7 @@ export song = stack(
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5000)
       .band(low => low.distort(0.001, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.70)
+    .mul(4.80)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )
