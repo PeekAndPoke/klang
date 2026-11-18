@@ -19,7 +19,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-SONG=src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt
+# the song's file: in apps/common since KLANG-00465, in the studio's sources before; an old tag has only the old place
+SONG=apps/common/src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt
+SONG_BEFORE=src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt
 DIR=$(mktemp -d)
 TAGS=("$@")
 if [ ${#TAGS[@]} -eq 0 ]; then
@@ -28,7 +30,7 @@ fi
 
 i=0
 for t in "${TAGS[@]}"; do
-  src=$(git show "$t:$SONG")
+  src=$(git show "$t:$SONG" 2>/dev/null || git show "$t:$SONG_BEFORE")
   rpm=$(printf '%s\n' "$src" | sed -n -E 's/^ *rpm *= *([0-9.]+),?.*/\1/p' | head -1)
   date=$(git log -1 --format=%ad --date=short "$t")
   # the song text is the raw string after `code = """` up to the last `"""`

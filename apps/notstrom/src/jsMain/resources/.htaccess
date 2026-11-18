@@ -1,0 +1,17 @@
+AuthType Basic
+AuthName "Notstrom"
+AuthUserFile /www/htdocs/w0057ac0/klang/notstrom/.htpasswd
+Require valid-user
+
+# Caching (needs mod_headers; without it the site is served all the same). What carries its content in its name (the
+# bundles' hashes) or in its address (the figures' ?v=<release>) is kept for long, by the browser only (not "public":
+# behind basic auth, a shared cache must not store it); the page, version.json and the audio worklet are asked anew
+# each time (the worklet's ?c= follows the page's bundle, not the worklet itself).
+<IfModule mod_headers.c>
+    <FilesMatch "\.[0-9a-f]{20}\.js$|\.glb$">
+        Header set Cache-Control "max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "^(index\.html|version\.json|klang-worklet\.js)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>

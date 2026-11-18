@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.apps.common.Song
 import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
 import io.peekandpoke.klang.spine.KlangCodePlaybackCtrl

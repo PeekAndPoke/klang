@@ -16,6 +16,7 @@ import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
+import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
@@ -49,12 +50,31 @@ import kotlin.math.sqrt
 /**
  * The live act: the band Notstrom on its stage, playing [show]'s song.
  *
- * [models] is the address of the folder that holds the figures (ending in a slash). The music is the show's
- * ([Show.music]).
+ * [models] is the address of the folder that holds the figures (ending in a slash); [version] the figures' release,
+ * asked for with each file (a release's figures may be cached for long, and a new release asks anew). The music is
+ * the show's ([Show.music]). [walkInAtOnce]: the walk-in begins as soon as the band stands, without a click; [frameTimes]: told
+ * the time of every frame drawn; [stepsDown]: the oversampling steps down where the frames stay slow; [picture]: the
+ * oversampling seen and set, and the frame rate seen, from outside (all four: see [LiveAct.Props]).
  */
 @Suppress("FunctionName")
-fun Tag.LiveAct(show: Show, models: String) = comp(
-    LiveAct.Props(show = show, models = models)
+fun Tag.LiveAct(
+    show: Show,
+    models: String,
+    version: String,
+    walkInAtOnce: Boolean = false,
+    frameTimes: ((Double) -> Unit)? = null,
+    stepsDown: Boolean = false,
+    picture: Picture? = null,
+) = comp(
+    LiveAct.Props(
+        show = show,
+        models = models,
+        version = version,
+        walkInAtOnce = walkInAtOnce,
+        frameTimes = frameTimes,
+        stepsDown = stepsDown,
+        picture = picture,
+    )
 ) {
     LiveAct(it)
 }
@@ -79,6 +99,33 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     data class Props(
         val show: Show,
         val models: String,
+        /** The figures' release (see [LiveAct]): every page that shows the live act names its own. */
+        val version: String,
+        /**
+         * The walk-in begins as soon as the band stands, without waiting for a click, and no notice asks for one
+         * ([ShowClock]'s `begun`). For an app whose own start screen took the click already (notstrom's, KLANG-00465).
+         */
+        val walkInAtOnce: Boolean = false,
+        /**
+         * Told the time of every frame drawn, in milliseconds since the one before, once the band stands and while the
+         * page is seen (the frames the line at the top counts). For an app that measures how fast this machine draws
+         * the stage (notstrom's picture test, KLANG-00465). A display caps the frames at its refresh rate: above the
+         * cap nothing is told apart. Null: nobody is told.
+         */
+        val frameTimes: ((Double) -> Unit)? = null,
+        /**
+         * Where the picture starts with oversampling (`?oversample=2`), it takes a step down to fewer samples when
+         * the frames stay slow for a while ([Downshift]), and never steps up again by itself. For an app that chose
+         * the oversampling by a test of this machine (notstrom's, KLANG-00465). False: the oversampling stays where
+         * it is set, as before.
+         */
+        val stepsDown: Boolean = false,
+        /**
+         * The picture seen and set from outside the live act ([Picture]): it is told every change of the oversampling
+         * and the frame rate counted for the line at the top, and an oversampling chosen through it is taken as the
+         * key o's is (by hand: no step down by itself after it). Null: none.
+         */
+        val picture: Picture? = null,
     )
 
     /** Everything a running show holds, once its figures are loaded. */
@@ -135,12 +182,18 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      */
     private var over: Int = maxOf(0, SAMPLES.indexOf(props.show.switches[Switch.Oversample]?.toIntOrNull() ?: 1))
 
+    /** The oversampling was chosen by hand (the key o, or [Props.picture]): it holds, no step down by itself. */
+    private var byHand = false
+
     /**
      * How finely the picture is drawn: it follows the frame rate (see [Sharpness]). Not where the picture is frozen
      * (a still is the same on every machine), not with oversampling (that asks for more pixels), and not with
      * `?sharp`, which keeps the screen's own pixels whatever the frames do.
      */
     private val sharpness = Sharpness(full = screenRatio())
+
+    /** When the oversampling takes a step down, where [Props.stepsDown] asks for it. */
+    private val downshift = Downshift()
 
     private val adapts: Boolean get() = over == 0 && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
 
@@ -152,21 +205,24 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         val e = event as? KeyboardEvent
 
         if (e != null && !event.fromTyping() && e.key.lowercase() == "o" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            over = (over + 1) % SAMPLES.size
-            sharpness.reset(full = screenRatio())
-            sample()
+            oversample(step = (over + 1) % SAMPLES.size, byHand = true)
         }
     }
 
     init {
         lifecycle {
             onMount {
+                props.picture?.let {
+                    it.attach { samples -> oversample(step = SAMPLES.indexOf(samples), byHand = true) }
+                    it.tellSamples(SAMPLES[over])
+                }
                 window.addEventListener("resize", onResize)
                 window.document.addEventListener("visibilitychange", onVisibility)
                 window.addEventListener("keydown", onKey)
             }
 
             onUnmount {
+                props.picture?.detach()
                 window.removeEventListener("resize", onResize)
                 window.document.removeEventListener("visibilitychange", onVisibility)
                 window.removeEventListener("keydown", onKey)
@@ -242,13 +298,21 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         scope.launch {
             val band = try {
-                Notstrom.load(show = show, scene = ctx.scene, models = props.models, viewer = viewer)
+                Notstrom.load(
+                    show = show,
+                    scene = ctx.scene,
+                    models = props.models,
+                    version = props.version,
+                    viewer = viewer,
+                    arrived = { count, of -> props.picture?.tellFigures(Picture.Figures(arrived = count, of = of, failed = false)) },
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 // without its figures there is no show: the stage stays dark, and the reason is said where a
                 // developer looks
                 console.error("The live act's band could not be made (its figures are looked for in '${props.models}')", e)
+                props.picture?.let { it.tellFigures(it.figures().copy(failed = true)) }
 
                 return@launch
             }
@@ -265,7 +329,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             )
             // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
             // fail before it is kept (and with it given up on unmount)
-            val clock = ShowClock(show = show, notice = element(NOTICE_ID), intro = StagePlot.INTRO)
+            val clock = ShowClock(show = show, notice = element(NOTICE_ID), intro = StagePlot.INTRO, begun = props.walkInAtOnce)
 
             clock.start()
 
@@ -318,12 +382,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             return
         }
 
+        props.frameTimes?.invoke(nowMs - before)
         worst = maxOf(worst, nowMs - before)
         before = nowMs
         counted++
 
         if (nowMs - since >= 500) {
             fps = counted * 1000 / (nowMs - since)
+            props.picture?.tellFps(fps)
             worstShown = worst.toFixed(0)
             counted = 0
             worst = 0.0
@@ -331,6 +397,11 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
             if (adapts && sharpness.judge(fps)) {
                 sample()
+            }
+
+            // one step fewer samples where the frames stay slow, as the key o changes them (`stepsDown`)
+            if (props.stepsDown && over > 0 && downshift.judge(fps = fps, byHand = byHand)) {
+                oversample(step = over - 1, byHand = false)
             }
         }
 
@@ -375,6 +446,22 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     }
 
     /**
+     * The oversampling at [step] of [SAMPLES]: the pixels judged anew from full, and drawn so. [byHand]: the key o or
+     * a choice from outside, which holds (no step down by itself after it). Tells [Props.picture].
+     */
+    private fun oversample(step: Int, byHand: Boolean) {
+        if (step !in SAMPLES.indices) {
+            return
+        }
+
+        over = step
+        this.byHand = this.byHand || byHand
+        sharpness.reset(full = screenRatio())
+        sample()
+        props.picture?.tellSamples(SAMPLES[over])
+    }
+
+    /**
      * Sets the renderer's pixels: the screen's (at most 2) or fewer where the frames come too slowly ([sharpness]),
      * times the oversampling chosen.
      */
@@ -411,6 +498,6 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         fun screenRatio(): Double = minOf(window.devicePixelRatio, 2.0)
 
         /** How many times the screen's pixels are drawn. */
-        val SAMPLES = listOf(1, 2, 4)
+        val SAMPLES = Picture.STEPS
     }
 }

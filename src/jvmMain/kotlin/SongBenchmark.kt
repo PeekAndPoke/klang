@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.apps.common.registerBuiltInSongsAsModules
 import io.peekandpoke.klang.audio_be.AudioBackendContext
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.StereoBuffer

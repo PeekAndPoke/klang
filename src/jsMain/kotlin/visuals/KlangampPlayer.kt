@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.visuals
 
-import io.peekandpoke.klang.BuiltInSongs
+import io.peekandpoke.klang.apps.common.BuiltInSongs
 import io.peekandpoke.klang.comp.Motor
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats

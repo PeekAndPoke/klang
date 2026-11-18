@@ -8,6 +8,7 @@ package io.peekandpoke.klang
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
+import io.peekandpoke.klang.apps.common.registerBuiltInSongsAsModules
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_engine.cli.RenderWavCommand
 import io.peekandpoke.klang.audio_fe.create

@@ -72,7 +72,8 @@ fun main() {
         val show = Show(seed = seed, music = music, switches = switches)
 
         kraft.mount(selector = "#app", engine = PreactVDomEngine()) {
-            LiveAct(show = show, models = MODELS)
+            // the demo serves its figures fresh from the build: its version is a fixed word
+            LiveAct(show = show, models = MODELS, version = "dev")
         }
     }
 }

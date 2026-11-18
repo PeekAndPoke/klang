@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.visuals
 
-import io.peekandpoke.klang.BuiltInSongs
+import io.peekandpoke.klang.apps.common.BuiltInSongs
 import io.peekandpoke.klang.comp.clockOf
 import io.peekandpoke.klang.spine.KlangampDeck
 import io.peekandpoke.klang.spine.Playbacks

@@ -5,9 +5,10 @@
 
 package io.peekandpoke.klang.pages
 
-import io.peekandpoke.klang.BuiltInJingles
-import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.apps.common.BrowserCheck
+import io.peekandpoke.klang.apps.common.BuiltInJingles
+import io.peekandpoke.klang.apps.common.BuiltInSongs
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.PlateComposition
@@ -35,7 +36,6 @@ import io.peekandpoke.klang.version
 import io.peekandpoke.klang.visuals.VisualsBoard
 import io.peekandpoke.klang.visuals.VisualsParts
 import io.peekandpoke.klang.visuals.VisualsParts.glassDome
-import io.peekandpoke.kraft.addons.browserdetect.BrowserDetect
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetectAddon
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -234,17 +234,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         val glowing: Boolean get() = false
     }
 
-    /** What the browser check found; only a phone or a browser other than Chrome asks before the Motor starts. */
-    private class BrowserCheck(detect: BrowserDetect) {
-        private val platform = detect.getPlatform()
-        private val browser = detect.getBrowser()
-
-        val isMobile = platform.type == "mobile" || platform.type == "tablet"
-        val isChrome = browser.name.lowercase().contains("chrome") && !browser.name.lowercase().contains("edg")
-
-        fun needsWarning() = isMobile || !isChrome
-    }
-
     /** The key waits at OFF, the plate dim. */
     private inner class StateOffline : State {
         override val key = KlangIgnition.Position.Off
@@ -269,10 +258,13 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 return
             }
 
-            val check = BrowserCheck(addon.forCurrentBrowser())
+            // only a phone or a browser other than Chrome asks before the Motor starts (the apps' common check)
+            val detect = addon.forCurrentBrowser()
+            val check = BrowserCheck.of(platformType = detect.getPlatform().type, browserName = detect.getBrowser().name)
+            val warning = check.warning
 
-            if (check.needsWarning()) {
-                askToContinue(check)
+            if (warning != null) {
+                askToContinue(warning)
             } else {
                 state = StateWarming()
             }
@@ -581,22 +573,18 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     /** A phone or a browser other than Chrome: ask before the Motor starts; no keeps the key at OFF. */
-    private fun askToContinue(check: BrowserCheck) {
+    private fun askToContinue(warning: BrowserCheck.Warning) {
         val from = state
 
         modals.show { handle ->
             KlangYesNoModal(
                 handle = handle,
-                headline = if (check.isMobile) "A phone or a tablet" else "Not Chrome",
+                headline = warning.headline,
                 content = {
-                    if (check.isMobile) {
-                        +"This version only works reliably on desktop computers or laptops using Google Chrome."
-                    } else {
-                        +"Currently, only Google Chrome is well tested. Other browsers may have compatibility issues."
-                    }
+                    +warning.text
                 },
-                yesText = "Continue anyway",
-                noText = "Not now",
+                yesText = BrowserCheck.CONTINUE,
+                noText = BrowserCheck.NOT_NOW,
                 onResult = { yes ->
                     if (yes && state == from) {
                         state = StateWarming()

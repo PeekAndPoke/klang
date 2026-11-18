@@ -1,0 +1,134 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+@file:Suppress("unused")
+
+package io.peekandpoke.klang.apps.common.builtinsongs
+
+import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.Song
+
+internal val sakuraSong = Song(
+    id = "${BuiltInSongs.PREFIX}-synthkura",
+    title = "Die Kirschblüte",
+    rpm = 27.0,
+    icon = "globe asia",
+    code = """import * from "stdlib"
+import * from "sprudel"
+
+let wait = 14
+
+let koto = Ign.pluck()
+      .plus(Ign.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
+      .highpass(200)
+      .lowpass(Ign.constant(2800).plus(Ign.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)), x => x.analog(Ign.slot.analog))
+      .classic()
+
+let shaku = Ign.sine().mul(0.6)
+      .plus(Ign.tri().mul(0.25))
+      .plus(Ign.perlin(13).mul(0.05))
+      .plus(Ign.perlin(21).mul(0.10).highpass(2800).adsr(0.02, 0.2, 0.03, 0.02))
+      .lowpass(3500, 1.0, x => x.analog(Ign.slot.analog))
+      .highpass(600, x => x.analog(Ign.slot.analog))
+      .vibrato(4, Ign.perlin(2).mul(0.15).plus(0.15))
+      .pitchEnvelope(1, x => x.adsr(0.02, 0.1, 0, 0))
+      .adsr(0.07, 0.15, 0.8, 0.3)
+      .classic()
+
+let kick = Ign.sine()
+      .pitchEnvelope(24, x => x.adsr(0.001, 0.04, 0, 0))
+      .adsr(0.001, 0.2, 0.0, 0.02)
+      .classic()
+
+let rim = Ign.sine(800)
+      .plus(Ign.whitenoise().highpass(4000).mul(0.3))
+      .lowpass(3500)
+      .adsr(0.001, 0.03, 0.0, 0.005)
+      .classic()
+
+let brush = Ign.perlin(30).mul(0.5)
+      .plus(Ign.whitenoise().mul(0.3))
+      .lowpass(12000).highpass(2000)
+      .adsr(0.01, 0.08, 0.0, 0.02)
+      .classic()
+
+let sub = Ign.sine().lowpass(200)
+      .adsr(0.005, 1.0, 0.0, 0.05)
+      .classic()
+
+let pad = Ign.supertri(x => x.voices(5).analog(5.0))
+      .lowpass(Ign.sine(0.3).plus(Ign.perlin().mul(0.05)).plus(3).times(800).plus(Ign.freq()), 3, x => x.analog(Ign.slot.analog))
+      .adsr(1.5, 3.0, 0.6, 1.5, e => e.curves("scurve", "scurve", "scurve"))
+      .classic()
+
+
+stack(
+  // Sakura melody
+  note(`
+    [a4 a4 b4 ~ a4 a4 b4 ~]       [a4 b4 c5 b4 a4 [b4 a4] f4@2]
+    [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
+    [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
+    [e4 f4 [b4 a4] f4 e4@4]
+  `).cylinder(0).sound(koto).legato(0.8).slow(14).gain(0.55).body(material = "mahogany").pan(0.70) // .struct()
+    .superimpose(fast(2).velocity(0.2).pan(0.2).superimpose(pan(0.8)))
+
+  // Shakuhachi
+  ,note(`
+    a4@2  ~  ~  ~  ~  b4 ~
+    a4@2  ~  ~  ~  ~  f4 ~
+    e4@2  ~  ~  ~  ~  a4 ~
+    e5@2  ~  ~  c5@2  b4 a4
+    c5@2  ~  ~  ~  ~  a4 ~
+    a5@2  ~  ~  e5@2  d5@2
+    <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
+  `).cylinder(1).sound(shaku).adsr(release = 0.3).slow(14).gain(0.32).pan(0.30) // classic() releases over this, not the shakuhachi's own 0.3 s tail; keep them equal
+    .lpf(perlin.range(3800, 4000).slow(2)).body(material = "rosewood")
+    .filterWhen(x => x >= wait * 2) // . solo()
+
+  // Drums
+  ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").cylinder(2).sound(kick).gain(0.7).hpf(100)
+  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").cylinder(2).sound(rim).gain(0.45).pan(0.6)
+  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").cylinder(2).sound(brush).gain(0.35).pan(0.4)
+
+  // Sub-Bass
+  ,note("a1 d2 a1 f1 c2 e1 a1").cylinder(3).sound(sub).slow(14).legato(1.5).gain(0.25).hpf(40)
+    .filterWhen(x => x >= wait * 1)
+
+  ,stack(
+    // Root
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.4).hpf(100)
+    // Third (minor/major character)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.55).hpf(280)
+    // Fifth
+    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.250).pan(0.6).hpf(400)
+    // Octave
+    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.3).hpf(600)
+    // High third
+    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.45).hpf(800)
+    // High fifth
+    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.200).pan(0.7).hpf(1000)
+  ).cylinder(4).adsr(release = 1.5).coarse(factor = 2).filterWhen(x => x >= wait * 3).body(material = "tube", wet = 0.3) // adsr(release = 1.5): classic() releases over this, not the pad's own 1.5 s tail; keep them equal
+
+  // Noise
+  , sound("dust!2").cylinder(5).gain(0.0400).vel(sine.range(0.500, 1.0).slow(21)).hpf(5000).lpf(8000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound("pink!3").cylinder(5).gain(0.0070).vel(sine.range(0.625, 1.0).slow(13)).hpf(4000).lpf(14000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+  , sound("brown!4").cylinder(5).gain(0.0150).vel(sine.range(0.500, 1.0).slow(8)).hpf(3000).lpf(10000).clip(1.5).adsr(0.1, 1, 1, 0.1)
+
+  // Master
+  , master(Katalyst(k => k.oversampleAtLeast(4, r => r
+    .reverb(0.35, 8, 6500)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.15, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.05))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .mul(1.8)
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  )))
+)
+
+
+    """,
+)

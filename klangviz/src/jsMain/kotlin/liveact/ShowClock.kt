@@ -27,11 +27,16 @@ import kotlin.math.min
  *
  * Keys, heard from the window until [dispose]: space starts the walk-in or pauses; the right arrow skips the
  * walk-in, or jumps ten seconds ahead; the left arrow ten seconds back.
+ *
+ * [begun]: the walk-in begins at [start], without waiting for a click, and no notice asks for one. For an app whose
+ * own start screen took the click already (notstrom's, KLANG-00465: its click unlocked the sound, and the show was
+ * made after it). Clicks and keys after it do what they do once the walk-in runs.
  */
 class ShowClock(
     private val show: Show,
     private val notice: HTMLElement?,
     private val intro: Double,
+    private val begun: Boolean = false,
 ) {
     /**
      * What plays the music, listened to from here until [dispose]: the stage's time is its time once it runs. A
@@ -59,13 +64,18 @@ class ShowClock(
     private val keyListener: ((Event) -> Unit)? = controls?.let { { event: Event -> onKey(event) } }
 
     init {
-        if (controls == null) {
-            // the prototype makes no notice at all then
+        if (controls == null || begun) {
+            // the prototype makes no notice at all where there is nothing to start; and where the click was taken
+            // already, nothing asks for one
             notice?.let { it.style.display = "none" }
-        } else {
-            notice?.let {
-                it.textContent = "click to start"
-                it.style.cssText = "position:fixed;left:0;right:0;bottom:18px;text-align:center;color:#9ab;font:14px monospace"
+        }
+
+        if (controls != null) {
+            if (!begun) {
+                notice?.let {
+                    it.textContent = "click to start"
+                    it.style.cssText = "position:fixed;left:0;right:0;bottom:18px;text-align:center;color:#9ab;font:14px monospace"
+                }
             }
 
             clickListener?.let { window.addEventListener("click", it) }
@@ -73,9 +83,13 @@ class ShowClock(
         }
     }
 
-    /** Call right before the first frame. */
+    /** Call right before the first frame. With [begun], the walk-in begins here. */
     fun start() {
         started = now()
+
+        if (begun && controls != null && introAt == null) {
+            introAt = started
+        }
     }
 
     /**

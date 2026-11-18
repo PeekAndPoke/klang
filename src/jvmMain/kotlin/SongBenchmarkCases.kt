@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.builtinsongs.derSchmetterlingSong
+import io.peekandpoke.klang.apps.common.BuiltInSongs
 
 /**
  * Benchmark cases for "Der Schmetterling".
@@ -467,9 +467,9 @@ object SongBenchmarkCases {
         ),
         SongBenchmark.Case(
             name = "Der Schmetterling (LIVE, current code)",
-            code = derSchmetterlingSong.code,
+            code = BuiltInSongs.derSchmetterling.code,
             group = "full-song",
-            rpm = derSchmetterlingSong.rpm,
+            rpm = BuiltInSongs.derSchmetterling.rpm,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,
@@ -520,7 +520,7 @@ object SongBenchmarkCases {
         )
 
     /** The live song, ungated: only the `--args=ledger` live rows read it, never a check. */
-    private val liveUngated: String by lazy { ungated(derSchmetterlingSong.code) }
+    private val liveUngated: String by lazy { ungated(BuiltInSongs.derSchmetterling.code) }
 
     /** The text the rig suite edits: the frozen 2026-09-25 Der Schmetterling, ungated, so a song edit never moves it. */
     private val rigUngated: String by lazy { ungated(FrozenPieces.derSchmetterling_2026_09_25) }
@@ -715,7 +715,7 @@ object SongBenchmarkCases {
         SongBenchmark.Case(
             name = "$name @ live",
             group = "ledger-live",
-            rpm = derSchmetterlingSong.rpm,
+            rpm = BuiltInSongs.derSchmetterling.rpm,
             cycles = 8,
             code = liveUngated + "\n\n" + expr + "\n",
         )

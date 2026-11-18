@@ -1,0 +1,61 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.apps.common
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
+
+/**
+ * Smoke test for BuiltInSongs that have been refactored to use the new
+ * `export name = expr` form (and for the cross-song remix that imports
+ * named parts from another built-in entry).
+ *
+ * Confirms each song compiles to a non-null SprudelPattern under the same
+ * engine setup the user-facing app uses (stdlib + sprudel + builtin songs).
+ *
+ * Kind: for the future: a song that no longer compiles is a real break (the 2026-10-12 paste of a retired door), the
+ * one way a song edit may turn a check red (`CLAUDE.md`, "Two kinds of check").
+ */
+class BuiltInSongsSmokeTest : StringSpec({
+
+    // Engine matches the Cli's `compilePattern` setup. Inline ignitors
+    // (`val foo = Ignitor.sine()...; .sound(foo)`) are values now: no registrar
+    // wiring needed at compile time.
+    fun engine() = klangScript {
+        registerLibrary(sprudelLib)
+        registerBuiltInSongsAsModules()
+    }
+
+    "tetris (rewritten with export declarations) compiles to a SprudelPattern" {
+        val pattern = SprudelPattern.compile(engine(), BuiltInSongs.tetris.code)
+        pattern.shouldNotBeNull()
+    }
+
+    "tetris-remix (imports leadPattern + bassPattern from peekandpoke/tetris) compiles to a SprudelPattern" {
+        val pattern = SprudelPattern.compile(engine(), BuiltInSongs.tetrisRemix.code)
+        pattern.shouldNotBeNull()
+    }
+
+    "every BuiltInSongs entry compiles to a SprudelPattern" {
+        val songs = BuiltInSongs.songs
+        for (song in songs) {
+            val pattern = SprudelPattern.compile(engine(), song.code)
+            withClue(song) { pattern.shouldNotBeNull() }
+        }
+    }
+
+    "every BuiltInJingles entry compiles to a SprudelPattern" {
+        for (jingle in BuiltInJingles.all) {
+            val pattern = SprudelPattern.compile(engine(), jingle.code)
+            withClue(jingle.id) { pattern.shouldNotBeNull() }
+        }
+    }
+})
+
+private inline fun <T> withClue(clue: Any, block: () -> T): T = io.kotest.assertions.withClue(clue, block)

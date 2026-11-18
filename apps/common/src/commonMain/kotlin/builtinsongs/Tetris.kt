@@ -1,0 +1,125 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+@file:Suppress("unused")
+
+package io.peekandpoke.klang.apps.common.builtinsongs
+
+import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.Song
+
+internal val tetrisSong = Song(
+    id = "${BuiltInSongs.PREFIX}-synthris",
+    title = "Stein um Stein",
+    rpm = 39.5,
+    icon = "gamepad",
+    code = """import * from "stdlib"
+import * from "sprudel"
+
+// ── Patterns: the raw musical content ───────────────────────────────────
+
+// The iconic Tetris (Korobeiniki) melody.
+export leadPattern = `<[e5 [b4 c5] d5 [c5 b4]]    [a4 [a4 c5] e5 [d5 c5]]      [b4 [~ c5] d5 e5]           [c5 a4 a4 ~]
+                       [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]       [b4 [b4 c5] d5 e5]          [c5 a4 a4 ~]>`
+
+// Bass line — bouncy, driving.
+export bassPattern = `<[[e2 e3]*4] [[a2 a3]*4]    [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5|a5|a5|e5]]
+                       [[d2 d3]*4] [[c2 c3]*4]    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2]    [a5|a5|a5|e5 a4] [a2 a3]]>`
+
+// Sub-bass / counter-melody — the brooding undercurrent.
+export subPattern = `<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1 e1] [a1 g#1 b1 c2]] [[d2 d2]!4 [c2 c2]!4] [[b1]!q [g#1]!2 [a1]!3 ~]>`
+
+// Drum machine programming.
+export drumsPattern = `<
+    [[bd:2,cr]    hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [mt mt,sd]    [ht ht,oh]]
+    [[bd:2,cr]    hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh [sd,hh] oh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [sd sd]       [sd sd]   ]
+
+    [[bd:2,cr]    hh sd      sd     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh sd      [hh sd]]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [lt lt,sd sd] ~         ]
+    [[bd:2,cr]    hh sd      [sd,hh]]  [bd      hh sd:8    oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
+    [[bd,cr]      hh [sd,hh] cr     ]  [[bd,cr] hh [bd,cr] hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
+>`
+
+// ── Shapes: the synthesis chain for each part ──────────────────────────
+//
+// Each shape is a function from a pattern to a fully-shaped voice. Apply to
+// any pattern to get "this song's sound, on those notes" — the unit of
+// remix at the timbre layer.
+
+// Lead voice: triangle, mild lpf, pan-spread, tempo-locked delay,
+// octave-superimposed accents.
+export leadShape = (p) => p
+    .sound("tri").clip(0.33).hpf(800).lpf(freq = "4600", env = 14.8, q = perlin.range(1, 2).slow(64)).onepole(23197)
+    .cylinder(0).gain(0.10).adsr(0.01, 0.3, 0.5, 0.1).lpf(attack = 0.009, decay = 0.2, sustain = 0.1, release = 0.1)
+    .superimpose(x => x.transpose("<0 12 0 -12>/8").hpf("<800 1200 800 500>/8"),
+                x => x.sound("pink").gain(0.12).adsr(0.009, 0.1, 0.1, 0.1)) // TODO: separate noise with steady rhythm
+    .pan(sine.range(0.2,0.3).slow(8)).superimpose(pan(sine.range(0.8, 0.7).slow(8)))
+    .body(material = "wood", wet = 0.2).velocity(perlin.range(0.95,1.0))
+    .delay(wet = 0.05, time = pure(5/32).div(cps), feedback = 0.2).analog(3.5)
+
+// Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
+export bassShape = (p) => p
+  .sound("supersaw").cylinder(1)
+  .gain(0.20).adsr(0.007, 0.5, 0.6, 0.10).lpf(attack = 0.007, decay = 2.0, sustain = 0.0, release = 0.10).pan(0.2)
+  .apply(
+    x => x.pan(0.1),
+    x => x.pan(0.9),
+    x => x.transpose("<0 12 0 -12>/8").pan(0.33).superimpose(pan(0.66))
+  )
+  .phaser(rate = 1/19, wet = 0.35, center = 1600, sweep = 1200)
+  .unison(voices = sine.range(4, 12).slow(80), spread = sine.range(0.1, 0.4).early(1.5).slow(24))
+  .hpf(freq = 120, passes = 2)
+  .lpf(freq = 3500, env = 10.0, q = berlin.range(1.5, 2.2).slow(32))
+
+// Sub voice: tremoloed triangle, soft distortion.
+export subShape = (p) => p
+    .slow(2).cylinder(2).clip(0.5).sound("tri").gain(0.3).distort(0.3, "softsat").analog(2.5)
+    .adsr(0.01, 0.2, 0.4, 0.09).lpf(attack = 0.01, decay = 0.1, sustain = 0.0, release = 0.09).hpf(55).lpf(freq = 200, env = 56.4, q = 1.0) // . solo()
+
+// Drums: tight, panned right, fast.
+export drumsShape = (p) => p
+    .cylinder(3).gain(0.45).pan(0.6).adsr(0.007, 0.2, 0.5, 1.0).hpf(90).lpf(11500)
+    .fast(2)
+
+// ── Assembled parts: shape × pattern, fully voiced and arrangement-free ─
+//
+// Convention: parts must NOT carry arrangement timing (filterWhen, slow/fast
+// gates, "when does this come in" predicates). An importer wants the fully
+// voiced part with no temporal restrictions baked in — they decide their own
+// arrangement at the song level.
+
+export lead  = note(leadPattern).apply(leadShape)
+export bass  = note(bassPattern).apply(bassShape)
+export sub   = note(subPattern).apply(subShape)
+export drums = sound(drumsPattern).apply(drumsShape)
+
+// ── Song: the assembled whole — arrangement lives here ─────────────────
+//
+// `filterWhen` controls when each voice enters: lead joins at cycle 16, bass
+// and sub follow on a long every-other-half-cycle pattern past cycle 31.4.
+
+export song = stack(
+  lead.filterWhen(x => x >= 16),
+  bass.filterWhen(x => x > 31.4 && x % 64 > 15.4),
+  sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
+  drums,
+  master(Katalyst(k => k.oversampleAtLeast(4, r => r
+    .reverb(0.10, 8, 6500)
+    .bands(b => b
+      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(mid => mid.distort(0.15, "soft").mul(0.90)).cut(5000)
+      .band(low => low.distort(0.01, "soft").mul(1.10))
+    ) // the glue on the mids only: the kick and the hats stay clean
+    .gain(2.0)
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
+  ))),
+).swingBy(sine.pow(6.0).mul(0.05).slow(128), 4)
+
+
+
+    """,
+)

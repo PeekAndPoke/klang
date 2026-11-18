@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.pages
 
-import io.peekandpoke.klang.BuiltInJingles
-import io.peekandpoke.klang.Jingle
+import io.peekandpoke.klang.apps.common.BuiltInJingles
+import io.peekandpoke.klang.apps.common.Jingle
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.compile

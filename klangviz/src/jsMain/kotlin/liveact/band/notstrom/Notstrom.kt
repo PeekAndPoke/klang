@@ -91,13 +91,33 @@ class Notstrom private constructor(
          *
          * The files are fetched together, but the figures enter the scene in the players' order: what is made first
          * is drawn first. [viewer]: where the camera is (who looks at the viewer looks there); it is read every
-         * frame, so the show keeps it up to date.
+         * frame, so the show keeps it up to date. [version]: the figures' release, asked for with each file
+         * (`<key>.glb?v=<version>`): a release's figures may be cached for long, and a new release asks anew.
+         * [arrived] is told how many of how many files have arrived, as each one does.
          */
-        suspend fun load(show: Show, scene: Scene, models: String, viewer: Vector3): Notstrom {
+        suspend fun load(
+            show: Show,
+            scene: Scene,
+            models: String,
+            version: String,
+            viewer: Vector3,
+            arrived: (count: Int, of: Int) -> Unit = { _, _ -> },
+        ): Notstrom {
             val loader = Three.addon.gltfLoader()
+            val query = "?v=" + js("encodeURIComponent")(version).unsafeCast<String>()
+            var count = 0
+
+            arrived(0, Player.entries.size)
 
             val loaded: List<Gltf> = coroutineScope {
-                Player.entries.map { player -> async { loader.load("$models${Members.of(player).figure}") } }.awaitAll()
+                Player.entries.map { player ->
+                    async {
+                        loader.load("$models${Members.of(player).figure}$query").also {
+                            count++
+                            arrived(count, Player.entries.size)
+                        }
+                    }
+                }.awaitAll()
             }
 
             val rigs = linkedMapOf<Player, Rig>()

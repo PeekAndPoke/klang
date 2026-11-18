@@ -5,9 +5,9 @@
 
 package io.peekandpoke.klang.pages
 
-import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.KlangGuiDance
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.apps.common.BuiltInSongs
 import io.peekandpoke.klang.ui.comp.KlangButton
 import io.peekandpoke.klang.ui.comp.KlangControlStyles
 import io.peekandpoke.kraft.components.NoProps

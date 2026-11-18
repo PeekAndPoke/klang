@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.registerBuiltInSongsAsModules
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer

@@ -9,7 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.apps.common.Song
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.samples.NullAudioDecoder
 import io.peekandpoke.klang.audio_fe.samples.Samples

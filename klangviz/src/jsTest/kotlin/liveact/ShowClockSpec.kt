@@ -114,6 +114,41 @@ class ShowClockSpec : StringSpec({
         }
     }
 
+    "begun: the walk-in begins at start without a click, no notice asks for one, and the music plays when it runs out" {
+        val asked = Asked()
+        val notice = document.createElement("div").unsafeCast<HTMLElement>()
+        val clock = ShowClock(show = Show(seed = 1, music = Counted(asked)), notice = notice, intro = 15.0, begun = true)
+
+        try {
+            notice.style.display shouldBe "none"
+            notice.textContent shouldBe ""
+            // not started yet: the house is dark
+            clock.houseAt() shouldBe 0.07
+
+            clock.start()
+
+            // the lamps come on with the start, no click needed
+            clock.waiting() shouldBe true
+            (clock.houseAt() > 0.07) shouldBe true
+            asked.calls shouldBe emptyList()
+        } finally {
+            clock.dispose()
+        }
+
+        // no walk-in at all: it has run out the moment it starts, and the music plays at the first frame
+        val now = Asked()
+        val at = ShowClock(show = Show(seed = 1, music = Counted(now)), notice = null, intro = 0.0, begun = true)
+
+        try {
+            at.start()
+            at.showTime() shouldBe 0.0
+            now.calls shouldBe listOf("play")
+            at.waiting() shouldBe false
+        } finally {
+            at.dispose()
+        }
+    }
+
     "a frozen show's time is the frozen one" {
         val clock = ShowClock(show = Show(seed = 1, music = Counted(Asked()), switches = Switches.parse("t=62.1")), notice = null, intro = 15.0)
 

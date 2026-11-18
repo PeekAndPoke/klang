@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.spine
 
+import io.peekandpoke.klang.apps.common.createScriptEngine
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangDiagnostics
 import io.peekandpoke.klang.audio_engine.KlangPlayer
@@ -15,14 +16,10 @@ import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.common.logging.LogArea
 import io.peekandpoke.klang.common.logging.Logger
-import io.peekandpoke.klang.registerBuiltInSongsAsModules
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.stdlib.ConsoleLevel
-import io.peekandpoke.klang.script.stdlib.KlangStdLib
-import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.spine.storage.SectionStores
 import io.peekandpoke.klang.spine.storage.Stored
-import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.state.AudioOutput
 import io.peekandpoke.klang.storage.StorageKeys
 import io.peekandpoke.klang.workshop.storage.DocumentStorage
@@ -59,29 +56,13 @@ class Player(stores: SectionStores) : PlaybackEngine {
         }
 
         /**
-         * Creates a KlangScriptEngine with sprudel and stdlib registered.
-         *
-         * Inline ignitors are denormalized at the playback boundary by the player's ignitor
-         * registry; no engine-level wiring is required.
-         * If [outputHandler] is provided, console/print output goes there (e.g. REPL capture).
+         * Creates a KlangScriptEngine with sprudel and stdlib registered, and the built-in songs as modules: the apps'
+         * engine ([createScriptEngine]). If [outputHandler] is provided, console/print output goes there (e.g. REPL
+         * capture).
          */
         fun createEngine(
             outputHandler: ((ConsoleLevel, List<String>) -> Unit)? = null,
-        ): KlangScriptEngine {
-            val stdlib = if (outputHandler != null) {
-                KlangStdLib.create(outputHandler = outputHandler)
-            } else {
-                stdlibLib
-            }
-
-            val engineBuilder = KlangScriptEngine.Builder()
-
-            engineBuilder.registerLibrary(stdlib)
-            engineBuilder.registerLibrary(sprudelLib)
-            engineBuilder.registerBuiltInSongsAsModules()
-
-            return engineBuilder.build()
-        }
+        ): KlangScriptEngine = createScriptEngine(outputHandler = outputHandler)
     }
 
     enum class Status {

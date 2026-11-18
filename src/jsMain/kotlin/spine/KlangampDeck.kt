@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.spine
 
-import io.peekandpoke.klang.BuiltInSongs
-import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.Song
 
 /**
  * Klangamp's deck: the playlist that plays the built-in songs on the Spine's song deck (the maintainer, 2026-10-29:

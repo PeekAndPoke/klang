@@ -5,8 +5,8 @@
 
 package io.peekandpoke.klang.layouts
 
-import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.apps.common.BuiltInSongs
 import io.peekandpoke.klang.comp.clockOf
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialProgress

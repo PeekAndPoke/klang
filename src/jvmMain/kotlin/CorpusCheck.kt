@@ -5,6 +5,9 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.builtInSongModules
+import io.peekandpoke.klang.apps.common.registerBuiltInSongsAsModules
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
 import io.peekandpoke.klang.audio_fe.create

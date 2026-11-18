@@ -5,7 +5,7 @@
 
 package io.peekandpoke.klang.spine
 
-import io.peekandpoke.klang.Song
+import io.peekandpoke.klang.apps.common.Song
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.distinct

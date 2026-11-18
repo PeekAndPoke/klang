@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.apps.common.Jingle
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.playOnce

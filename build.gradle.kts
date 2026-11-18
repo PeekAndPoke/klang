@@ -102,6 +102,8 @@ kotlin {
 
                 api(project(":klang"))
                 api(project(":sprudel"))
+                // What the apps share: the built-in songs, the script engine, the live music for the band (KLANG-00465)
+                api(project(":apps:common"))
                 // The shape and the merge of the stored documents, shared with a server (KLANG-00422)
                 api(project(":workshop"))
             }

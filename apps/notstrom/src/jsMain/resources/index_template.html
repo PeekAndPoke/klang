@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#020308">
+<head>
+    <meta charset="UTF-8">
+    <title>Notstrom</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        html, body { margin: 0; height: 100%; overflow: hidden; background: #020308; color: #c8cfdc; }
+        body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+        #app { position: fixed; inset: 0; }
+        #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+            color: #8a93a8; font-size: 16px; letter-spacing: 0.04em; }
+    </style>
+    <script>window.__APP_VERSION__ = <%= JSON.stringify(appVersion) %>;</script>
+</head>
+<body>
+<div id="loading">Loading</div>
+<div id="app"></div>
+</body>
+</html>

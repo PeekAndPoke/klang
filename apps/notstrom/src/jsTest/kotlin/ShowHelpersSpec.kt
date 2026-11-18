@@ -1,0 +1,68 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.notstrom
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.Switch
+import io.peekandpoke.klang.viz.liveact.Switches
+import kotlin.random.Random
+
+class ShowHelpersSpec : StringSpec({
+
+    "the stroboscope switched off on the start screen sets nostrobe, and the address's other switches stay" {
+        val switches = showSwitches(query = "?seed=7&still", strobe = false)
+
+        switches.has(Switch.NoStrobe) shouldBe true
+        switches[Switch.Seed] shouldBe "7"
+        switches.has(Switch.Still) shouldBe true
+    }
+
+    "the stroboscope switched on takes nostrobe away, also where the address had it" {
+        val switches = showSwitches(query = "?nostrobe&still", strobe = true)
+
+        switches.has(Switch.NoStrobe) shouldBe false
+        switches.has(Switch.Still) shouldBe true
+    }
+
+    "an address without switches gives only what the app decides: no line of text at the top, and the stroboscope" {
+        showSwitches(query = "", strobe = true) shouldBe Switches.parse("nohud")
+        showSwitches(query = "?", strobe = false) shouldBe Switches.parse("nostrobe&nohud")
+    }
+
+    "the line of text at the top shows only where the address asks for it with hud" {
+        showSwitches(query = "?seed=3", strobe = true).has(Switch.NoHud) shouldBe true
+        showSwitches(query = "?nohud", strobe = true) shouldBe Switches.parse("nohud")
+        showSwitches(query = "?hud&seed=3", strobe = true) shouldBe Switches.parse("seed=3")
+        showSwitches(query = "?hud&nohud", strobe = true).has(Switch.NoHud) shouldBe false
+    }
+
+    "notest in the address skips the machine's tests, and is not handed on to the live act" {
+        skipsTests("?seed=3&notest") shouldBe true
+        skipsTests("?notesting&seed=3") shouldBe false
+        skipsTests("") shouldBe false
+        showSwitches(query = "?notest&hud", strobe = true) shouldBe Switches()
+    }
+
+    "the test's oversampling is handed on, unless the address sets it by hand; 1 sets nothing" {
+        showSwitches(query = "", strobe = true, oversample = 2)[Switch.Oversample] shouldBe "2"
+        showSwitches(query = "", strobe = true, oversample = 1).has(Switch.Oversample) shouldBe false
+        showSwitches(query = "?oversample=4", strobe = true, oversample = 2)[Switch.Oversample] shouldBe "4"
+        setsOversample("?seed=1&oversample=1") shouldBe true
+        setsOversample("?seed=1") shouldBe false
+    }
+
+    "the address's frozen time is not taken; the app's is" {
+        showSwitches(query = "?t=62.1&seed=3", strobe = true).has(Switch.Time) shouldBe false
+        showSwitches(query = "?t=62.1", strobe = true, frozenAt = 0.0).double(Switch.Time) shouldBe 0.0
+    }
+
+    "the seed is the address's where it gives one, else drawn" {
+        showSeed(switches = Switches.parse("seed=42"), random = Random(1)) shouldBe 42
+        showSeed(switches = Switches.parse("seed=x"), random = Random(1)) shouldBe Random(1).nextInt(100_000)
+        showSeed(switches = Switches(), random = Random(5)) shouldBe Random(5).nextInt(100_000)
+    }
+})

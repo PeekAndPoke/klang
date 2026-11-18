@@ -44,6 +44,10 @@ include(
     // Visualizations: the live act (a band on a stage); and a small app that shows them alone
     ":klangviz",
     ":klangviz-demo",
+
+    // The apps (KLANG-00465): what they share, and the band's own app
+    ":apps:common",
+    ":apps:notstrom",
 )
 
 // Per-user build outputs (MC-00031). Append to the project's settings.gradle.kts.
