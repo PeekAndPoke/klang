@@ -2,14 +2,14 @@
 
 Two flat HTML pages about where Klang stands, built from the docs and served next to the SPA:
 
-- `src/jsMain/resources/klang-topic-map.html`: every open task and plan in `docs/tasks` as a
+- `apps/studio/src/jsMain/resources/klang-topic-map.html`: every open task and plan in `docs/tasks` as a
   zoomable graph, grouped by area, with the links between the docs; the archive behind toggles.
-- `src/jsMain/resources/klang-mission-log.html`: every archived task on a timeline by the date in its file
+- `apps/studio/src/jsMain/resources/klang-mission-log.html`: every archived task on a timeline by the date in its file
   name, and a guessed completion date for each open one.
 
 A third page is built by its own script from the DSP probes' results (KLANG-00420):
 
-- `src/jsMain/resources/klang-engine-health.html`: every probe with a light, its items with a light each, and the
+- `apps/studio/src/jsMain/resources/klang-engine-health.html`: every probe with a light, its items with a light each, and the
   measured rows behind an item. `python3 console/dev-status/engine_health.py` reads, per probe, the newest run folder
   in `docs/audio-audit/<date>/` that holds its JSON (a rerun of one probe adds a folder with that probe's files only) and the judgement in `docs/audio-audit/verdicts.json`. A light is a
   rule over a measurement (the rules are the `*_items` functions in the script): green nothing notable, yellow a lead
@@ -19,7 +19,7 @@ A third page is built by its own script from the DSP probes' results (KLANG-0042
   Rebuild it after a probe run or a verdict.
 
 All share `hud.css` (the UI palette of `KlangLookAndFeel`, the Chakra Petch and Share Tech Mono
-faces, the HUD pieces); the white paper, `src/jsMain/resources/klang-whitepaper.html`, uses the same palette
+faces, the HUD pieces); the white paper, `apps/studio/src/jsMain/resources/klang-whitepaper.html`, uses the same palette
 and faces but is edited by hand.
 
 ## Rebuild
@@ -30,7 +30,7 @@ When a page changed its look, refresh the card previews too (needs Chrome and Im
 
     console/dev-status/previews.sh
 
-Then commit the pages and `src/jsMain/resources/images/dev-status/`. The pages sit in the SPA's
+Then commit the pages and `apps/studio/src/jsMain/resources/images/dev-status/`. The pages sit in the SPA's
 static resources, so the dev server serves them and `console/deploy-finzo.sh` uploads them to the
 site root with the rest of that folder. The SPA shows them as cards on the Dev status page
 (`/dev-status`, `DevStatusPage.kt`, in the sidebar after Credits). Each card is one link that

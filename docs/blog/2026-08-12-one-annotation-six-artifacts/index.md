@@ -16,14 +16,14 @@ status: draft
 references:
   - id: whitepaper
     text: "Klangmotor: A White Paper, §03 'KlangScript: the language you type' (2026)."
-    url: ../../../src/jsMain/resources/klang-whitepaper.html
+    url: ../../../apps/studio/src/jsMain/resources/klang-whitepaper.html
 ---
 
 # One Annotation, Six Artifacts
 
 *How KlangScript's KSP processor turns a KDoc comment into a language surface.*
 
-The [white paper](../../../src/jsMain/resources/klang-whitepaper.html) tells the general KlangScript story: JavaScript-shaped
+The [white paper](../../../apps/studio/src/jsMain/resources/klang-whitepaper.html) tells the general KlangScript story: JavaScript-shaped
 syntax, Kotlin-shaped standard library, a hand-written interpreter with no `eval` and no host-interop hole
 [[1]](#whitepaper). This post is the closer look at one sentence of it:
 
@@ -164,4 +164,4 @@ time rotting; when it does, the build says so.
 
 1. <a id="whitepaper"></a>*Klangmotor: A White Paper*, §03
    "KlangScript: the language you type" (2026).
-   [docs/whitepaper](../../../src/jsMain/resources/klang-whitepaper.html)
+   [docs/whitepaper](../../../apps/studio/src/jsMain/resources/klang-whitepaper.html)

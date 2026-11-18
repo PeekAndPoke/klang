@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds the engine health page into src/jsMain/resources: the DSP probes' results with a light per item.
+"""Builds the engine health page into apps/studio/src/jsMain/resources: the DSP probes' results with a light per item.
 
     python3 console/dev-status/engine_health.py [--run docs/audio-audit/<date>] [--out FILE]
 
@@ -37,7 +37,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 AUDIT = os.path.join(ROOT, 'docs', 'audio-audit')
-OUT = os.path.join(ROOT, 'src', 'jsMain', 'resources', 'klang-engine-health.html')
+OUT = os.path.join(ROOT, 'apps', 'studio', 'src', 'jsMain', 'resources', 'klang-engine-health.html')
 
 SAMPLE_RATE = 48000.0
 POISON = ('nan', '+inf', '1e30')

@@ -3,7 +3,7 @@
 # Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-"""Builds the blog into src/jsMain/resources/blog: one page per post and the index.
+"""Builds the blog into apps/studio/src/jsMain/resources/blog: one page per post and the index.
 
     python3 console/blog/build.py            # build and write
     python3 console/blog/build.py --check    # build in memory, run every guard, write nothing; exit 1 on a
@@ -11,8 +11,8 @@
 
 Reads every docs/blog/<YYYY-MM-DD-slug>/index.md (front matter + CommonMark/GFM body, the contract is
 docs/blog/howto-write-a-post.md), renders it with the templates and blog.css next to this file, and
-writes src/jsMain/resources/blog/<slug>/index.html with the post's web assets copied beside it, plus
-src/jsMain/resources/blog/index.html. The output folder belongs to the build: whatever it did not
+writes apps/studio/src/jsMain/resources/blog/<slug>/index.html with the post's web assets copied beside it, plus
+apps/studio/src/jsMain/resources/blog/index.html. The output folder belongs to the build: whatever it did not
 produce is removed. Files are written only when their bytes change, so a rerun is a no-op.
 Needs markdown-it-py and PyYAML (see README.md).
 """
@@ -29,15 +29,15 @@ from markdown_it import MarkdownIt
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 SRC = os.path.join(ROOT, 'docs', 'blog')
-OUT = os.path.join(ROOT, 'src', 'jsMain', 'resources', 'blog')
+OUT = os.path.join(ROOT, 'apps', 'studio', 'src', 'jsMain', 'resources', 'blog')
 # The one folder the build may write into and delete from, fixed to this script's location so no
 # reassignment of ROOT or OUT can point the writes or the cleanup anywhere else.
-OWNED_OUT = os.path.realpath(os.path.join(HERE, '..', '..', 'src', 'jsMain', 'resources', 'blog'))
+OWNED_OUT = os.path.realpath(os.path.join(HERE, '..', '..', 'apps', 'studio', 'src', 'jsMain', 'resources', 'blog'))
 # Only these files of a post folder are copied next to the page; sources (make_fig.py, graphs.dot)
 # stay in docs/blog.
 WEB_ASSETS = {'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif', 'html', 'wav', 'mp3', 'ogg', 'flac', 'mp4',
               'webm', 'pdf', 'json', 'css', 'js'}
-SITE_ROOT = os.path.join(ROOT, 'src', 'jsMain', 'resources')
+SITE_ROOT = os.path.join(ROOT, 'apps', 'studio', 'src', 'jsMain', 'resources')
 GITHUB = 'https://github.com/PeekAndPoke/klang'
 POST_DIR = re.compile(r'^(\d{4}-\d{2}-\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)$')
 REQUIRED = ('title', 'subtitle', 'date', 'slug', 'tags', 'summary', 'authors', 'status')
@@ -528,7 +528,7 @@ def existing_files():
 
 
 def guard_output_dir():
-    """Refuses to write or delete anywhere but src/jsMain/resources/blog of this checkout."""
+    """Refuses to write or delete anywhere but apps/studio/src/jsMain/resources/blog of this checkout."""
     if os.path.islink(OUT) or os.path.realpath(OUT) != OWNED_OUT:
         raise SystemExit(f'refusing to write: the output folder {OUT} is not the real folder {OWNED_OUT}')
 
@@ -591,9 +591,9 @@ def main():
     drafts = sum(p['status'] != 'published' for p in posts)
     stream = sys.stderr if check else sys.stdout
     for rel in written:
-        print(f'{"STALE" if check else "wrote"} src/jsMain/resources/blog/{rel}', file=stream)
+        print(f'{"STALE" if check else "wrote"} apps/studio/src/jsMain/resources/blog/{rel}', file=stream)
     for rel in removed:
-        print(f'{"STALE (would be removed)" if check else "removed"} src/jsMain/resources/blog/{rel}', file=stream)
+        print(f'{"STALE (would be removed)" if check else "removed"} apps/studio/src/jsMain/resources/blog/{rel}', file=stream)
     print(f'{len(posts)} posts ({drafts} drafts), {len(out)} files; {len(written)} changed, {len(removed)} removed')
     if check:
         if written or removed:
