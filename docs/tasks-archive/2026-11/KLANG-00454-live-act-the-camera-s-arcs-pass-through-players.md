@@ -1,6 +1,6 @@
 # KLANG-00454: Live act: the camera's arcs pass through players
 
-> **Status (2026-11-17): IDEA.** Found by the review of the camera's clearing rule (KLANG-00446, 2026-11-17).
+> **Status (2026-11-18): DONE.** Each arc set for the stage plot (Arcs.kt: a part of the round and a distance of its own for Wucht, Rune, Beben, Skalpell); the camera and its line of sight stay clear of every other place, and the drummer's arc cuts back to the total. LooksSpec holds the arcs against the places. Not covered: the frontwoman's strolls.
 >
 > **Part of:** KLANG-00447 (Live act: a band on a stage, played by the song)
 
@@ -35,3 +35,4 @@ No arc comes nearer than the looks' clearing to a player it does not go round, a
 ## History
 
 - 2026-11-17: created.
+- 2026-11-18: DONE. Each arc set for the stage plot (Arcs.kt: a part of the round and a distance of its own for Wucht, Rune, Beben, Skalpell); the camera and its line of sight stay clear of every other place, and the drummer's arc cuts back to the total. LooksSpec holds the arcs against the places. Not covered: the frontwoman's strolls.

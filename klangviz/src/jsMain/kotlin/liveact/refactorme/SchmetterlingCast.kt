@@ -27,9 +27,9 @@ import io.peekandpoke.klang.viz.liveact.song.Strum
 // figure/Life.kt, LiveAct; the song's drum hits in song/Song.kt and the light plan's kicks read SchmetterlingTags).
 //
 // Places outside it that still know the song or the cast, and why they stay for now:
-// - camera/Subject.kt, LOOKS, and camera/Choreography.kt, ARCS: keyed by player, how a seated drummer (Wucht) and a marimba player
-//   (Rune) are looked at and gone round; everyone else is looked at as one who stands. A bridge would key them by
-//   instrument.
+// - camera/Subject.kt, LOOKS, and camera/Arcs.kt, ARCS: keyed by player, how a seated drummer (Wucht) and a marimba
+//   player (Rune) are looked at and gone round; everyone else is looked at as one who stands. The arcs are also set
+//   for where each stands on this stage plot (Beben, Skalpell). A bridge would key them by instrument and place.
 // - camera/Subject.kt, ORDER, and camera/View.kt: the keys 1 to 6 by player, the key help names each by what
 //   they play (drums, lead guitar, ...), and the hand camera starts on Skalpell.
 // - band/figure/Life.kt, PAIRS: who has eye contact with whom, chosen by who plays what (the rhythm section, the

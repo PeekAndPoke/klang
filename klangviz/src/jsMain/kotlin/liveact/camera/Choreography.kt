@@ -31,7 +31,7 @@ import kotlin.math.tan
 // into rounds of 48 cycles (bars, about 79 s), and a round is one of five kinds, by the seed:
 //   looks   34 bars on the total, then three looks in a row, three bars each, with a cut between them (close on one
 //           player, or the stage from another angle)
-//   arc     the same, but the nine bars are one look: the camera goes slowly round one player, across their front
+//   arc     the same, but the nine bars are one look: the camera goes slowly part of the way round one player
 //   circle  24 bars on the total, then one slow flight right round the whole band, from the start position and
 //           back to it, with no cut at all
 //   flight  20 bars on the total, then out backward over the audience to the mixing desk far back (the FOH), a
@@ -53,11 +53,8 @@ import kotlin.math.tan
 /** The camera in the world: where it is ([pos]), what it looks at ([at]), its lens ([fov], degrees). */
 class Shot(val pos: Vector3, val at: Vector3, val fov: Double)
 
-/** A slow way round one player, in the player's own space: how far off, how high, what it looks at, the lens. */
-data class Orbit(val far: Double, val high: Double, val at: Triple<Double, Double, Double>, val fov: Double)
-
 /** The total, the start position. Never change it: copy first. */
-val HOME: Shot by lazy { Shot(pos = vec(0.0, 1.85, 9.4), at = vec(0.0, 1.0, 0.0), fov = 35.0) }
+val HOME: Shot by lazy { Shot(pos = vec(TOTAL_FROM.x, 1.85, TOTAL_FROM.z), at = vec(0.0, 1.0, 0.0), fov = 35.0) }
 
 /**
  * The looks at every player of a band that stands at [homes]: [looksOf], each camera moved where it would stand in
@@ -85,15 +82,6 @@ fun looksOn(homes: Map<Player, Place>): Map<Player, List<Placement>> = homes.map
         }
     }
 }
-
-/** Round one player who stands, in the player's own space: how far off, how high, what it looks at, the lens. */
-private val STANDING_ARC = Orbit(far = 2.7, high = 1.35, at = Triple(0.0, 1.15, 0.1), fov = 38.0)
-
-/** Round the players who do not stand, as [STANDING_ARC]. */
-private val ARCS: Map<Player, Orbit> = mapOf(
-    Player.Wucht to Orbit(far = 3.4, high = 1.30, at = Triple(0.0, 0.95, 0.4), fov = 40.0),
-    Player.Rune to Orbit(far = 3.1, high = 1.60, at = Triple(0.0, 1.00, 0.4), fov = 40.0),
-)
 
 /** How far a camera that looks at one player stays from where every other one stands, in metres: clear of a guitar's neck and head. */
 const val CLEAR = 1.3
@@ -211,7 +199,7 @@ class Choreography(
         return shot
     }
 
-    /** The slow way round the player of round [n], [u] of it (0 to 1): across their front, 43 degrees to each side. */
+    /** The slow way round the player of round [n], [u] of it (0 to 1): the part of the round set for them (see [arcOf]). */
     private fun arc(n: Int, u: Double): Shot {
         val player = checkNotNull(subject(n, 0).player) { "An arc round $n without a player" }
 
@@ -220,8 +208,8 @@ class Choreography(
 
     /** The way round [player], [u] of it, from one side ([way] 1) or the other (-1). */
     fun arcBy(player: Player, way: Int, u: Double): Shot {
-        val a = ARCS[player] ?: STANDING_ARC
-        val angle = way * 1.5 * (u - 0.5)
+        val a = arcOf(player)
+        val angle = a.angle(way = way, u = u)
         val root = rigs.getValue(player).root
 
         root.updateWorldMatrix(updateParents = true, updateChildren = false)
@@ -399,10 +387,11 @@ class Choreography(
 
         // a look that looks away from the total (over the drummer's shoulder): the dolly would swing the camera right
         // round, so it cuts. And from the frontwoman, who may stroll off and turn while the camera travels: the way
-        // back hangs on her place, and would jump
+        // back hangs on her place, and would jump. And from an arc that ends behind someone (see `Orbit.cutsBack`)
         val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == rounds.strolls
+        val behind = roundKind == RoundKind.Arc && subject(n, 0).player?.let { arcOf(it).cutsBack } == true
 
-        if (away(shot) || strolls) {
+        if (away(shot) || strolls || behind) {
             label = "total"
 
             return home
