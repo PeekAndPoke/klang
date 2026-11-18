@@ -310,7 +310,7 @@ export guitar1_arrange = x => x.cylinder(1)  // . solo()
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.40)
+  .katp("gain.gain", 0.39)
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
 
@@ -329,11 +329,11 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
   .body(material = "maple", wet = 0.15)
 
 export guitar2_arrange = x => x.cylinder(2)  // . solo()
-  .scale("<e2:minor>").gain(0.1850).mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").gain(0.2000).mute("<0!128 1!16 0!16>") // .mute()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.40)
+  .katp("gain.gain", 0.39)
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
 
@@ -352,11 +352,11 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .body(material = "mahogany", wet = 0.15)
 
 export guitar3_arrange = x => x.cylinder(3) //  . solo()
-  .scale("<e2:minor>").gain(0.1800).mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").gain(0.2000).mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
   // Shaping
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.40)
+  .katp("gain.gain", 0.39)
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
 
@@ -367,7 +367,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.22) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.23) // . mute()
     .ignp("sub", 0.92).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
