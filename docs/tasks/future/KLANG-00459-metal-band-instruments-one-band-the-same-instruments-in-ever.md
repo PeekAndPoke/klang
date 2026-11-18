@@ -27,6 +27,29 @@ uncalibrated parts to a place where a change affects two songs.
 4. KLANG-00463 (the shared guitar rig): one place, imported by the songs.
 5. KLANG-00464 (the bass and the drums): the rest of the band, the same way.
 
+## Found by reading the rig (2026-11-18)
+
+An opinion asked for by the maintainer; the facts are read from the song and the engine, nothing was listened to
+or measured.
+
+- **One amp per note.** The rig is part of the voice, and a voice builds its own shaper cores and filters for every
+  note. Two notes that sound together never meet inside a clipper, so an interval (a power chord) gets no
+  intermodulation: no difference tone an octave under the root, which is a large part of why a distorted power
+  chord sounds heavy. And every note starts a cold amp: filters and DC blockers begin at rest on each note.
+  A real guitarist has one amp for all notes.
+- **The amp cannot move to the cylinder today.** A cylinder chain has `distort`, `eq` (bells and taps), `parallel`,
+  `serial` and oversampling, but no lowpass and no highpass stage, and the rig needs both (the highpasses between
+  the gain stages, the cab's wall). The song's own comment that the cabs move to the cylinder "once the Katalyst
+  DSL lands" still waits on that.
+- **Within one voice it works already:** an oscillator a fifth above the string, summed before the rig, would give
+  a power chord its intermodulation without any engine work. Not tried.
+- **The rig's tail is mixing, not amp.** `snareCut`, the cab and `guitarShape` come after the last hard clipper.
+  `guitarShape` is a level trim and a soft curve that, by the numbers, can only round the highest peaks slightly
+  (an estimate). The header names a tone stack that has no stage; the cab's broad band at 800 Hz and `snareCut` do
+  its work.
+- **`snareCut` needs no parameter mechanism** (for KLANG-00463): a song builds its rig from parts with `serial`,
+  so a song-specific stage is one more entry in the song's own list.
+
 ## Notes
 
 - **Parameters for the rigs** may be needed later (maintainer, 2026-11-18). The first case is already there: the
@@ -40,3 +63,4 @@ uncalibrated parts to a place where a change affects two songs.
 ## History
 
 - 2026-11-18: created, from the Der Schmetterling session of 2026-11-17 and 18.
+- 2026-11-18: findings from reading the rig and the engine's shaper code added.
