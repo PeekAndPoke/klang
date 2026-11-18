@@ -38,10 +38,10 @@ against the whole reading:
    **Done** (d699a4b40): `planTrumpet`, with `TrumpetPlanSpec`.
 4. The drummer's lists by limb (`Drummer.plan`). **Done** (d699a4b40): `planDrums`, with `DrumPlanSpec`.
 5. The camera's choice of a look (`Choreography.choose`, `subject`, `kind`): stable through a round whatever the
-   song forgets. **Open.** What it needs, from the worker who did 1 to 4: `Subject`, `Placement`, the looks tables
-   and the order of the keys move to `commonMain`; the cast's two players who play seldom are handed in instead of
-   read from the cast; and the `begun` map (a look the camera has begun) becomes data the plan carries over
-   explicitly, as the other four plans carry theirs.
+   song forgets. **Done** (the commit after 6d065cd84): `chooseLook` and `chooseKind`, going on from a `LookPlan` (the looks begun),
+   with `LookPlanSpec`. `Subject`, `Placement`, `RoundKind`, the looks tables, the angles and `ORDER` are in
+   `commonMain`; the players who play seldom and the one who strolls are handed in (`Rounds`); the choreography
+   asks for each look as before, so the stills are the same.
 
 ## Acceptance
 

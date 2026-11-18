@@ -27,14 +27,14 @@ import io.peekandpoke.klang.viz.liveact.song.Strum
 // figure/Life.kt, LiveAct; the song's drum hits in song/Song.kt and the light plan's kicks read SchmetterlingTags).
 //
 // Places outside it that still know the song or the cast, and why they stay for now:
-// - camera/Choreography.kt, LOOKS and ARCS: keyed by player, how a seated drummer (Wucht) and a marimba player
+// - camera/Subject.kt, LOOKS, and camera/Choreography.kt, ARCS: keyed by player, how a seated drummer (Wucht) and a marimba player
 //   (Rune) are looked at and gone round; everyone else is looked at as one who stands. A bridge would key them by
 //   instrument.
-// - camera/Choreography.kt, ORDER, and camera/View.kt: the keys 1 to 6 by player, the key help names each by what
+// - camera/Subject.kt, ORDER, and camera/View.kt: the keys 1 to 6 by player, the key help names each by what
 //   they play (drums, lead guitar, ...), and the hand camera starts on Skalpell.
 // - band/figure/Life.kt, PAIRS: who has eye contact with whom, chosen by who plays what (the rhythm section, the
 //   neighbours on this stage, the frontwoman and whoever she passes).
-// - camera/Choreography.kt, the rounds in bars (FIRST, BACK, CIRCLE, ROUND, REVERSE_FROM, REVERSE_TO, EARLY) and
+// - camera/LookPlan.kt, the rounds in bars (FIRST, BACK, CIRCLE, ROUND, REVERSE_FROM, REVERSE_TO, EARLY) and
 //   the two bars of count-in before the first round (`start`); lights/LightPlan.kt, its bars (HOLD, TURN, RIG_HOLD,
 //   RIG_TURN, the eight bars in forty of the low front lamp): tuned on this song, but speaking of bars, so any song
 //   can use them as they are.

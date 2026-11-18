@@ -10,7 +10,6 @@ import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
-import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smoother
 import io.peekandpoke.klang.viz.liveact.vec
@@ -54,97 +53,11 @@ import kotlin.math.tan
 /** The camera in the world: where it is ([pos]), what it looks at ([at]), its lens ([fov], degrees). */
 class Shot(val pos: Vector3, val at: Vector3, val fov: Double)
 
-/** A fixed place of the camera, in plain numbers: where it is, what it looks at, the lens. */
-data class Placement(
-    val pos: Triple<Double, Double, Double>,
-    val at: Triple<Double, Double, Double>,
-    val fov: Double,
-)
-
 /** A slow way round one player, in the player's own space: how far off, how high, what it looks at, the lens. */
 data class Orbit(val far: Double, val high: Double, val at: Triple<Double, Double, Double>, val fov: Double)
 
-/** The kind of a round of the choreography. [key] is its name in a page's switches (`?move=circle`). */
-enum class RoundKind(val key: String) {
-    /** Three looks in a row, with a cut between them. */
-    Looks("looks"),
-
-    /** One slow way round one player. */
-    Arc("arc"),
-
-    /** One slow flight right round the whole band. */
-    Circle("circle"),
-
-    /** Out over the audience to the mixing desk far back, and back in. */
-    Flight("flight"),
-
-    /** A long look from behind the drummer at the audience. */
-    Reverse("reverse");
-
-    companion object {
-        /** The kind named [key]; null where there is none. */
-        fun of(key: String?): RoundKind? = entries.firstOrNull { it.key == key }
-    }
-}
-
-/** What a look shows: the stage from another angle, or one player. */
-sealed class Subject {
-    /** The player looked at; null for the stage. */
-    abstract val player: Player?
-
-    /** What it shows, in words (for the line at the top). */
-    abstract val words: String
-
-    /** The stage from [angle]. */
-    class Angle(val angle: Placement) : Subject() {
-        override val player: Player? get() = null
-
-        override val words: String
-            get() = when {
-                angle === STADIUM -> "stadium"
-                angle === REVERSE -> "reverse total"
-                else -> "the stage from elsewhere"
-            }
-    }
-
-    /** The [player], by [look] (in the player's own space). */
-    class OnPlayer(override val player: Player, val look: Placement) : Subject() {
-        override val words: String get() = player.key
-    }
-}
-
 /** The total, the start position. Never change it: copy first. */
 val HOME: Shot by lazy { Shot(pos = vec(0.0, 1.85, 9.4), at = vec(0.0, 1.0, 0.0), fov = 35.0) }
-
-/**
- * Looks at a player who stands, in the player's own space (x to their left, y up, z ahead of them): where the camera
- * is, what it looks at, the lens.
- */
-val STANDING_LOOKS: List<Placement> = listOf(
-    Placement(pos = Triple(0.7, 0.75, 2.4), at = Triple(0.0, 1.20, 0.1), fov = 42.0),       // from below, in front
-    Placement(pos = Triple(2.0, 1.45, 0.9), at = Triple(0.0, 1.15, 0.2), fov = 38.0),       // from their left
-    Placement(pos = Triple(-0.9, 1.55, 1.7), at = Triple(0.0, 1.30, 0.1), fov = 30.0),      // close on head and hands
-    Placement(pos = Triple(-1.9, 1.1, 1.3), at = Triple(0.0, 1.10, 0.2), fov = 40.0),       // from their right, low
-)
-
-/** Looks at the players who do not stand ([looksOf] gives everyone else [STANDING_LOOKS]), as [STANDING_LOOKS]. */
-val LOOKS: Map<Player, List<Placement>> = mapOf(
-    Player.Wucht to listOf(
-        Placement(pos = Triple(1.2, 1.0, 3.1), at = Triple(0.0, 0.95, 0.4), fov = 40.0),    // over the kick drum
-        Placement(pos = Triple(-1.1, 2.2, -1.5), at = Triple(0.0, 0.85, 0.7), fov = 55.0),  // over his shoulder, down on the kit
-        Placement(pos = Triple(2.4, 1.25, 0.7), at = Triple(0.0, 0.95, 0.4), fov = 38.0),   // from his left
-    ),
-    Player.Rune to listOf(
-        Placement(pos = Triple(0.2, 2.2, 2.3), at = Triple(0.0, 0.90, 0.5), fov = 42.0),    // down on the bars
-        // along the bars, low, from before the rhythm guitarist: his guitar at the picture's edge, and she is seen
-        // (from beside him he stood before her, and the camera in his guitar)
-        Placement(pos = Triple(1.6, 0.95, 2.1), at = Triple(0.0, 1.05, 0.5), fov = 38.0),
-        Placement(pos = Triple(-0.8, 1.5, 2.2), at = Triple(0.0, 1.25, 0.2), fov = 32.0),
-    ),
-)
-
-/** The looks at [player]. */
-fun looksOf(player: Player): List<Placement> = LOOKS[player] ?: STANDING_LOOKS
 
 /**
  * The looks at every player of a band that stands at [homes]: [looksOf], each camera moved where it would stand in
@@ -173,24 +86,6 @@ fun looksOn(homes: Map<Player, Place>): Map<Player, List<Placement>> = homes.map
     }
 }
 
-/** The stadium shot: from far back and high in the audience, the whole stage small above a field of held-up lights. */
-val STADIUM: Placement = Placement(pos = Triple(5.0, 11.0, 46.0), at = Triple(0.0, 0.0, 14.0), fov = 27.0)
-
-/**
- * The reverse total: from behind the drummer, over his left shoulder, the band from the back and the audience's
- * lights before it (the maintainer, 2026-11-17: "so the crowd can be seen for longer").
- */
-val REVERSE: Placement = Placement(pos = Triple(1.1, 2.4, -4.6), at = Triple(-0.8, 0.6, 12.0), fov = 40.0)
-
-/** The stage from elsewhere. */
-val ANGLES: List<Placement> = listOf(
-    Placement(pos = Triple(-7.2, 1.1, 5.6), at = Triple(0.0, 1.0, 0.6), fov = 40.0),        // from the left, low
-    Placement(pos = Triple(0.0, 5.6, 7.4), at = Triple(0.0, 0.6, 0.6), fov = 38.0),         // from above
-    Placement(pos = Triple(7.0, 1.4, 5.2), at = Triple(0.0, 1.0, 0.6), fov = 40.0),         // from the right
-    Placement(pos = Triple(0.0, 0.45, 6.6), at = Triple(0.0, 1.5, 0.0), fov = 44.0),        // from the floor
-    STADIUM,                                                                                // from far back in the audience
-)
-
 /** Round one player who stands, in the player's own space: how far off, how high, what it looks at, the lens. */
 private val STANDING_ARC = Orbit(far = 2.7, high = 1.35, at = Triple(0.0, 1.15, 0.1), fov = 38.0)
 
@@ -200,33 +95,11 @@ private val ARCS: Map<Player, Orbit> = mapOf(
     Player.Rune to Orbit(far = 3.1, high = 1.60, at = Triple(0.0, 1.00, 0.4), fov = 40.0),
 )
 
-// A round in bars: where the looks begin, where the way back begins, where the circle begins
-private const val FIRST = 34
-private const val BACK = 43
-private const val CIRCLE = 24
-private const val ROUND = 48
-
-/** The reverse total begins and ends, in bars. */
-private const val REVERSE_FROM = 32
-private const val REVERSE_TO = 44
-
-/** Where the two looks of a round's first half begin, in bars. */
-private const val EARLY = 12
-
-/** How many looks a round can have: three late, two early. */
-private const val LOOKS_A_ROUND = 5
-
-/** The bar of a round at which its look number [i] begins: 0 to 2 are the late three, 3 and 4 the early two. */
-private fun opens(i: Int): Int = if (i < 3) FIRST + 3 * i else EARLY + 3 * (i - 3)
-
 /** How far a camera that looks at one player stays from where every other one stands, in metres: clear of a guitar's neck and head. */
 const val CLEAR = 1.3
 
 /** From this height on a camera is above the players' heads and passes over them. */
 private const val OVERHEAD = 2.1
-
-/** The players in the order the camera tries them, and the keys 1 to 6 choose them. */
-val ORDER: List<Player> = listOf(Player.Wucht, Player.Skalpell, Player.Sirene, Player.Beben, Player.Klaue, Player.Rune)
 
 /**
  * The camera's choreography under [show]: a bar is its cycle, and every seed gives another show (who is looked at,
@@ -238,120 +111,57 @@ val ORDER: List<Player> = listOf(Player.Wucht, Player.Skalpell, Player.Sirene, P
 class Choreography(
     show: Show,
     private val rigs: Map<Player, Rig>,
-    private val looks: Map<Player, List<Placement>>,
+    looks: Map<Player, List<Placement>>,
     private val activity: (Player) -> List<Double>,
-    private val force: RoundKind? = null,
+    force: RoundKind? = null,
 ) {
-    private val seed: Int = show.seed
     private val cycle: Double = show.bar
-    private val round: Double = ROUND * cycle
+
+    /** The rounds, and what the choice of a look goes by: the cast's two players who play seldom, and who strolls. */
+    private val rounds = Rounds(
+        seed = show.seed,
+        bar = cycle,
+        looks = looks,
+        // (into refactorme: that they play seldom is the song's arrangement, who plays them is its cast; the one
+        // who strolls is the trumpet player)
+        seldom = listOf(SchmetterlingCast.MARIMBA, SchmetterlingCast.TRUMPET),
+        strolls = SchmetterlingCast.TRUMPET,
+        force = force,
+    )
+    private val round: Double = rounds.length
 
     /** The song starts after the count-in; the rounds begin up to twelve bars later, by the seed. */
-    val start: Double = (2 + floor(chance(n = 0, i = 0, salt = 9) * 13)) * cycle
+    val start: Double = rounds.start
 
     /** What the camera did at the last [at], in words. */
     var label: String = "total"
         private set
 
     /** A number from 0 to 1 that belongs to the round [n], the look [i] and a purpose [salt], under this seed. */
-    private fun chance(n: Int, i: Int, salt: Int): Double {
-        return hash01(n * 127.1 + i * 311.7 + salt * 74.7 + seed * 0.618)
-    }
-
-    /** How many notes [player] plays between [a] and [b]. */
-    private fun plays(player: Player, a: Double, b: Double): Int {
-        var n = 0
-
-        for (t in activity(player)) {
-            if (t >= a && t < b) {
-                n++
-            } else if (t >= b) {
-                break
-            }
-        }
-
-        return n
-    }
+    private fun chance(n: Int, i: Int, salt: Int): Double = rounds.chance(n = n, i = i, salt = salt)
 
     /** The moment the camera was last asked for ([at]). */
     private var heard: Double = Double.NEGATIVE_INFINITY
 
-    /** The looks that have begun, by round and number: what they show stays, whatever the song forgets or learns. */
-    private val begun = mutableMapOf<Int, Subject>()
+    /** The looks that have begun (see [chooseLook]), carried on from one question to the next. */
+    private var plan: LookPlan = LookPlan()
 
-    /**
-     * What the look number [i] of round [n] shows (0, 1, 2 the late three, 3 and 4 the early two): a player who plays
-     * then, or the stage from another angle.
-     * It is chosen from the notes known, and kept once the look has begun: a song played live forgets those notes
-     * while the round still asks for its looks (the way back from the last look goes on long after the first).
-     */
-    fun subject(n: Int, i: Int): Subject {
-        val key = n * LOOKS_A_ROUND + i
+    /** What the look number [i] of round [n] shows (see [chooseLook]). */
+    private fun subject(n: Int, i: Int): Subject {
+        val chosen = chooseLook(rounds = rounds, n = n, i = i, now = heard, playsAt = activity, before = plan)
 
-        return begun[key] ?: choose(n, i).also {
-            if (heard >= start + n * round + opens(i) * cycle) {
-                begun[key] = it
-            }
-        }
+        plan = chosen.plan
+
+        return chosen.what
     }
 
-    private fun choose(n: Int, i: Int): Subject {
-        val a = start + n * round + opens(i) * cycle
-        val b = a + 3 * cycle
-        // the first of its row of looks: nobody was shown right before it
-        val leads = i == 0 || i == 3
+    /** What kind the round [n] is (see [chooseKind]). */
+    private fun kind(n: Int): RoundKind {
+        val chosen = chooseKind(rounds = rounds, n = n, now = heard, playsAt = activity, before = plan)
 
-        fun <T> pick(list: List<T>, salt: Int): T = list[floor(chance(n, i, salt) * list.size).toInt() % list.size]
+        plan = chosen.plan
 
-        // about one look in five is the stage from another angle
-        if (chance(n, i, 1) < 0.2) {
-            return Subject.Angle(pick(ANGLES, 2))
-        }
-
-        // the marimba and the trumpet play seldom: when one of them does, the round's first look is theirs
-        // (into refactorme: that they play seldom is the song's arrangement, who plays them is its cast)
-        val rare = listOf(SchmetterlingCast.MARIMBA, SchmetterlingCast.TRUMPET).filter { plays(it, a, b) > 2 }
-        var player: Player? = if (rare.isNotEmpty() && i == 0) pick(rare, 3) else null
-        // else someone who plays just then, and not the one the look before showed
-        val before = if (!leads) subject(n, i - 1).player else null
-        val first = floor(chance(n, i, 4) * ORDER.size).toInt()
-
-        for (k in ORDER.indices) {
-            if (player != null) {
-                break
-            }
-
-            val candidate = ORDER[(first + k) % ORDER.size]
-
-            if (candidate != before && plays(candidate, a, b) > 3) {
-                player = candidate
-            }
-        }
-
-        if (player == null) {
-            return Subject.Angle(pick(ANGLES, 2))
-        }
-
-        return Subject.OnPlayer(player, pick(looks.getValue(player), 5))
-    }
-
-    /**
-     * What kind the round [n] is: about a fifth each are a circle, an arc and a flight, about one in seven has the
-     * reverse total, the rest are looks. An arc needs a player who stays at their place (the frontwoman strolls and
-     * turns: the camera would swing with her).
-     */
-    fun kind(n: Int): RoundKind {
-        val kind = force ?: when {
-            chance(n, 0, 7) < 0.2 -> RoundKind.Circle
-            chance(n, 0, 7) < 0.4 -> RoundKind.Arc
-            chance(n, 0, 7) < 0.6 -> RoundKind.Flight
-            chance(n, 0, 7) < 0.75 -> RoundKind.Reverse
-            else -> RoundKind.Looks
-        }
-        val player = subject(n, 0).player
-
-        // (into refactorme: the one who strolls is the trumpet player, and who that is, the cast says)
-        return if (kind == RoundKind.Arc && (player == null || player == SchmetterlingCast.TRUMPET)) RoundKind.Looks else kind
+        return chosen.what
     }
 
     /**
@@ -501,7 +311,7 @@ class Choreography(
 
         heard = t
         // (the looks of the rounds before the last are of no use any more)
-        begun.keys.removeAll { it < (n - 1) * LOOKS_A_ROUND }
+        plan = plan.inRound(n)
         val roundKind = kind(n)
 
         if (roundKind == RoundKind.Circle) {
@@ -590,8 +400,7 @@ class Choreography(
         // a look that looks away from the total (over the drummer's shoulder): the dolly would swing the camera right
         // round, so it cuts. And from the frontwoman, who may stroll off and turn while the camera travels: the way
         // back hangs on her place, and would jump
-        // (into refactorme: the one who strolls is the trumpet player, and who that is, the cast says)
-        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == SchmetterlingCast.TRUMPET
+        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == rounds.strolls
 
         if (away(shot) || strolls) {
             label = "total"
