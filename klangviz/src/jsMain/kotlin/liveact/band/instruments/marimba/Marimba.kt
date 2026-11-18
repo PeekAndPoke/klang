@@ -258,6 +258,12 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
 
             head.position.y = malletLength / 2
             mallet.add(head)
+            // a mallet stands on the stage, not in the marimba's group: it casts its shadow by its own flag
+            mallet.traverse { o ->
+                if (o.isMesh) {
+                    o.castShadow = true
+                }
+            }
             stage.add(mallet)
 
             return mallet

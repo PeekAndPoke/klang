@@ -295,6 +295,8 @@ class Kit(rig: Rig, name: String) {
                 KitMaterials.wood,
             )
 
+            // a stick stands on the stage, not in the kit's group: it casts its shadow by its own flag
+            stick.castShadow = true
             stage.add(stick)
 
             stick
