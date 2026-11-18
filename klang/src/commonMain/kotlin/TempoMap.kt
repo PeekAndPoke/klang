@@ -67,6 +67,13 @@ internal class TempoMap private constructor(private val pieces: List<Piece>) {
         return secondsAt(endCycle) - secondsAt(startCycle)
     }
 
+    /** True when this map is the one tempo [cyclesPerSecond] with cycle 0 at second 0, as a start makes it. */
+    fun isPlain(cyclesPerSecond: Double): Boolean {
+        val only = pieces.singleOrNull() ?: return false
+
+        return only.cyclesPerSecond == cyclesPerSecond && secondsAt(0.0) == 0.0
+    }
+
     /** The first cycle after [cycle] where the tempo changes; null when it stays. */
     fun nextChangeAfter(cycle: Double): Double? = pieces.firstOrNull { it.startCycle > cycle }?.startCycle
 

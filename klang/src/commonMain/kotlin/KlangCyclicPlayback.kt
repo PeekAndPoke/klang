@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_bridge.KlangPattern
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 
 /**
  * Interface for cycle-based pattern playback.
@@ -38,6 +39,29 @@ interface KlangCyclicPlayback : KlangPlayback {
      * playback's start (KLANG-00399). Stands still while the backend does. Null before the playback has started.
      */
     fun heardSec(): Double?
+
+    /**
+     * Where [heardSec] is in cycles, on the playback's tempo map. Null before the playback has started.
+     */
+    fun heardCycles(): Double?
+
+    /** The tempo at [cycle] on the playback's tempo map, in RPM. Before the start: the tempo last set, 30 until then. */
+    fun rpmAt(cycle: Double): Double
+
+    /**
+     * The events of the whole cycle [cycle] of the pattern that plays, placed in seconds as the scheduler places them
+     * (KLANG-00450). It is the scheduler's own answer: both read one store, and whoever asks a cycle first, that
+     * answer is the cycle's, so a reader beside the sound (the live act's band) shows what sounds.
+     *
+     * - It answers at once, on the caller's thread: a cycle not asked before asks the pattern there.
+     * - It works as soon as the playback exists, before [start], from cycle 0; set the tempo first ([updateRpm]). The
+     *   start keeps the answers; a stop forgets them.
+     * - It sends nothing and signals nothing.
+     * - A cycle whose asking fails gives no events; the failure is printed, as the scheduler does.
+     * - After [KlangPlaybackSignal.PatternUpdated] (a new pattern, a new tempo) what was read is out of date: the
+     *   events may be others, the seconds have moved. A read at or after the signal gives the new answer.
+     */
+    fun cycleEvents(cycle: Int): List<KlangCycleEvent>
 
     /**
      * Moves the playback's output gain to [gain] over [rampSec] seconds (KLANG-00406 step 5): a song faded under a code

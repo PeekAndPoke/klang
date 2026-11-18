@@ -10,6 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_engine.KlangCycleEvent
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
@@ -34,6 +35,9 @@ private class FakePlayback : KlangCyclicPlayback {
     override fun updateRpm(rpm: Double) = Unit
     override fun reemitVoiceSignals() = Unit
     override fun heardSec(): Double? = heard
+    override fun heardCycles(): Double? = null
+    override fun rpmAt(cycle: Double): Double = 30.0
+    override fun cycleEvents(cycle: Int): List<KlangCycleEvent> = emptyList()
 
     override fun setGain(gain: Double, rampSec: Double) = Unit
 

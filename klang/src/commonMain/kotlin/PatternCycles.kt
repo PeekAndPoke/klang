@@ -18,15 +18,19 @@ import kotlin.math.floor
  * the signal re-emit all get the same events for the same cycle.
  *
  * The last [capacity] answers stored are kept, so a cycle asked again is not computed again, and a pattern that reads
- * something that moves (the wall clock) still gives one answer per cycle. An answer belongs to its pattern, its cycle
+ * something that moves (the wall clock) still gives one answer per cycle, whoever asks it first: the scheduler, or a
+ * reader beside it ([KlangCyclicPlayback.cycleEvents]). An answer belongs to its pattern, its cycle
  * and the tempo it was asked at; the oldest goes first. The playback owns this object and empties it when its pattern
- * changes and when it stops.
+ * changes and when it stops; a start keeps it, so what was read before the start is what sounds.
  */
 internal class PatternCycles(private val capacity: Int = DEFAULT_CAPACITY) {
 
     companion object {
-        /** The sample look-ahead (8 cycles) and the fetch's look-ahead fit, with room to spare. */
-        const val DEFAULT_CAPACITY = 32
+        /**
+         * The scheduler's cycles (the sample look-ahead, 8 cycles, and the fetch's) and a reader's beside it
+         * ([KlangCyclicPlayback.cycleEvents]: the live act reads up to 16 cycles ahead) fit, with room to spare.
+         */
+        const val DEFAULT_CAPACITY = 64
     }
 
     private class Answer(

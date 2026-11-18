@@ -26,8 +26,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -94,6 +96,178 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
         }
     }
 
+    "a cycle read before the start is the one that sounds: asked once, placed in the playback's seconds" {
+        val recording = Recording()
+        var read = emptyList<KlangCycleEvent>()
+
+        withScheduler(
+            options = rpm30,
+            pattern = recording,
+            beforeStart = {
+                scheduler.heardCycles() shouldBe null
+                read = (0..3).flatMap { scheduler.cycleEvents(it) }
+                seen shouldBe listOf(KlangPlaybackSignal.Idle)
+                sent shouldBe emptyList()
+            },
+        ) {
+            round(atSec = 4.0)
+
+            read.map { it.data.note } shouldBe listOf("0", "1", "2", "3")
+            read[3].startSec shouldBe (6.0 plusOrMinus eps)
+            read[3].endSec shouldBe (8.0 plusOrMinus eps)
+            // Cycle 0 asks for half its slot as its gate: the end is the slot's
+            read[0].endSec shouldBe (2.0 plusOrMinus eps)
+            read[3].startCycles shouldBe 3.0
+            read[3].durationCycles shouldBe 1.0
+            // The scheduler played what was read: no cycle was asked a second time
+            scheduled(cycle = 3).startTime shouldBe (6.0 plusOrMinus eps)
+            (0..3).forEach { cycle -> recording.asked.count { (from, _) -> from == cycle.toDouble() } shouldBe 1 }
+        }
+    }
+
+    "a cycle read ahead of the scheduler is the one it plays later" {
+        val recording = Recording()
+
+        withScheduler(options = rpm30, pattern = recording) {
+            scheduler.cycleEvents(20).single().startSec shouldBe (40.0 plusOrMinus eps)
+            round(atSec = 40.0)
+
+            scheduled(cycle = 20).startTime shouldBe (40.0 plusOrMinus eps)
+            recording.asked.count { (from, _) -> from == 20.0 } shouldBe 1
+        }
+    }
+
+    "a read at the pattern's update signal gives the new pattern's cycle" {
+        val other = object : KlangPattern {
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> =
+                everyCycle.queryEvents(fromCycles = fromCycles + 100.0, toCycles = toCycles + 100.0, cps = cps)
+        }
+
+        withScheduler(rpm30) {
+            scheduler.cycleEvents(30).single().data.note shouldBe "30"
+
+            var atSignal: String? = null
+            onSignal = {
+                if (it == KlangPlaybackSignal.PatternUpdated && atSignal == null) {
+                    atSignal = scheduler.cycleEvents(30).single().data.note
+                }
+            }
+
+            scheduler.updatePattern(other)
+
+            atSignal shouldBe "130"
+        }
+    }
+
+    "a start at another tempo than the one set tells a reader; a start at the tempo set does not" {
+        withScheduler(options = KlangCyclicPlayback.Options(rpm = 60.0, prefetchCycles = 0)) {
+            seen.filterIsInstance<KlangPlaybackSignal.PatternUpdated>().size shouldBe 1
+        }
+
+        withScheduler(
+            options = KlangCyclicPlayback.Options(rpm = 60.0, prefetchCycles = 0),
+            beforeStart = {
+                scheduler.updateRpm(60.0)
+                seen.filterIsInstance<KlangPlaybackSignal.PatternUpdated>().size shouldBe 1
+                scheduler.rpmAt(0.0) shouldBe 60.0
+                scheduler.cycleEvents(2).single().startSec shouldBe (2.0 plusOrMinus eps)
+            },
+        ) {
+            seen.filterIsInstance<KlangPlaybackSignal.PatternUpdated>().size shouldBe 1
+        }
+
+        withScheduler(rpm30) {
+            seen.filterIsInstance<KlangPlaybackSignal.PatternUpdated>() shouldBe emptyList()
+        }
+    }
+
+    "after a stop, a start on a tempo map with a change in it tells a reader, also at the first tempo" {
+        withScheduler(rpm30) {
+            round(atSec = 20.0)
+            scheduler.updateRpm(60.0)
+            scheduler.stop()
+            val seenBefore = seen.size
+
+            // The map still holds the change at cycle 10.1: cycle 12 read now stands at second 22.1, after the start at 24
+            scheduler.cycleEvents(12).single().startSec shouldBe (22.1 plusOrMinus eps)
+            scheduler.start(rpm30)
+            idle.receive()
+
+            seen.drop(seenBefore).filterIsInstance<KlangPlaybackSignal.PatternUpdated>().size shouldBe 1
+            scheduler.cycleEvents(12).single().startSec shouldBe (24.0 plusOrMinus eps)
+        }
+    }
+
+    "after a stop, a tempo set on a tempo map with a change in it tells a reader, and the start at it does not again" {
+        withScheduler(rpm30) {
+            round(atSec = 20.0)
+            scheduler.updateRpm(60.0)
+            scheduler.stop()
+            val seenBefore = seen.size
+
+            scheduler.updateRpm(30.0)
+            seen.drop(seenBefore).filterIsInstance<KlangPlaybackSignal.PatternUpdated>().size shouldBe 1
+
+            scheduler.start(rpm30)
+            idle.receive()
+            seen.drop(seenBefore).filterIsInstance<KlangPlaybackSignal.PatternUpdated>().size shouldBe 1
+        }
+    }
+
+    "a listener that stops the playback at the start's signal: no loop runs on" {
+        withScheduler(
+            options = KlangCyclicPlayback.Options(rpm = 60.0, prefetchCycles = 0),
+            beforeStart = {
+                onSignal = {
+                    if (it == KlangPlaybackSignal.PatternUpdated) {
+                        scheduler.stop()
+                    }
+                }
+            },
+            stoppedAtStart = true,
+        ) {
+            sent.filterIsInstance<KlangCommLink.Cmd.ScheduleVoices>() shouldBe emptyList()
+            withTimeoutOrNull(300.milliseconds) { idle.receive() } shouldBe null
+        }
+    }
+
+    "where the sound is in cycles, the tempo at a cycle, and a cycle's seconds across a tempo change" {
+        withScheduler(rpm30) {
+            round(atSec = 20.0)
+            scheduler.heardCycles() shouldBe (scheduler.heardSec()!! * 0.5 plusOrMinus eps)
+
+            // The switch is at cycle 10.1
+            scheduler.updateRpm(60.0)
+
+            scheduler.rpmAt(5.0) shouldBe 30.0
+            scheduler.rpmAt(12.0) shouldBe 60.0
+            val tenth = scheduler.cycleEvents(10).single()
+            tenth.startSec shouldBe (20.0 plusOrMinus eps)
+            tenth.endSec shouldBe (21.1 plusOrMinus eps)
+
+            // Past the switch (second 20.2, cycle 10.1) a second is a cycle
+            round(atSec = 22.0)
+            val heardSec = scheduler.heardSec()!!
+            (heardSec > 20.2) shouldBe true
+            scheduler.heardCycles() shouldBe (10.1 + (heardSec - 20.2) plusOrMinus eps)
+        }
+    }
+
+    "a cycle whose asking fails gives no events and does not throw" {
+        val failing = object : KlangPattern {
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> =
+                if (fromCycles == 50.0) {
+                    error("cycle 50 fails, on purpose (KlangPatternSchedulerTempoSpec)")
+                } else {
+                    emptyList()
+                }
+        }
+
+        withScheduler(options = rpm30, pattern = failing) {
+            scheduler.cycleEvents(50) shouldBe emptyList()
+        }
+    }
+
     "a tempo change during a stall keeps the tempo of the cycles the counter has not reported yet" {
         withScheduler(rpm30) {
             // Reported up to cycle 8; then the loop stalls through two changes, at cycle 10.5 and at cycle 19.7
@@ -126,7 +300,8 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
         ) {
             scheduled(cycle = 1).startTime shouldBe (1.0 plusOrMinus eps)
             replaces shouldBe emptyList()
-            seen.filterIsInstance<KlangPlaybackSignal.PatternUpdated>() shouldBe emptyList()
+            // One sign for a reader that read ahead on the old tempo ([KlangCyclicPlayback.cycleEvents])
+            seen.filterIsInstance<KlangPlaybackSignal.PatternUpdated>().size shouldBe 1
         }
     }
 
@@ -201,14 +376,28 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
                 (ceil(fromCycles).toInt() until ceil(toCycles).toInt()).map { Note(cycle = it, cps = cps) }
         }
 
+        /** [everyCycle], noting every asking. */
+        class Recording : KlangPattern {
+            val asked = mutableListOf<Pair<Double, Double>>()
+
+            override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+                asked += fromCycles to toCycles
+
+                return everyCycle.queryEvents(fromCycles = fromCycles, toCycles = toCycles, cps = cps)
+            }
+        }
+
         /**
-         * Runs [test] after the scheduler's first round. [beforeFirstRound] runs right after the start, while the
+         * Runs [test] after the scheduler's first round. [beforeStart] runs on the scheduler made and not started.
+         * [beforeFirstRound] runs right after the start, while the
          * scheduler waits for [backendReady]; a [backendReady] still open there has to be completed by it.
          */
         private suspend fun withScheduler(
             options: KlangCyclicPlayback.Options,
             pattern: KlangPattern = everyCycle,
             backendReady: CompletableDeferred<Unit> = CompletableDeferred(Unit),
+            beforeStart: Rig.() -> Unit = {},
+            stoppedAtStart: Boolean = false,
             beforeFirstRound: suspend Rig.() -> Unit = {},
             test: suspend Rig.() -> Unit,
         ) {
@@ -252,7 +441,10 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
             )
 
             val signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
-            val listening = signals.subscribeToStream { rig.seen += it }
+            val listening = signals.subscribeToStream {
+                rig.seen += it
+                rig.onSignal(it)
+            }
 
             rig.scheduler = KlangPatternScheduler(
                 playbackId = "tempo",
@@ -270,10 +462,13 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
             try {
                 // A loop that never parks again fails the spec instead of hanging it
                 withTimeout(10.seconds) {
+                    rig.beforeStart()
                     rig.scheduler.start(options)
                     rig.beforeFirstRound()
                     // The first round: the first cycle and the look-ahead, at second 0
-                    rig.idle.receive()
+                    if (!stoppedAtStart) {
+                        rig.idle.receive()
+                    }
                     rig.test()
                 }
             } finally {
@@ -305,6 +500,7 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
         var nowSec = 0.0
         val sent = mutableListOf<KlangCommLink.Cmd>()
         val seen = mutableListOf<KlangPlaybackSignal>()
+        var onSignal: (KlangPlaybackSignal) -> Unit = {}
         val idle = Channel<Unit>()
         val go = Channel<Unit>()
         lateinit var scheduler: KlangPatternScheduler

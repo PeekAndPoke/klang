@@ -206,13 +206,13 @@ internal class KlangPatternScheduler(
      * Update the pattern being played
      */
     fun updatePattern(pattern: KlangPattern) {
+        // The new pattern first, the old one's answers gone: a reader that asks at the signal gets the new answer
+        // ([cycleEvents])
+        this.pattern = pattern
+        cycles.clear()
         // Old-pattern highlights are already scheduled ahead in the UI; tell it to
         // cancel them BEFORE the new pattern's VoicesScheduled signals arrive
         signals(KlangPlaybackSignal.PatternUpdated)
-        // Update pattern
-        this.pattern = pattern
-        // The old pattern's answers are of no use any more
-        cycles.clear()
         // Re-request current cycle to repopulate backend
         resyncCurrentCycle()
         // Pre-fetch the new pattern's samples over the whole look-ahead the old one was fetched for (audit N-R4: through
@@ -238,7 +238,13 @@ internal class KlangPatternScheduler(
 
         // Nothing is timed yet: the playback starts at the new tempo
         if (!begun) {
+            val moved = !tempo.isPlain(cyclesPerSecond = cps)
             tempo = TempoMap(cyclesPerSecond = cps)
+
+            // What a reader read ahead ([cycleEvents]) stood on the old tempo
+            if (moved) {
+                signals(KlangPlaybackSignal.PatternUpdated)
+            }
 
             return
         }
@@ -291,13 +297,26 @@ internal class KlangPatternScheduler(
         // current is the one [fetcherJob] holds, so the next stop cancels it. Checked under [jobLock], which the stop
         // takes after its flip, so a stop that comes after the check finds the job set and cancels it
         val prefetchCycles = options.prefetchCycles?.toDouble() ?: 2.0
+        val cps = options.rpm.coerceAtLeast(MIN_RPM) / 60.0
+        // What a reader read before this start ([cycleEvents]) stood on the tempo set until now
+        val moved = !tempo.isPlain(cyclesPerSecond = cps)
+
         jobLock.withLock {
             if (!isCurrent(started)) {
                 return
             }
 
             driven = false
-            reset(cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0, lookaheadCycles = options.lookaheadCycles)
+            reset(cyclesPerSecond = cps, lookaheadCycles = options.lookaheadCycles)
+
+            if (moved) {
+                signals(KlangPlaybackSignal.PatternUpdated)
+
+                // A listener may have stopped the playback at the signal: then no loop is launched
+                if (!isCurrent(started)) {
+                    return
+                }
+            }
 
             fetcherJob = scope.launch(fetcherDispatcher.limitedParallelism(1)) {
                 runPlayback(scope = this, prefetchCycles = prefetchCycles, started = started)
@@ -652,6 +671,47 @@ internal class KlangPatternScheduler(
     fun heardSec(): Double? = when {
         begun -> maxOf(0.0, clock.reportedSec() - epochSec - clock.outputLatencySec)
         else -> null
+    }
+
+    /** See [KlangCyclicPlayback.heardCycles]. */
+    fun heardCycles(): Double? = heardSec()?.let { tempo.cycleAt(it) }
+
+    /** See [KlangCyclicPlayback.rpmAt]. */
+    fun rpmAt(cycle: Double): Double = tempo.cyclesPerSecondAt(cycle) * 60.0
+
+    /**
+     * See [KlangCyclicPlayback.cycleEvents]. Its work counts into the pattern's work, like the scheduler's own; on the
+     * JVM a reader on another thread than the fetcher's may lose a few of those milliseconds (a plain sum, no lock: it
+     * is a diagnostic).
+     */
+    fun cycleEvents(cycle: Int): List<KlangCycleEvent> {
+        val map = tempo
+        val startedMs = workClock.internalMsNow()
+
+        return try {
+            cycles.events(pattern = pattern, tempo = map, from = cycle.toDouble(), to = cycle + 1.0).map { event ->
+                val startSec = map.secondsAt(event.startCycles)
+
+                KlangCycleEvent(
+                    startSec = startSec,
+                    endSec = startSec + map.durationSec(startCycle = event.startCycles, durationCycles = event.durationCycles),
+                    startCycles = event.startCycles,
+                    durationCycles = event.durationCycles,
+                    data = event.toVoiceData(),
+                    sourceLocations = event.sourceLocations,
+                )
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) {
+                throw t
+            }
+
+            t.printStackTrace()
+
+            emptyList()
+        } finally {
+            runtimeSpentMs += workClock.internalMsNow() - startedMs
+        }
     }
 
     /** A control event that sets nothing, at the playback's second 0: it only makes the backend start the playback. */

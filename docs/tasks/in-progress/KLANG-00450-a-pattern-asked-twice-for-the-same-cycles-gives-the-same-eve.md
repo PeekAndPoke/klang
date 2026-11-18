@@ -105,3 +105,29 @@ applied. Not mutation-checked: the guard against an infinite window's start (its
 - The song writers' reference no longer says "No `Math.random()`" (the maintainer: "Remove the rule").
 - `timeOfDay`'s KDoc note and the noise engines kept per seed: "consider this as closed". Nothing is changed there.
 - Still open: the live act's own compile of the playing code (asked of Klang-Research).
+
+## 2026-11-18: a reader beside the sound reads the playback's cycles
+
+The live act compiled the playing code a second time (Klang-Research, KLANG-00449): it missed the playback's answers
+and, with `seed(Random.nextInt())`, drew another seed than the one that sounds. The maintainer: the two sessions
+build what the band needs together. The engine half, on `KlangCyclicPlayback`:
+
+- `cycleEvents(cycle)`: the events of a whole cycle as `KlangCycleEvent` (seconds on the tempo map, the end is the
+  slot, the scheduler's `VoiceData`). It reads the scheduler's own store, so whoever asks a cycle first, that answer
+  is the cycle's. It works on a playback made and not started, and a start keeps the answers. A failing cycle gives
+  no events.
+- `heardCycles()` and `rpmAt(cycle)`.
+- `PatternUpdated` is the sign that what was read is out of date. `updatePattern` now swaps the pattern and empties
+  the store before it signals. The signal now also comes when the tempo is set before the playback has begun, and
+  at a start whose tempo map is not the one set (another tempo, or a map left with a change in it by the last run).
+- The store keeps 64 answers (it was 32).
+
+Before a start the tempo is 30 rpm until `updateRpm` sets it: a reader sets the tempo, reads, then starts at it.
+
+Checks: `:klang:jvmTest` 115 and `:klang:jsBrowserTest`, 0 failed; the apps compile; 18 mutants killed; review
+round 1 (`reviewer-opus-high`) CLEAN, 4 MINOR and 4 of 5 NIT applied. Left as it is: `heardCycles` can read on the
+next tempo for about the output latency when two tempo changes follow each other within a quarter second across a
+cycle border. Found by the review, not from this change, not fixed: `OneShotPlayback.updatePattern` drops its cycle
+limit; `updatePattern` on a stopped playback still sends a `ReplaceVoices`.
+
+Open: the live act's side in `apps/common` (Klang-Research), and a look at it in the app.

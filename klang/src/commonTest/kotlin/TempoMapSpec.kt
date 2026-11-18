@@ -14,6 +14,19 @@ class TempoMapSpec : StringSpec({
 
     val eps = 1e-9
 
+    "a map is plain at a tempo when it is that one tempo with cycle 0 at second 0" {
+        TempoMap(cyclesPerSecond = 0.5).isPlain(cyclesPerSecond = 0.5) shouldBe true
+        TempoMap(cyclesPerSecond = 0.5).isPlain(cyclesPerSecond = 1.0) shouldBe false
+        // Two pieces, the first at the tempo asked for
+        TempoMap(cyclesPerSecond = 0.5)
+            .changed(atCycle = 4.0, cyclesPerSecond = 1.0, foldBefore = 0.0)
+            .isPlain(cyclesPerSecond = 0.5) shouldBe false
+        // One piece that starts before cycle 0, at another tempo than the one before: second 0 is not cycle 0
+        TempoMap(cyclesPerSecond = 0.5)
+            .changed(atCycle = -1.0, cyclesPerSecond = 1.0, foldBefore = -1.0)
+            .isPlain(cyclesPerSecond = 1.0) shouldBe false
+    }
+
     "one tempo is one straight line" {
         val map = TempoMap(cyclesPerSecond = 0.5)
 

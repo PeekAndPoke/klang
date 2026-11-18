@@ -54,6 +54,12 @@ internal class ContinuousPlayback internal constructor(
 
     override fun heardSec(): Double? = controller.heardSec()
 
+    override fun heardCycles(): Double? = controller.heardCycles()
+
+    override fun rpmAt(cycle: Double): Double = controller.rpmAt(cycle)
+
+    override fun cycleEvents(cycle: Int): List<KlangCycleEvent> = controller.cycleEvents(cycle)
+
     override fun setGain(gain: Double, rampSec: Double) {
         controller.setGain(gain = gain, rampSec = rampSec)
     }
