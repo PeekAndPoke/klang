@@ -302,7 +302,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   KLANG-00230 (resource warehouse) (the four Fairphone measurements of 2026-09-03/04),
   KLANG-00202 (ignitor optimizer arithmetic folds) ("can barely
   run", 2026-09-15), `docs/benchmarks/2026-07-03_der-schmetterling-cpu-analysis.md` (the first
-  song analysis), `audio_benchmark/README.md`, `src/jvmMain/kotlin/SongBenchmark*.kt`,
+  song analysis), `audio_benchmark/README.md`, `apps/studio/src/jvmMain/kotlin/SongBenchmark*.kt`,
   `console/run-dsp-benchmarks.sh`, `docs/blog/2026-09-10-off-the-end-of-the-instrument/index.md`
   (for the size of the thing).
 - **Mechanics.** (haiku) the phone's spec sheet, verified online (SoC, cores, release year);
@@ -361,7 +361,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   best paragraph: a hand-written `fastCopy` via `Object.assign` was 22x SLOWER on V8 than the
   constructor-based `copy()`.
 - **Artifacts.** KLANG-00102 (mutable voicedata optimization),
-  `sprudel/ref/memory-history.md`, `src/jsMain/resources/klang-whitepaper.html` (the 17x line), commits
+  `sprudel/ref/memory-history.md`, `apps/studio/src/jsMain/resources/klang-whitepaper.html` (the 17x line), commits
   `e9fa560c` .. `c303c333`.
 - **Mechanics.** (opus) run `VoiceDataCopyBenchmark` today on JVM and node
   (`:audio_benchmark:jvmRun`, `:jsNodeProductionRun`); it prints before the captured section.
@@ -533,7 +533,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   was measured to be worth at most 1.3 % of the song and NOT built.
 - **Artifacts.** `audio/ref/memory-history.md` (three entries), `docs/benchmarks/2026-09-15_1508*`, `_1509*`,
   `_1539*`, `_162314`, `_171710`, commits `80915245`, `2aaaf62b`, `65b1842d`, `b9565f67`,
-  `FastSinSpec`, `FastExp2Spec`, `CREDITS.MD`, `src/jsMain/kotlin/pages/CreditsPage.kt`.
+  `FastSinSpec`, `FastExp2Spec`, `CREDITS.MD`, `apps/studio/src/jsMain/kotlin/pages/CreditsPage.kt`.
 - **Mechanics.** (opus) `runMathBenchmark` today on JVM and node (it prints before the captured
   section of `:audio_benchmark:jvmRun` / `:jsNodeProductionRun`); the voices rows FM bell,
   vibrato+tremolo pad, lead. (sonnet) Fig. 1, ns per call library against polynomial, JVM and
@@ -624,7 +624,7 @@ tells the story in the order it happened. Working titles are Fable's to change.
   complexity increase will cost at the current cost per pass.
 - **Mechanics, the engine axis** (opus, the big one). For each tag in the map: `git worktree
   add`, build, run `runSongBenchmark --args=songs` (the FROZEN Der Schmetterling and Seltsamere
-  Dinge of 2026-07-03, `src/jvmMain/kotlin/FrozenSongs.kt`, whose text has been migrated through
+  Dinge of 2026-07-03, `apps/studio/src/jvmMain/kotlin/FrozenSongs.kt`, whose text has been migrated through
   the door renames so the sound stays identical; a tag before 2026-07-03 has no frozen song and
   is recorded as "not measurable") and `:audio_benchmark:jvmRun` for a fixed set of rows that
   exist at every tag (`sine`, `supersaw_8v`, `pluck+distort_4x`, `supersaw+lpf+adsr`; on node

@@ -1,6 +1,6 @@
 # KLANG-00465: Apps layout: studio, notstrom and common
 
-> **Status (2026-11-18): IN PROGRESS.** Steps 1 to 3 are done (the shared module, notstrom, its scripts); step 4, the move of `src/`, is next.
+> **Status (2026-11-18): IN PROGRESS.** Steps 1 to 4 are done: the shared module, notstrom, its scripts, and the studio as `:apps:studio`. Open: the first deploys (the maintainer's), others' files that still name the old place, and the engine work with Klang-Main-Dev.
 
 ## Why this exists
 
@@ -51,6 +51,22 @@ an app of its own, and the repository a place for apps: a top-level `apps/`, the
   Klang-Main-Dev after step 4 (the maintainer, 2026-11-18).
 - Not verified without a server and ears: the caching rules, the deploy script's run, and the sound itself.
 
+## What step 4 turned out to be
+
+- The studio is `:apps:studio` (`apps/studio/`, packages `io.peekandpoke.klang.studio...`); the root project builds
+  nothing. Its JVM tests and programs run in the repository's root folder, so their relative paths mean what they
+  meant. 171 JVM tests and 253 browser tests, none lost; the production distribution holds the files it held.
+- No stored document depends on a class's package (plain data classes and enums, no polymorphism), so the rename
+  needed no pinned names; the one stored section without a text pin (`LAST_OPENED`) got one in `RecentsSpec`.
+- The worklet and `version.json` come from the build (as in notstrom); the development bundle is named `studio.js`.
+- Daily commands: `./gradlew :apps:studio:jsBrowserDevelopmentRun -t`, `:apps:studio:jvmTest`,
+  `:apps:studio:jsBrowserTest`, `console/build-studio.sh`, `console/build-all.sh`.
+- `console/deploy-finzo.sh` uploads to `/www/htdocs/w0057ac0/klang/studio`: the host's document root for
+  klang.finzo.de is switched once to that folder's `current`.
+- Still naming the old place, in files of others: `console/blog/**` and `console/dev-status/**`, two links in the
+  blog post of 2026-08-12 (the docs lint's two problems), the root `CLAUDE.md` (the Credits page's path), the IDE's
+  two run configurations.
+
 ## Acceptance
 
 - `apps/notstrom` builds to a folder that plays the band with sound from a plain web server at a domain's root.
@@ -62,3 +78,4 @@ an app of its own, and the repository a place for apps: a top-level `apps/`, the
 ## History
 
 - 2026-11-18: created.
+- 2026-11-18: steps 1 to 3 landed (b6079a2f3); step 4, the studio as `:apps:studio`, landed after two clean review rounds.

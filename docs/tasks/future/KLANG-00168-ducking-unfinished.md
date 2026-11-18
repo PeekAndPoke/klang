@@ -9,7 +9,7 @@ scope: *"it is not used yet and was never really tested yet, so let us not waste
 Removed from audit finding [F14](../../audio-audit/FINDINGS.md#f14) rather than carried as an open
 coverage hole.
 
-**No shipped song uses it.** A repo-wide grep of `src/commonMain/kotlin/builtinsongs/` for `duck`
+**No shipped song uses it.** A repo-wide grep of `apps/common/src/commonMain/kotlin/builtinsongs/` for `duck`
 returns nothing, so nothing here is a regression risk — it is unfinished work, not broken work.
 
 ## What exists today

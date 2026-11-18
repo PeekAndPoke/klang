@@ -8,7 +8,8 @@
 # Usage: ./console/song-snapshots.sh [tag ...]
 #   default tags: v0.3.8.2 v0.3.8.3 v0.3.9 v0.3.10 v0.3.11 v0.3.12 v0.3.13 v0.3.14 HEAD
 #   (texts before v0.3.8.2 do not parse on today's doors; the July 3 snapshot left FrozenSongs on
-#   2026-09-25 and is in git history, src/jvmMain/kotlin/FrozenSongs.kt at 0cc351a2)
+#   2026-09-25 and is in git history, src/jvmMain/kotlin/FrozenSongs.kt at 0cc351a2, before the studio moved to
+#   apps/studio in KLANG-00465)
 #
 # Syntax-only migration (the FrozenSongs exception: a text that no longer parses guards nothing):
 # since the Ignitor/Katalyst naming (2026-10-03, KLANG-00269 (ignitor katalyst naming)) the script
@@ -48,5 +49,5 @@ for t in "${TAGS[@]}"; do
 done
 
 ls -1 "$DIR"
-KLANG_SNAPSHOT_DIR="$DIR" console/with-build-lock.sh ./gradlew -q runSongBenchmark --args=snapshots
+KLANG_SNAPSHOT_DIR="$DIR" console/with-build-lock.sh ./gradlew -q :apps:studio:runSongBenchmark --args=snapshots
 rm -rf "$DIR"

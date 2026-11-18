@@ -1,0 +1,208 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.studio
+
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
+import io.peekandpoke.klang.studio.storage.StorageKeys
+import io.peekandpoke.klang.ui.GuiDance
+import kotlinx.browser.localStorage
+import kotlinx.browser.window
+import kotlin.js.Date
+
+private val log = Logger(area = LogArea.Ui, source = "KlangGuiDance")
+
+/**
+ * Klang's Gui-dance (KLANG-00350): its story arcs and their steps, and the arcs done kept in the browser. A component
+ * whose step it is asks [dance] whether it is lit, wears the beacon then, and reports its use.
+ */
+object KlangGuiDance {
+
+    /** Play on the song page. */
+    const val SONG_PLAY = "song.play"
+
+    /** The Motor's menu button, opening the drawer. */
+    const val MOTOR_MENU = "motor.menu"
+
+    /** "Songs" in the Motor's drawer. */
+    const val DRAWER_SONGS = "drawer.songs"
+
+    /** Another song opened on the songs page; the next one after the first is lit. */
+    const val SONGS_OPEN = "songs.open"
+
+    /** The fullscreen key at the workbench strip's foot. */
+    const val FULLSCREEN = "workbench.fullscreen"
+
+    /** The walkthroughs key above it, opening the walkthroughs window. */
+    const val WALKTHROUGHS = "workbench.walkthroughs"
+
+    /** "Learn" in the Motor's drawer. */
+    const val DRAWER_LEARN = "drawer.learn"
+
+    /** The First Steps track's panel on the Learn overview, to its page. */
+    const val LEARN_FIRST_STEPS = "learn.first-steps"
+
+    /** Copper in the drawer's LOOK row. */
+    const val LOOK_COPPER = "look.copper"
+
+    /** Sun in the drawer's LOOK row. */
+    const val LOOK_SUN = "look.sun"
+
+    /** Asphalt in the drawer's LOOK row. */
+    const val LOOK_ASPHALT = "look.asphalt"
+
+    /** The Edit key in the drawer's LOOK heading, to the look editor. */
+    const val LOOK_EDIT = "look.edit"
+
+    /** The bottom panel's key at the workbench strip's foot. */
+    const val BOTTOM_PANEL = "workbench.bottom-panel"
+
+    /** The Visuals tab in the bottom panel. */
+    const val VISUALS_TAB = "bottom.visuals"
+
+    /**
+     * Klang Amp tiles' card in the Visuals tab: its playlist plays a song with a click, so the visual shows something
+     * even when nothing played before (the maintainer, 2026-10-29: "Take the third visual because the first one does not
+     * do anything when there is no song playing").
+     */
+    const val VISUAL_KLANGAMP_TILES = "visuals.klangamp-tiles"
+
+    /** The lure at the bottom edge of a visual, to bring up its looks. */
+    const val VISUALS_LOOKS = "visuals.looks"
+
+    /** A visual's close key, "Close: Esc", and leaving the visual. */
+    const val VISUALS_CLOSE = "visuals.close"
+
+    /** The looks the Looks walkthrough lights in the drawer, by their steps. */
+    val LOOK_STEPS: Map<String, String> = mapOf(LOOK_COPPER to "copper", LOOK_SUN to "sun", LOOK_ASPHALT to "asphalt")
+
+    /**
+     * The arcs, in their order (the maintainer, 2026-10-26). The first: Play on the song page, the Motor button,
+     * "Songs" in its drawer, then the next song on the songs page. The second starts as it ends: the fullscreen key,
+     * then the walkthroughs key itself. The third, after it, to the first lessons (the maintainer, 2026-10-27: "After
+     * the GuiDance to the "Walkthroughs" is done, let us guide the user to the "First Steps" tutorial", "new guidance
+     * path"): the Motor button, "Learn" in its drawer, the First Steps panel.
+     */
+    val arcs = listOf(
+        GuiDance.Arc(
+            id = "first-song",
+            title = "Your first song, and the next",
+            steps = listOf(SONG_PLAY, MOTOR_MENU, DRAWER_SONGS, SONGS_OPEN),
+        ),
+        GuiDance.Arc(
+            id = "fullscreen",
+            title = "Fullscreen, and the walkthroughs",
+            steps = listOf(FULLSCREEN, WALKTHROUGHS),
+        ),
+        GuiDance.Arc(
+            id = "first-steps",
+            title = "First Steps, your first lessons",
+            steps = listOf(MOTOR_MENU, DRAWER_LEARN, LEARN_FIRST_STEPS),
+        ),
+        // The fourth (KLANG-00382; the maintainer, 2026-10-28: "its own tour, where the motor button lights up again,
+        // then 2-3 themes and then the custom button"): three looks in turn, so a look reads as the whole app, then the
+        // editor's Edit key
+        GuiDance.Arc(
+            id = "looks",
+            title = "Looks, dress the Motor",
+            steps = listOf(MOTOR_MENU, LOOK_COPPER, LOOK_SUN, LOOK_ASPHALT, LOOK_EDIT),
+        ),
+        // The fifth (the maintainer, 2026-10-29: "add a new guidance tour to one of the visuals", with "a "bait" to move
+        // the mouse to the bottom to get the theme selection"): the bottom panel, its Visuals tab, Klang Amp tiles,
+        // then the lure at the visual's bottom edge that brings up the looks, and last the way out ("the ESC: close
+        // must be part of the visuals tour")
+        GuiDance.Arc(
+            id = "visuals",
+            title = "Visuals, the Motor on the whole screen",
+            steps = listOf(BOTTOM_PANEL, VISUALS_TAB, VISUAL_KLANGAMP_TILES, VISUALS_LOOKS, VISUALS_CLOSE),
+        ),
+    )
+
+    /**
+     * How long the walkthroughs rest after a finished one, before the next lights up (the maintainer, 2026-10-28: "When
+     * a tour is done, add a 1 minute mute"): time to look around, the next lamp not at once on the heels of the last.
+     */
+    const val REST_AFTER_ARC_MS = 60_000.0
+
+    val dance: GuiDance = GuiDance(
+        arcs = arcs,
+        store = BrowserStore,
+        // A rest only when another walkthrough waits; the mute's timer brings the lamp back
+        onArcDone = { if (dance.currentArc() != null) mute(REST_AFTER_ARC_MS) },
+    )
+
+    /** The timer that ends a mute on time. */
+    private var muteTimer: Int? = null
+
+    init {
+        wakeAfterMute()
+    }
+
+    /** Mutes the walkthroughs for [forMs] milliseconds; the lamp comes back by itself after. */
+    fun mute(forMs: Double) {
+        dance.mute(forMs)
+        wakeAfterMute()
+    }
+
+    fun unmute() {
+        dance.unmute()
+        wakeAfterMute()
+    }
+
+    /** When a mute runs, a timer for its end, so the lamp comes back without a reload. */
+    private fun wakeAfterMute() {
+        muteTimer?.let { window.clearTimeout(it) }
+        muteTimer = null
+
+        val until = dance.mutedUntil() ?: return
+        // setTimeout takes at most about 24.8 days; a longer mute wakes then and looks again
+        val delay = (until - Date.now()).coerceIn(0.0, 2_000_000_000.0).toInt() + 50
+
+        muteTimer = window.setTimeout({
+            dance.refresh()
+            wakeAfterMute()
+        }, delay)
+    }
+
+    /**
+     * The arcs done, in localStorage, their ids joined by commas, and the mute's end. The storage can throw or come back
+     * empty (a private window, blocked site data); the dance then starts from its first arc, unmuted, and only forgets
+     * on reload.
+     */
+    private object BrowserStore : GuiDance.Store {
+        override fun loadDone(): Set<String> = try {
+            localStorage.getItem(StorageKeys.GUI_DANCE_ARCS_DONE)
+                ?.split(",")?.filter { it.isNotBlank() }?.toSet()
+                ?: emptySet()
+        } catch (e: Throwable) {
+            log.warn("Could not read the arcs done", e)
+            emptySet()
+        }
+
+        override fun saveDone(done: Set<String>) {
+            try {
+                localStorage.setItem(StorageKeys.GUI_DANCE_ARCS_DONE, done.joinToString(","))
+            } catch (e: Throwable) {
+                log.warn("Could not remember the arcs done", e)
+            }
+        }
+
+        override fun loadMutedUntil(): Double = try {
+            localStorage.getItem(StorageKeys.GUI_DANCE_MUTED_UNTIL)?.toDoubleOrNull() ?: 0.0
+        } catch (e: Throwable) {
+            log.warn("Could not read the mute", e)
+            0.0
+        }
+
+        override fun saveMutedUntil(until: Double) {
+            try {
+                localStorage.setItem(StorageKeys.GUI_DANCE_MUTED_UNTIL, until.toString())
+            } catch (e: Throwable) {
+                log.warn("Could not remember the mute", e)
+            }
+        }
+    }
+}

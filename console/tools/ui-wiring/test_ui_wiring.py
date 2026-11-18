@@ -212,11 +212,11 @@ class UiWiringTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.root = tree({
-            "src/jsMain/kotlin/spine/Player.kt": SPINE,
-            "src/jsMain/kotlin/storage/EditorSettings.kt": STORAGE,
-            "src/jsMain/kotlin/index.kt": INDEX,
-            "src/jsMain/kotlin/pages/SongPage.kt": PAGE,
-            "src/jsMain/kotlin/layouts/Menu.kt": OTHER,
+            "apps/studio/src/jsMain/kotlin/spine/Player.kt": SPINE,
+            "apps/studio/src/jsMain/kotlin/storage/EditorSettings.kt": STORAGE,
+            "apps/studio/src/jsMain/kotlin/index.kt": INDEX,
+            "apps/studio/src/jsMain/kotlin/pages/SongPage.kt": PAGE,
+            "apps/studio/src/jsMain/kotlin/layouts/Menu.kt": OTHER,
             "klangui/src/jsMain/kotlin/Part.kt": LIBRARY,
             "klangui/src/jsMain/kotlin/Modal.kt": MODAL,
             "sprudel/src/jsMain/kotlin/ui/GainTool.kt": SPRUDEL,
@@ -263,7 +263,7 @@ class UiWiringTest(unittest.TestCase):
         self.assertEqual(self.holders["Drafts"]["keeps"], ["mutable collection"])
         self.assertEqual(self.holders["Menu"]["members"], ["cache"])
         self.assertEqual(self.holders["Menu"]["keeps"], ["mutable collection", "browser storage"])
-        self.assertEqual(self.facts["src/jsMain/kotlin/layouts/Menu.kt"]["browser_storage"], 1)
+        self.assertEqual(self.facts["apps/studio/src/jsMain/kotlin/layouts/Menu.kt"]["browser_storage"], 1)
 
     def test_stream_and_direct_cables(self):
         self.assertEqual(self.edges_of("pages/SongPage.kt", "Player"), [
@@ -374,7 +374,7 @@ class UiWiringTest(unittest.TestCase):
         self.assertNotIn("After", self.holders)
 
     def test_an_import_is_not_a_use(self):
-        facts = uw.file_facts("src/jsMain/kotlin/pages/X.kt", "import a.ComponentRef\nimport b.localStorage\nval x = 1", {})
+        facts = uw.file_facts("apps/studio/src/jsMain/kotlin/pages/X.kt", "import a.ComponentRef\nimport b.localStorage\nval x = 1", {})
 
         self.assertEqual(facts["component_ref"], 0)
         self.assertEqual(facts["browser_storage"], 0)
@@ -383,7 +383,7 @@ class UiWiringTest(unittest.TestCase):
         self.assertEqual(self.edges_of("klangui/src/jsMain/kotlin/Part.kt"), [])
 
     def test_file_facts(self):
-        page = self.facts["src/jsMain/kotlin/pages/SongPage.kt"]
+        page = self.facts["apps/studio/src/jsMain/kotlin/pages/SongPage.kt"]
 
         self.assertTrue(page["component"])
         self.assertEqual(page["subscribing"], {"holder": 3, "props": 1})
@@ -391,7 +391,7 @@ class UiWiringTest(unittest.TestCase):
         self.assertEqual(page["browser_storage"], 1)
         self.assertEqual(page["manual_json"], 1)
         self.assertEqual(page["stream_sources"], ["open"])
-        self.assertTrue(self.facts["src/jsMain/kotlin/layouts/Menu.kt"]["component"])
+        self.assertTrue(self.facts["apps/studio/src/jsMain/kotlin/layouts/Menu.kt"]["component"])
 
     def test_findings(self):
         found = uw.findings(self.holders, self.facts, self.edges)
@@ -400,9 +400,9 @@ class UiWiringTest(unittest.TestCase):
             return [rel for rel, _ in found[title]]
 
         self.assertEqual(paths("browser storage touched outside the storage rail"),
-                         ["src/jsMain/kotlin/layouts/Menu.kt", "src/jsMain/kotlin/pages/SongPage.kt"])
-        self.assertEqual(paths("hand-written JSON"), ["src/jsMain/kotlin/pages/SongPage.kt"])
-        self.assertEqual(paths("storage reached from the UI"), ["src/jsMain/kotlin/pages/SongPage.kt"])
+                         ["apps/studio/src/jsMain/kotlin/layouts/Menu.kt", "apps/studio/src/jsMain/kotlin/pages/SongPage.kt"])
+        self.assertEqual(paths("hand-written JSON"), ["apps/studio/src/jsMain/kotlin/pages/SongPage.kt"])
+        self.assertEqual(paths("storage reached from the UI"), ["apps/studio/src/jsMain/kotlin/pages/SongPage.kt"])
         self.assertEqual(sorted(what.split(" ")[0] for _, what in found["state held outside the Spine"]),
                          ["KeysManager", "KlangTheme", "Menu", "SongPage", "version"])
 

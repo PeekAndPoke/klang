@@ -20,4 +20,6 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
-exec ./gradlew -q runCli --args="klang:record:wav $*"
+# the studio's CLI (apps/studio); Gradle runs it in the repository's root folder, so a relative --file or -o means
+# what it says here
+exec ./gradlew -q :apps:studio:runCli --args="klang:record:wav $*"

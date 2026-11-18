@@ -246,7 +246,7 @@ there and reads from there. The rig is such data, so it lives in the Spine; the 
 shows it live in one MIDI package (the maintainer, 2026-11-01: "We should have a dedicated midi package for all ui and
 data in the frontend"; then "So where in the 'spine' will midi live?").
 
-**In the Spine** (`src/jsMain/kotlin/spine/`), the collection point for all the app's global state (the maintainer,
+**In the Spine** (`apps/studio/src/jsMain/kotlin/spine/`), the collection point for all the app's global state (the maintainer,
 2026-11-01, KLANG-00389), beside `Player`: `MidiRig`, one object for the app's life, as `VisualState` hosts the lamp.
 It owns the live instances and the state:
 
@@ -270,12 +270,12 @@ Two points of the Spine's plan for `Player` touch it:
   It also ends the leak the sweep found in `RealtimePlaybackCtrl` (one `Player.status` subscription per MIDI page
   visit): one rig, one subscription.
 
-**In the MIDI package** (`io.peekandpoke.klang.midi`, flat):
+**In the MIDI package** (`io.peekandpoke.klang.studio.midi`, flat):
 
-- `src/commonMain/kotlin/midi/`: the parts with no browser in them, `ControlEvent`, `Routing`, `NoteVoicing`,
+- `apps/studio/src/commonMain/kotlin/midi/`: the parts with no browser in them, `ControlEvent`, `Routing`, `NoteVoicing`,
   `LaptopKeys`, the device profiles (bytes to events) and the panels' data (`MidiDevicePanel`, the KeyLab's, the
   laptop's), so their specs run on the JVM.
-- `src/jsMain/kotlin/midi/`: `MidiConnector` and `WebMidi`; the UI: `MidiTool` (the bottom tab), `MidiPanel` (the
+- `apps/studio/src/jsMain/kotlin/midi/`: `MidiConnector` and `WebMidi`; the UI: `MidiTool` (the bottom tab), `MidiPanel` (the
   drawing, from `comp/`), `MidiPlaygroundPage` (the configuration, from `pages/`). `RealtimePlaybackCtrl` (from
   `comp/`) is global state and goes to the Spine with the rig.
 - The page leaves `pages/`, where every other page lives: a feature folder keeps its page with it. Outside the

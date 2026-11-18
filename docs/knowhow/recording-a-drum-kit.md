@@ -234,7 +234,7 @@ MirrorSet(name = "Motor Metal", dir = "motor-metal"),
 That is the only code change the runtime needs. Add `hasAlias = true` only if you also ship an
 `alias.json` in `{"CanonicalBank": "ShortAlias"}` form (it is inverted on load).
 
-**3. Verify and deploy.** `./gradlew runSampleMirror --args="--verify"` should report 0 missing
+**3. Verify and deploy.** `./gradlew :apps:studio:runSampleMirror --args="--verify"` should report 0 missing
 for the new dir — a hand-built kit has no upstream origin manifest, so `verify` is the relevant
 mode; a full mirror run will report `no origin manifest configured` and that is expected. Then
 `./console/deploy-samples-finzo.sh` rsyncs the tree. The root `.htaccess` already sets
@@ -247,7 +247,7 @@ picked up until you delete the matching cache entries. For fast local iteration 
 
 **5. Housekeeping**: add a provenance section to the mirror's `ATTRIBUTION.md` — for an
 own-recorded kit this is the happy case: state the license *you* are granting users — and a credit
-bullet in `src/jsMain/kotlin/pages/CreditsPage.kt`. The Samples Library UI is fully index-driven
+bullet in `apps/studio/src/jsMain/kotlin/pages/CreditsPage.kt`. The Samples Library UI is fully index-driven
 and needs no change.
 
 ## Using variants once you have them

@@ -6,7 +6,7 @@
 
 A pattern must give the same events for a span whether it is asked in one query or in pieces: live playback asks
 cycle by cycle, and since KLANG-00399 step 4 the offline renderer does too, but specs, tools and anyone else may ask
-for a whole song at once. "The Synthsale Piper's Last Rave" (`src/commonMain/kotlin/builtinsongs/IrishLamentTechno.kt`)
+for a whole song at once. "The Synthsale Piper's Last Rave" (`apps/common/src/commonMain/kotlin/builtinsongs/IrishLamentTechno.kt`)
 does not: queried `[0, 256)` at once against `[k, k + 1)` for each cycle, 141 of 19,875 events differ, the first at
 cycle 41, a pad chord in another octave and gain (F3, A3, F2 at once against F4, A4 cycle by cycle). The likely cause is
 the pad's `voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.3)))`: a continuous signal sampled from the

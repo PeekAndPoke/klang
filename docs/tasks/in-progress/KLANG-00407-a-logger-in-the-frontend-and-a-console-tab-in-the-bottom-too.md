@@ -84,7 +84,7 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
 
 - **D1, the location**: DECIDED 2026-11-02 by the maintainer: the ignore list. The Logger stays a plain function that
   fans out to its listeners; its file is listed in the source map's `x_google_ignoreList` (webpack's
-  `SourceMapDevToolPlugin`, option `ignoreList`, set in `webpack.config.d`), so the developer tools show the first
+  `SourceMapDevToolPlugin`, option `ignoreList`, set in `apps/studio/webpack.config.d`), so the developer tools show the first
   frame outside it: the caller. Checked in Chrome and Firefox before the Logger is built.
 - **D2, the size of the buffer** and what leaves it first (the oldest; proposal: 1000 records, `debug` dropped first).
   TAKEN AS PROPOSED 2026-11-02, open to change.
@@ -127,7 +127,7 @@ caller; Firefox's support to be checked). Way 4 works everywhere at the cost of 
 - **The Logger** (`common`, so `klangui` and `audio_fe` can use it too): `common/src/commonMain/kotlin/logging/`
   (`KlangLog`, `Logger`, `LogRecord`, `LogBuffer`) and `common/src/jsMain/kotlin/logging/BrowserConsoleListener.kt`.
   Every `logging/` directory of a Kotlin source set is on the source maps' ignore list
-  (`webpack.config.d/04-log-ignore-list.js`); the built map lists both files beside Kotlin's own entry. Webpack
+  (`apps/studio/webpack.config.d/04-log-ignore-list.js`); the built map lists both files beside Kotlin's own entry. Webpack
   writes the standard key `ignoreList`, not `x_google_ignoreList`. **To check by the maintainer:** after a dev server
   restart, DevTools in Chrome and in Firefox show `[app/App] The app is on the page` at `KlangStudioComponent.kt`, not at
   `BrowserConsoleListener.kt` or `KlangLog.kt`.

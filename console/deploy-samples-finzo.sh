@@ -6,8 +6,8 @@ set -e
 # Serving url: https://klang-assets.finzo.de/samples/...
 #
 # Workflow:
-#   1. ./gradlew runSampleMirror                    (delta-only: skips files already mirrored)
-#   2. ./gradlew runSampleMirror --args="--verify"  (must report zero missing)
+#   1. ./gradlew :apps:studio:runSampleMirror        (delta-only: skips files already mirrored)
+#   2. ./gradlew :apps:studio:runSampleMirror --args="--verify"  (must report zero missing)
 #   3. ./console/deploy-samples-finzo.sh
 #
 # NOTE: adjust TARGET if the vhost docroot for klang-assets.finzo.de differs.

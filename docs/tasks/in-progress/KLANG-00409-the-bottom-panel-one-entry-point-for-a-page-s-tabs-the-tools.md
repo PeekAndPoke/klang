@@ -13,7 +13,7 @@ same, the toolbox icon. It appears to be different on different pages" (fixed at
 
 ## How it works today
 
-- **The slots.** `WorkbenchSlots` (`src/jsMain/kotlin/layouts/WorkbenchSlots.kt`, KLANG-00349) holds three streams a
+- **The slots.** `WorkbenchSlots` (`apps/studio/src/jsMain/kotlin/layouts/WorkbenchSlots.kt`, KLANG-00349) holds three streams a
   page fills: `column`, `tools` (tool windows) and `bottom`, a whole `KlangWorkbench.Bottom` (title, icon, tabs, the
   walkthrough's beacon step). `WorkbenchLayout` reads them and draws `KlangWorkbench`.
 - **The tabs on every page.** `WorkbenchLayout` passes the page's panel through `BottomTools.with(page, unseenErrors)`,
@@ -97,7 +97,7 @@ A page that adds nothing writes nothing: it gets the app's tabs.
 
 ## The work
 
-1. `PageWorkbench` in `src/jsMain/kotlin/layouts/`: the builder (`column`, `tool`, `bottomTabs`), the lifecycle, the
+1. `PageWorkbench` in `apps/studio/src/jsMain/kotlin/layouts/`: the builder (`column`, `tool`, `bottomTabs`), the lifecycle, the
    inert check, emptying only what it filled. Specs: fills on mount, empties on unmount, leaves a newer page's parts
    alone, does nothing from an inert copy.
 2. `WorkbenchSlots.bottom` becomes `bottomTabs`; `BottomTools.with` takes the page's tabs and builds the one panel

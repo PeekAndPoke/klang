@@ -1,0 +1,176 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.studio.pages.docs.tutorials
+
+/** Curriculum slot A2, see KLANG-00145 (tutorial curriculum) */
+val shapeOfANoteTutorial = Tutorial(
+    slug = "shape-of-a-note",
+    title = Tut.shapeOfANote,
+    description = "ADSR: four numbers that turn one voice into a pluck, an organ, or a pad.",
+    difficulty = TutorialDifficulty.Beginner,
+    depth = TutorialDepth.Quick,
+    tags = listOf(TutorialTag.Synthesis),
+    teaches = listOf("adsr"),
+    sections = listOf(
+        TutorialSection(
+            heading = "The shape you have been hearing",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    So far, every note held for its whole step and then stopped. That was a shape all along, just a hidden default. `adsr()` writes it out as four numbers separated by commas: **attack** (seconds to fade in), **decay** (seconds to settle), **sustain** (the level it holds while the note lasts, 0 to 1), **release** (seconds to fade out after the note ends).
+
+                    The melody from ${Tut.firstNotes} is too quick for shapes this size, so this lesson stretches its opening leap (`a3` up to `c4`) into two long notes with room around them.
+
+                    **Listen for:** nothing new. This is exactly the organ-like shape every note has worn since your first note in ${Tut.firstNotes}, now visible in the code. The next three sections take it apart, one change at a time.
+                    """.trimIndent(),
+                ),
+                Block.Visual.Adsr(),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")              // the melody's opening leap, stretched long
+                      .sound("saw")                // the bright voice from ${Tut.theFourWaveforms}
+                      .adsr(0.01, 0.1, 1, 0.05)    // the default shape, written out: on, hold, off
+                      .gain(0.5)                   // kept modest, the stages are easier to hear
+                    """.trimIndent(),
+                ),
+            ),
+        ),
+        TutorialSection(
+            heading = "Attack: how a note begins",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    The first number is the fade-in, in seconds. Nearly zero means the note switches on; longer means it swells in.
+
+                    **Try it:** play the first example, then the second.
+
+                    **Listen for:** the snap of an instant beginning against the breath of a slow one. Attack alone decides whether a sound feels struck or blown; most of what makes a piano a piano and a flute a flute happens in these first milliseconds.
+                    """.trimIndent(),
+                ),
+                Block.Visual.Adsr("0.3:0.1:1:0.05"),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")           // the opening leap again
+                      .sound("saw")             // the same voice
+                      .adsr(0.3, 0.1, 1, 0.05)  // slow attack: the note swells in
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")             // the opening leap again
+                      .sound("saw")               // the same voice
+                      .adsr(0.001, 0.1, 1, 0.05)  // instant attack: switched on
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+            ),
+        ),
+        TutorialSection(
+            heading = "Decay and sustain: what it settles to",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    Sustain is the odd one out: it is a level, not a time. After the attack, the note slides (taking decay seconds) down to the sustain level, and holds there for the rest of the step. Set sustain to 0 and the note dies away while it is still being held.
+
+                    **Try it:** play both examples; only the sustain number differs between them. Then, in the first example, change the decay from 0.4 to 0.05 and press **Update** again: the same fall, eight times faster. Decay is how long the drop takes; sustain is where it lands.
+
+                    **Listen for:** falling-away against steady. The first example is struck and fades while held; the second stands like something powered. Same voice, same notes; only the middle of the shape changed.
+                    """.trimIndent(),
+                ),
+                Block.Visual.Adsr("0.001:0.4:0:0.05"),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")             // the opening leap again
+                      .sound("saw")               // the same voice
+                      .adsr(0.001, 0.4, 0, 0.05)  // sustain 0: dies away while held
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")             // the opening leap again
+                      .sound("saw")               // the same voice
+                      .adsr(0.001, 0.4, 1, 0.05)  // sustain 1: holds steady
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+            ),
+        ),
+        TutorialSection(
+            heading = "Release: what remains",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    The last number is the fade-out after the note's step ends. The default 0.05 stops almost dead; a long release lets the note ring on. The rests give the tail room, and with a release this long, the tail outlives them: the next note arrives on top of the last one's fading memory. Two notes sounding at once, from a line that plays them one at a time.
+
+                    **Try it:** play the first example, then the second.
+
+                    **Listen for:** the note breathing past its own step. The rest after each note is no longer empty, and at the end of it, the notes begin to touch.
+                    """.trimIndent(),
+                ),
+                Block.Visual.Adsr("0.001:0.1:0.8:1.2"),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")              // the opening leap again
+                      .sound("saw")                // the same voice
+                      .adsr(0.001, 0.1, 0.8, 1.2)  // long release: rings into the rest
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")               // the opening leap again
+                      .sound("saw")                 // the same voice
+                      .adsr(0.001, 0.1, 0.8, 0.05)  // short release: stops almost dead
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+            ),
+        ),
+        TutorialSection(
+            heading = "Pluck, organ, pad",
+            blocks = listOf(
+                Block.Markdown(
+                    markdown = """
+                    Three instruments, one voice, one phrase: nothing changes below but the four numbers.
+
+                    **Try it:** give each example a few loops.
+
+                    **Listen for:** how completely the shape is the instrument. The pluck is struck and gone, the organ is on while held, the pad swells in and rings out. When you can hear a sound in your head and reach for the four numbers that make it, this lesson has done its job. Start from one of these and bend it.
+
+                    (Loudness is only half of a note's life; the other half is colour over time, and that is its own Sound-track lesson: filters.)
+                    """.trimIndent(),
+                ),
+                Block.Visual.Adsr(),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")            // the opening leap again
+                      .sound("saw")              // the same voice
+                      .adsr(0.001, 0.3, 0, 0.1)  // pluck: struck, then gone
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")            // the opening leap again
+                      .sound("saw")              // the same voice
+                      .adsr(0.01, 0.1, 1, 0.05)  // organ: on while held
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+                Block.Code(
+                    code = """
+                    note("a3 ~ c4 ~")              // the opening leap again
+                      .sound("saw")                // the same voice
+                      .adsr(0.25, 0.15, 0.8, 1.2)  // pad: swells in, rings out
+                      .gain(0.5)
+                    """.trimIndent(),
+                ),
+            ),
+        ),
+    ),
+)

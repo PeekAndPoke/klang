@@ -1,18 +1,18 @@
 ---
 name: tutorial-writing
-description: Use when writing, rewriting or reviewing a Klang tutorial lesson (the `tut_*.kt` files under `src/commonMain/kotlin/pages/docs/tutorials/`, shown in the app's Learn area) - its examples, its prose, its ADSR pictures. Holds how an example is written (multi-line, one player per alternative), how the prose talks about the players, the pictures that follow them, and where the full curriculum rules and their lints live. Not for published texts (`/public-voice`) or songs (`/klang-music-writing`).
+description: Use when writing, rewriting or reviewing a Klang tutorial lesson (the `tut_*.kt` files under `apps/studio/src/commonMain/kotlin/pages/docs/tutorials/`, shown in the app's Learn area) - its examples, its prose, its ADSR pictures. Holds how an example is written (multi-line, one player per alternative), how the prose talks about the players, the pictures that follow them, and where the full curriculum rules and their lints live. Not for published texts (`/public-voice`) or songs (`/klang-music-writing`).
 ---
 
 # Writing a tutorial lesson
 
 A lesson is Kotlin data: a `Tutorial` of `TutorialSection`s, each a list of `Block`s (`Block.Markdown`,
-`Block.Code`, `Block.Visual.Adsr`), in `src/commonMain/kotlin/pages/docs/tutorials/tut_<Name>.kt`. Each
+`Block.Code`, `Block.Visual.Adsr`), in `apps/studio/src/commonMain/kotlin/pages/docs/tutorials/tut_<Name>.kt`. Each
 `Block.Code` in KlangScript is drawn as a player: Play, Stop, the cycle, the RPM, an editor, Copy.
 
 **The curriculum's rules** (the anti-slop principles: sound before vocabulary, one running example, a
 "listen for" moment in every lesson, concepts before use, comments as a narration column, lesson names
 instead of "next lesson", the flux ruling on engine internals) live in KLANG-00145 (tutorial curriculum),
-section "Principles". Read them before writing a lesson. `src/jvmTest/kotlin/TutorialCurriculumSpec.kt` lints
+section "Principles". Read them before writing a lesson. `apps/studio/src/jvmTest/kotlin/TutorialCurriculumSpec.kt` lints
 what can be linted; run it after every change to a lesson.
 
 ## Examples (the maintainer, 2026-10-27)

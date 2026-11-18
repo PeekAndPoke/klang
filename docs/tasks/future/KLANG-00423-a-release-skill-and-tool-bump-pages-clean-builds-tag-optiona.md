@@ -30,7 +30,7 @@ refactoring (KLANG-00422) is done (the maintainer, the same day).
 | 2. Engine Health | `console/dev-status/engine_health.py`, from the newest probe run in `docs/audio-audit/<date>/` | running the probes first |
 | 2. The two performance pages | not yet: KLANG-00424 | the data, the history, the pages |
 | 3. The worklet | the two Gradle tasks | nothing |
-| 4. The web frontend | `:jsBrowserDistribution` | nothing |
+| 4. The web frontend | `:apps:studio:jsBrowserDistribution` (`console/build-studio.sh`) | nothing |
 | 5. The deploy | `console/deploy-finzo.sh` | nothing |
 
 ## What the maintainer's list leaves out (proposed additions)
@@ -71,6 +71,12 @@ Why the split is right, checked on 2026-11-10: an agent can build (its distribut
 agents' user has no `finzo` host in its ssh setup, and `deploy-finzo.sh` uploads `./build/dist/...`, the
 maintainer's folder. One more reason for one builder: the worklet's production copy lands in the source tree
 (`src/jsMain/resources/klang-worklet.js`), which both users share.
+
+Since KLANG-00465 (2026-11-18) three of these points have moved: the studio is `:apps:studio` and
+`console/build-studio.sh` builds it (the agents' distribution is in
+`.build-claude/apps/studio/dist/js/productionExecutable`), `deploy-finzo.sh` finds the distribution in the layout of
+the user who runs it, and the worklet is no longer copied into the source tree (the build lays it beside the page).
+That the agents cannot deploy still holds.
 
 ## Decide before implementing
 

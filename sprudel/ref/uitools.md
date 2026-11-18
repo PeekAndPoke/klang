@@ -205,6 +205,6 @@ All helpers live in `sprudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`.
 | `klangscript/src/commonMain/kotlin/intel/CallText.kt`, `CallArgs.kt` | The call's text: parentheses, arguments, literals; a whole-call rewrite |
 | `klangscript-ui/src/jsMain/kotlin/codemirror/ToolCallFollower.kt` | Follows the cursor, live tool contexts, one undo per drag |
 | `klangscript-ui/src/jsMain/kotlin/codemirror/DslEditorExtension.kt` | Right-click: "Open the Sprudel tool" |
-| `src/jsMain/kotlin/comp/SprudelToolTab.kt`              | The Sprudel tab of the song page's bottom panel |
+| `apps/studio/src/jsMain/kotlin/comp/SprudelToolTab.kt`              | The Sprudel tab of the song page's bottom panel |
 | `sprudel/src/jsMain/kotlin/ui/SprudelUiTools.kt`        | Registration function                       |
-| `src/jsMain/kotlin/index.kt`                            | Calls `registerSprudelUiTools()` at startup |
+| `apps/studio/src/jsMain/kotlin/index.kt`                            | Calls `registerSprudelUiTools()` at startup |

@@ -45,8 +45,9 @@ include(
     ":klangviz",
     ":klangviz-demo",
 
-    // The apps (KLANG-00465): what they share, and the band's own app
+    // The apps (KLANG-00465): what they share, the studio (the root project until 2026-11-18), and the band's own app
     ":apps:common",
+    ":apps:studio",
     ":apps:notstrom",
 )
 
@@ -72,8 +73,9 @@ include(
 // build/js/packages/<pkg>): any script that climbs a fixed number of levels breaks (spross: a webpack.config.d
 // file used __dirname + '../../../../' and webpack failed with "2 errors" and printed neither). Grep
 // webpack.config.d/ and karma.config.d/ for '../' and search upward for settings.gradle.kts instead.
-// Not covered: files a task writes into SOURCE trees or into TRACKED files (klang: the worklet copy into
-// src/jsMain/resources; ultra: kotlin-js-store/yarn.lock, docs examples); those need their own fix.
+// Not covered: files a task writes into SOURCE trees or into TRACKED files (klang: the worklet copy into the studio's
+// resources, until KLANG-00465 laid it beside the page from the build; ultra: kotlin-js-store/yarn.lock, docs
+// examples); those need their own fix.
 //
 // Tested 2026-10-24 on Gradle 9.7.1 + Kotlin 2.4.21 (testbed + a jvm/js(nodejs) multiplatform module): both
 // layouts build and test, neither touches the other's build/ or .gradle/, up-to-date state survives alternating

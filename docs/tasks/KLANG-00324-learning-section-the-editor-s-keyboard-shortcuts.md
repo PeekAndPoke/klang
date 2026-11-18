@@ -16,7 +16,7 @@ After KLANG-00325 (the key map): the page lists its table. KLANG-00321, KLANG-00
 
 ## Decide before implementing
 
-1. **Where:** a third card on the manuals page (`src/jsMain/kotlin/pages/docs/DocsPage.kt`, next to Lexikon and
+1. **Where:** a third card on the manuals page (`apps/studio/src/jsMain/kotlin/pages/docs/DocsPage.kt`, next to Lexikon and
    Tutorials), opening a page of its own (`Nav.manualsEditorShortcuts`, `$manualsBase/editor-shortcuts`).
 2. **One source:** the page lists the key map's table (KLANG-00325), every action with its key in the viewer's
    preset, so the page cannot drift from the code. The keys the browser handles (cut and copy a line) and the mouse

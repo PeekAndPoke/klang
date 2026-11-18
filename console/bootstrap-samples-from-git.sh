@@ -193,5 +193,5 @@ sys.exit(1 if missing else 0)
 EOF
 
 echo ""
-echo "Done. Verify with: ./gradlew runSampleMirror --args=\"--verify\""
+echo "Done. Verify with: ./gradlew :apps:studio:runSampleMirror --args=\"--verify\""
 echo "Upload with:      ./console/deploy-samples-finzo.sh"

@@ -1,0 +1,147 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.studio.spine
+
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
+import io.peekandpoke.klang.audio_bridge.SampleRequest
+import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_engine.KlangRealtimeVoicePlayback
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
+import io.peekandpoke.kraft.utils.launch
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
+import kotlinx.coroutines.Deferred
+
+private val log = Logger(area = LogArea.Engine, source = "RealtimePlaybackCtrl")
+
+/**
+ * Non-UI controller owning the engine-startup → durable-playback → voice-forwarding lifecycle for
+ * ONE realtime playback. The realtime sibling of [io.peekandpoke.klang.studio.spine.KlangCodePlaybackCtrl].
+ *
+ * It is deliberately a **pipe, not a manager**: an id goes in with a voice, the same id stops it.
+ * It knows nothing about notes, MIDI, or what a voice sounds like: the note bookkeeping is
+ * `NoteVoicing`'s, and the MIDI rig owns voice shape (`MidiRig`). That split is what
+ * keeps this class reusable for a computer-keyboard fallback, UI sound effects or a pad grid.
+ */
+class RealtimePlaybackCtrl(
+    /** Playback name; [io.peekandpoke.klang.audio_engine.KlangPlayer] mangles it to `"custom-$name"`. */
+    private val playbackName: String,
+    private val engine: PlaybackEngine,
+) {
+    /**
+     * Scalar state, mirrored once from the engine's status ([PlaybackEngine.status]) so consumers subscribe here only: the same
+     * shape [io.peekandpoke.klang.studio.spine.KlangCodePlaybackCtrl] uses.
+     *
+     * It carries the [Player.Status] ENUM rather than a collapsed boolean: the song page can fold
+     * "not started" into "ready" because its Play button doubles as the engine-start gesture, but
+     * this page shows a separate "Start Engine" screen and needs the distinction, and both need
+     * to tell FAILED apart from LOADING.
+     */
+    data class State(
+        /** Mirrored from the engine's status: whether it is loading, ready or failed. */
+        val playerStatus: Player.Status,
+        /** True once THIS controller's durable playback exists and can take voices. */
+        val isReady: Boolean,
+        /** The exception message from a failed start, for display next to [Player.Status.FAILED]. */
+        val error: String? = null,
+    ) {
+        val isLoading: Boolean get() = playerStatus == Player.Status.LOADING
+        val isFailed: Boolean get() = playerStatus == Player.Status.FAILED
+    }
+
+    private val _state = StreamSource(
+        State(playerStatus = engine.status(), isReady = false)
+    )
+
+    val state: Stream<State> = _state.readonly
+
+    private var playback: KlangRealtimeVoicePlayback? = null
+
+    /** Guards against a second [start] while the first is still in flight. */
+    private var starting = false
+
+    /**
+     * Monotonic id source for voices. Owned here rather than on the playback so a note source can
+     * mint an id before the playback exists (and without reaching into it).
+     */
+    private var liveIdCounter = 1
+
+    init {
+        engine.status.subscribeToStream { status ->
+            _state { it.copy(playerStatus = status) }
+        }
+    }
+
+    /**
+     * Boots the engine and creates the durable playback. Idempotent and safe to call repeatedly.
+     *
+     * Call it from a USER GESTURE (the "Start Engine" button): browsers only allow an AudioContext
+     * to start from one, so a page that boots the engine on mount alone comes up silently suspended.
+     */
+    fun start() {
+        if (_state().isReady || starting) {
+            return
+        }
+
+        starting = true
+
+        launch {
+            try {
+                val player = engine.readyPlayer()
+                playback = player.createRealtimePlayback(playbackName)
+                _state { it.copy(isReady = true, error = null) }
+            } catch (t: Throwable) {
+                log.error("Failed to start", t)
+                _state { it.copy(error = t.message ?: t.toString()) }
+            } finally {
+                starting = false
+            }
+        }
+    }
+
+    /** Mints the id for a voice about to be started. Unique per controller instance. */
+    fun nextLiveId(): Int = liveIdCounter++
+
+    /**
+     * Fires a voice now. No-op until [start] has completed: a key pressed before the engine is up
+     * is dropped rather than queued.
+     *
+     * @param gateDurSec null = held until [stopVoice].
+     */
+    fun startVoice(liveId: Int, data: VoiceData, gateDurSec: Double? = null) {
+        playback?.startVoice(liveId = liveId, data = data, gateDurSec = gateDurSec)
+    }
+
+    /**
+     * Fires one voice per pattern event, all under [liveId], announcing inline DSLs first. No-op
+     * until [start] has completed.
+     *
+     * @param gateDurSec null = held until [stopVoice].
+     */
+    fun startEvents(liveId: Int, events: List<KlangPatternEvent>, gateDurSec: Double? = null) {
+        playback?.startEvents(liveId = liveId, events = events, gateDurSec = gateDurSec)
+    }
+
+    /**
+     * Loads the samples [requests] name ahead (the MIDI pads' kit, KLANG-00402 D2), so their first hit sounds; null while
+     * the engine is not up. The Deferred completes once the backend has them.
+     */
+    fun preload(requests: Set<SampleRequest>): Deferred<Unit>? = playback?.preload(requests = requests)
+
+    /** Releases the voice(s) under [liveId] into their ADSR tail. Unknown id = no-op. */
+    fun stopVoice(liveId: Int) {
+        playback?.stopVoice(liveId)
+    }
+
+    /**
+     * Announces an inline ignitor and returns the synthetic name to put in [VoiceData.sound];
+     * null while the engine is not up. This is v1's seam: compile the editor's script to a DSL,
+     * register it, play notes with the returned name.
+     */
+    fun registerIgnitor(dsl: IgnitorDsl): String? = playback?.registerIgnitor(dsl)
+}

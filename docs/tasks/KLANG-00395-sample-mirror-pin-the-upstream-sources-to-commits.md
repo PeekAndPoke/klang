@@ -11,7 +11,7 @@ manifests load from an unpinned `main`; checked at the meeting, the app does not
 every sample from our mirror, `klang-assets.finzo.de` (`SampleCatalogue.default`, KLANG-00182). What still reads an
 unpinned upstream is the tooling that builds the mirror:
 
-- `SampleMirror.originManifests` (`src/jvmMain/kotlin/SampleMirrorMain.kt`): six manifests on
+- `SampleMirror.originManifests` (`apps/studio/src/jvmMain/kotlin/SampleMirrorMain.kt`): six manifests on
   `raw.githubusercontent.com/.../main/...` (uzu-drumkit, and five from felixroos/dough-samples).
 - `console/bootstrap-samples-from-git.sh`: `git clone --depth 1` of each upstream's default branch.
 

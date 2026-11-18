@@ -665,10 +665,10 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 
 ### Measuring the engine
 
-- **`./gradlew runSongBenchmark --args=ledger`** renders the six instrument pieces of Der Schmetterling solo on the
-  frozen text (`src/jvmMain/kotlin/FrozenPieces.kt`) and on the live text, and appends a row per piece to
+- **`./gradlew :apps:studio:runSongBenchmark --args=ledger`** renders the six instrument pieces of Der Schmetterling solo on the
+  frozen text (`apps/studio/src/jvmMain/kotlin/FrozenPieces.kt`) and on the live text, and appends a row per piece to
   `docs/benchmarks/ledger.md`. Run it after every optimization round: within one piece and one machine only the
-  engine moves between rows. The other suites are listed in `src/jvmMain/kotlin/SongBenchmarkMain.kt`.
+  engine moves between rows. The other suites are listed in `apps/studio/src/jvmMain/kotlin/SongBenchmarkMain.kt`.
 - **`GraphCensus`** (`ignitor/GraphCensus.kt`, diagnostic, never on the render path) counts what a note asks of
   the engine (passes, traffic, held state). It models the build gate of every gated stage (KLANG-00433 Decide 6): an
   unwritten `vib`, `penv`, `accelerate` or `fm`, a filter at an unset cutoff, a crush, coarse, distort, drive,
@@ -679,7 +679,7 @@ The records behind each of these are in `audio/ref/memory-history.md` (the 2026-
 - **`KLANG_BENCH_FILTER=guitar-rig`** runs only the `guitar-rig*` rows of `audio_benchmark`'s `IgnitorBenchmark`.
 - A timing claim needs interleaved runs and a control row: `audio/ref/verification.md`.
 - **`console/full-check.sh`** runs everything before a merge or a release: every test, the corpus check
-  (`./gradlew runSongBenchmark --args=corpus`, against `docs/benchmarks/corpus-reference.md`), the timing benchmarks
+  (`./gradlew :apps:studio:runSongBenchmark --args=corpus`, against `docs/benchmarks/corpus-reference.md`), the timing benchmarks
   and the allocation check, each step in its own build lock, then one summary and exit 0 or 1. `--fresh` makes every
   test task run again.
 

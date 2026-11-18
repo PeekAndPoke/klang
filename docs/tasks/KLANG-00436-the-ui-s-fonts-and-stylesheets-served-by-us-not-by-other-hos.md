@@ -19,7 +19,7 @@ are not ours.
   `fonts.googleapis.com`, whose font files come from `fonts.gstatic.com`; it also names its icon fonts beside itself
   on the CDN and emoji pictures on `twemoji.maxcdn.com`. Everything else in the UI inherits; the code editor uses the
   browser's own `monospace`.
-- **A copy of Fomantic's stylesheet is in the repo** (`src/jsMain/resources/css/fomantic-ui@2.8.8/`) but the template
+- **A copy of Fomantic's stylesheet is in the repo** (`apps/studio/src/jsMain/resources/css/fomantic-ui@2.8.8/`) but the template
   does not use it, and it holds the same import of Lato from Google.
 - **The flat pages** (the white paper and its figures, the blog, the dev status pages: 50 files) load Chakra Petch
   and Share Tech Mono from Google Fonts; a few also load something from `cdnjs.cloudflare.com`.
@@ -37,14 +37,14 @@ are not ours.
 ## Proposal
 
 - **The fonts as files of ours:** Lato, Chakra Petch and Share Tech Mono as `woff2` in
-  `src/jsMain/resources/fonts/`, each with an `@font-face` in a stylesheet of ours, only the weights and styles the
+  `apps/studio/src/jsMain/resources/fonts/`, each with an `@font-face` in a stylesheet of ours, only the weights and styles the
   UI uses. All three are under the SIL Open Font License, which allows this; their licence texts go beside the files.
 - **Fomantic's stylesheet from our own resources,** its import of Lato taken out, its icon fonts beside it; the
   emoji pictures it names are not used by the UI and need no copy.
 - **The flat pages** link the same font stylesheet; their generators (`console/dev-status/`) and the hand-written
   pages are changed together.
 - **A check for the future:** no `fonts.googleapis.com`, `fonts.gstatic.com` or CDN stylesheet in
-  `src/jsMain/resources` or in a template (a rule of `docs-lint`'s local file, or a spec).
+  `apps/studio/src/jsMain/resources` or in a template (a rule of `docs-lint`'s local file, or a spec).
 - **Credits:** the three typefaces and Fomantic UI in `CREDITS.MD` and on the Credits page, if they are not there yet.
 
 ## Decide before implementing

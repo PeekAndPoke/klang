@@ -1,0 +1,175 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+@file:Suppress("detekt.all")
+
+package io.peekandpoke.klang.studio
+
+import io.peekandpoke.klang.sprudel.lang.adsr
+import io.peekandpoke.klang.sprudel.lang.arrange
+import io.peekandpoke.klang.sprudel.lang.clip
+import io.peekandpoke.klang.sprudel.lang.delay
+import io.peekandpoke.klang.sprudel.lang.distort
+import io.peekandpoke.klang.sprudel.lang.early
+import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.filterWhen
+import io.peekandpoke.klang.sprudel.lang.flipSign
+import io.peekandpoke.klang.sprudel.lang.gain
+import io.peekandpoke.klang.sprudel.lang.hpf
+import io.peekandpoke.klang.sprudel.lang.lpf
+import io.peekandpoke.klang.sprudel.lang.n
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.cylinder
+import io.peekandpoke.klang.sprudel.lang.pan
+import io.peekandpoke.klang.sprudel.lang.perlin
+import io.peekandpoke.klang.sprudel.lang.range
+import io.peekandpoke.klang.sprudel.lang.reverb
+import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.lang.scale
+import io.peekandpoke.klang.sprudel.lang.silence
+import io.peekandpoke.klang.sprudel.lang.sine
+import io.peekandpoke.klang.sprudel.lang.slow
+import io.peekandpoke.klang.sprudel.lang.sound
+import io.peekandpoke.klang.sprudel.lang.stack
+import io.peekandpoke.klang.sprudel.lang.struct
+import io.peekandpoke.klang.sprudel.lang.superimpose
+import io.peekandpoke.klang.sprudel.lang.transpose
+import io.peekandpoke.klang.sprudel.lang.unison
+
+@Suppress("unused")
+object TestKotlinPatterns {
+
+    val tetris = stack(
+        // Melody
+        note(
+            """
+                <
+                    [e5 [b4 c5] d5 [c5 b4]] [a4 [a4 c5] e5 [d5 c5]]
+                    [b4 [~ c5] d5 e5]       [c5 a4 a4 ~]
+                    
+                    [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]
+                    [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
+                >
+                """.trimIndent()
+        ).sound("tri")
+            .filterWhen(predicate = { it >= 16 })
+//            .struct("x(5,8,2)")
+            .cylinder(0).gain(0.375)
+            .pan(sine.slow(48).range(0.3, 0.7).flipSign())
+            .delay(wet = 0.2, time = 0.4, feedback = 0.1)
+            .reverb(wet = 0.2, size = 0.1)
+            .clip(0.3)
+            .hpf(600)
+//            .adsr(0.025, 0.2, 0.5, 0.0)
+            .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
+//            .rev(4.1).rev(3)
+        ,
+
+        note(
+            """
+                <
+                    [[e2 e3]*4]             [[a2 a3]*4] 
+                    [[g#2 g#3]*2 [e2 e3]*2] [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
+                    
+                    [[d2 d3]*4]                   [[c2 c3]*4]
+                    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [c1 e2] [a5 a4] [a3 a2]]
+                >
+            """.trimIndent()
+        ).sound("supersaw")
+            .filterWhen(predicate = { it >= 31.5 })
+//            .struct("<x*2>")
+            .unison(voices = sine.range(4, 12).slow(32))
+            .unison(spread = sine.range(0.05, 0.3).early(1.5).slow(12))
+            .cylinder(2).gain(0.55)
+            .pan(sine.slow(48).range(0.3, 0.7))
+            .adsr(0.01, 0.3, 0.4, 0.5)
+//            .lpf(4000)
+            .reverb(wet = 0.02, size = 0.5)
+            .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
+//            .rev(4).rev(3)
+        ,
+
+        sound(
+            """
+            <
+            [[bd:2, cr, cr] hh sd hh] [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
+            [[bd, hh] hh sd hh]       [bd hh sd oh] [bd hh sd hh] [bd hh [mt mt, sd] [ht ht, oh]]
+            
+            [[bd:2, cr] hh sd hh]     [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
+            [[bd, hh] hh [sd, hh] oh] [bd hh sd oh] [bd hh sd hh] [bd hh [sd sd] [sd sd]]
+            
+            [[bd:2, cr, cr] hh sd sd] [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
+            [[bd, hh] hh sd [hh sd]]  [bd hh sd oh] [bd hh sd hh] [bd hh [lt lt, sd sd] ~]
+            
+            [[bd:2, cr] hh sd [sd, hh]] [bd hh sd:8 oh] [bd hh sd hh]              [bd hh sd [bd, oh]]
+            [[bd, cr] oh sd oh]         [cr hh cr hh]   [[sd, oh] mt sd [mt, hh]]  [sd [lt, hh] [bd bd] [bd bd, hh]]
+            >            
+        """.trimIndent()
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+        )
+            .cylinder(3).pan(-0.0).gain(1.0)
+            .reverb(wet = 0.02, size = 0.5)
+            .adsr(0.01, 0.2, 0.8, 0.5)
+            .fast(2)
+//            .rev(4).rev(3),
+    )
+
+    val smallTownBoy = stack(
+        // melody
+        arrange(
+            listOf(8, silence),
+            listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
+        ).cylinder(1)
+            .scale("C4:minor")
+            .adsr(0.05, 0.7, 0.0, 0.5)
+            .hpf(800)
+            .sound("triangle")
+            .gain(0.6),
+
+        // melody 2
+        arrange(
+            listOf(8, silence),
+            listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
+        ).cylinder(2)
+            .scale("C5:minor")
+            .adsr(0.05, 0.7, 0.0, 0.5)
+            .hpf(1600)
+            .sound("triangle")
+            .gain(0.7),
+
+        // bass
+        note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
+            .cylinder(3)
+            .sound("supersaw").unison(voices = 4, spread = 0.1)
+            .adsr(0.0, 0.3, 0.0, 0.8)
+            .lpf(800)
+            .gain(0.7).pan(-0.5),
+
+        // Drums
+        sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
+            .cylinder(4)
+            .pan(0.5)
+            .gain(0.8)
+            .delay(wet = "0.2", time = 0.25, feedback = 0.3),
+    ).reverb(wet = 0.025, size = 5.0)
+
+    val strangerThings = stack(
+        n("0 2 4 6 7 6 4 2")
+            .scale("<c3:major>/2")
+            .s("supersaw")
+            .distort(0.7)
+            .superimpose({ x -> x.unison(spread = "<0.5>") })
+//        .lpf(env = perlin.slow(3).range(12, 27.9))
+            .lpf(perlin.range(100, 2000).slow(4))
+            .gain(0.3),
+        note("<a1 e2>/8")
+            .clip(0.8)
+            .struct("x*8")
+            .s("supersaw"),
+    )
+}

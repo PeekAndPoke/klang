@@ -101,12 +101,14 @@ python3 console/tools/test-digest/test_digest.py digest --root <tree> --since 20
 |---|---|---|
 | `:<module>:jvmTest` | kotest on the JVM (`commonTest` + `jvmTest`) | `<module>/build/test-results/jvmTest/` |
 | `:<module>:jsTest` | an aggregate that runs `:<module>:jsBrowserTest` (ChromeHeadless through Karma) | `<module>/build/test-results/jsBrowserTest/` |
-| `:jvmTest` | the root project's own specs (`src/jvmTest`) | `build/test-results/jvmTest/` |
+| `:apps:studio:jvmTest` | the studio's own specs (`apps/studio/src/jvmTest`; the root project until KLANG-00465) | `apps/studio/build/test-results/jvmTest/` |
 | `:klangscript-ksp:test` | the KSP processor's specs (a plain JVM module); not part of `allTests` | `klangscript-ksp/build/test-results/test/` |
 
 The XML paths are the maintainer's layout. The agents (user claude) build into `.build-claude/` (MC-00031, the block
-at the end of `settings.gradle.kts`): `<module>/build/` becomes `.build-claude/<module>/`, the root's `build/` becomes
-`.build-claude/_root/`. test-digest reads only the layout of the user running it.
+at the end of `settings.gradle.kts`): `<module>/build/` becomes `.build-claude/<module>/` (an app's
+`apps/studio/build/` becomes `.build-claude/apps/studio/`), the root's `build/` becomes `.build-claude/_root/` (the
+root project builds no app of its own since KLANG-00465, only the build's shared JS packages). test-digest reads only
+the layout of the user running it.
 
 - `--rerun` goes on the task that runs the tests: `:m:jvmTest --rerun`, `:m:jsBrowserTest --rerun`.
   `:m:jsTest --rerun` reruns only the aggregate and leaves `jsBrowserTest` UP-TO-DATE (seen
@@ -117,7 +119,7 @@ at the end of `settings.gradle.kts`): `<module>/build/` becomes `.build-claude/<
   printed output of every spec), so its count is one above the number of tests. JS suites all carry
   the same timestamp, the moment the results were written.
 - **A change in a module also runs the tests of the modules that use it** (rule, weekly meeting 2026-10-30): a
-  `klangui` change runs `:klangui:jsTest` and the app's `:jsTest`, whose specs use klangui's parts. 649198205 ran only
+  `klangui` change runs `:klangui:jsTest` and the app's `:apps:studio:jsTest`, whose specs use klangui's parts. 649198205 ran only
   `:klangui:jsTest`, and the app's `LearnPagesSpec` stayed red until KLANG-00382.
 - `:audio_be:jvmTest` leaves out the `ClickHunt` tag unless `-Pkotest.tags=ClickHunt` is given.
 - `audio-wire-codec-ksp` has no test sources.
@@ -186,7 +188,7 @@ python3 console/tools/docs-lint/docs_lint.py --forbid-dashes <new or rewritten .
   names the number, so a hit is an old path left behind. Dated history and published pages
   (`docs/tasks-archive/`, `docs/history/`, files named by a date, `ref/memory-history.md`,
   `DEV-DIARY.MD`, the ledgers, `docs/benchmarks/`, `docs/blog/`, `docs/funding/evidence/`,
-  `src/jsMain/resources/`) keep their words and are skipped by stale-path; the generic link check still
+  `apps/studio/src/jsMain/resources/`) keep their words and are skipped by stale-path; the generic link check still
   reads them. Whether a task file sits in the right folder is `ticket check`'s job.
 - **Dashes** (`/code-style` §22): `--forbid-dashes` reports every line with an em or en dash in the
   files given, old lines included. Use it on files you create or rewrite; for edits use
@@ -323,8 +325,11 @@ The recipe in full:
 
 1. **An old commit:** `git worktree add --detach /opt/dev/peekandpoke/klang-worktrees/<name> <sha>`, then
    `env KLANG_LOCK_TIMEOUT=7200 /opt/dev/peekandpoke/klang/console/with-build-lock.sh ./gradlew
-   :jsBrowserDistribution -q` in it (the main checkout's script and lock, not the old commit's); the app is in
-   `build/dist/js/productionExecutable`. The current app: the same task in the main checkout.
+   :apps:studio:jsBrowserDistribution -q` in it (the main checkout's script and lock, not the old commit's); the app
+   is in `apps/studio/build/dist/js/productionExecutable` (`.build-claude/apps/studio/dist/...` for user claude). A
+   commit from before KLANG-00465 builds the app as the root project: `:jsBrowserDistribution`, in
+   `build/dist/js/productionExecutable` (`.build-claude/_root/dist/...` for user claude). The current app: the same task in the main checkout, or
+   `console/build-studio.sh`.
 2. **Serve the folder** on 127.0.0.1, any path that is not a file answered with `index.html` (the app routes by path).
 3. **Chrome over its DevTools protocol** (`--headless=new --remote-debugging-port=<p> --user-data-dir=<scratch>`):
    `Emulation.setFocusEmulationEnabled` first, since without focus a UI that rests on blur stops drawing; then
@@ -339,7 +344,7 @@ The recipe in full:
 
 ```
 python3 -I console/tools/ui-wiring/ui_wiring.py [--out <scratch dir>]     # the counts; with --out: report.md, graph.json
-python3 -I console/tools/ui-wiring/ui_wiring.py --file src/jsMain/kotlin/layouts/WorkbenchLayout.kt
+python3 -I console/tools/ui-wiring/ui_wiring.py --file apps/studio/src/jsMain/kotlin/layouts/WorkbenchLayout.kt
 ```
 
 - klang's own (the maintainer's go, 2026-11-10, KLANG-00421): how state moves through the UI code, read as text, no
@@ -418,7 +423,8 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
 - **docs-lint**: anchors of `*.MD` files are checked too (klang's `README.MD`). `docs_lint_local.py` is
   klang's own: task-place and stale-path (a `...` placeholder is not a path).
 - **review-pack**: the blueprint's copy at 5473c0b (2026-10-21), unchanged. klang's `skip.txt` beside it leaves
-  the maintainer's song edits (`src/commonMain/kotlin/builtinsongs/`) out of every round's diffs.
+  the maintainer's song edits (`apps/common/src/commonMain/kotlin/builtinsongs/`, and the old place for branches from
+  before KLANG-00465) out of every round's diffs.
 - **stack-merge**, on top of the draft: (1) the stack worktree goes to
   `<main checkout>-worktrees/stack-<name>`, the sibling directory (klang only; it was
   `.claude/worktrees/` until 2026-10-20). (2) A shared line in a pure insertion
@@ -446,7 +452,7 @@ dash scan, stack-merge's exit code by exception type, test-digest's foreign-suit
   alone; its task-place rule went with the ticket numbers (`ticket check`).
 - **hooks**, adopted 2026-10-24 from the master at missioncontrol 43bb762, unchanged; 20 of 20 tests green.
   `hooks.json` sets only `dash_skip`, the same pattern as docs_lint_local.py's history skip (dated history,
-  ledgers, docs/benchmarks, blog, funding/evidence, src/jsMain/resources). Before install, `check` on the
+  ledgers, docs/benchmarks, blog, funding/evidence, apps/studio/src/jsMain/resources). Before install, `check` on the
   last 300 commits flagged 11, all real dashes on lines those commits wrote or edited, no false positive; the
   ticket sweep 3c9a191d would have been blocked by old dashes on the lines it rewrote. UI strings in Kotlin
   (not KDoc) are not checked by the hook; `review-pack --dash-scan` still covers them in a review round.

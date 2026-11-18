@@ -179,10 +179,10 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day); the workshop sect
 30e364a).
 
 - **Root:** no `SEED.md` (klang grew before the layout) and no `CHANGELOG.md` (an app, not a library).
-  `CREDITS.MD` has a twin, the in-app Credits page (`src/jsMain/kotlin/pages/CreditsPage.kt`), kept in step
+  `CREDITS.MD` has a twin, the in-app Credits page (`apps/studio/src/jsMain/kotlin/pages/CreditsPage.kt`), kept in step
   (rules register). `tones/` stays MIT and never gets the AGPL header.
 - **docs/, klang's own folders:** `audio-audit/`, `benchmarks/` (dated full-check and timing results, the
-  allocation scoreboard), `blog/` (published posts; a copy ships in `src/jsMain/resources/blog/`), `design/`
+  allocation scoreboard), `blog/` (published posts; a copy ships in `apps/studio/src/jsMain/resources/blog/`), `design/`
   (the sources of design canvases, one dated folder per canvas with a README naming its ticket and its claude.ai
   link; since 2026-10-25), `funding/`,
   `history/`, `knowhow/`, `media/`, `notebooks/`, `strategy/`, `whitepaper/`, plus `docs/retired-names.md`.
@@ -204,7 +204,7 @@ klang's copy, taken 2026-10-20 (the blueprint as of that day); the workshop sect
   epic at birth (`ticket new --part-of`); an experiment ticket (KLANG-00329) stays outside.
 - **Dated records keep their words** and were not swept: `DEV-DIARY.MD`, the escape and defect-density
   ledgers, `<module>/ref/memory-history.md`, `docs/benchmarks/`, `docs/funding/evidence/`, and the
-  published pages (`docs/blog/`, `src/jsMain/resources/`), which may still name old task paths.
+  published pages (`docs/blog/`, `apps/studio/src/jsMain/resources/`), which may still name old task paths.
 - **The maintainer's (rules retro, 2026-10-23):** pushing, tagging, releasing and deploying; no agent pushes or
   deploys, and no release is prepared unless asked. Agents may edit the repo's `gradle.properties`, but
   `VERSION_NAME` is bumped by the maintainer for a release, and the global `~/.gradle/gradle.properties` (signing

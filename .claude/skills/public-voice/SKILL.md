@@ -54,7 +54,7 @@ brochure ("no Hochglanz-rubbish"). Factual, but not cold.
 
 ## Where it applies
 
-The whitepaper (`src/jsMain/resources/klang-whitepaper.html`), blog posts (`docs/blog/`, whose structure and
+The whitepaper (`apps/studio/src/jsMain/resources/klang-whitepaper.html`), blog posts (`docs/blog/`, whose structure and
 publishing rules live in `docs/blog/howto-write-a-post.md`), the README, release notes, site copy. **Not** the
 tutorials or in-app text: they have their own style (maintainer, 2026-09-28).
 

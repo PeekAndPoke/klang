@@ -12,7 +12,7 @@
 
 38 tutorials have shipped, produced by the `tutorial-factory` skill:
 
-- `src/commonMain/kotlin/pages/docs/tutorials/` — `TutorialRegistry.kt` + the `tut_*.kt` files.
+- `apps/studio/src/commonMain/kotlin/pages/docs/tutorials/`: `TutorialRegistry.kt` + the `tut_*.kt` files.
 - Build log: `src/jsMain/kotlin/pages/docs/tutorials/GENERATION_LOG.md`.
 
 Per the Q3 plan, the problem is quality and coherence, not coverage: many tutorials have

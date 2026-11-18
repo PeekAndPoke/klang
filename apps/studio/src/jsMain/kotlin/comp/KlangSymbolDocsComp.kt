@@ -1,0 +1,432 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.studio.comp
+
+import io.peekandpoke.klang.studio.Nav
+import io.peekandpoke.klang.studio.pages.docs.lexikon.lexikonAutoLinks
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.script.types.parametersByName
+import io.peekandpoke.klang.ui.comp.MarkdownDisplay
+import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.routing.Route
+import io.peekandpoke.kraft.routing.Router.Companion.router
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onContextMenu
+import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.semanticui.noui
+import io.peekandpoke.ultra.semanticui.ui
+import kotlinx.browser.window
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.Flex
+import kotlinx.css.FlexBasis
+import kotlinx.css.FlexDirection
+import kotlinx.css.LinearDimension
+import kotlinx.css.Margin
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flex
+import kotlinx.css.flexDirection
+import kotlinx.css.flexGrow
+import kotlinx.css.flexShrink
+import kotlinx.css.fontFamily
+import kotlinx.css.fontSize
+import kotlinx.css.gap
+import kotlinx.css.margin
+import kotlinx.css.marginBottom
+import kotlinx.css.maxHeight
+import kotlinx.css.maxWidth
+import kotlinx.css.minHeight
+import kotlinx.css.minWidth
+import kotlinx.css.overflowX
+import kotlinx.css.overflowY
+import kotlinx.css.padding
+import kotlinx.css.px
+import kotlinx.css.vh
+import kotlinx.css.vw
+import kotlinx.css.width
+import kotlinx.html.FlowContent
+import kotlinx.html.Tag
+import kotlinx.html.b
+import kotlinx.html.div
+import kotlinx.html.pre
+import kotlinx.html.span
+import kotlinx.html.tbody
+import kotlinx.html.td
+import kotlinx.html.tr
+import org.w3c.dom.pointerevents.PointerEvent
+
+@Suppress("FunctionName")
+fun Tag.KlangSymbolDocsComp(
+    symbol: KlangSymbol,
+    declarationCode: String? = null,
+    onNavigate: (KlangSymbol, dynamic) -> Unit,
+) = comp(
+    KlangSymbolDocsComp.Props(
+        symbol = symbol,
+        declarationCode = declarationCode,
+        onNavigate = onNavigate,
+    )
+) { KlangSymbolDocsComp(it) }
+
+class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props>(ctx) {
+
+    /** [declarationCode]: a local's declaration as the song writes it, shown below its signature; null otherwise. */
+    data class Props(
+        val symbol: KlangSymbol,
+        val declarationCode: String? = null,
+        val onNavigate: (KlangSymbol, dynamic) -> Unit,
+    )
+
+    private val laf by subscribingTo(KlangTheme)
+    private var copiedIndex: Int? by value(null)
+
+    override fun VDom.render() {
+        val symbol = props.symbol
+        val description = symbol.variants
+            .firstOrNull { it.description.isNotBlank() }
+            ?.description
+            ?.trim()
+
+        val sortedVariants = symbol.variants.sortedBy {
+            when (it) {
+                is KlangCallable -> it.receiver?.simpleName?.length ?: 0
+                is KlangProperty -> it.owner?.simpleName?.length ?: 0
+            }
+        }
+
+        val firstSample = symbol.variants
+            .firstOrNull { it.samples.isNotEmpty() }
+            ?.samples?.firstOrNull()
+            ?.takeIf { it.code.isNotBlank() }
+
+        ui.segment.with(laf.styles.popup()).with(laf.styles.docsPopup()) {
+            css {
+                width = LinearDimension.fitContent
+                minWidth = 33.vw
+                maxWidth = 50.vw
+                // Cap at 45% viewport height; longer docs scroll INSIDE the card.
+                // Header, body and footer are a flex column so that ONLY the body scrolls: the name,
+                // scope and origin stay put while you read a long parameter table, and "View docs"
+                // stays reachable without scrolling to the bottom first.
+                maxHeight = 45.vh
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                overflowY = Overflow.hidden
+                // !important because Fomantic's `.ui.segment` padding out-specifies
+                // the generated style class
+                put("padding-bottom", "10px !important")
+            }
+
+            onClick { event -> event.stopPropagation() }
+            onContextMenu { event -> event.stopPropagation() }
+
+            ui.grid {
+                css { flexShrink = 0.0 }
+
+                noui.four.wide.middle.aligned.column {
+                    ui.header {
+                        +symbol.name
+                    }
+                }
+
+                noui.four.wide.middle.aligned.column {
+                    if (symbol.aliases.isNotEmpty()) {
+                        ui.horizontal.list {
+                            noui.item { +"Alias:" }
+                            symbol.aliases.forEach { alias ->
+                                noui.item { +alias }
+                            }
+                        }
+                    }
+                }
+
+                noui.eight.wide.middle.aligned.right.aligned.column {
+                    ui.horizontal.list {
+                        symbol.scope?.let { scope ->
+                            noui.item {
+                                klangScopeLabel(laf, scope)
+                            }
+                        }
+
+                        noui.item {
+                            when (val origin = symbol.origin) {
+                                    // No origin recorded is still built-in: a registered object and a
+                                    // blank library name both arrive here (KlangScriptLibrary)
+                                    null -> {
+                                        ui.label {
+                                            css {
+                                                backgroundColor = Color("${laf.good} !important")
+                                                color = Color("#222 !important")
+                                            }
+
+                                            icon.book()
+                                            +"Built-in"
+                                        }
+                                    }
+
+                                    is KlangSymbol.Origin.Library -> {
+                                        if (origin.name.isBlank()) {
+                                            ui.label {
+                                                css {
+                                                    backgroundColor = Color("${laf.good} !important")
+                                                    color = Color("#222 !important")
+                                                }
+
+                                                icon.book()
+                                                +"Built-in"
+                                            }
+                                        } else {
+                                            ui.label {
+                                                css {
+                                                    backgroundColor = Color("${laf.excellent} !important")
+                                                    color = Color("#222 !important")
+                                                }
+
+                                                icon.book()
+                                                +origin.name.uppercase()
+                                            }
+                                        }
+                                    }
+
+                                    is KlangSymbol.Origin.Local -> {
+                                        ui.label {
+                                            css {
+                                                backgroundColor = Color("${laf.moderate} !important")
+                                                color = Color("#222 !important")
+                                            }
+
+                                            icon.code()
+                                            +origin.kind.display
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
+
+            ui.divider { css { flexShrink = 0.0 } }
+
+            ui.relaxed.list {
+                css {
+                    // A flex child only scrolls once it is allowed to shrink below its content
+                    flexGrow = 1.0
+                    minHeight = 0.px
+                    overflowY = Overflow.auto
+                }
+
+                // ── Description ───────────────────────────────────────────────────
+                if (description != null) {
+                    noui.item {
+                        noui.content {
+                            // New tab: this popup floats over the editor, and path routing means a
+                            // plain link would reload the app and take the unsaved song with it.
+                            // The Lexikon's terms link themselves (KLANG-00369)
+                            MarkdownDisplay(lexikonAutoLinks(description), linksInNewTab = true)
+                        }
+                    }
+                }
+
+                // ── Signatures ────────────────────────────────────────────────────
+                noui.item {
+                    sectionLabel("Signatures")
+                    noui.content {
+                        codeBlock(
+                            sortedVariants.joinToString("\n") { it.signature },
+                        )
+                    }
+                }
+
+                // ── Declaration (a local: its code in the song) ──────────────────
+                val declarationCode = props.declarationCode
+
+                if (declarationCode != null) {
+                    noui.item {
+                        sectionLabel("Declaration")
+                        noui.content {
+                            codeBlock(declarationCode, copyToClipboard = true)
+                        }
+                    }
+                }
+
+                // ── Parameters ───────────────────────────────────────────────────
+                val params = sortedVariants.parametersByName()
+
+                if (params.isNotEmpty()) {
+                    noui.item {
+                        sectionLabel("Parameters")
+                        noui.content {
+                            ui.very.basic.compact.small.table Table {
+                                css {
+                                    color = Color(laf.textPrimary)
+                                }
+                                tbody {
+                                    params.forEach { param ->
+                                        tr {
+                                            td {
+                                                css { fontFamily = "monospace" }
+                                                b { +param.name }
+                                                if (param.isOptional && !param.isVararg) {
+                                                    span {
+                                                        css { color = Color(laf.textTertiary) }
+                                                        +"?"
+                                                    }
+                                                }
+                                            }
+                                            td {
+                                                css { fontFamily = "monospace" }
+                                                +"${param.type}"
+                                                if (param.defaultDoc != null && !param.isVararg) {
+                                                    span {
+                                                        css { color = Color(laf.textTertiary) }
+                                                        +" = ${param.defaultDoc}"
+                                                    }
+                                                }
+                                            }
+                                            td {
+                                                +param.description
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── Examples ───────────────────────────────────────────────────────
+                noui.item {
+                    if (firstSample != null) {
+                        sectionLabel("Example")
+                        noui.content {
+                            codeBlock(firstSample.code, copyToClipboard = true)
+                        }
+                    }
+                }
+            }
+
+            // ── View docs link ────────────────────────────────────────────────
+            // Suppressed for locals — there's no external library page to navigate to.
+            if (symbol.origin !is KlangSymbol.Origin.Local) {
+                noui.divider { css { flexShrink = 0.0 } }
+
+                ui.horizontal.list {
+                    css { flexShrink = 0.0 }
+
+                    noui.item {
+                        css {
+                            cursor = Cursor.pointer
+                            fontSize = 12.px
+                            color = Color(laf.gold)
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                            props.onNavigate(symbol, event.asDynamic())
+                        }
+                        icon.small.book()
+                        +"View docs"
+                    }
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.sectionLabel(text: String) {
+        ui.small.header {
+            css { marginBottom = 4.px }
+            b { +text }
+        }
+    }
+
+    private fun FlowContent.codeBlock(text: String, copyToClipboard: Boolean = false) {
+        div(classes = laf.styles.darken20()) {
+            css {
+                display = Display.flex
+                flexDirection = FlexDirection.row
+                alignItems = Align.flexStart
+                gap = 8.px
+                padding = Padding(6.px, 8.px)
+                margin = Margin(0.px)
+                border = Border(1.px, BorderStyle.solid, Color(laf.textTertiary))
+                put("border-radius", "var(--klang-border-radius)")
+            }
+
+            // Copy button
+            if (copyToClipboard) {
+                div {
+                    css {
+                        flexShrink = 0.0
+                        cursor = Cursor.pointer
+                        color = if (copiedIndex == 0) {
+                            Color(laf.good)
+                        } else {
+                            Color(laf.textTertiary)
+                        }
+                    }
+                    onClick { event ->
+                        event.stopPropagation()
+                        window.asDynamic().navigator.clipboard.writeText(text)
+                        copiedIndex = 0
+                        window.setTimeout({ copiedIndex = null }, 2000)
+                    }
+
+                    if (copiedIndex == 0) {
+                        icon.small.check()
+                    } else {
+                        icon.small.copy()
+                    }
+                }
+            }
+
+            pre {
+                css {
+                    flex = Flex(1.0, 1.0, FlexBasis.auto)
+                    fontFamily = "monospace"
+                    fontSize = 12.px
+                    margin = Margin(0.px)
+                    overflowX = Overflow.auto
+                }
+                +text
+            }
+        }
+    }
+}
+
+/**
+ * Opens [doc]'s docs page from a name's help (the editor's popup, the song page's Help window): a shift click opens it
+ * in a new tab.
+ */
+fun Component<*>.navToSymbolDocs(doc: KlangSymbol, event: dynamic) {
+    val uri = symbolDocsUri(doc.name)
+    val pointerEvent = event as? PointerEvent
+
+    if (pointerEvent?.shiftKey == true) {
+        router.navToUri(pointerEvent, uri)
+    } else {
+        router.navToUri(uri)
+    }
+}
+
+/** Where a name's docs page is: the library docs, searched for the name (an alias has an entry of its own). */
+fun symbolDocsUri(name: String): Route.Bound = Nav.manualsLibrarySearch("sprudel", "function:$name")

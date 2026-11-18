@@ -17,7 +17,7 @@
 (2 parallel bandpass boosts + notch + tracking highpass + double lowpass) executes as ~11 separate
 Ignitor nodes — each a full per-sample loop with scratch-buffer traffic. Maintainer confirms the
 filters dominate guitar-ignitor cost; guitars ≈ 98% of the song → expected ~35–60% total song CPU
-reduction (2–4× on the chain portion, larger on JS). Song: `src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt`
+reduction (2 to 4× on the chain portion, larger on JS). Song: `apps/common/src/commonMain/kotlin/builtinsongs/DerSchmetterling.kt`
 (guitar used by 4 instruments; unison shares one chain/note, superimpose ×2 re-runs it per copy).
 
 ## Decisions (agreed with maintainer 2026-08-19)

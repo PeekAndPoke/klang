@@ -43,13 +43,13 @@ https://klang.finzo.de
 # White Paper
 
 An in-depth tour of what Klang is — the engine, the languages, the DSL surfaces, and where the journey might
-go: [src/jsMain/resources/klang-whitepaper.html](src/jsMain/resources/klang-whitepaper.html)
+go: [apps/studio/src/jsMain/resources/klang-whitepaper.html](apps/studio/src/jsMain/resources/klang-whitepaper.html)
 
 # Module Structure
 
 ```
                             ┌──────────────────┐
-                            │   klang (app)    │  Main application (JS/JVM)
+                            │   apps/studio    │  The studio, the main application (JS/JVM)
                             └──┬───┬────┬───┬──┘
                                │   │    │   │
           ┌────────────────────┘   │    │   └────────────────────┐
@@ -122,7 +122,10 @@ go: [src/jsMain/resources/klang-whitepaper.html](src/jsMain/resources/klang-whit
 
 | Module                    | Platform  | Description                                                                            |
 |---------------------------|-----------|----------------------------------------------------------------------------------------|
-| `klang`                   | JS/JVM    | Main application — web UI, pages, routing, audio player integration                    |
+| `apps/studio`             | JS/JVM    | The studio: the web app (editor, docs, tutorials, tools) and its JVM programs (CLI, benchmarks) |
+| `apps/notstrom`           | JS        | Notstrom, the band's own app: a start screen, then the band plays with the real engine |
+| `apps/common`             | Common/JS | What the apps share: the built-in songs and jingles, the script engine, the live music |
+| `klang`                   | JS/JVM    | The public entry point: the player and what an app needs to make sound                  |
 | `sprudel`                 | Common/JS | Pattern language — Kotlin sibling of strudel.cc for live coding music (own direction)  |
 | `klangscript`             | Common    | Scripting language — hand-rolled parser, tree-walking interpreter, type system         |
 | `klangscript-libs`        | Common    | KlangScript standard library (`Ignitor`, `Katalyst`, `Math`, ...) and DSL builders; both doors |

@@ -7,10 +7,11 @@ package io.peekandpoke.klang.apps.common
 
 /**
  * A release's name, from the fields of the build's `version.json`: `v<version>-<gitRev>`, as the deploy scripts name a
- * release's folder. A build from a tree with uncommitted changes ([gitDesc] ends with `-dirty`) is named
- * `v<version>-<gitRev>-dirty-<date>`, [date]'s digits only (`2026-11-18 17:29:11` gives `20261118-172911`): two dirty
- * builds at one commit may differ, and each must be a release of its own. The apps ask for the band's figures with
- * this name (a long-cached address that changes with every release), and notstrom shows it in its drawer.
+ * release's folder (a dirty build's folder ends with `-dirty` alone and is used again). A build from a tree with
+ * uncommitted changes ([gitDesc] ends with `-dirty`) is named `v<version>-<gitRev>-dirty-<date>`, [date]'s digits only
+ * (`2026-11-18 17:29:11` gives `20261118-172911`): two dirty builds at one commit may differ, and each must be a
+ * release of its own. The apps ask for the band's figures with this name (a long-cached address that changes with
+ * every release), and notstrom shows it in its drawer.
  */
 fun releaseName(version: String, gitRev: String, gitDesc: String, date: String): String {
     val name = "v$version-$gitRev"

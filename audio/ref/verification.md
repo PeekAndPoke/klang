@@ -8,13 +8,13 @@ is `/review-loop`; this file is the audio-specific half. The stories behind the 
 ## An identity claim
 
 - **Render the corpus, both sides, in raw doubles.** The built-in songs plus the frozen songs and pieces
-  (`src/jvmMain/kotlin/FrozenSongs.kt`, `FrozenPieces.kt`), 256 cycles, 48 kHz, the wall-clock seeds pinned
+  (`apps/studio/src/jvmMain/kotlin/FrozenSongs.kt`, `FrozenPieces.kt`), 256 cycles, 48 kHz, the wall-clock seeds pinned
   (`timeOfDay`, `sineOfDay`, `timeOfNight`, `sineOfNight` to `pure(0.5)`), HEAD in a throwaway
   `git worktree` against the tree. Compare doubles, not a 16-bit WAV: a 16-bit render cannot see a sub-LSB change,
   so a bit-level claim needs a spec, not the corpus.
 - **Render from the repo root.** The JVM sample bank loads and writes `./cache` relative to where it runs
   (`audio_fe/src/jvmMain/kotlin/samples.kt`), and a Gradle `-p <tree>` run needs ABSOLUTE song paths. The CLI render
-  plays samples; the `:jvmTest` helper `renderSong` has no sample bank, so a sample-fed cylinder is silent there.
+  plays samples; the `:apps:studio:jvmTest` helper `renderSong` has no sample bank, so a sample-fed cylinder is silent there.
 - **Every identity run needs an engagement control**: a deliberate mutant that must move the rows the change can
   reach. A green run alone is not evidence. Predict WHICH rows move before running, and read each song's
   arrangement and imports to do it: a grep finds what is DEFINED, not what PLAYS (a song may define an instrument
@@ -69,7 +69,7 @@ How they are used (maintainer, 2026-11-10):
 - **A new stage or source runs the probes that apply to it before it lands**, and the review brief carries the
   tables (`/review-loop`).
 - **The results have a page**: `python3 console/dev-status/engine_health.py` builds
-  `src/jsMain/resources/klang-engine-health.html` (the Dev Tools' "Engine health" card) from, per probe, the newest
+  `apps/studio/src/jsMain/resources/klang-engine-health.html` (the Dev Tools' "Engine health" card) from, per probe, the newest
   run folder that holds its JSON (a rerun of one probe is a folder with that probe's files only), a light per item. A lead becomes confirmed, accepted, disproved or fixed by one entry in
   `docs/audio-audit/verdicts.json`; rebuild the page after a run or a verdict (`console/dev-status/README.md`).
 - **Each full run's tables go to `docs/audio-audit/<date>/`** (text and JSON), so the next run is a comparison. The full review

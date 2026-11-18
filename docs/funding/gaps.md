@@ -44,7 +44,7 @@ Ordered by how much each one matters for the NLnet "own words / not mostly gener
 - **G9. Unified EQ gain**: 33 % CPU reduction "on this machine" (maintainer [PF3], observation) vs ~3 to 5 % of
   song CPU (agent's D0 projection, `ANS 2026-08-19T11:05`). Different scopes; find the benchmark file in
   `docs/benchmarks/` or the blog `2026-08-20-eleven-loops-one-pass` before quoting either.
-- **G10. Built-in song count**: 15 files in `src/commonMain/kotlin/builtinsongs/`; WP says "More than a dozen".
+- **G10. Built-in song count**: 15 files in `apps/common/src/commonMain/kotlin/builtinsongs/`; WP says "More than a dozen".
   Some files may be helpers. `[VERIFY]`
 
 ## Authorship of docs

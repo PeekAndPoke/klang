@@ -11,7 +11,7 @@ sheets that Kraft provides, if this is possible. Maybe also a future task with a
 uncover some gaps in the Kraft StyleSheets though".
 
 klangui's controls already live in Kraft style sheets (`KlangControlStyles`, `KlangLookAndFeel.Styles`): mangled
-class names, mounted with the code that uses them, nothing global. The app itself still has `src/jsMain/resources/
+class names, mounted with the code that uses them, nothing global. The app itself still has `apps/studio/src/jsMain/resources/
 css/klang.css` (575 lines, about 80 rules on 2026-10-27): the Fomantic overrides, the global gold `a` rule with
 `!important`, and the app's own classes (`kl-app-link`, `kl-quiet-key`, ...), plus inline `css {}` blocks in pages.
 The Learn area's first sheet, `LearnStyles` (its track panel), shows the way.

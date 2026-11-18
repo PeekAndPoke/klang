@@ -32,8 +32,8 @@
 | Piece                   | Where                                             | What it gives us                                                                                                             |
 |-------------------------|---------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | `AudioAnalyzer`         | `audio_be/src/commonMain/kotlin/AudioAnalyzer.kt` | `getFft(out)` dB magnitudes + `waveform: Stream<AnalyzerBufferHistory>` — the FE data path exists                            |
-| `Spectrumeter`          | `src/jsMain/kotlin/comp/Spectrumeter.kt`          | canvas spectrum component, ~30 fps read loop                                                                                 |
-| `SpectrumBinning`       | `src/jsMain/kotlin/comp/SpectrumBinning.kt`       | log-spaced buckets, RMS aggregation, **+3 dB/oct slope compensation referenced at 1 kHz — this is already pink-referencing** |
+| `Spectrumeter`          | `apps/studio/src/jsMain/kotlin/comp/Spectrumeter.kt`          | canvas spectrum component, ~30 fps read loop                                                                                 |
+| `SpectrumBinning`       | `apps/studio/src/jsMain/kotlin/comp/SpectrumBinning.kt`       | log-spaced buckets, RMS aggregation, **+3 dB/oct slope compensation referenced at 1 kHz: this is already pink-referencing** |
 | Limiter/compressor gain | `effects/Compressor.kt`, `master/HouseStage.kt`  | GR is computed every sample today; it is just never published                                                                |
 | Per-cylinder mix buffers   | `cylinders/Cylinder.kt`                           | per-cylinder stereo blocks exist; per-block RMS is a two-line sum                                                               |
 

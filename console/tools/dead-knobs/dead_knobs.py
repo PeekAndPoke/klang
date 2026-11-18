@@ -210,7 +210,8 @@ def block_end(code, open_brace):
 # ── The files ───────────────────────────────────────────────────────────────────────────────────────────────
 
 
-MAIN_SOURCE = re.compile(r"^(?:[\w.-]+/)?src/\w*Main/.*\.kt$")
+# A module's main sources (<module>/src/<set>Main/), an app's under apps/ too (apps/studio, KLANG-00465)
+MAIN_SOURCE = re.compile(r"^(?:apps/)?(?:[\w.-]+/)?src/\w*Main/.*\.kt$")
 
 
 def source_files(root):

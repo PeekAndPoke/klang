@@ -22,7 +22,7 @@ as selected. One theme always has to be selected so the users knows what they ar
 
 1. The waiting slot goes: `target`, `Props.slot`, the waiting hint and border, the bench click that fills a slot.
    The picker's "+" (`WorkbenchLayout`, `KlangLookPicker.onEdit`) navigates to the Looks page, no slot.
-2. The look last selected on the Looks page is stored (a small storage in `src/jsMain/kotlin/storage/`, like the
+2. The look last selected on the Looks page is stored (a small storage in `apps/studio/src/jsMain/kotlin/storage/`, like the
    others there). Opening the page selects it; none stored, or a look deleted since, selects the look worn. A look
    is always selected.
 3. Optional (the maintainer, 2026-10-31): after the page's "+", the hint line says "A new look, copied from '...'"

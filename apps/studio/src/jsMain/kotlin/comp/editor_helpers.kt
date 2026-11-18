@@ -1,0 +1,108 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.studio.comp
+
+import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.SourceLocationAware
+import io.peekandpoke.klang.common.logging.LogArea
+import io.peekandpoke.klang.common.logging.Logger
+import io.peekandpoke.klang.script.runtime.KlangScriptError
+import io.peekandpoke.klang.ui.codemirror.EditorError
+import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
+import io.peekandpoke.kraft.components.ComponentRef
+
+private val log = Logger(area = LogArea.Editor, source = "Editor")
+
+/**
+ * Maps a Throwable into an EditorError for display in the CodeMirror editor.
+ *
+ * If the error is a [KlangScriptError] with a [SourceLocation], the location is used directly.
+ * Otherwise, falls back to regex parsing of the error message.
+ */
+fun mapToEditorError(e: Throwable): EditorError {
+    // Use structured location if available (KlangScriptError, MiniNotationParseException, etc.)
+    if (e is SourceLocationAware) {
+        val loc = e.location
+        if (loc != null) {
+            val prefix = if (e is KlangScriptError) "${e.errorType.name}: " else ""
+
+            // `source` names an imported library; null means the main script, i.e. the buffer
+            // the user is looking at. Pointing an imported module's line number at the open
+            // document would underline an unrelated token, which is WORSE than no marker — so
+            // pin those to line 1 and say where they really came from.
+            if (loc.source != null) {
+                return EditorError(
+                    message = "$prefix[in ${loc.source} at line ${loc.startLine}] ${e.message}",
+                    line = 1,
+                    col = 1,
+                    len = 1,
+                )
+            }
+
+            val len = if (loc.startLine == loc.endLine) {
+                (loc.endColumn - loc.startColumn).coerceAtLeast(1)
+            } else {
+                1
+            }
+            return EditorError(
+                message = "$prefix${e.message}",
+                line = loc.startLine,
+                col = loc.startColumn,
+                len = len,
+            )
+        }
+    }
+
+    // KlangScriptError without location
+    if (e is KlangScriptError) {
+        return EditorError(
+            message = "${e.errorType.name}: ${e.message}",
+            line = 1,
+            col = 1,
+            len = 1,
+        )
+    }
+
+    // Fallback: parse location from error message (for non-KlangScript exceptions)
+    val message = e.message ?: "Unknown error"
+
+    val atLineColRegex = Regex("at\\s+(\\d+):(\\d+)", RegexOption.IGNORE_CASE)
+    val atLineColMatch = atLineColRegex.find(message)
+
+    val line: Int
+    val col: Int
+
+    if (atLineColMatch != null) {
+        line = atLineColMatch.groupValues.getOrNull(1)?.toIntOrNull() ?: 1
+        col = atLineColMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: 1
+    } else {
+        line = 1
+        col = 1
+    }
+
+    return EditorError(
+        message = message,
+        line = line,
+        col = col,
+        len = 1,
+    )
+}
+
+/**
+ * Clears editor errors, runs [block], and on failure maps the exception to an EditorError.
+ */
+suspend fun withEditorErrorHandling(
+    editorRef: ComponentRef.Tracker<KlangScriptEditorComp>,
+    block: suspend () -> Unit,
+) {
+    editorRef { it.setErrors(emptyList()) }
+    try {
+        block()
+    } catch (e: Throwable) {
+        log.error("Editor error", e)
+        editorRef { it.setErrors(listOf(mapToEditorError(e))) }
+    }
+}

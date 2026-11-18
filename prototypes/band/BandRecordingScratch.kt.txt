@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang
+package io.peekandpoke.klang.studio
 
 import io.kotest.core.spec.style.StringSpec
+import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.registerBuiltInSongsAsModules
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer

@@ -48,7 +48,7 @@ tried with the editor and a mock analysis panel on screen, until one feels right
 asks that the outcome be written down when it is found, so phase 2 has a place to put its panel.
 
 Today the analysis surface is decorative. The Motor component
-(`src/jsMain/kotlin/comp/Motor.kt`) stacks an oscilloscope and a spectrum display behind the title
+(`apps/studio/src/jsMain/kotlin/comp/Motor.kt`) stacks an oscilloscope and a spectrum display behind the title
 at fixed pixel heights, at 66 % opacity, with pointer events off. That is a visualiser, and it is
 right as one. A measurement workbench has different needs: it is read, not glanced at; it needs
 Start, Stop, Freeze and Compare gestures; it converges over cycles rather than dancing per frame;

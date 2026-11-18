@@ -31,9 +31,9 @@ Two things are not in git and have to be there. They live in `ignored/`, the one
 
 The audio and the events must come from one render: the song is seeded by the time of day.
 
-1. Copy `BandRecordingScratch.kt.txt` to `src/jvmTest/kotlin/BandRecordingScratch.kt` (never commit it there).
+1. Copy `BandRecordingScratch.kt.txt` to `apps/studio/src/jvmTest/kotlin/BandRecordingScratch.kt` (never commit it there).
 2. Write the number of cycles into `prototypes/band/ignored/RECORD` (328 is nine minutes).
-3. Run `./gradlew :jvmTest --rerun --tests io.peekandpoke.klang.BandRecordingScratch` through the build lock.
+3. Run `./gradlew :apps:studio:jvmTest --rerun --tests io.peekandpoke.klang.studio.BandRecordingScratch` through the build lock.
 4. Remove the spec and `RECORD` again, then `python3 prototypes/band/energy.py` (needs numpy) for the loudness.
 
 ## What is where

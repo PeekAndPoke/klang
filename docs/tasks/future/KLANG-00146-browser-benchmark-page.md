@@ -25,7 +25,7 @@ Two harnesses:
    serialization). Already multiplatform: harnesses in `commonMain`, runs on JS today
    (`./gradlew :audio_benchmark:jsBrowserDevelopmentRun`, see its README). `run(cases)` returns
    structured `Result` data classes — the page can render tables directly, no console scraping.
-2. **`SongBenchmark`** (`src/jvmMain/kotlin/SongBenchmark.kt`) — the real one: compiles KlangScript
+2. **`SongBenchmark`** (`apps/studio/src/jvmMain/kotlin/SongBenchmark.kt`), the real one: compiles KlangScript
    song code, drives `KlangAudioRenderer.renderBlock`, times every block. JVM-only *by placement*,
    not by dependency.
 
@@ -52,7 +52,7 @@ Portability findings (all checked, not guessed):
 
 ### B. Song suites (a move + a suspend)
 
-- Move `SongBenchmark.kt`, `SongBenchmarkCases.kt`, `FrozenSongs.kt` → `src/commonMain`.
+- Move `SongBenchmark.kt`, `SongBenchmarkCases.kt`, `FrozenSongs.kt` → `apps/studio/src/commonMain`.
 - Make `run`/`renderPass` suspend; JVM CLI keeps its `runBlocking` wrapper in `SongBenchmarkMain`.
 - In the browser, reuse the app's already-loaded `Samples` instance instead of `Samples.create`.
 - **Add `yield()` every ~64 blocks + a progress callback.** One song case ≈ 97 s of audio

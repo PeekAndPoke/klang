@@ -3,45 +3,75 @@
 # Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Deploys the production build to klang.finzo.de as a versioned release.
+# Deploys the studio's production build (apps/studio) to klang.finzo.de as a versioned release.
 #
 # Each deploy lands in its own directory named after the version and the git commit, and the `current` symlink
 # points at the release that is live:
 #
-#   klang.finzo.de/versions/v<version>-<git hash>/   one directory per deployed commit, e.g. v0.5.3-4f5502c8c683
-#   klang.finzo.de/current -> versions/v<version>-<git hash>
+#   studio/versions/v<version>-<git hash>/   one directory per deployed commit, e.g. v0.5.3-4f5502c8c683
+#   studio/current -> versions/v<version>-<git hash>
 #
-# The host's document root must be klang.finzo.de/current (a one-time switch in the host settings, maintainer,
-# 2026-10-07). The last step fetches the live version.json and fails loudly if the site does not serve the release
-# just deployed, so a host still pointing at the old root cannot go unnoticed. Setting the document root in the
-# hosting panel creates `current` as an empty directory; the script refuses to replace a real directory, so remove it
-# once (`rmdir`) before the first deploy (happened on 2026-10-07; the host follows the symlink).
+# The server folder is /www/htdocs/w0057ac0/klang/studio since KLANG-00465 (the maintainer, 2026-11-18), beside
+# notstrom's; it was /www/htdocs/w0057ac0/finzo/klang.finzo.de before. The site stays klang.finzo.de: the host's
+# document root for it must be switched ONCE to $BASE/current (in the host settings), as it was switched to the old
+# place's current on 2026-10-07. The last step fetches the live version.json and fails loudly if the site does not
+# serve the release just deployed, so a host still pointing at the old folder cannot go unnoticed. Setting the
+# document root in the hosting panel may create `current` as an empty directory; the script refuses to replace a real
+# directory, so remove it once (`rmdir`) before the first deploy (the host follows the symlink).
 #
 # A removed page or post is really gone in the next release, and a rollback is one symlink. A browser tab left open
 # across a deploy loses the old release's on-demand chunks (webpack's ChunkLoadError) until it is reloaded. The newest
 # KEEP_VERSIONS releases are kept; older ones are deleted, never the one `current` points at.
 #
-# Run after `./gradlew jsBrowserDistribution`. The distribution folder holds the bundle
-# AND a copy of every file in src/jsMain/resources, including the version.json the build wrote, so it is the one
-# thing uploaded and the one thing checked.
+# Run after console/build-studio.sh. The distribution folder holds the bundle AND a copy of every file in
+# apps/studio/src/jsMain/resources, the band's figures, the worklet and the version.json the build wrote, so it is
+# the one thing uploaded and the one thing checked. It is the build directory of the user who runs this (the
+# per-user layout, MC-00031: apps/studio/build/ for the maintainer, .build-claude/apps/studio/ for the agents).
 
 set -euo pipefail
 
 HOST="finzo"
-BASE="/www/htdocs/w0057ac0/finzo/klang.finzo.de"
+BASE="/www/htdocs/w0057ac0/klang/studio"
 SITE="https://klang.finzo.de"
 KEEP_VERSIONS=10
-DIST="./build/dist/js/productionExecutable"
 
 cd "$(dirname "$0")/.."
 echo "Working in $(pwd)"
+
+# Where this user's build outputs live when the per-user layout is on (MC-00031): as in console/build-studio.sh.
+build_root() {
+    local value user
+
+    value=${ORG_GRADLE_PROJECT_buildRoot:-$(sed -n 's/^[[:space:]]*buildRoot[[:space:]]*=[[:space:]]*//p' gradle.properties 2>/dev/null | head -1)}
+
+    if [ -n "$value" ]; then
+        printf '%s\n' "./$value"
+        return 0
+    fi
+
+    user=$(id -un)
+
+    if [ -d "./.build-$user" ] && [ -O "./.build-$user" ]; then
+        printf '%s\n' "./.build-$user"
+    fi
+}
+
+ROOT=$(build_root)
+
+if [ -n "$ROOT" ]; then
+    DIST="$ROOT/apps/studio/dist/js/productionExecutable"
+else
+    DIST="./apps/studio/build/dist/js/productionExecutable"
+fi
+
+echo "Distribution: $DIST"
 
 # The release is named after what was built: the distribution's version.json carries the version and the git
 # revision it was built at, and `-dirty` when the tree had uncommitted changes (maintainer, 2026-10-07: deploying
 # a build with uncommitted changes is allowed; its name says so).
 HASH="$(sed -n 's/.*"gitRev": *"\([0-9a-f]*\)".*/\1/p' "$DIST/version.json" 2>/dev/null || true)"
 if [ -z "$HASH" ]; then
-  echo "No gitRev in $DIST/version.json: run ./gradlew jsBrowserDistribution first." >&2
+  echo "No gitRev in $DIST/version.json: run console/build-studio.sh first." >&2
   exit 1
 fi
 

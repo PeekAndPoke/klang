@@ -9,7 +9,7 @@
 # Four steps, each in its own console/with-build-lock.sh call (so a waiting agent waits for one step, not for the
 # whole run):
 #   tests   ./gradlew allTests :klangscript-ksp:test --continue
-#   corpus  ./gradlew runSongBenchmark --args=corpus              (src/jvmMain/kotlin/CorpusCheck.kt)
+#   corpus  ./gradlew :apps:studio:runSongBenchmark --args=corpus (apps/studio/src/jvmMain/kotlin/CorpusCheck.kt)
 #           (red when a frozen text or an unedited live song sounds different; an edited live song is information)
 #   timing  console/run-dsp-benchmarks.sh                         (no budgets: never red on its numbers)
 #   alloc   the production node bundle (relinked, so its time is fresh), then
@@ -25,8 +25,8 @@
 # differs from the state before, the run is red: its results would mix two states of the tree. Only what the run
 # writes itself is left out: docs/benchmarks/alloc-scoreboard.md and the timing step's dated files.
 #
-# The test XML is searched only in the root's and the top-level modules' build dirs, never in a nested checkout or
-# worktree (.claude/worktrees/..., or any top-level folder holding a .git).
+# The test XML is searched only in the root's, the top-level modules' and the apps' (apps/<app>/) build dirs, never in
+# a nested checkout or worktree (.claude/worktrees/..., or any top-level folder holding a .git).
 #
 # Needs Linux tools: flock (console/with-build-lock.sh), GNU sed, sha1sum.
 #
@@ -112,15 +112,13 @@ test_xml() {
     root=$(build_root)
 
     if [ -n "$root" ]; then
-        find "$root" -path '*/test-results/*' -name '*.xml' -type f "$@"
+        # not the root project's folder: it has no tests since the studio became :apps:studio (KLANG-00465), and what
+        # lies there is the studio's last run from before the move
+        find "$root" -path '*/test-results/*' -not -path "$root/_root/*" -name '*.xml' -type f "$@"
         return 0
     fi
 
-    if [ -d ./build ]; then
-        dirs+=(./build)
-    fi
-
-    for dir in ./*/; do
+    for dir in ./*/ ./apps/*/; do
         if [ -e "${dir}.git" ]; then
             continue
         fi
@@ -180,7 +178,7 @@ step tests $LOCK bash -c '
     test_xml -print0 | xargs -0 -r grep -ho "<testsuite [^>]*>" > "$LOGDIR/tests.suites"
     exit $rc'
 
-step corpus $LOCK ./gradlew runSongBenchmark --args=corpus -q
+step corpus $LOCK ./gradlew :apps:studio:runSongBenchmark --args=corpus -q
 step timing $LOCK console/run-dsp-benchmarks.sh
 
 step alloc $LOCK bash -c '

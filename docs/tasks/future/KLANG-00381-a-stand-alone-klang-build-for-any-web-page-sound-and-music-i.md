@@ -8,7 +8,7 @@
 
 The maintainer, 2026-10-28: "stand-alone engine js-build so that it can be pulled into a normal website, like the
 whitepaper or the blog-post, and play sounds and music there". The whitepaper (`klang-whitepaper.html`) and the blog
-posts (`src/jsMain/resources/blog/`) are plain pages that talk about sound but cannot play any: a reader has to open
+posts (`apps/studio/src/jsMain/resources/blog/`) are plain pages that talk about sound but cannot play any: a reader has to open
 the app. A small headless build that any page includes with one script tag would let a paragraph about drift, a filter or a
 song play right where it is explained.
 

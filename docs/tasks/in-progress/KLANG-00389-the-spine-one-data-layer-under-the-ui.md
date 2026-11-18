@@ -209,7 +209,7 @@ next, the MIDI rig first (KLANG-00402). A global object outside the Spine is a d
 
 ## The work
 
-1. **The sweep:** an inventory of every source of state and every stream in the UI modules (`src/jsMain`, `klangui`,
+1. **The sweep:** an inventory of every source of state and every stream in the UI modules (`apps/studio/src/jsMain`, `klangui`,
    `klangscript-ui`, `sprudel`'s UI): what it holds, who writes it, who reads it, how long it lives, whether it is
    saved. As a table in this ticket, with the cases where the same data is derived twice or a hidden part keeps working.
 2. **The design:** the Spine's areas, its entry point, the rules for sending and receiving, written here and agreed

@@ -177,7 +177,7 @@ access every CodeMirror symbol through the dynamically-imported module objects r
 instead of the static `external class` companions (`EditorState.create(...)` → `modules.state.EditorState.create(...)`,
 etc.). That re-touches the consumers that use the static classes directly:
 `klangscript-ui/.../codemirror/{CodeMirrorComp, CodeMirrorTheme, DslCompletionSource, DslEditorExtension}.kt` and
-`src/jsMain/kotlin/codemirror/CodeMirrorHighlightBuffer.kt`, and any editor mount must `await` the load before
+`apps/studio/src/jsMain/kotlin/codemirror/CodeMirrorHighlightBuffer.kt`, and any editor mount must `await` the load before
 constructing the view.
 
 **Caveat on the benefit:** the savings come off the *initial download*, but Klang is a live-coding app where the editor
@@ -212,7 +212,7 @@ Combined §1 + §2 ≈ **1.8–2.2 MB off the initial 9.3 MB (~20–24%)**.
 
 - `./gradlew :klangscript:jvmTest :klangscript:jsTest` — interpreter + native-interop correctness (§1).
 - `./gradlew :sprudel:jvmTest :sprudel:jsTest`: the big stdlib consumer (door specs / round-trip).
-- Rebuild: `./gradlew jsBrowserProductionWebpack`; re-measure `build/dist/js/productionExecutable/klang-engine.*.js` vs
+- Rebuild: `console/build-studio.sh`; re-measure `apps/studio/build/dist/js/productionExecutable/klang-engine.*.js` vs
   the **9.3 MB baseline**. For §2 confirm a new `@codemirror`-bearing lazy chunk appears and the main bundle drops ~0.6
   MB.
 - Spot-check the regenerated `GeneratedSprudelRegistration.kt` for the new ~3–6-line closure shape; smoke-test a few

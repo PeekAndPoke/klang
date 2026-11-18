@@ -28,7 +28,7 @@ Sprudel code (String)
 | `KlangOfflineRenderer` | `klang/src/commonMain/kotlin/KlangOfflineRenderer.kt` | Platform-independent renderer on the live path, in lockstep; calls `onBlock` per rendered block. Available on JVM and JS. |
 | `WavFileWriter`        | `klang/src/jvmMain/kotlin/cli/WavFileWriter.kt`       | Streams 16-bit stereo PCM to a WAV file. Writes placeholder header, patches sizes on close. JVM only.                  |
 | `RenderWavCommand`     | `klang/src/jvmMain/kotlin/cli/RenderWavCommand.kt`    | Clikt CLI command `klang:record:wav`. Takes a `compilePattern` lambda to decouple from sprudel.                        |
-| `Cli.kt`               | `src/jvmMain/kotlin/Cli.kt`                           | Root CLI entry point. Wires KlangScript engine + sprudel lib into `RenderWavCommand`.                                  |
+| `Cli.kt`               | `apps/studio/src/jvmMain/kotlin/Cli.kt`                           | Root CLI entry point. Wires KlangScript engine + sprudel lib into `RenderWavCommand`.                                  |
 | `record.sh`            | `console/record.sh`                                   | Bash shortcut: `./console/record.sh --file song.sprudel --cycles 8 -o song.wav`                                        |
 
 ## Usage
@@ -49,7 +49,7 @@ Sprudel code (String)
 ### Gradle
 
 ```bash
-./gradlew -q runCli --args="klang:record:wav --file song.sprudel --cycles 4 -o out.wav"
+./gradlew -q :apps:studio:runCli --args="klang:record:wav --file song.sprudel --cycles 4 -o out.wav"
 ```
 
 ### CLI Options
@@ -103,7 +103,7 @@ Any valid KlangScript code works, as long as the last expression evaluates to a 
 ## Adding New CLI Commands
 
 1. Create a new `CliktCommand` in `klang/src/jvmMain/kotlin/cli/`
-2. Register it in `src/jvmMain/kotlin/Cli.kt` via `.subcommands(...)`
+2. Register it in `apps/studio/src/jvmMain/kotlin/Cli.kt` via `.subcommands(...)`
 3. Optionally add a bash shortcut in `console/`
 
 Naming convention: `klang:<category>:<action>` (e.g., `klang:record:wav`)

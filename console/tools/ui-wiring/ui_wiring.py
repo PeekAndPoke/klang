@@ -35,8 +35,8 @@ from collections import defaultdict
 
 # The source roots read, relative to the repo root.
 ROOTS = [
-    "src/jsMain/kotlin",
-    "src/commonMain/kotlin",
+    "apps/studio/src/jsMain/kotlin",
+    "apps/studio/src/commonMain/kotlin",
     "klangui/src/jsMain/kotlin",
     "klangscript-ui/src/jsMain/kotlin",
     "sprudel/src/jsMain/kotlin",
@@ -45,18 +45,18 @@ ROOTS = [
 
 # A file's rail: the first prefix that matches its path. The order of RAIL_ORDER is the cabinet's, bottom to top.
 RAILS = [
-    ("src/jsMain/kotlin/spine/storage/", "storage"),
-    ("src/jsMain/kotlin/storage/", "storage"),
-    ("src/commonMain/kotlin/storage/", "storage"),
-    ("src/jsMain/kotlin/spine/", "spine"),
-    ("src/jsMain/kotlin/layouts/", "layout"),
-    ("src/jsMain/kotlin/pages/", "pages"),
-    ("src/jsMain/kotlin/midi/", "pages"),
-    ("src/jsMain/kotlin/visuals/", "pages"),
-    ("src/jsMain/kotlin/comp/", "components"),
-    ("src/jsMain/kotlin/codemirror/", "components"),
-    ("src/jsMain/kotlin/", "app"),
-    ("src/commonMain/kotlin/", "content"),
+    ("apps/studio/src/jsMain/kotlin/spine/storage/", "storage"),
+    ("apps/studio/src/jsMain/kotlin/storage/", "storage"),
+    ("apps/studio/src/commonMain/kotlin/storage/", "storage"),
+    ("apps/studio/src/jsMain/kotlin/spine/", "spine"),
+    ("apps/studio/src/jsMain/kotlin/layouts/", "layout"),
+    ("apps/studio/src/jsMain/kotlin/pages/", "pages"),
+    ("apps/studio/src/jsMain/kotlin/midi/", "pages"),
+    ("apps/studio/src/jsMain/kotlin/visuals/", "pages"),
+    ("apps/studio/src/jsMain/kotlin/comp/", "components"),
+    ("apps/studio/src/jsMain/kotlin/codemirror/", "components"),
+    ("apps/studio/src/jsMain/kotlin/", "app"),
+    ("apps/studio/src/commonMain/kotlin/", "content"),
     ("klangui/", "library"),
     ("klangscript-ui/", "library"),
     ("sprudel/", "library"),
@@ -69,10 +69,10 @@ STATE_RAILS = {"spine", "storage"}
 STORAGE_RAILS = {"storage"}
 
 # Only the app's own top-level vals count as holders (the content's are songs and tutorials).
-VAL_HOLDER_PREFIX = "src/jsMain/kotlin/"
+VAL_HOLDER_PREFIX = "apps/studio/src/jsMain/kotlin/"
 
 # What a holder under the key's prefix can be seen from: the app's own code is seen only by the app.
-SEEN_ONLY_FROM = {"src/jsMain/kotlin/": "src/jsMain/kotlin/"}
+SEEN_ONLY_FROM = {"apps/studio/src/jsMain/kotlin/": "apps/studio/src/jsMain/kotlin/"}
 
 STREAM_LINE = re.compile(r"subscribingTo\s*\(|subscribeToStream|\.subscribe\b|combinedWith\s*\(")
 # (name, mark, own level only): a var or a collection inside a function is that function's, not the holder's state

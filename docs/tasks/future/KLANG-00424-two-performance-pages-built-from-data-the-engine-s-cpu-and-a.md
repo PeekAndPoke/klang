@@ -22,7 +22,7 @@ refactoring (KLANG-00422) is done (the maintainer, the same day).
   `console/full-check.sh`.
 - **Sprudel's performance:** nothing found (2026-11-10): no benchmark of the pattern engine.
 - **The pages' machinery:** `console/dev-status/` (`build.py`, `engine_health.py`, the templates, `hud.css`), each
-  page a flat HTML file in `src/jsMain/resources/`, a card on the Dev status page.
+  page a flat HTML file in `apps/studio/src/jsMain/resources/`, a card on the Dev status page.
 
 ## Proposal
 

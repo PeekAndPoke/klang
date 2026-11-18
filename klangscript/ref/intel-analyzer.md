@@ -237,7 +237,7 @@ Existing consumers that demonstrate the pattern:
   through `CompletionProvider.namedArgumentCompletions` first (boosted above the locals, in declaration order), then
   `analysis.localsAt(from, currentCode)` through `CompletionProvider.localCompletions`, before the library names (a
   CodeMirror `boost` keeps them first).
-- `src/jsMain/.../KlangSymbolDocsComp.kt` — switches purely on `symbol.origin` to render
+- `apps/studio/src/jsMain/.../KlangSymbolDocsComp.kt`: switches purely on `symbol.origin` to render
   the library / LOCAL / Built-in chip; suppresses "View docs" for `Origin.Local`.
 
 ## Where the tests live

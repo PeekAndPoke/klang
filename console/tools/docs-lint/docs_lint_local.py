@@ -11,8 +11,8 @@ stale-path: a path to a task or plan written as text, not as a link, that does n
    Dated history keeps its words and is skipped: docs/tasks-archive/, docs/history/, files whose name
    starts with a date (2026-09-06-..., 20260927-...), */ref/memory-history.md, the build-lock log,
    DEV-DIARY.MD, the strategist's agent memory, and what the ticket sweep of 2026-10-20 left alone: the
-   ledgers, docs/benchmarks/, docs/blog/, docs/funding/evidence/ and src/jsMain/resources/. The migration's
-   "(was `old path`)" records are skipped too.
+   ledgers, docs/benchmarks/, docs/blog/, docs/funding/evidence/ and the studio's published pages
+   (apps/studio/src/jsMain/resources/). The migration's "(was `old path`)" records are skipped too.
 """
 import os
 import re
@@ -27,7 +27,7 @@ HISTORY = re.compile(r"(^|/)(docs/tasks-archive|docs/history|\.claude/agent-memo
                      r"|(^|/)(\d{4}-\d{2}-\d{2}|\d{8})-[^/]*$"
                      r"|/ref/memory-history\.md$|^\.claude/build-lock-log\.md$|^DEV-DIARY\.MD$"
                      # the files the ticket sweep left alone (2026-10-20): dated records and published pages
-                     r"|ledger[^/]*\.md$|^docs/(benchmarks|blog|funding/evidence)/|^src/jsMain/resources/")
+                     r"|ledger[^/]*\.md$|^docs/(benchmarks|blog|funding/evidence)/|^apps/studio/src/jsMain/resources/")
 CODE_EXT = (".kt", ".kts")
 WAS_RECORD = re.compile(r"\(was `[^`]+`\)")
 SKIP_DIRS = {".git", "node_modules", "build", ".gradle", ".idea", ".kotlin", "kotlin-js-store"}

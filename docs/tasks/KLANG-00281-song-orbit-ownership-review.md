@@ -26,7 +26,7 @@ The lines below are the Kotlin file's lines. Times are from the reviewer's rende
 built (first claimer among sounding voices); the newest-onset rule changes which voice wins at each moment, not
 which patterns conflict.
 
-## Die Kirschblüte (`src/commonMain/kotlin/builtinsongs/Sakura.kt`)
+## Die Kirschblüte (`apps/common/src/commonMain/kotlin/builtinsongs/Sakura.kt`)
 
 - **Cylinder 0:** the koto melody `:70-76` (`.cylinder(0)`, `body(material = "mahogany")` on `:75`: material 4, wet 0.5,
   floor 0.4) against the three noise layers `:117-119` (`dust`, `pink`, `brown`), which name no cylinder and so land
@@ -35,7 +35,7 @@ which patterns conflict.
   off. First conflict at 0.833 s (cycle 0.375).
 - **Likely fix:** put the noise layers on their own cylinder.
 
-## Seltsamere Dinge (`src/commonMain/kotlin/builtinsongs/StrangerThings.kt`)
+## Seltsamere Dinge (`apps/common/src/commonMain/kotlin/builtinsongs/StrangerThings.kt`)
 
 - **Cylinders 3 and 4:** the bass `:48-51` (cylinder 3) and its octave copy `:52-54` (cylinder 4), with
   `.vowel(vowel = "e o e i a u".slow(24), wet = 0.40)` on `:55`. Each cylinder on its own, no conflict between
@@ -43,7 +43,7 @@ which patterns conflict.
   the previous note's 2.75 s release (0.57 s earlier on cylinder 3, 1.48 s on cylinder 4).
 - **Nothing to fix:** the rule doing what it should. Listen once to confirm the earlier vowel changes sound right.
 
-## The Synthsale Piper's Last Rave (`src/commonMain/kotlin/builtinsongs/IrishLamentTechno.kt`)
+## The Synthsale Piper's Last Rave (`apps/common/src/commonMain/kotlin/builtinsongs/IrishLamentTechno.kt`)
 
 - **Cylinder 5:** the pad `:73-77` (`phaser(wet = saw.range(0.3, 0.6).slow(16))` per chord, `reverb(0.4, 6)`), and
   later the stabs `:150-153` (reverb 0.4/6) against the Tetris bassline `:197-205` (phaser 0.25, sweep 500,
@@ -57,7 +57,7 @@ which patterns conflict.
 - **Cylinder 6:** the Tetris bassline `:157-166` (phaser) against the stabs `:207-212` (reverb 0.4/6), from 233.7 s.
 - **Likely fix:** separate cylinders for the hat and the clap, the stab and the sub, the bassline and the stabs.
 
-## frozen strangerThings_2026_07_03 (`src/jvmMain/kotlin/FrozenSongs.kt`, string from `:536`)
+## frozen strangerThings_2026_07_03 (`apps/studio/src/jvmMain/kotlin/FrozenSongs.kt`, string from `:536`)
 
 - **Cylinder 1:** the melody `:556-561` (`body(material = "wood")`) and its superimposed octave copy `:562-564`
   (`body(material = "glass")`): two different bodies on one cylinder, starting on the same frame. Only one body can
@@ -77,7 +77,7 @@ which patterns conflict.
     re-accepted with `corpus-accept-engine` (the text moved it, not the engine). Listening pair:
     `tmp/listening/frozen-orbits/stranger-things.md`.
 
-## frozen piece derSchmetterling_2026_09_16 (`src/jvmMain/kotlin/FrozenPieces.kt`, string from `:50`)
+## frozen piece derSchmetterling_2026_09_16 (`apps/studio/src/jvmMain/kotlin/FrozenPieces.kt`, string from `:50`)
 
 - **Cylinder 3:** guitar 3 `:333-345` (`body(material = "rosewood", wet = 0.3)` on `:339`, the group's
   `reverb(wet = 0.15, size = 3.0)` on `:450`) against the bass `:348-361` (the cylinder on `:356`, no body, no
@@ -98,7 +98,7 @@ which patterns conflict.
 - **Seen on the way, not changed:** the current Der Schmetterling puts guitar 3 on `x.cylinder(2)`, beside guitar 2
   (guitar 2's mahogany body against none): the same kind of conflict, in a live song, so the maintainer's.
 
-## frozen derSchmetterling_2026_09_25 (`src/jvmMain/kotlin/FrozenSongs.kt`, string from `:89`)
+## frozen derSchmetterling_2026_09_25 (`apps/studio/src/jvmMain/kotlin/FrozenSongs.kt`, string from `:89`)
 
 - **Cylinder 0:** the count-in `:478-479` (`reverb(wet = "0.1", size = 0)`) against the lead `:332`
   (`body(material = "wood", wet = 0.4)`, `reverb(wet = 0.10, size = 1.0)` on `:487`). Found in Q20's review round 1.

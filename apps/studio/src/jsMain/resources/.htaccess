@@ -1,0 +1,15 @@
+RewriteEngine On
+# If the requested filename is not a directory
+RewriteCond %{REQUEST_FILENAME} !-d
+# AND if the requested filename is not a file
+RewriteCond %{REQUEST_FILENAME} !-f
+# Then redirect everything to index.html
+RewriteRule ^ index.html [L]
+
+# Caching (needs mod_headers; without it the site is served all the same). The figures carry the release in their
+# address (?v=<release>), so a browser keeps them for long (KLANG-00465).
+<IfModule mod_headers.c>
+    <FilesMatch "\.glb$">
+        Header set Cache-Control "max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>

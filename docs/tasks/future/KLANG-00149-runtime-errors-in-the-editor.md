@@ -69,7 +69,7 @@ Measured, not assumed:
   through. **Verified inside the swallow**: instrumenting the catch printed
   `type=KlangScriptTypeError loc=3:33-37` for a typo inside an arrow function. The position is
   there; nothing is lost at throw time.
-- `mapToEditorError` (`src/jsMain/kotlin/comp/editor_helpers.kt`) already converts any
+- `mapToEditorError` (`apps/studio/src/jsMain/kotlin/comp/editor_helpers.kt`) already converts any
   `SourceLocationAware` throwable into an `EditorError` with line, column and length.
 - `KlangCodePlaybackCtrl` already exposes `errors: Stream<List<EditorError>>`, and
   `KlangCodeEditorComp` already subscribes to it and calls `setErrors`.
