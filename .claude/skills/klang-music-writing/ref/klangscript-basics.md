@@ -112,7 +112,7 @@ No higher-order methods yet (`map`, `filter`, `reduce`, `forEach`): use a `for` 
 `startsWith()`, `endsWith()`, `replace()`, `slice()`, `concat()`, `repeat()`
 
 **Math:** `Math.sqrt()`, `Math.pow()`, `Math.abs()`, `Math.floor()`, `Math.ceil()`, `Math.round()`, `Math.sin()`,
-`Math.cos()`, `Math.tan()`, `Math.min()`, `Math.max()`. No `Math.random()` and no `Math.PI` yet.
+`Math.cos()`, `Math.tan()`, `Math.min()`, `Math.max()`. No `Math.PI` yet.
 
 **Functions** take a fixed list of named parameters: no rest parameters (`...args`) and no spread. A script
 function that should take any number of things takes an array.

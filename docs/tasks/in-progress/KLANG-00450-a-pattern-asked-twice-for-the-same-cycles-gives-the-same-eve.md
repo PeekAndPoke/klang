@@ -99,3 +99,9 @@ What changes in behaviour:
 Checks: `:klang:jvmTest` 105, 0 failed (`PatternCyclesSpec` 12, and one scheduler test that every asking is a whole
 cycle across a tempo change); 17 mutants killed; review round 1 (`reviewer-opus-high`) CLEAN, 3 MINOR and 2 NIT
 applied. Not mutation-checked: the guard against an infinite window's start (its mutant would not end).
+
+## 2026-11-18: the maintainer closes the leftovers
+
+- The song writers' reference no longer says "No `Math.random()`" (the maintainer: "Remove the rule").
+- `timeOfDay`'s KDoc note and the noise engines kept per seed: "consider this as closed". Nothing is changed there.
+- Still open: the live act's own compile of the playing code (asked of Klang-Research).
