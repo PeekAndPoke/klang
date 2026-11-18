@@ -69,3 +69,4 @@ or measured.
 - 2026-11-18: created, from the Der Schmetterling session of 2026-11-17 and 18.
 - 2026-11-18: findings from reading the rig and the engine's shaper code added.
 - 2026-11-18: KLANG-00466 (the guitar amp on the cylinder) added, proposed as the first step.
+- 2026-11-18: KLANG-00466 became the plan's index; its steps are KLANG-00467 to KLANG-00471, its notes KLANG-00472.

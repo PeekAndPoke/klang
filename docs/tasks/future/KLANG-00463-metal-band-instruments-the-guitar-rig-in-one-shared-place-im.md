@@ -19,6 +19,11 @@ The two copies were compared by reading: the rig sections are the same but for t
 Outside the compared sections, `guitarShape` differs since 2026-11-17: Kokon still ends in `.mul(0.35)`, which was
 removed in Der Schmetterling (its guitar compressors and faders were moved to match).
 
+**Later the same day** the copies had drifted further, as the maintainer tuned Der Schmetterling: the humbucker,
+the screamer, the booster, both preamps' lowpasses, the high gain's first stage and all three cab bands differ now.
+The table is in KLANG-00470 (step 4: Kokon), section 6. The lesson for this ticket: compare the files on the day
+of the work, and expect "which copy wins" to be asked part by part.
+
 ## The work (a sketch)
 
 - The rig parts and `makeGuitar` move to one shared place, and both songs import them.
@@ -40,3 +45,4 @@ Both songs play from the shared rig, no rig part is left in either song, and the
 ## History
 
 - 2026-11-18: created, from the Der Schmetterling session of 2026-11-17 and 18.
+- 2026-11-18: the two copies drifted further the same day; the table is in KLANG-00470.
