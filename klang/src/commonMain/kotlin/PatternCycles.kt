@@ -28,7 +28,8 @@ internal class PatternCycles(private val capacity: Int = DEFAULT_CAPACITY) {
     companion object {
         /**
          * The scheduler's cycles (the sample look-ahead, 8 cycles, and the fetch's) and a reader's beside it
-         * ([KlangCyclicPlayback.cycleEvents]: the live act reads up to 16 cycles ahead) fit, with room to spare.
+         * ([KlangCyclicPlayback.cycleEvents]: the live act keeps at most 34 cycles, a bar back and up to 32 ahead) fit,
+         * with room to spare: the scheduler's cycles lie inside the reader's stretch.
          */
         const val DEFAULT_CAPACITY = 64
     }

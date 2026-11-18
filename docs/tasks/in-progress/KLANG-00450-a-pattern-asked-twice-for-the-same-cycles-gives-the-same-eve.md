@@ -131,3 +131,14 @@ cycle border. Found by the review, not from this change, not fixed: `OneShotPlay
 limit; `updatePattern` on a stopped playback still sends a `ReplaceVoices`.
 
 Open: the live act's side in `apps/common` (Klang-Research), and a look at it in the app.
+
+## 2026-11-18: the live act's side is in
+
+Klang-Research, 166f3c3c1: `SongReading` asks the playback's `cycleEvents`; no second compile. The band keeps at
+most 34 cycles (a bar back, up to 32 ahead), inside the store of 64. Their tests: `:apps:common:jsBrowserTest` 52,
+`:apps:notstrom:jsBrowserTest` 9, `:apps:studio:jsBrowserTest` 253, `:klangviz:jvmTest` 240, green; 17 mutants; two
+clean rounds (their report, not run here).
+
+Open: the maintainer's look in the browser (the band follows what sounds, also with `seed(Random.nextInt())` and
+after a code edit). Found by their review, older, not fixed: the studio's tempo slider does not publish
+`nowPlaying`, so the band's bar length keeps the old tempo until the next Play.
