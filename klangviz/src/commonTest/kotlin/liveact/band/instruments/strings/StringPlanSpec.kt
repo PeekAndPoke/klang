@@ -17,8 +17,15 @@ import kotlin.math.pow
 
 private fun strum(t: Double, vararg notes: Int) = Strum(t = t, d = 0.1, midi = notes.min(), v = 1.0, all = notes.toList())
 
-private fun plan(strums: List<Strum>, now: Double = Double.NEGATIVE_INFINITY, before: StringPlan = StringPlan()) =
-    planStrings(strums = strums, now = now, before = before, tuning = Tuning.GUITAR)
+/** A bar longer than any of the fixtures: none of their notes begins one but a note at 0, which is struck down anyway. */
+private const val NO_BAR = 1000.0
+
+private fun plan(
+    strums: List<Strum>,
+    now: Double = Double.NEGATIVE_INFINITY,
+    before: StringPlan = StringPlan(),
+    bar: Double = NO_BAR,
+) = planStrings(strums = strums, now = now, before = before, tuning = Tuning.GUITAR, bar = bar)
 
 /** When the [k]th moment of [riff] is: eighths at 120 beats a minute. */
 private fun moment(k: Int) = 0.5 + k * 0.125
@@ -59,6 +66,22 @@ private fun riff(): List<RecordedEvent> {
 }
 
 class StringPlanSpec : StringSpec({
+
+    "the pick goes down on a note that begins a bar, whatever its turn would be" {
+        // a bar of one second: by turns the notes at 1.0, at 2.015 and at 3.985 would go up; 3.03 is too far off its bar
+        val times = listOf(0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.015, 2.215, 2.415, 2.615, 2.815, 3.03, 3.25, 3.5, 3.75, 3.985)
+        val p = plan(times.map { strum(it, 45) }, bar = 1.0)
+
+        withClue("down where a bar begins (1.0, and 2.015 and 3.985 within the tolerance either side), by turns elsewhere") {
+            p.plucks.map { it.way } shouldBe listOf(
+                1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0,
+            )
+        }
+
+        withClue("the same notes with no bar among them: down and up in turn all through") {
+            plan(times.map { strum(it, 45) }).plucks.map { it.way } shouldBe List(times.size) { if (it % 2 == 0) 1.0 else -1.0 }
+        }
+    }
 
     "the pick goes down after a pause, else down and up in turn" {
         val p = plan(listOf(strum(0.0, 40), strum(0.2, 43), strum(0.4, 45), strum(1.0, 40), strum(1.25, 43)))
@@ -152,7 +175,7 @@ class StringPlanSpec : StringSpec({
             val strums = forgetting.strumsOf(tags)
             val from = strums.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
 
-            kept = plan(strums, now = now, before = kept)
+            kept = plan(strums, now = now, before = kept, bar = 2.0)
             steps++
 
             if (strums.isEmpty()) {
@@ -174,7 +197,7 @@ class StringPlanSpec : StringSpec({
             val more = events.filter { it.t >= start && it.t < moment(17 * (n + 1) + 128) - 0.06 }
 
             grown.add(more)
-            all = plan(grown.strumsOf(tags), now = now, before = all)
+            all = plan(grown.strumsOf(tags), now = now, before = all, bar = 2.0)
 
             if (n % 2 == 1) {
                 // as the show does it: it forgets and adds in one go, and the player plans once

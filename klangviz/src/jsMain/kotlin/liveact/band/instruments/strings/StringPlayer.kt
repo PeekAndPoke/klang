@@ -193,7 +193,7 @@ class StringPlayer(
     private fun fingered(strums: List<Strum>, now: Double): List<Pluck> {
         val k = design
 
-        planned = planStrings(strums = strums, now = now, before = planned, tuning = k.tuning)
+        planned = planStrings(strums = strums, now = now, before = planned, tuning = k.tuning, bar = show.bar)
 
         /** How far from the nut a finger lies that presses at [fret]: just behind the fret's wire. */
         fun alongOf(fret: Double): Double = k.scale * s * (1 - 2.0.pow(-max(0.0, fret - 0.4) / 12))
