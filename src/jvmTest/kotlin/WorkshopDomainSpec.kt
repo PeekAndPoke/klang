@@ -18,6 +18,8 @@ import java.io.File
  *
  * Left alone: the package and import lines (the package moves with the copy) and ticket numbers (`KLANG-00325`, the
  * record of where a decision was made). A Klang type cannot reach the workshop at all: its build names Kraft alone.
+ * And three.js's own word for a shape: in the three.js bindings (`threejs/`) a cylinder is the geometry
+ * (`CylinderGeometry`), not Klang's cylinder (red unnoticed from 2026-11-17, when those bindings came, to 2026-11-18).
  */
 class WorkshopDomainSpec : StringSpec({
 
@@ -33,21 +35,25 @@ class WorkshopDomainSpec : StringSpec({
         // Words that hide inside others (`promotor`, `songbird` would be fine), as words and as parts of a name
         val shortWords = Regex("""(?<![A-Za-z])(motor|song)s?(?![a-z])|(Motor|Song)s?(?![a-z])""")
 
-        fun speaksOfIt(line: String): Boolean {
+        // three.js's shape, in its bindings only
+        val shape = Regex("cylinder", RegexOption.IGNORE_CASE)
+
+        fun speaksOfIt(file: File, line: String): Boolean {
             val trimmed = line.trim()
 
             if (trimmed.startsWith("package ") || trimmed.startsWith("import ")) {
                 return false
             }
 
-            val text = trimmed.replace(Regex("KLANG-\\d{5}"), "")
+            val ticketsOut = trimmed.replace(Regex("KLANG-\\d{5}"), "")
+            val text = if (file.invariantSeparatorsPath.contains("/threejs/")) ticketsOut.replace(shape, "") else ticketsOut
 
             return words.containsMatchIn(text) || shortWords.containsMatchIn(text)
         }
 
         val found = sources.flatMap { file ->
             file.readLines().withIndex()
-                .filter { (_, line) -> speaksOfIt(line) }
+                .filter { (_, line) -> speaksOfIt(file = file, line = line) }
                 .map { (index, line) -> "${file.path}:${index + 1}: ${line.trim()}" }
         }
 
