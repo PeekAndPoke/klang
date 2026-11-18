@@ -37,12 +37,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4700, 3.2)                              // the peak, up high and narrow
+  .lowpass(4700, 3.3)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3300, 2.1)                              // the peak, low and wide
+  .lowpass(3300, 2.2)                              // the peak, low and wide
   .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
