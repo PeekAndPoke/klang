@@ -168,12 +168,14 @@ class Notstrom private constructor(
 
     /**
      * Where a look can go: the camera (the viewer, as the show keeps it), the members' eyes as they are posed now,
-     * and the crowd's spots.
+     * the crowd's spots, and nowhere: a place low before the member and a little aside, by where the figure stands
+     * and faces (not by its head, which the look itself turns).
      */
     private val places = LookPlaces(
         camera = viewer,
         eyes = { player -> eyesAt(rig(player)) },
         crowd = crowdSpots(CrowdPlaces.all),
+        nowhere = { player -> rig(player).let { it.root.localToWorld(vec(0.45 * it.height, 0.4 * it.height, 1.5 * it.height)) } },
     )
 
     val frontwoman = TrumpetPlayer(

@@ -22,9 +22,16 @@ class Look(val share: Double, val at: Vector3, val behind: Boolean = false, val 
 
 /**
  * Where a look can go, built once by the band: the [camera]'s place (the vector the show keeps up to date), where a
- * member's eyes are now ([eyes], read when it is asked), and the [crowd]'s spots (see [crowdSpots]).
+ * member's eyes are now ([eyes], read when it is asked), the [crowd]'s spots (see [crowdSpots]), and where a member
+ * looks who looks at nothing ([nowhere]: a place on the way down to the floor before them, as they stand and face
+ * now: it reads the figure's root when it is asked, so a pose places its figure before it asks for its looks).
  */
-class LookPlaces(val camera: Vector3, val eyes: (Player) -> Vector3, val crowd: List<CrowdLight>)
+class LookPlaces(
+    val camera: Vector3,
+    val eyes: (Player) -> Vector3,
+    val crowd: List<CrowdLight>,
+    val nowhere: (Player) -> Vector3,
+)
 
 /**
  * Where the skills of [who] ([skills], their sheet's) ask the head to look at [t]: one look for each timed skill in
@@ -41,6 +48,8 @@ fun lookAt(who: Player, skills: List<Skill>, t: Double, roll: (Double) -> Double
             is CameraGlance -> Look(share = used.share, at = places.camera)
 
             is CameraStare -> Look(share = used.share, at = places.camera, still = true)
+
+            is InwardStare -> Look(share = used.share, at = places.nowhere(who), still = true)
 
             is BandGlance -> Look(share = used.share, at = places.eyes(skill.whom(t = t, roll = roll, who = who)), behind = true)
 

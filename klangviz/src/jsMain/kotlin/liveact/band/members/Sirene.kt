@@ -12,13 +12,15 @@ import io.peekandpoke.klang.viz.liveact.band.skills.BandGlance
 import io.peekandpoke.klang.viz.liveact.band.skills.CameraStare
 import io.peekandpoke.klang.viz.liveact.band.skills.CrowdGaze
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
+import io.peekandpoke.klang.viz.liveact.band.skills.InwardStare
 import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
 
 /**
  * Sirene's sheet: the frontwoman. Between her phrases she looks about (the maintainer, 2026-11-17: "look around in
  * the crowd when she is facing the crowd, and then look 'inward' or stare at the camera"): now and then a long stare
- * at the camera ([CameraStare]), a short look at one of the band ([BandGlance]), and most often her gaze wandering
- * over the crowd ([CrowdGaze]). Never with the trumpet at her lips.
+ * at the camera ([CameraStare]), a short look at one of the band ([BandGlance]), a look at nothing ([InwardStare];
+ * "inward" also meant "not looking anywhere", 2026-11-18), and most often her gaze wandering over the crowd
+ * ([CrowdGaze]). Never with the trumpet at her lips.
  */
 val SIRENE: Member = Member(
     player = Player.Sirene,
@@ -34,8 +36,9 @@ val SIRENE: Member = Member(
     ),
     bearing = null,
     // in the order of rank: she answers a look; she stares at the camera seldom and long (a chance every 23 s, a third
-    // of them taken, held four to six seconds, and then not again for 40 s); she glances at one of the band (a chance
-    // every 14 s, half of them taken, held a second or two); and most of the time between them her gaze wanders over
+    // of them taken, held four to six seconds, and then not again for 30 s); she glances at one of the band (a chance
+    // every 14 s, half of them taken, held a second or two); she looks at nothing (a chance every 19 s, half of them
+    // taken, held three to five seconds); and most of the time between them her gaze wanders over
     // the crowd (a chance every 9 s, three in four taken, held four to six seconds, resting on a spot 1.5 to 2.5 s)
     skills = listOf(
         EyeContact,
@@ -43,7 +46,7 @@ val SIRENE: Member = Member(
             SkillTiming(
                 every = 23.0,
                 chance = 0.34,
-                cooldown = 40.0,
+                cooldown = 30.0,
                 least = 4.0,
                 most = 6.0,
                 earliest = 0.5,
@@ -63,6 +66,19 @@ val SIRENE: Member = Member(
                 reserve = 3.5,
                 rise = 0.5,
                 fall = 0.5,
+            ),
+        ),
+        InwardStare(
+            SkillTiming(
+                every = 19.0,
+                chance = 0.5,
+                cooldown = 0.0,
+                least = 3.0,
+                most = 5.0,
+                earliest = 0.5,
+                reserve = 6.5,
+                rise = 1.0,
+                fall = 1.1,
             ),
         ),
         CrowdGaze(

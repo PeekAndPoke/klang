@@ -32,7 +32,7 @@ val KLAUE: Member = Member(
         ),
     ),
     // he dances from one leg to the other (the maintainer, 2026-11-17)
-    bearing = Bearing(lean = 0.10, bang = 0.24, bounce = 0.028, step = 1.0),
+    bearing = Bearing(lean = 0.10, bang = 0.24, bounce = 0.028, step = 0.6),
     // he answers a look, and looks at the camera every now and then: a chance every eleven seconds, half of them
     // taken, each look held for two to four seconds
     skills = listOf(

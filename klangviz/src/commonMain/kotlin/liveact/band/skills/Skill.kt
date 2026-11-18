@@ -85,6 +85,15 @@ data class BandGlance(override val timing: SkillTiming) : TimedSkill {
     }
 }
 
+/**
+ * The other look "inward" (the maintainer, 2026-11-18: "not looking anywhere"): a long, still look at nothing, the
+ * head a little down and aside, at the moments its [timing] gives. The body's nodding and wandering calm down
+ * while it lasts, as in a [CameraStare].
+ */
+data class InwardStare(override val timing: SkillTiming) : TimedSkill {
+    override val rolls: Double get() = 4000.0
+}
+
 /** A timed [skill] in use, and how much ([share], above 0 up to 1). */
 data class SkillInUse(val skill: TimedSkill, val share: Double)
 

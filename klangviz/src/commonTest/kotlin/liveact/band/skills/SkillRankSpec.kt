@@ -68,6 +68,7 @@ class SkillRankSpec : StringSpec({
             CameraStare(every),
             BandGlance(every),
             CrowdGaze(timing = every, spotLeast = 1.5, spotMost = 2.5, move = 0.8),
+            InwardStare(every),
         )
         val long = (0 until 30000).map { it * 0.1 }
 

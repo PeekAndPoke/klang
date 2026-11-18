@@ -319,6 +319,10 @@ class TrumpetPlayer(
 
         // strolling: the whole figure goes along her way and turns into it; the legs step by the way made
         val walk = put ?: walkAt(t)
+        // placed before the looks: a look may go by where she stands and faces (`LookPlaces.nowhere`)
+        rig.root.position.copy(walk.at)
+        rig.root.rotation.y = walk.turn
+
         // where her skills ask the head to look, each as far as she may: a stare calms the nod and the wander
         val turns = looksAt(t = t, walk = walk)
         val calm = turns.filter { it.look.still }.maxOfOrNull { it.share } ?: 0.0
@@ -329,9 +333,6 @@ class TrumpetPlayer(
         val parts = mover.parts
         val sway = sin(PI * beat / 2) * parts.sway
         val back = up * (0.08 + 0.16 * high) + 0.04 * breath
-
-        rig.root.position.copy(walk.at)
-        rig.root.rotation.y = walk.turn
 
         val going = walk.going
         // she walks in time: a step every two beats, so two steps a bar; a step is as long as her pace asks for. And she
@@ -402,7 +403,7 @@ class TrumpetPlayer(
         val turned = head.getWorldQuaternion(quat()).multiply(headRest.clone().invert())
         val lips = head.getWorldPosition(vec()).add(rig.dir(0.0, 0.045, 0.100).multiplyScalar(0.110 * s).applyQuaternion(turned))
         val ahead = rig.dir(0.0, -0.20, 1.0).applyQuaternion(turned)
-        // between phrases the right arm hangs loose, nearly straight, and the trumpet hangs from the hand beside her
+        // between phrases, standing, the right arm hangs loose, nearly straight, and the trumpet hangs from the hand beside her
         // thigh, the bell down: nothing is held up
         val hip = rig.bone("hips").getWorldPosition(vec())
         val hang = rig.dir(-0.03, -0.97, 0.22).normalize()
@@ -412,6 +413,9 @@ class TrumpetPlayer(
             .addScaledVector(rig.dir(0.0, 1.0, 0.0), -0.93 * rig.armLength)
             .addScaledVector(rig.dir(0.0, 0.0, 1.0), (0.07 + 0.13 * going * swing) * s)
             .addScaledVector(rig.dir(0.0, 1.0, 0.0), 0.05 * s * going * abs(swing))
+            // walking, the forearm comes up a little: only a little on this arm, it carries the trumpet
+            .addScaledVector(rig.dir(0.0, 1.0, 0.0), 0.045 * s * going)
+            .addScaledVector(rig.dir(0.0, 0.0, 1.0), 0.04 * s * going)
         val hangUp = rig.dir(0.0, 0.22, 0.97)
         val hangY = hangUp.addScaledVector(hang, -hangUp.dot(hang)).normalize()
         val hangZ = vec().crossVectors(hang, hangY)
@@ -464,6 +468,10 @@ class TrumpetPlayer(
             .addScaledVector(rig.dir(0.0, 0.0, 1.0), (0.04 + 0.03 * sway * (1 - going) - 0.20 * going * swing) * s)
             .addScaledVector(rig.dir(0.0, 1.0, 0.0), 0.07 * s * going * abs(swing))
             .addScaledVector(rig.dir(1.0, 0.0, 0.0), 0.04 * s * going)
+            // walking, the forearm comes up: more on this arm, the free one (the maintainer, 2026-11-18: "bend up
+            // her forearms a little ... more on the arm that is free than on the one carrying something")
+            .addScaledVector(rig.dir(0.0, 1.0, 0.0), 0.11 * s * going)
+            .addScaledVector(rig.dir(0.0, 0.0, 1.0), 0.09 * s * going)
         val wristL = hanging.clone().lerp(place(0.18, -0.05, -0.085), up)
         // before she starts to play again after a silence, she raises the left arm high for a moment: here I come
         // (a first pose asked of a body from outside, to try that out: the maintainer, 2026-11-16). It is up from
