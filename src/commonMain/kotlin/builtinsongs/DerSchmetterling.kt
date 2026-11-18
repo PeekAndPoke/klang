@@ -58,9 +58,12 @@ let pedalStock = Ign.fn(x => x)
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
 let pedalScreamer = Ign.fn(x => x.parallel(
     clean => clean,
-    dirt => dirt.highpass(580).distort(0.20, "soft").mul(0.4)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+    dirt => dirt
+      .highpass(550)
+      .distort(0.20, "soft")
+      .lowpass(4200) // the tone knob, half way
+      .mul(0.4)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
-  .lowpass(4500)                                   // the tone knob, half way
   .mul(0.50))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
@@ -305,7 +308,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
   .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
 
 export guitar1_arrange = x => x.cylinder(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.250)  // .mute()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.300)  // .mute()
   .mute("<0!128 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
   // Shaping
@@ -579,7 +582,7 @@ export song = stack(
       .band(mid => mid.distort(0.100, "soft").mul(0.92)).cut(5000)
       .band(low => low.distort(0.001, "soft").mul(1.00))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.80)
+    .mul(4.70)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )
