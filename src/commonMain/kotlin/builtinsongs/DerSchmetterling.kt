@@ -128,7 +128,7 @@ let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Ign.fn(x => x
   .eq(e => e
-    .band(freq =  160, q = 0.6, db =  5.20)        // thump: closed-back box resonance
+    .band(freq =  160, q = 0.6, db =  4.50)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  4.90)        // roar:  low mids
     .band(freq = 2700, q = 1.8, db =  2.40)        // bark:  the upper-mid speaker peak
   )
