@@ -30,4 +30,16 @@ class LangScrambleSpec : StringSpec({
         val values = events.mapNotNull { it.data.value?.asInt }
         values.all { it in 0..3 } shouldBe true
     }
+
+    // Until 2026-11-19 bite (which scramble plays through) sped a patterned n up: the n = 4 cycle of "<2 4>"
+    // played two slices instead of four.
+    "scramble with a patterned n plays the slice count of each cycle" {
+        val p = n("0 1 2 3").scramble("<2 4>").seed(789)
+
+        fun onsetBegins(cycle: Int) =
+            p.queryArc(cycle.toDouble(), cycle + 1.0).filter { it.isOnset }.map { it.part.begin.toDouble() - cycle }.sorted()
+
+        onsetBegins(0) shouldBe listOf(0.0, 0.25, 0.5, 0.75)
+        onsetBegins(1) shouldBe listOf(0.0, 0.25, 0.5, 0.75)
+    }
 })

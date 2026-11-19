@@ -9,6 +9,7 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -20,8 +21,10 @@ import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel._splitQueries
 import io.peekandpoke.klang.sprudel._withHapSpan
 import io.peekandpoke.klang.sprudel._withQuerySpan
+import io.peekandpoke.klang.sprudel._withQueryTime
 import io.peekandpoke.klang.sprudel.createSprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.pattern.StackPattern
@@ -332,27 +335,54 @@ fun PatternMapperFn.linger(t: PatternLike, callInfo: CallInfo? = null): PatternM
 
 // -- bite() -----------------------------------------------------------------------------------------------------------
 
+/**
+ * Each event of the indices squeezes its slice of [source] into its own whole, from the cycle it sits in
+ * (Strudel's `bite`: `ipat.fmap(i => pat.zoom(a, b)).squeezeJoin()`, with its cycle-keeping focus).
+ *
+ * Until 2026-11-19 the slice was `zoom(a, b).fast(steps of the indices)`, queried over the index event's own
+ * span: right only for a source that repeats every cycle and indices of even steps. Any later index event read
+ * the slice from another cycle (in `"1 0"` the second half of cycle `c` played cycle `2c + 1`), and a
+ * patterned `n` or indices sped every cycle up by the indices' largest step count. The slice number was
+ * `index mod (the source's steps)`, and a source without steps was silent; it is `index mod n` now.
+ */
 private fun applyBite(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.size < 2) return silence
 
     val nPattern = args.take(1).toPattern()
     val indicesPattern = args.drop(1).toPattern()
-    val indicesSteps: Double = indicesPattern.numSteps ?: 1.0
 
-    return source._innerJoin(nPattern, indicesPattern) { src, nValue, indexValue ->
-        val steps: Double =
-            src.numSteps ?: return@_innerJoin silence
-        val n: Double =
-            nValue?.asDouble?.takeIf { it > 0.0 } ?: return@_innerJoin silence
-        val index: Double =
-            indexValue?.asDouble ?: return@_innerJoin silence
-        val indexMod: Double =
-            ((index % steps) + steps) % steps
+    // The structure: n outermost (its steps stay the result's), the index events inside each n event
+    return nPattern._bind { nEvent ->
+        val n: Double = nEvent.data.value?.asDouble?.takeIf { it > 0.0 } ?: return@_bind null
 
-        val start = indexMod / n
-        val end = (indexMod + 1.0) / n
+        indicesPattern._bind { indexEvent ->
+            val index: Double = indexEvent.data.value?.asDouble ?: return@_bind null
+            val slot: Double = ((index % n) + n) % n
 
-        src.zoom(start, end).fast(indicesSteps)
+            source.zoom(slot / n, (slot + 1.0) / n)._focusKeepingCycle(indexEvent.whole)
+        }
+    }
+}
+
+/**
+ * Plays cycle `c` of this pattern inside [span], where `c` is the cycle [span] begins in: Strudel's `focus`
+ * (`_early(b.sam()).fast(1 / (e - b)).late(b)`), the same mapping as the `focus(start, end)` door
+ * (`lang_tempo_shift.kt`), for a span given as cycle times.
+ */
+private fun SprudelPattern._focusKeepingCycle(span: CycleTimeSpan): SprudelPattern {
+    if (span.duration <= CycleTime.ZERO) {
+        return silence
+    }
+
+    val begin = span.begin
+    val cycle = begin.floorToCycle()
+    val durCycles = span.duration.toCycles()
+
+    return _withQueryTime { t -> (t - begin).divBy(durCycles) + cycle }.mapEvents { ev ->
+        ev.copy(
+            part = ev.part.shift(-cycle).scale(durCycles).shift(begin),
+            whole = ev.whole.shift(-cycle).scale(durCycles).shift(begin),
+        )
     }
 }
 

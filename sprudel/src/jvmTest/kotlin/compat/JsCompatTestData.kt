@@ -631,6 +631,9 @@ object JsCompatTestData {
         Example(SKIP, "Bite string extension", """"0 1 2 3".bite(4, "3 2 1 0")"""),
         Example("Bite pattern control for n", """n("0 1 2 3").bite("2 4", "0 1")"""),
         Example("Bite steady pattern", """n("0 1 2 3").bite(steady(4), "0 1 2 3")"""),
+        Example("Bite cycle-varying source", """n("<[0 1] [2 3] [4 5]>").bite(2, "1 0")"""),
+        Example("Bite slow source", """n("0 1 2 3 4 5 6 7").slow(2).bite(2, "1 0")"""),
+        Example("Bite patterned n and indices", """n("0 1 2 3").bite("<1 2>", "<0 [1 0]>")"""),
         Example(SKIP, "Bite continuous pattern", """n("0 1 2 3").bite(sine.range(2, 4).segment(2), "0 1")"""),
     ).map {
         it.recovers("data.gain") { graal, native ->

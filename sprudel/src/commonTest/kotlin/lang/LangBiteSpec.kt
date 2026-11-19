@@ -119,4 +119,42 @@ class LangBiteSpec : StringSpec({
         // Should have events with varying slice counts
         events.isNotEmpty() shouldBe true
     }
+
+    // Until 2026-11-19 every index event after the first read its slice from another cycle (`fast` over the
+    // zoomed slice), and a patterned n or indices sped the whole cycle up. A source that repeats every cycle hid it.
+
+    fun onsets(p: SprudelPattern, cycle: Int): List<Int?> =
+        p.queryArc(cycle.toDouble(), cycle + 1.0).filter { it.isOnset }.sortedBy { it.part.begin }.map { it.data.soundIndex }
+
+    "bite takes each slice from the cycle it plays in" {
+        val p = n("<[0 1] [2 3] [4 5]>").bite(2, "1 0")
+
+        onsets(p, 0) shouldBe listOf(1, 0)
+        onsets(p, 1) shouldBe listOf(3, 2)
+        onsets(p, 2) shouldBe listOf(5, 4)
+    }
+
+    "bite swaps the halves of a source that spans two cycles" {
+        val p = n("0 1 2 3 4 5 6 7").slow(2).bite(2, "1 0")
+
+        onsets(p, 0) shouldBe listOf(2, 3, 0, 1)
+        onsets(p, 1) shouldBe listOf(6, 7, 4, 5)
+    }
+
+    "bite with a patterned n and patterned indices plays each cycle at its own speed" {
+        val p = n("0 1 2 3").bite("<1 2>", "<0 [1 0]>")
+
+        onsets(p, 0) shouldBe listOf(0, 1, 2, 3)
+        onsets(p, 1) shouldBe listOf(2, 3, 0, 1)
+        onsets(p, 2) shouldBe listOf(0, 1, 2, 3)
+    }
+
+    "when with bite swaps the halves only in the cycles the condition is on" {
+        val p = SprudelPattern.compile("""n("<[10 11 12 13] [14 15 16 17]>").when("<0 1>", x => x.bite(2, "1 0"))""")!!
+
+        onsets(p, 0) shouldBe listOf(10, 11, 12, 13)
+        onsets(p, 1) shouldBe listOf(16, 17, 14, 15)
+        onsets(p, 2) shouldBe listOf(10, 11, 12, 13)
+        onsets(p, 3) shouldBe listOf(16, 17, 14, 15)
+    }
 })
