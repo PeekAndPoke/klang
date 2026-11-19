@@ -141,23 +141,27 @@ Apply this standard whenever reviewing changes or writing tests — including wh
 - **The effort ladder: the level follows the findings, not the round number** (maintainer, 2026-10-25,
   Mission Control's MC-00033, merged from the blueprint `ea3a129`; before it, the ladder went by round
   number, 2026-09-18). Each rung is an agent definition in `.claude/agents/` with model and effort pinned; spawn it
-  without `model` and `effort`, a per-call value would override the pin. The four rungs and their names are the blueprint's, the same
-  in every repo (maintainer, 2026-11-13, Mission Control `9310bcc`); a name says model and effort, not the level:
+  without `model` and `effort`, a per-call value would override the pin. The three rungs and their names are the blueprint's, the same
+  in every repo (maintainer, 2026-11-13, Mission Control `9310bcc`; three since 2026-11-19, `fc29a57`); a name says model
+  and effort, not the level:
 
   | rung | reviewers | how to spawn |
   |---|---|---|
   | 1 | `opus`, high | `subagent_type: reviewer-opus-high` |
   | 2 | `fable`, medium | `subagent_type: reviewer-fable-medium` |
-  | 3 | `fable`, high | `subagent_type: reviewer-fable-high` |
-  | 4 (the top) | `fable`, xhigh | `subagent_type: reviewer-fable-xhigh` |
+  | 3 (the top) | `fable`, high | `subagent_type: reviewer-fable-high` |
 
-  `fable` follows the newest Fable; it replaces Opus on rungs 2 to 4 and does not run beside it (the "no Fable"
+  There is no xhigh rung (maintainer, 2026-11-19: "the current setup eats too many tokens"; measured since
+  2026-11-13, reviewers wrote 35% of Klang's output tokens, in 79 runs, none of them on xhigh: the cost is the
+  number of rounds, not the top rung). From 2026-11-13 to 2026-11-19 a rung 4 existed, `reviewer-fable-xhigh`.
+
+  `fable` follows the newest Fable; it replaces Opus on rungs 2 and 3 and does not run beside it (the "no Fable"
   rule of 2026-10-24 ended 2026-11-13). Rung 1 is Opus pinned to high, never the session's effort. A definition
   added, renamed or removed may not be picked up at once: if a spawn fails, try again later, and ask for a restart
   only if it still fails.
 
-  A loop has a level, 1 to 3, and the code's tier maps the level to a rung: **standard** code runs rungs 1, 2, 4;
-  **strict** code runs rungs 2, 3, 4. Strict in Klang is the mandatory mutation scope below (`audio_be`,
+  A loop has a level, 1 to 3, and the code's tier maps the level to a rung: **standard** code runs rungs 1, 2, 3;
+  **strict** code runs rungs 2, 3, 3 (its levels 2 and 3 are the same rung). Strict in Klang is the mandatory mutation scope below (`audio_be`,
   `audio_bridge`, the wire codecs, sprudel's pattern and timing core, the KSP processors); everything else is
   standard. A change that touches any strict code is strict as a whole. The mutation items that apply "regardless
   of module" (a regression guard, a threshold) do not make a change strict: they decide the mutation check, not
@@ -170,10 +174,11 @@ Apply this standard whenever reviewing changes or writing tests — including wh
     the floor.
   - **The level belongs to the loop**, not to a charter: a MAJOR from the coding or the audio reviewer
     raises both next rounds.
-  - **The ledger records each round's level.** The next step of the same task starts one level below where
-    the last loop ended if it ended clean, at that level if it stopped without a clean round, and at the
-    floor if it touches none of the previous step's modules. **New work arriving between rounds** (a
-    refactor the maintainer asks for) **is a new step, not the next round** (KLANG-00325, 2026-10-25: a
+  - **The ledger records each round's level.** The next step of the same task starts at the floor (maintainer,
+    2026-11-19; before, one level below where the last loop ended, which kept a task that had once reached the
+    top running there). The one exception: it starts at the last loop's level if that loop stopped without a
+    clean round (valve, wall, maintainer decision) and the step touches one of its modules. **New work arriving
+    between rounds** (a refactor the maintainer asks for) **is a new step, not the next round** (KLANG-00325, 2026-10-25: a
     round 3 at max ran after a clean round 2 because the briefs called MINORs unclean, `_incidents.md`).
   - Round 1 stays blind whatever its level. The safety valve counts rounds that were not clean, whatever
     their level.
@@ -372,6 +377,10 @@ reader.
 
 ## Changelog
 
+- **2026-11-19**: the ladder costs less (maintainer, through Mission Control `fc29a57`, confirmed in this repo: "Yes
+  please update the review skill and the xhigh reviewer"): the xhigh rung is gone, the top rung is `fable` high;
+  standard code runs rungs 1, 2, 3, strict code 2, 3, 3; `reviewer-fable-xhigh` is deleted. A new step starts at the
+  floor, at the last loop's level only when that loop stopped without a clean round. Rung 1 stays `opus` high.
 - **2026-11-13**: the blueprint's four rungs, with its agent names (maintainer: "Go ahead, take over the blueprint's
   four rungs"; Mission Control `9310bcc`): rung 1 `reviewer-opus-high`, rung 2 `reviewer-fable-medium`, rung 3
   `reviewer-fable-high`, rung 4 `reviewer-fable-xhigh`; standard code runs rungs 1, 2, 4, strict code 2, 3, 4.

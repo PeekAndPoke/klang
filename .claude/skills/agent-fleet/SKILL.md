@@ -34,8 +34,8 @@ gets the cheapest model/effort tier that can do its task well.
 | Frontier reasoning                                   | inherit (omit `model`) | architecture judgment, by-ear/sound design tradeoffs, cross-cutting analysis the coordinator can't decompose further |
 
 **Klang note: review rounds follow the `/review-loop` ladder.** The level follows the findings, not the round
-number (since 2026-10-25). Its rungs since 2026-11-13: `reviewer-opus-high`, `reviewer-fable-medium`,
-`reviewer-fable-high`, `reviewer-fable-xhigh`; the top rung is the newest Fable at xhigh.
+number (since 2026-10-25). Its rungs since 2026-11-19: `reviewer-opus-high`, `reviewer-fable-medium`,
+`reviewer-fable-high`; the top rung is the newest Fable at high (the xhigh rung of 2026-11-13 is gone).
 
 **Klang note — DSP review is correctness-critical.** The audio-engineer reviewer in `/review-loop`
 judges numerical stability, per-sample cost and click risk; run it on the ladder's rung (`/review-loop`), never
@@ -48,20 +48,20 @@ judges numerical stability, per-sample cost and click risk; run it on the ladder
 | Mechanical / bulk stages      | `low`                         |
 | Standard work                 | omit (inherit session effort) |
 | Hardest verify / judge stages | `high` or `xhigh`             |
-| Review rounds (every level)   | pinned per rung by the four `reviewer-*` agent definitions (`/review-loop`, the effort ladder): opus high, fable medium, fable high, fable xhigh; `max` nowhere (the four rungs, maintainer, 2026-11-13) |
+| Review rounds (every level)   | pinned per rung by the three `reviewer-*` agent definitions (`/review-loop`, the effort ladder): opus high, fable medium, fable high; `max` and `xhigh` nowhere (the three rungs, maintainer, 2026-11-19) |
 
 ## Where the dials live
 
 - **Agent tool**: set the `model` parameter per call, except for a `reviewer-*` agent: omit `model` and `effort`
   there, the definition pins both and a per-call value would override it. Elsewhere effort comes from the agent
   definition (the tool's own `effort` parameter is only for an explicit request). `fork`-type agents always inherit the parent model; don't set
-  `model` on them. Klang pins effort through the four reviewer definitions in `.claude/agents/`
-  (`reviewer-opus-high`, `reviewer-fable-medium`, `reviewer-fable-high`, `reviewer-fable-xhigh`; the blueprint's names
+  `model` on them. Klang pins effort through the three reviewer definitions in `.claude/agents/`
+  (`reviewer-opus-high`, `reviewer-fable-medium`, `reviewer-fable-high`; the blueprint's names
   since 2026-11-13, before that `reviewer-high` and `reviewer-max`). A new or renamed definition may not be picked up at
   once: if a spawn fails, try again later, and ask for a restart only if it still fails.
 - **Workflow `agent()`**: set both `model` and `effort` in the opts, per stage.
 - **Custom agents** (`.claude/agents/*.md`): can pin model/effort in frontmatter; prefer that for agents whose task type
-  never varies. Klang has several (the four reviewers, `reader`, `writer`, `visualizer`, and
+  never varies. Klang has several (the three reviewers, `reader`, `writer`, `visualizer`, and
   `music-platform-strategist`, which is explicit-invocation only, never for coding).
 - **Agent type**: prefer `Explore` for read-only search fan-out (it reads excerpts, not whole files — cheaper and it
   won't edit anything). Use `general-purpose` when the worker must run commands or write files.
@@ -246,6 +246,8 @@ The safeguards, for every write action:
 
 ## Changelog
 
+- **2026-11-19**: the review ladder has three rungs (maintainer); `reviewer-fable-xhigh` is gone, the top rung is
+  `reviewer-fable-high`.
 - **2026-11-13**: the review ladder's four rungs and agent names are the blueprint's (maintainer); Fable is back on
   rungs 2 to 4, `reviewer-high` is `reviewer-opus-high`, `reviewer-max` is gone.
 - **2026-10-30**: IntelliJ Refactor Rename, Move and Safe Delete allowed with the meeting's safeguards; the gate
