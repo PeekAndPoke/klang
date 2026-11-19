@@ -551,7 +551,13 @@ sealed interface KatalystStageDsl {
      * `k.lowpass(freq, q, configure)`, `k.highpass(...)`, `k.bandpass(freq, q)` and `k.notch(freq, q)` (KLANG-00467,
      * cylinder amp step 1) each append ONE stage of this kind holding that filter's sections, the voice's filter as its
      * optimizer fuses it (a `passes` cascade as N sections on the Butterworth q ladder). Two doors in a row are two
-     * stages; merging them is the Katalyst optimizer's (KLANG-00468), not a door's.
+     * stages as written; merging them is the Katalyst optimizer's, not a door's.
+     *
+     * **Adjacent stages of numbers are merged at registration** ([KatalystDsl.optimize], KLANG-00468): the backend's registry
+     * stores a run of `eq` stages whose section knobs are all numbers as ONE stage holding their sections in order,
+     * which renders the same samples with one effect instead of several. A stage holding a `tap` is never merged into
+     * the one before it (a tap reads its own stage's input), and a stage holding a `Kat.param` is never merged at all
+     * (a moved knob crossfades its whole stage). Any other stage between two `eq` stages keeps them apart.
      *
      * @param sections the sections in written order; an empty list is a transparent stage.
      */

@@ -241,6 +241,14 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
 - **The optimizer's promise** is `OPTIMIZER_PARITY` (1e-12 relative to the block's loudest sample), not bit
   identity; every registered tree renders optimized. A synthesized coefficient may be zero only when the authored
   one was. Open items: KLANG-00204 (ignitor optimizer open items).
+- **The chain's pass promises the same bits** (`KatalystDsl.optimize`, KLANG-00468): `KatalystRegistry.register`
+  stores every chain with its adjacent `eq` stages of numbers merged into one, never a stage holding a `tap` into the
+  one before it, never a stage holding a `Kat.param`, nothing across another stage; no kill switch, a failure stores
+  the chain as written. The name stays the written chain's. Rule and refusals: `audio/ref/katalyst.md`.
+- **A chain configures itself before its first block when no host did** (`KatalystChain.process`, KLANG-00468): built
+  or reset and then processed with nothing applied (a cylinder's first voice that does not claim it), it
+  applies from no state, its authored defaults, so its stages run from the first sample; a host that configures first
+  (a claiming owner, the output, a swap) never reaches it. `audio/ref/katalyst.md`, "How a stage switches".
 - **Numerical contract**: `SAFE_MIN` 1e-15 / `SAFE_MAX` 1e15; "safe" means finite, not small, so a consumer must be
   O(1) at any magnitude. A divisor of exactly zero yields zero (`Recip` excepted). A non-finite value a pattern
   writes reads as unset, at each reader once. Four extreme raw knob values end in NaN and stay raw (documented, not
@@ -364,7 +372,7 @@ record up to 2026-09-29 is `audio/ref/memory-history.md` (read it only for the h
   `min`, `max`, `abs` (and the Ignitor's aliases) are stages that run the Ignitor's per-sample law on the bus, so the
   same numbers give the same sample (`KatalystArithmeticEffectSpec` renders against the Ignitor runtime). The operand
   is a number, a `Kat.param` or a Kat expression, glides per sample, and reads non-finite as unset. `times` is not
-  the fader. No optimizer (won't implement, maintainer 2026-10-11): one cheap stage costs about 50 ns per block (KLANG-00300 (katalyst arithmetic), D5).
+  the fader. No optimizer for them (won't implement, maintainer 2026-10-11; the chain's pass of KLANG-00468 merges `eq` stages only): one cheap stage costs about 50 ns per block (KLANG-00300 (katalyst arithmetic), D5).
 - **The sample instrument**: a sample voice is bit-identical to the built-in `sine` when it plays the sine's own
   output at rate 1.0 (`SampleInstrumentSpec`, the oracle that outlived the strip). Its playback knobs `begin`,
   `end`, `speed`, `loop` are slots; `n` and `cut` stay wire fields. The playhead reads with a cubic Lagrange kernel,
@@ -526,6 +534,8 @@ crossing) are in `CLAUDE.md`. Not repeated here. In addition:
 One line per step, newest first. A link to the archived task record where one exists, else to the entry in
 `audio/ref/memory-history.md`. "Superseded" marks an entry whose rules no longer hold as written.
 
+- 2026-11-19 The Katalyst chain's pass: adjacent `eq` stages of numbers merged at registration, bit for bit, a tap or a slot refused: KLANG-00468
+- 2026-11-19 A chain processed before any configure configures itself from its defaults (a cylinder's non-claiming first voice ran a declared chain with its stages off): KLANG-00468
 - 2026-11-18 The voice's filters, `shape` and `drive` on a Katalyst chain (`eq` stages of the voice's sections, a `Shape` stage, a `times` by the drive law, the law's home moved to `audio_bridge`), `Kat.fn`: KLANG-00467
 - 2026-11-11 The per-note rings pooled (the Karplus lines and the shimmer ring rented per voice from the warehouse, given back on every voice exit, 16 lines warmed, six note-ring counts on the wire), the reverb's `lowpass` glides on its pole (the closing run's click), the stale L4-02 reproductions deleted: KLANG-00429, KLANG-00420
 - 2026-11-11 Decisions pass C: the filter envelope's cutoff exact at knots of the note (half a semitone, 128 frames), the distort doors on the fused law (the soft cap gone), the aliasing meter's healthy limit on the health page: KLANG-00432, KLANG-00420

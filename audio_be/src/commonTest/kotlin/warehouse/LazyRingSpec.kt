@@ -217,6 +217,39 @@ class LazyRingSpec : StringSpec({
         next.left[10] shouldBe 0.3
     }
 
+    "a chain built, never configured and retired does not configure itself on a stray block: it rents nothing" {
+        // KLANG-00468: a chain configures itself from its defaults on its first processed block when no host configured
+        // it first, but a retired chain is out of service and must not. Its delay is a constant, so a configure would
+        // rent a ring at once.
+        val (rings, alloc) = shelf()
+        val chain = KatalystChainBuilder.build(
+            dsl = KatalystDsl.of(
+                KatalystStageDsl.Delay(
+                    wet = KatalystKnobDsl.Constant(1.0),
+                    time = KatalystKnobDsl.Constant(0.3),
+                    feedback = KatalystKnobDsl.Constant(0.0),
+                ),
+            ),
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            rings = rings,
+            reverbs = ReverbUnits(sampleRate),
+        )
+        val c = ctx()
+
+        chain.retire()
+
+        repeat(4) {
+            c.mixBuffer.fill(0.5)
+            chain.process(c)
+        }
+
+        withClue("retired, never configured: no ring rented") {
+            alloc.asked shouldBe emptyList()
+            chain.delay.shouldNotBeNull().delayLine.shouldBeNull()
+        }
+    }
+
     "an off-config on a fresh effect rents nothing — 'off' does not need a ring" {
         val (rings, alloc) = shelf()
         val fx = effect(rings)

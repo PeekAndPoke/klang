@@ -1,6 +1,6 @@
 # KLANG-00468: Cylinder amp step 2: a Katalyst optimizer that fuses adjacent eq stages
 
-> **Status (2026-11-19): IN PROGRESS.** Klang-Main-Dev: step 2 starts, D8 and D9 confirmed 2026-11-19
+> **Status (2026-11-19): DONE.** Klang-Main-Dev: built, reviewed clean in round 2, committed
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -162,7 +162,54 @@ pass breaks, never because a song was edited.
 - The mutation campaign's table in the report.
 - A review round with zero CRITICAL and zero MAJOR findings, code and audio.
 
+## Found by review: a chain's stages before its first block
+
+The audio review of round 1 found that a chain processed before anything configured it ran with every stage off: on a
+cylinder only an owner's commit configures the chain, so under a first voice that does not claim (past its gate when it
+arrives, or fading) a declared chain ran dry for that block, and the owner a block later faded each stage in from dry.
+Written as three `eq` stages they faded one after another, merged as one they faded together, so the optimizer's
+bit-for-bit promise failed there (measured up to 0.12 on a 0.5 noise); without any optimizer a declared `eq` of numbers
+did not run at all for that first voice. The maintainer decided on 2026-11-19: "yes 1 this needs to be fixed".
+
+The fix: a chain that nothing configured since it was built or reset configures itself from its authored defaults at
+the top of its first processed block (`KatalystChain.process`), and an idle install resets the incoming chain, since a
+cached one comes back retired. A host that configures first (a claiming owner, the output, a swap) never reaches it, so
+a claiming first voice renders as before; guards `CylinderChainFirstBlockSpec` and the late-apply rows of
+`KatalystDslOptimizerRenderSpec`, the laws in `audio/ref/katalyst.md`, "How a stage switches".
+
 ## History
 
 - 2026-11-18: created, as step 2 of KLANG-00466.
 - 2026-11-19: IN PROGRESS. Klang-Main-Dev: step 2 starts, D8 and D9 confirmed 2026-11-19
+
+## Done (2026-11-19)
+
+Built by an Opus worker, coordinated and checked by Klang-Main-Dev.
+
+- The pass: `KatalystDsl.optimize()` (`audio_bridge/src/commonMain/kotlin/KatalystDslOptimizer.kt`), one linear walk,
+  the rule and its two refusals as above; "all numbers" is asked through `IgnitorDsl.EqSection.childNodes()`. It runs
+  in `KatalystRegistry.register`; a failure stores the chain as written and counts it.
+- The engine fix found by review (section above): `KatalystChain` configures itself on its first processed block when
+  nothing configured it since build or reset, and `Cylinder.install` resets the incoming chain. A cylinder from the
+  warehouse shelf starts its first life without it (its born-with chain is classic, all off at its defaults): stated in
+  the KDoc and in `audio/ref/katalyst.md`, not changed.
+- Checks: `:audio_be:jvmTest` 3231 (run again by the coordinator), `:audio_be:jsBrowserTest` 3054,
+  `:audio_bridge:jvmTest` 197, `:audio_bridge:jsBrowserTest` 336 (before the last round's KDoc edits),
+  `:apps:studio:jvmTest` 172 (run again by the coordinator), 0 failed. 30 mutants killed in four campaigns by the worker;
+  the reviewers ran their own.
+- Reviews: round 1 (`reviewer-fable-medium`, code and audio) NOT CLEAN, one MAJOR each (the knob table pinned half
+  the knobs; the first-block state); round 2 (`reviewer-fable-high`, code and audio) CLEAN, 6 MINOR and 7 NIT applied.
+- Measured by the audio reviewer on a real cylinder, with the fix against without: the classic chain identical in
+  four cases (a late first voice then a claim, the same on an adopted cylinder, after a deactivation reset, a claiming
+  first voice). The amp chain under a late first voice equals a claiming first voice; without the fix the first ten
+  blocks were dry (differences up to 0.62).
+- JS allocation probe: 0 B per block on all 93 bus stage rows. It cannot see the one-off first-block configure nor a
+  cylinder-level path.
+- Not done: no one has listened. The allocation check of `full-check` was not run (it writes into `docs/benchmarks/`),
+  nor the full song corpus render. No built-in song merges anything today (their chains sit at the output; Kokon's
+  band split is refused for its tap), so the first real merges come with step 3.
+- Proposed for two skill files, not written (they need the maintainer's word): a clause in
+  `.claude/skills/dsl-design/door-shapes.md` (the chain filter row: adjacent `eq` stages of numbers are merged at
+  registration) and a bullet in `.claude/skills/review-loop/audio-constraints.md` (the pass has no kill switch and
+  refuses on purpose).
+- 2026-11-19: DONE. Klang-Main-Dev: built, reviewed clean in round 2, committed

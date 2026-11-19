@@ -144,3 +144,4 @@ acceptance.
 - 2026-11-18: no `analog` on the chain filters (the maintainer); KLANG-00473 closed.
 - 2026-11-18: step 1 done (KLANG-00467, 62910fb0a).
 - 2026-11-19: D8 and D9 confirmed by the maintainer; step 2 starts.
+- 2026-11-19: step 2 done (KLANG-00468): the chain's pass, and a chain's stages are in place before its first block (found by review, fixed on the maintainer's word).

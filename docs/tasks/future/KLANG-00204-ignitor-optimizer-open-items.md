@@ -162,6 +162,25 @@ are kept as two sections, correctly: cascading two identical filters is a steepe
 redundancy. Do NOT "optimize" this away.
 
 
+## 9. What the Katalyst chain's pass leaves (KLANG-00468)
+
+The chain has a pass of its own since KLANG-00468 (`audio_bridge/src/commonMain/kotlin/KatalystDslOptimizer.kt`), one
+rule: adjacent `eq` stages of numbers become one, never a tap into the stage before it (the refusal item 3 above names
+for the voice), rendered bit for bit. What it
+deliberately leaves, each for the same reason (it would break the bit-for-bit promise, or it needs a measurement
+first):
+
+- **Gains and the other stages are walls.** Folding a `gain`, a `times` or a `drive` into a neighbouring `eq` (a bell's
+  gain, a tap's gain) moves a multiply, so it renders within a margin at best, and the chain has no margin.
+- **A stage holding a slot is never merged.** A moved section knob crossfades its whole stage to a freshly zeroed bank
+  (`KatalystEqEffect`); merged, one knob's move would restart every section. Merging slot stages needs a bank that can
+  crossfade one section, which is new DSP.
+- **Empty `eq` stages are kept** when nothing merges them. A lone one costs one stage per block and nothing per sample.
+- **Across a duck or a region that takes no step.** The chain builder takes the duck out of the list and inlines a
+  stepless region, so the stages on either side meet at run time; the pass works on the written list and does not
+  follow the builder there.
+- **Reordering linear stages** (an `eq` past a `gain`) to make a longer run: the voice's pass never reorders either.
+
 ## Measurement note
 
 Before claiming a win from any of the above, read the D0 comparability rule in
@@ -174,3 +193,4 @@ user-facing docs.
 
 - 2026-10-20: numbered KLANG-00204 (was `docs/tasks/future/ignitor-optimizer-open-items.md`).
 - 2026-10-27: part of KLANG-00355 (Performance: fast on every device), the epic grouping.
+- 2026-11-19: section 9, what the Katalyst chain's pass leaves (KLANG-00468).

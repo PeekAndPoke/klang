@@ -25,6 +25,27 @@ KLANG-00238 (phase3 step12 master as katalyst).
   first block is adopted at full weight; it never deactivates or resets on silence; its tail keeps the engine alive
   (`isRinging`: an audible output, or a declared tail that still holds energy). Nothing fills its slots (`applyParams(null)`), and a duck stage is built there but inert.
 - **One registry fork per playback** (`KatalystRegistry`) serves both positions.
+- **The registry stores the optimized chain** (`KatalystDsl.optimize`, `audio_bridge/.../KatalystDslOptimizer.kt`,
+  KLANG-00468): `register` runs the chain's one rewrite, R1, once per registration, so both positions build the
+  merged form. R1: an `eq` stage is merged into the `eq` stage directly before it (a merged one included), its sections
+  appended in written order, when it holds no `tap` and every section knob of both is a number, so a run of any length
+  ends as one stage. Two refusals: a `tap` in the later stage (a tap reads its own stage's input, so a merge would move
+  what it hears) and a `Kat.param` in either (a moved section knob crossfades its whole stage to a fresh bank, so a
+  merge would restart every section). Any other stage is a wall; the pass walks into `parallel` branches and region
+  bodies, never moves or drops a stage, and returns a chain it changes nothing in as the same instance. With both
+  refusals the merged chain renders the SAME BITS as the written one (`KatalystDslOptimizerRenderSpec`,
+  `KatalystOptimizerSongParitySpec`), so there is no kill switch; that holds because a chain's stages are in place
+  before its first processed block (see "How a stage switches" below), which keeps a merged run from fading in
+  differently than the stages it replaces. A failure of the pass stores the chain as written and
+  is counted (`KatalystRegistry.optimizerFailures`), never rethrown. The wire and the chain's name stay the written
+  chain's (`KatalystDsl.uniqueId`, taken in the frontend before the pass); the classic chain holds no `eq` and comes
+  back as itself, so `ChainHost.chainFor`'s content compare still finds it. Left on purpose: gains and other stages as
+  walls, slot-carrying stages, empty stages, merges across a duck or a stepless region (KLANG-00204 (ignitor optimizer
+  open items), section 9). A chain built directly with `KatalystChainBuilder` (specs, the effect benchmark) stays as
+  written; the engine allocation cases (`AllocationCases`) register through the registry, so they run the optimized
+  form. What merging saves: per stage merged away one effect object, one writer and its compare pass per block, two
+  banks and the swap's scratch buffers, and fewer per-stage calls per block; the per-sample work is the same (the per-block
+  time of a cabinet and of a 21-stage run, written and merged, lay inside the JVM's run-to-run noise in review round 1).
 - **One chain host** (`ChainHost`, `audio_be/.../ChainHost.kt`, KLANG-00243 (one chain host), 2026-11-04): both
   positions own one for the plumbing they share: the chain in service and its name, the bounded cache
   (`ChainHost.MAX_CACHED_CHAINS`, 8), the parked request, the lookup and the `ChainSwap`. What a position does when a
@@ -76,6 +97,36 @@ block has run (the `KnobGlide` snap), so a stage set on a cylinder's first block
 swap brings in over sound has had no block yet and must not snap: the host calls `KatalystChain.joinSoundingBus()`
 after its reset, and its delay and reverb fade their feed in like any later switch-on (KLANG-00428, L7a-02). `reset`
 and `retire` stay a synchronous hard cut, and `Cylinder` calls them only on a silent cylinder or at the shelf.
+
+**A chain's stages are in place before its first processed block** (KLANG-00468, review round 1, the maintainer
+2026-11-19). A stage is switched on only by its writer, so a chain must be configured before it processes. The hosts
+do it when they have something to configure from: a cylinder on its owner's commit, the output before every block
+(`MasterBus.process`), a swap's arriving chain at once (`Cylinder.beginFade`), a draining chain never again (it rings
+out on the settings it left with). A chain that nothing configured since it was built or reset configures itself
+from no state, its authored defaults, at the top of its first `process` (`KatalystChain.process`): the chain a cylinder
+runs under a first voice that does not claim it (past its gate when it arrives, or fading), after an idle install
+(which resets the incoming chain, a cached one comes back retired), a deactivation's reset or on a cylinder built
+directly. A retired chain is out of service and does not configure itself on a stray block (it would rent again). One
+path serves a retired chain without a reset: a cylinder rented from the shelf (`CylinderUnits.rent`, `Cylinder.adopt`,
+`ChainHost.retireAll`) runs its retired born-with chain, which then does not configure itself on its first block.
+Harmless today, the born-with chain is classic and at its defaults switches nothing on (the classic row of
+`CylinderChainFirstBlockSpec` renders a built and an adopted cylinder alike); it becomes a real difference the day a
+born-with chain holds a default that is not off. Before, such a chain ran with every stage off and the stages' fresh
+window was used up by that block, so the owner's configure a block later faded each stage in from dry (and a declared
+`eq` of numbers did not run at all for that first voice). A host that configures first never reaches this, so a
+claiming first voice renders as it always did; the classic chain at its defaults has every stage off and its fader at
+unity, so a cylinder that declares nothing renders as before in either case. Guards: `CylinderChainFirstBlockSpec`,
+`KatalystDslOptimizerRenderSpec` (the late-apply rows).
+
+Two consequences, measured by the audio review of round 2 (KLANG-00468):
+
+- **A declared constant reverb or delay is rented and ringing from the first block**, under a non-claiming first voice
+  too, so the cylinder stays active for its tail: 2.23 s for `reverb(wet 0.5)`, 4.0 s for `delay(wet 0.5, time 0.25,
+  feedback 0.5)`, where before the cylinder went after its 10 clean-up visits.
+- **On a declared chain with a slot, a late first voice runs the slot's default**, and a claiming voice that writes
+  another value is an ordinary knob move (the EQ crossfades its bank over 50 ms; a gain and a distort amount glide over
+  50 ms), where before the value arrived on a chain fading in from dry. On the classic chain nothing changes (measured
+  identical in four cases).
 
 | stage | switch on / off | knob changes |
 |---|---|---|

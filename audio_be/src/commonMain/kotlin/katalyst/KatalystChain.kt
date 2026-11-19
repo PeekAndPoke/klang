@@ -136,6 +136,22 @@ class KatalystChain internal constructor(
     /** False until the first [applyParams], so that resolving from a null state still happens. */
     private var everResolved: Boolean = false
 
+    /**
+     * True while this chain still owes itself a configure: from its build and from every [reset] until [applyParams]
+     * runs, which [process] pays from no state on its first block (see there). Not [everResolved], which survives a
+     * reset. [retire] clears it: a retired chain is out of service, and a stray block must not configure it (and rent
+     * a ring for it, `LazyRingSpec`); a host that puts a retired chain back into service resets it first
+     * (`Cylinder.install`, `Cylinder.beginFade`, `MasterBus.landChain`).
+     *
+     * One path puts a retired chain back WITHOUT a reset: a cylinder rented from the shelf (`CylinderUnits.rent`, then
+     * `Cylinder.adopt`, then `ChainHost.retireAll`) serves its retired born-with chain, so that chain does not configure
+     * itself on its first block, where a cylinder built directly does. Harmless today: the born-with chain is the
+     * classic chain, which at its defaults switches no stage on and keeps its fader at unity, so the two render the
+     * same samples (`CylinderChainFirstBlockSpec`, the classic row). It becomes a real difference the day a born-with
+     * chain holds a default that is not off.
+     */
+    private var configureOnFirstBlock: Boolean = true
+
     /** Test seam: how many times [applyParams] actually re-read the state. */
     internal var resolveCount: Int = 0
         private set
@@ -269,6 +285,8 @@ class KatalystChain internal constructor(
         for (i in writers.indices) {
             writers[i].apply()
         }
+
+        configureOnFirstBlock = false
     }
 
     /**
@@ -318,6 +336,20 @@ class KatalystChain internal constructor(
      * which every stage takes as an unchanged config (a retarget to the target that stands, a compare that matches).
      */
     fun process(ctx: KatalystContext) {
+        // A chain's stages are in place before its FIRST processed block, whoever hosts it (KLANG-00468, review
+        // round 1). A stage is switched on only by its writer, and a host applies only when it has something to apply
+        // from: a cylinder only on an owner's commit. A chain built, reset or installed and then processed before any
+        // owner (a first voice that does not claim: past its gate, or fading) ran with every stage off, and its stages'
+        // fresh window (the instant first switch) was used up by that block, so the owner's install a block later was a
+        // fade from dry. Here such a chain configures itself from no state, its authored defaults, as the output's
+        // chain and an arriving one are, on the block the stages are still fresh. A host that applied first (every
+        // claiming owner, the output every block, a swap's arriving chain) never reaches this branch, so what it
+        // renders does not move. Nested chains (`parallel` branches, region bodies) are written by their stage's writer
+        // during this apply.
+        if (configureOnFirstBlock) {
+            applyParams(null)
+        }
+
         tickModulated()
 
         // The cylinder's rate buses meet at the chain's rate (step 3b): in the head region, or stepped down into the mix.
@@ -371,6 +403,7 @@ class KatalystChain internal constructor(
      */
     fun reset() {
         forgetParams()
+        configureOnFirstBlock = true
         busLadder?.reset()
 
         for (i in stages.indices) {
@@ -389,6 +422,7 @@ class KatalystChain internal constructor(
      */
     fun retire() {
         forgetParams()
+        configureOnFirstBlock = false
         busLadder?.reset()
 
         for (i in stages.indices) {

@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.audio_be.katalyst
 
 import io.peekandpoke.klang.audio_bridge.KatalystDsl
+import io.peekandpoke.klang.audio_bridge.optimize
 
 /**
  * Backend registry: Katalyst name → [KatalystDsl].
@@ -17,6 +18,16 @@ import io.peekandpoke.klang.audio_bridge.KatalystDsl
  * never handed a name runs its fixed historical chain, which is what keeps a song without
  * `katalyst(…)` byte-identical to the pre-Katalyst-DSL engine, and a bus that was never handed one
  * runs the empty chain.
+ *
+ * **What is stored is the OPTIMIZED chain** (KLANG-00468, decision D9 of KLANG-00466): [register] runs the chain's
+ * pass ([KatalystDsl.optimize], adjacent `eq` stages of numbers merged into one) once, here, so every lookup, and so every
+ * cylinder and the output, builds the merged form. The pass renders the same bits as the written chain, so this changes
+ * how many stages run and not one sample. The wire and the chain's name stay the written chain's: the name is
+ * `KatalystDsl.uniqueId()` of what the pattern wrote, taken in the frontend before any pass, and the pass is
+ * deterministic, so equal written chains share one name and find one optimized chain. A chain the pass changes nothing
+ * in is stored as the instance registered. A chain built directly with `KatalystChainBuilder` (specs, the effect
+ * benchmark) stays as written; the engine allocation cases (`AllocationCases`) register through here, so they run the
+ * optimized form.
  */
 class KatalystRegistry(
     /** Parent registry; lookups delegate here when not found locally. */
@@ -32,9 +43,34 @@ class KatalystRegistry(
     internal var namesNormalized: Int = 0
         private set
 
+    /**
+     * Stores [dsl] under [name], in its optimized form (see the class KDoc). Overwrites: a name re-registered with an
+     * edited chain plays the edit.
+     *
+     * This function MUST stay total, as `IgnitorRegistry.register` must: it runs on the audio thread's command path
+     * (`Cmd.RegisterKatalyst`), where an escaping exception would take the whole playback out
+     * (`Feedback.PlaybackFailed`) over a pass that only saves stages. A failure of the pass stores the chain as written
+     * (it renders the same samples, only with more stages) and is counted in [optimizerFailures]; it is never
+     * rethrown.
+     */
     fun register(name: String, dsl: KatalystDsl) {
-        defs[name.lowercase()] = dsl
+        defs[name.lowercase()] = try {
+            dsl.optimize()
+        } catch (_: Throwable) {
+            // Never rethrown (see the KDoc), never silent either: the count is what tells "the pass failed" from
+            // "nothing to merge". A probe for a debugger or a sweep, as the voice registry's: nothing can make the pass
+            // throw today, so the increment is untested by construction.
+            optimizerFailures++
+            dsl
+        }
     }
+
+    /**
+     * How many registrations stored the chain as written because the pass threw. Stays 0 in a healthy build. Read it
+     * from a debugger or a sweep; `KatalystRegistrySpec` asserts it stays 0 for the chains it registers.
+     */
+    internal var optimizerFailures: Int = 0
+        private set
 
     /**
      * Resolve a chain by name, or **null when it is not registered here or on any parent**.

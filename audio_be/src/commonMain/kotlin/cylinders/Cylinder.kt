@@ -828,7 +828,10 @@ class Cylinder(
      * two chains alive for the length of the fade and the outgoing chain's ring-out, which is the
      * one case that needs both.
      *
-     * The incoming chain needs no reset: nothing that is not the current chain holds state.
+     * The incoming chain holds no state (nothing that is not the current chain does), and it is reset anyway: a cached
+     * chain comes back retired, and a reset is what makes a chain configure itself from its defaults on its first block
+     * when no owner configures it first (`KatalystChain.process`, KLANG-00468). On a chain that holds nothing the reset
+     * changes no sample: its stages are already in the state a reset leaves, and its units went back when it retired.
      *
      * The incoming chain is never the outgoing one, so retiring after the assignment cannot wipe
      * what was just installed: the [host] lands nothing when the requested KEY is the one already
@@ -851,6 +854,9 @@ class Cylinder(
         if (next === leaving) {
             return false
         }
+
+        // Its stages are in place on its first block whoever arrives first (see the KDoc).
+        next.reset()
 
         // The denied rents are carried BEFORE the retire, which zeroes the stage's own count: the
         // cylinder's diagnostics number is about this cylinder's life, not about its current chain.
