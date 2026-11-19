@@ -106,9 +106,9 @@ let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.15, "tube").highpass(120)
   .distort(0.09, "asym").highpass(100)
-  .distort(0.35, "soft")
+  .distort(0.45, "soft")
   .lowpass(4800)                                   // the fizz
-  .mul(0.67))                                      // volume
+  .mul(0.64))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
 let powerStock = Kat.fn(x => x.drive(0.3))
@@ -322,7 +322,7 @@ let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
   .gain(1.0)
   .body(material = "spruce", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.40)
+  .katp("gain.gain", 0.38)
 
 export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
@@ -592,13 +592,13 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 7500)
-    .mul(0.70)
+    .mul(0.65) // the "brightness" knob
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.95)).cut(4900)
       .band(low => low.distort(0.001, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.70)
+    .mul(4.80)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )

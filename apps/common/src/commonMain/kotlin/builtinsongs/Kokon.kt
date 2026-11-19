@@ -102,7 +102,7 @@ let preampStock = Kat.fn(x => x
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
 let preampClean = Kat.fn(x => x
-  .distort(0.12, "tube")
+  .distort(0.05, "tube")
   .highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
   .mul(3.5))                                       // volume
@@ -120,12 +120,12 @@ let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.15, "tube").highpass(120)
   .distort(0.09, "asym").highpass(100)
-  .distort(0.35, "soft")
+  .distort(0.45, "soft")
   .lowpass(4800)                                   // the fizz
-  .mul(0.67))                                      // volume
+  .mul(0.63))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
-let powerStock = Kat.fn(x => x.drive(0.3))
+let powerStock = Kat.fn(x => x.drive(0.5))
 
 // Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
 let powerPushPull = Kat.fn(x => x
@@ -135,7 +135,7 @@ let powerPushPull = Kat.fn(x => x
 
 // Class A: a lopsided clip, even harmonics, the chime.
 let powerClassA = Kat.fn(x => x
-  .distort(0.25, "asym")
+  .distort(0.05, "asym")
   .mul(1.3))                                       // master
 
 // Cabinets: the linear half of the amp. All of these are static and linear.
@@ -229,7 +229,7 @@ let makeGuitar = (pickup) => {
 //   preamp: preampStock | preampClean   | preampCrunch    | preampHighGain
 //   power:  powerStock  | powerPushPull | powerClassA
 //   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
-let cleanStages  = Kat.fn(x => x.serial(pedalStock, preampClean, powerClassA, snareCut, cab1x12, ampLevel))
+let cleanStages  = Kat.fn(x => x.serial(pedalStock, preampClean, powerStock, snareCut, cab1x12, ampLevel))
 let brightStages = Kat.fn(x => x.serial(pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, ampLevel))
 let deepStages   = Kat.fn(x => x.serial(pedalStock, preampClean, powerClassA, snareCut, cab4x12, ampLevel))
 let heavyStages  = Kat.fn(x => x.serial(pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, ampLevel))
@@ -340,7 +340,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 1.2).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(8, 0.9).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -437,10 +437,10 @@ let chimeBus = x => x.cylinder(10).katalyst(chimeAmp)
 
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
-  .sound(clean).adsrOff().unison(voices = 11, spread = 0.08).pregain(0.7)
+  .sound(clean).adsrOff().unison(voices = 11, spread = 0.08).pregain(0.9)
   .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
-  .gain(0.5)                                       // the clean amp hit softly: notes ring into each other in it
+  .gain(0.25)                                      // the clean amp hit softly: notes ring into each other in it
   .pan(0.5)                                        // 0.25 in the parts, before the amp: listen for a drift to the middle
   .vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.07))
   .apply(spinBus)
@@ -459,7 +459,7 @@ export sing = notes => n(notes.add(7))
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
   .ignp("decay", 3.0).clip(1.5)
-  .gain(1.0).pan(0.5)
+  .gain(0.8).pan(0.5)
   .apply(soarBus)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -619,7 +619,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).katp("gain.gain", 0.48 * spinTrim).pregain(1.2).pan(0.25).superimpose(pan(0.75)),
+  spin(cocoonArp.add(7)).ply(2).katp("gain.gain", 0.45 * spinTrim).pregain(5.0).pan(0.25).superimpose(pan(0.75)),
   wings(cocoonPower2),
   chug(cocoonRoots),
   beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.10 * beatTrim).katp("amp.lp", 1600),
@@ -690,16 +690,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    [8, spinning],
-    [4, answering],
-    [4, quickening],
-    [4, stretching],
-    [4, holdingBreath],
+    // [8, spinning],
+    // [4, answering],
+    // [4, quickening],
+    // [4, stretching],
+    // [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    [12, flyingOff],
-    [4, lastChord],
-    [2, silence]
+    // [12, flyingOff],
+    // [4, lastChord],
+    // [2, silence]
   )
     .scale(songScale)
     .analog(feel)
