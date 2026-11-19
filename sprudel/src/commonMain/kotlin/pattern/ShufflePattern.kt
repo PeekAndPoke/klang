@@ -17,7 +17,11 @@ import io.peekandpoke.klang.sprudel.sampleAt
  *
  * [nPattern] is sampled once per cycle to determine the number of slices.
  * The source pattern's timing is preserved within each slice — only the slice
- * order is randomised. The shuffle permutation changes every cycle.
+ * order is randomised. The permutation is seeded by `n` and the context's seed, not by the cycle,
+ * so a cycle with the same `n` plays the same order.
+ *
+ * Live highlighting: every event keeps its own location chain, and the location of the [nPattern] atom
+ * sampled for its cycle is prepended, so the slice count lights up with the events it shuffled.
  */
 internal class ShufflePattern(
     val source: SprudelPattern,
@@ -45,8 +49,13 @@ internal class ShufflePattern(
             val cycle = CycleTime.ofCycleIndex(cycleInt)
 
             // Sample n from the control pattern at the start of this cycle
-            val n = nPattern.sampleAt(cycle, updatedCtx)?.data?.value?.asInt ?: 1
+            val nEvent = nPattern.sampleAt(cycle, updatedCtx)
+            val n = nEvent?.data?.value?.asInt ?: 1
+
             if (n < 1) continue
+
+            // The atom of n that rules this cycle lights up with every event, the way fast(n) does
+            val nLocation = nEvent?.sourceLocations?.innermost
 
             // Same permutation every cycle (seeded by n, not by cycle)
             val random = updatedCtx.getSeededRandom(n, "shuffle")
@@ -77,7 +86,7 @@ internal class ShufflePattern(
                     // Clip to slot boundaries
                     val clippedPart = shiftedPart.clipTo(slotStart, slotEnd) ?: continue
 
-                    result.add(event.copy(part = clippedPart, whole = shiftedWhole))
+                    result.add(event.copy(part = clippedPart, whole = shiftedWhole).prependLocation(nLocation))
                 }
             }
         }
