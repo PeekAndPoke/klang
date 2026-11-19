@@ -50,6 +50,12 @@ gone is removed when someone notices, not kept for history.
   (`ResonatorBank`'s KDoc). The blend is not the table: a `wet` or `floor` change glides the dry and wet coefficients
   of the sounding banks in place and leaves the bands alone, except that a mix landing at 0 zeroes their state, so a
   return starts them from rest (knob expressions step 5c, Q8 (a), maintainer 2026-10-11).
+- **The Katalyst chain's pass (`KatalystDsl.optimize`, KLANG-00468) has no kill switch and refuses on purpose.** It
+  merges adjacent `eq` stages of numbers only; a `tap` in the later stage and any `Kat.param` section knob refuse a
+  merge, and every other stage is a wall. Its promise is bit identity, not the voice optimizer's margin, so there is
+  nothing to settle by ear: do not ask for a switch, for merging slot stages, or for folding gains. The promise rests
+  on a chain's stages being in place before its first processed block (`KatalystChain.configureOnFirstBlock`): do not
+  remove that as dead code.
 - **Numerical contract**: `SAFE_MIN 1e-15` / `SAFE_MAX 1e15` (matches SuperCollider `zapgremlins`);
   "safe" means finite, **not** small: consumers must be O(1) regardless of magnitude.
 - **Rejected optimisations, do not retry:** `fastCopy` (about 22x slower on JS), ProtoBuf for the
