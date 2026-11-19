@@ -1,6 +1,6 @@
 # KLANG-00469: Cylinder amp step 3: Der Schmetterling's guitars on cylinder amps
 
-> **Status (2026-11-19): IN PROGRESS.** Klang-Main-Dev: step 3 starts, on the maintainer's rework of 2026-11-19
+> **Status (2026-11-19): DONE.** The maintainer, 2026-11-19: 'Consider Step 3 as done.'
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -269,3 +269,5 @@ the maintainer's listening.
 - **Found, older, not touched:** `SongBenchmarkCases.ungated()` looks for the seed line
   `seed(timeOfDay.mul(60*60*60*24))`, which the song no longer has, so the ledger's live rows would fail.
 - 2026-11-19: the maintainer listened to the port: "brilliant! it sound so much better and smoother... like real guitars! very very nice..."
+- 2026-11-19: the maintainer: "Consider Step 3 as done." The cylinder amp stays in Der Schmetterling. Still the maintainer's to say: whether the copy, "Der Schmetterling (amp per note)", can go.
+- 2026-11-19: DONE. The maintainer, 2026-11-19: 'Consider Step 3 as done.'

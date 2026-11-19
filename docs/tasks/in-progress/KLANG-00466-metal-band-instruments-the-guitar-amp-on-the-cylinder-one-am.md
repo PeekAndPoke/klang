@@ -149,3 +149,4 @@ acceptance.
 - 2026-11-19: D11 replaced by the maintainer (a copy and a full port, no switch); step 3 starts.
 - 2026-11-19: the maintainer listened to the port: "brilliant! it sound so much better and smoother... like real guitars! very very nice..."
 - 2026-11-19: step 4 starts (KLANG-00470): Kokon with Schmetterling's parts and guitar compressor, no copy; D13 option b (listen for the drift first).
+- 2026-11-19: step 3 done on the maintainer's word (KLANG-00469): the band keeps the cylinder amp. Step 4 (Kokon, KLANG-00470) is built and being listened to.
