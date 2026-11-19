@@ -393,12 +393,12 @@ let chimeTrim  = 1.60                              // rough: +4.1 dB
 let spinBus = x => x.cylinder(1).katalyst(spinAmp)
   .body(wet = 0.1, material = "oak")
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.20 * spinTrim)
+  .katp("gain.gain", 0.17 * spinTrim)
 
 let singBus = x => x.cylinder(2).katalyst(singAmp)
   .body(wet = 0.15, material = "rosewood")
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.15 * singTrim)
+  .katp("gain.gain", 0.16 * singTrim)
 
 let beatBus = x => x.cylinder(3).katalyst(beatAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
@@ -408,15 +408,15 @@ let beatBus = x => x.cylinder(3).katalyst(beatAmp)
 // 0.40 the gain of chug. Chug keeps that ratio as how hard it hits the amp (0.73 = 0.40 / 0.55).
 let heavyBus = x => x.cylinder(4).katalyst(heavyAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.50 * heavyTrim)
+  .katp("gain.gain", 0.40 * heavyTrim)
 
 let strikeBus = x => x.cylinder(5).katalyst(strikeAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.48 * strikeTrim)
+  .katp("gain.gain", 0.33 * strikeTrim)
 
 let soarBus = x => x.cylinder(6).katalyst(soarAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.45 * soarTrim)
+  .katp("gain.gain", 0.42 * soarTrim)
 
 // The swells' room comes before the compressor in the cylinder's strip, so the compressor holds the room too.
 let swellBus = x => x.cylinder(7).katalyst(swellAmp)
@@ -435,9 +435,9 @@ let chimeBus = x => x.cylinder(10).katalyst(chimeAmp)
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 11, spread = 0.08).pregain(0.9)
-  .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
+  .ignp("decay", 2.00).ignp("sustain", 0.25).ignp("release", 1.2).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
-  .gain(0.25)                                      // the clean amp hit softly: notes ring into each other in it
+  .gain(0.30)                                      // the clean amp hit softly: notes ring into each other in it
   .pan(0.5)                                        // 0.25 in the parts, before the amp: listen for a drift to the middle
   .vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.07))
   .apply(spinBus)
@@ -456,7 +456,7 @@ export sing = notes => n(notes.add(7))
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
   .ignp("decay", 3.0).clip(1.5)
-  .gain(0.8).pan(0.5)
+  .pregain(0.6).gain(0.5).pan(0.5)
   .apply(soarBus)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
@@ -464,7 +464,7 @@ export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 5, spread = 0.04)
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .late(0.030)
-  .gain(1.0).pan(0.0).superimpose(x => x.pan(1.0)) // far left and far right, the right a little late
+  .gain(0.6).pan(0.0).superimpose(x => x.pan(1.0)) // far left and far right, the right a little late
   .apply(swellBus)
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
@@ -492,7 +492,7 @@ export wings = chords => n(chords).ply(16)
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.92 0.85 0.90 0.94".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.6).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(0.5).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.95),
     x => x.pan(0.05),
   )
@@ -508,7 +508,7 @@ export strike = chords => n(chords)
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.08).pregain(0.45)
-  .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.1).clip(2)
+  .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.5).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.10)))
   .gain(0.5)                                       // the clean amp hit softly: notes ring into each other in it
   .pan(0.75)                                       // before the amp: listen for a drift to the middle
@@ -522,7 +522,7 @@ export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
   .ignp("decay", 0.30).ignp("sustain", 0.50).ignp("release", 5.0).clip(40)
   .gain(0.5)                                       // the clean amp hit softly: the strum rings into itself in it
-  .pan(0.45)                                       // before the amp: listen for a drift to the middle
+  .pan(0.40)                                       // before the amp: listen for a drift to the middle
   .apply(strumBus)
 
 // The drums, for the second run of the heavy block: the band of Der Schmetterling, heavy and half time. The kick on one,
@@ -531,7 +531,7 @@ export strum = notes => n(notes)
 let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 
 export kick = pat => sound("bd").struct(pat)
-  .sound(metalKick).adsrOff().note("a1").velocity("1.0 0.94 0.96 0.94")
+  .sound(metalKick).adsrOff().n("0").scale(songScale).transpose(-24).velocity("1.0 0.94 0.96 0.94")
   .gain(0.70).pan(0.5)
   .cylinder(11).apply(drumRoom)
 
@@ -561,14 +561,14 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
 // The cocoon is spun one thread at a time, over two rounds, in the middle; the answer and the heartbeat will stand to
 // either side of it.
 let spinning = stack(
-  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.03)
     .katp("gain.gain", 0.28 * spinTrim).katp("amp.hp", 120).katp("amp.lp", 3300)
     .mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.03)
     .katp("gain.gain", 0.28 * spinTrim).katp("amp.hp", 120).katp("amp.lp", 3300)
     .mask("<[1 1 1 0 1 0 0 0]!2 [1 0 1 1 1 0 1 0]!2>"),
   sing(melodyOne).pan(0.75).katp("gain.gain", 0.24 * singTrim).katp("amp.hp", 300),
@@ -576,7 +576,7 @@ let answering = stack(
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.03)
     .katp("gain.gain", 0.28 * spinTrim).katp("amp.hp", 120).katp("amp.lp", 3300)
     .mask("<[1 1 1 1 1 0 1 1]!2 1!2>"),
   sing(melodyTwo).pan(0.75).katp("gain.gain", 0.24 * singTrim).katp("amp.hp", 312),
@@ -585,7 +585,7 @@ let quickening = stack(
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp.ply(2)).pan(0.25).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp.ply(2)).pan(0.25).unison(voices = 5, spread = 0.03)
     .katp("gain.gain", "<0.28 0.29 0.30 0.31>".mul(spinTrim)).katp("amp.lp", 3300),
   sing(melodyOne.ply(2)).pan(0.75).katp("gain.gain", "<0.25 0.26 0.27 0.28>".mul(singTrim)).katp("amp.hp", 325),
   beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.18 * beatTrim).katp("amp.lp", 1600),
@@ -596,7 +596,7 @@ let stretching = stack(
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp.ply(2)).pan(0.25).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp.ply(2)).pan(0.25).unison(voices = 5, spread = 0.03)
     .katp("gain.gain", "<0.30 0.31 0.32 0.33>".mul(spinTrim)).katp("amp.lp", 3300),
   sing(melodyTwo.struct("x!32")).pan(0.75).katp("gain.gain", "<0.22 0.25 0.28 0.31>".mul(singTrim)).katp("amp.hp", 325),
   beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.20 * beatTrim).katp("amp.lp", 1600),
@@ -616,7 +616,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).katp("gain.gain", 0.45 * spinTrim).pregain(5.0).hpf(400).superimpose(
+  spin(cocoonArp.add(7)).ply(2).katp("gain.gain", 0.30 * spinTrim).pregain(1.0).gain(0.8).hpf(220).superimpose(
     pan(0.25).transpose(12),
     pan(0.75).transpose(12),
   ),
@@ -639,11 +639,11 @@ let lifting = stack(
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
   spin("[0 4 7 9 11 9 7 4]".add(7)).katp("gain.gain", 0.50 * spinTrim).ignp("sustain", 0.15).clip(0.66),
-  soar("[4@6 ~@2]").katp("gain.gain", 0.45 * soarTrim)
+  soar("[4@6 ~@2]")
     .tremolo(rate = beatRate(0.25), depth = 0.25)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.5),
-  beat("0").katp("gain.gain", 0.45 * beatTrim),
+  beat("0").katp("gain.gain", 0.10 * beatTrim),
 )
 
 // The cocoon again, empty now, and the butterfly flies off.
@@ -690,16 +690,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    // [8, spinning],
-    // [4, answering],
-    // [4, quickening],
-    // [4, stretching],
-    // [4, holdingBreath],
+    [8, spinning],
+    [4, answering],
+    [4, quickening],
+    [4, stretching],
+    [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    // [12, flyingOff],
-    // [4, lastChord],
-    // [2, silence]
+    [12, flyingOff],
+    [4, lastChord],
+    [2, silence]
   )
     .scale(songScale)
     .analog(feel)
@@ -711,7 +711,7 @@ export song = stack(
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7.5, 7500)     
-    .mul(0.22)
+    .mul(0.25)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(4800)
