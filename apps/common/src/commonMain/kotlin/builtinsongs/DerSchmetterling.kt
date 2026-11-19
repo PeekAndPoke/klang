@@ -32,12 +32,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4700, 3.3)                              // the peak, up high and narrow
+  .lowpass(4700, 3.2)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3000, 1.7)                              // the peak, low and wide
+  .lowpass(3000, 1.6)                              // the peak, low and wide
   .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -293,8 +293,8 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).ad
 export lead_arrange = x => x.cylinder(0) //  .mute()
   .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.50))
   .velocity("<1.1 0.95 1.00 0.95>*4")
-  .shuffle("<1!64  17!1 4!14 1!1 1!32  1!1 4!14 1!1  1!64>")
-  .mute(   "<1!64  0!32          1!32  0!32          1!64>")
+  .shuffle("<1!64  1!17 4!14 1!1 1!32  1!7 4!8 1!1  1!64>")
+  .mute(   "<1!64  0!32          1!32  0!32         1!64>")
   .late(berlin(0.0015, 0.0035).mul(drunk).fast(8))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -420,7 +420,7 @@ let trumpet = (() => {
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .oversampleAtLeast(2, y => y.distort(0.90, "diode"))
-    .mul(0.25)
+    .mul(0.15)
     .shape("hard")
     .classic()
 })()
@@ -436,8 +436,8 @@ export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
   )
 
 export trumpet_arrange = x => x.cylinder(5)  // .solo(0.5)
-  .scale("e5:minor").gain(0.16)
-  .mute("<1!96 0!32 1!96 0!32 1!64>")                          
+  .scale("e5:minor").gain(0.24)
+  .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
 export trumpet = n(trumpet_pat).apply(trumpet_shape).tag("trommel")
 
