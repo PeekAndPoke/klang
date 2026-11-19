@@ -1,6 +1,6 @@
 # KLANG-00470: Cylinder amp step 4: Kokon's guitars on cylinder amps
 
-> **Status (2026-11-19): IN PROGRESS.** Klang-Main-Dev: step 4 starts, on the maintainer's word of 2026-11-19
+> **Status (2026-11-19): DONE.** The maintainer, 2026-11-19: 'Kokon is ported well ... please close this step'
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -222,3 +222,5 @@ and the verdict on the drift (D13) are the maintainer's.
   sample and no silent stretch. Review: one round (`reviewer-opus-high`), CLEAN; 1 MINOR and 2 NIT applied.
 - **Not done:** no one has listened. What `beats(0.1)` gives at Kokon's tempo in live play was not checked. No
   browser tests, no benchmark.
+- 2026-11-19: the maintainer listened: "Kokon is ported well. I need to tweak as the distortion on the shared bus now sounds different and fuzzy in places where it should not. No problem though as this was expected and i will take care of it." The step is closed on their word; the tweaking is theirs. D13 (the drift of the off-centre lines): not raised; no pan stage is built.
+- 2026-11-19: DONE. The maintainer, 2026-11-19: 'Kokon is ported well ... please close this step'
