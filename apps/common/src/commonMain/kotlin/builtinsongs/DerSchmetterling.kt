@@ -133,8 +133,8 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
     .band(freq =  160, q = 0.6, db =  3.80)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.5, db =  4.60)        // roar:  low mids
-    .band(freq = 2700, q = 1.9, db =  2.00)        // bark:  the upper-mid speaker peak
+    .band(freq =  800, q = 0.5, db =  4.50)        // roar:  low mids
+    .band(freq = 2700, q = 1.9, db =  1.80)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
@@ -322,7 +322,7 @@ let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
   .gain(1.0)
   .body(material = "spruce", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.38)
+  .katp("gain.gain", 0.37)
 
 export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
@@ -404,9 +404,8 @@ export bass = n(bass_pat).struct(
     [x!4]!4 [[x x] x] [[x x] x] [[x x] x] [x!4]                                [x!2 x@2] [x!2] [x!2 x@2] x [x x] [x [x x]] [x [x x]] [x@3 x]>`
 ).fast(2).apply(bass_shape).tag("bass")
 
-// Gummieimer  ------------------------------------------------------------------------------------------------------------------------------------------
-// A traditional Rubber-bucket, similar in design to a Orchestertrommel
-let gummiEimer = (() => {
+// Trumpet  ------------------------------------------------------------------------------------------------------------------------------------------
+let trumpet = (() => {
   let pAnalog = Ign.slot.analog.add(60)
  
   let ring = Ign.constant(300).div(Ign.freq()).mul(0.85)  
@@ -429,10 +428,9 @@ let gummiEimer = (() => {
     .classic()
 })()
 
-// A slow tuned pulse under the band: root, root, root ... then the step the bass takes. 3-3-2 like a march.
-export trommel_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2 ~ 1 0]>`
+export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2 ~ 1 0]>`
 
-export trommel_shape = x => x.sound(gummiEimer).adsrOff() //  .solo()
+export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
   .hpf(550).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.35)
   .apply(
@@ -444,7 +442,7 @@ export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
   .scale("e5:minor").gain(0.42)
   .mute("<1!96 0!32 1!96>")                          
 
-export trommel = n(trommel_pat).apply(trommel_shape).tag("trommel")
+export trommel = n(trumpet_pat).apply(trumpet_shape).tag("trommel")
 
 // Metal kick  ------------------------------------------------------------------------------------------------------------------------------------------------
 // Thump and crack, and nothing in between. The "bd" sample rings a partial at 115 Hz, 11 dB under its 68 Hz body, for
