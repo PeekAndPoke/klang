@@ -1,6 +1,6 @@
 # KLANG-00470: Cylinder amp step 4: Kokon's guitars on cylinder amps
 
-> **Status (2026-11-18): IDEA.** 
+> **Status (2026-11-19): IN PROGRESS.** Klang-Main-Dev: step 4 starts, on the maintainer's word of 2026-11-19
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -13,6 +13,32 @@ the next (`spin`, `chime`).
 
 It is also the harder port, for the same reason. It waits for the verdict of KLANG-00469 (step 3): if the
 cylinder amp does not stay in Der Schmetterling, this step is not done.
+
+## Reworked by the maintainer (2026-11-19, to Klang-Main-Dev)
+
+After listening to step 3 ("brilliant! it sound so much better and smoother... like real guitars!"): "let us port
+Kokon... there we also need to port the guitar compression from Schmetterling. Basically the same rig and adjust
+the levels roughly, i will do the finetuning." Asked which numbers the parts take, the maintainer chose
+**Schmetterling's parts**; asked for a copy of the old song, **no copy**. This replaces every line below that
+speaks of a switch, of "both positions", and of porting Kokon's own numbers. What holds now:
+
+- **A full port, no switch, no copy.** The old Kokon is in git history.
+- **The parts are Der Schmetterling's as its file holds them on the day** (pickups, pedals, preamps, power amps,
+  cabs, `snareCut`, `ampLevel`), copied into Kokon as `Kat.fn` chain parts (pickups `Ign.fn`, in the voice).
+  Kokon's own drifted numbers (section 6 below) go. `snareHz` stays Kokon's own value. Sharing one set of parts
+  between the songs by import is KLANG-00463, not this step.
+- **Der Schmetterling's guitar compressor on every guitar cylinder**, with the values its bus functions hold on the
+  day, written once per cylinder in a bus function, as in step 3.
+- **The shape is step 3's**: `makeGuitar(pickup)` ends at the pickup; `makeAmp` holds the stages in a 4x region;
+  sections 1 to 3 below stand (one amp chain per cylinder; a line's `hpf` / `lpf` behind the rig move to the end of
+  its chain as slots; the old gain goes to the fader).
+- **Levels roughly, the fine tuning is the maintainer's.** Each line's level in the mix is brought near what it was
+  (a rough match by measurement, within a couple of dB), since the parts and the level trim changed. The numbers
+  set that way are marked in the song as rough starting values.
+- **D13: option b**, the plan's proposal: port as it is, the four off-centre single lines keep their pan before the
+  amp, and the maintainer listens for the drift. A `pan` stage on a chain is built only if it is heard.
+- **The tremolo stays where it is**, before the amp (section 5's first way). The clean lines start at
+  `.gain(0.5)` (section 4).
 
 ## Read first
 
@@ -165,3 +191,5 @@ as it was, and a render comparison if one can be made. Nothing about the sound.
 ## History
 
 - 2026-11-18: created, as step 4 of KLANG-00466.
+- 2026-11-19: reworked by the maintainer: a full port with Schmetterling's parts and its guitar compressor, levels roughly, no copy.
+- 2026-11-19: IN PROGRESS. Klang-Main-Dev: step 4 starts, on the maintainer's word of 2026-11-19
