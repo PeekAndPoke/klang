@@ -1,6 +1,6 @@
 # KLANG-00468: Cylinder amp step 2: a Katalyst optimizer that fuses adjacent eq stages
 
-> **Status (2026-11-18): IDEA.** 
+> **Status (2026-11-19): IN PROGRESS.** Klang-Main-Dev: step 2 starts, D8 and D9 confirmed 2026-11-19
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -31,7 +31,8 @@ chain the same: adjacent `eq` stages become one.
 
 ## Decide before implementing
 
-Decisions D8 and D9 of KLANG-00466 are this step's.
+Decisions D8 and D9 of KLANG-00466 are this step's. Confirmed by the maintainer on 2026-11-19 ("please go ahead", after both were laid
+out with the plan's choices).
 
 ## The work
 
@@ -164,3 +165,4 @@ pass breaks, never because a song was edited.
 ## History
 
 - 2026-11-18: created, as step 2 of KLANG-00466.
+- 2026-11-19: IN PROGRESS. Klang-Main-Dev: step 2 starts, D8 and D9 confirmed 2026-11-19

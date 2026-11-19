@@ -142,3 +142,5 @@ acceptance.
 - 2026-11-18: the maintainer's rework: the Ignitor's surface, `drive` added, `analog` to KLANG-00473; step 1 starts.
 - 2026-11-18: IN PROGRESS. Klang-Main-Dev, on the maintainer's word of 2026-11-18
 - 2026-11-18: no `analog` on the chain filters (the maintainer); KLANG-00473 closed.
+- 2026-11-18: step 1 done (KLANG-00467, 62910fb0a).
+- 2026-11-19: D8 and D9 confirmed by the maintainer; step 2 starts.
