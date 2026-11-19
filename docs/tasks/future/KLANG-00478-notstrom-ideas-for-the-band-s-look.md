@@ -113,7 +113,7 @@ moment. Not decided.
 
 The maintainer, 2026-11-19, on the restyles (the mirror underworld on the cold/hot still, kept as
 `prototypes/band/ignored/previews/gemini/liked-fog-behind-mesh.webp`, and the day still with the sun behind the
-drummer): "The idea of having the fog behind the wire mesh is also nice. And the fog could give way to the
+drummer): "The idea of heading the fog behind the wire mesh is also nice. And the fog could give way to the
 'shadows' ... I also like the image with 'sun' behind the drummer. These moods also already work well without the
 'shadows'." So:
 
