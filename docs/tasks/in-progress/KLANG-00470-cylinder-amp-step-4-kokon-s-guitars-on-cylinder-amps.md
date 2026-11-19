@@ -193,3 +193,32 @@ as it was, and a render comparison if one can be made. Nothing about the sound.
 - 2026-11-18: created, as step 4 of KLANG-00466.
 - 2026-11-19: reworked by the maintainer: a full port with Schmetterling's parts and its guitar compressor, levels roughly, no copy.
 - 2026-11-19: IN PROGRESS. Klang-Main-Dev: step 4 starts, on the maintainer's word of 2026-11-19
+
+## Built (2026-11-19), waiting for the maintainer's ear
+
+Built by an Opus worker, coordinated and checked by Klang-Main-Dev. The ticket stays in progress: the fine tuning
+and the verdict on the drift (D13) are the maintainer's.
+
+- **Only `Kokon.kt` changed.** The parts are Der Schmetterling's of that moment, character for character (a
+  reviewer diffed the code); the whole kit, also the parts Kokon's rigs do not use. Kokon's string and `snareHz`
+  (400) are its own. Kokon's old part numbers that went are in the commit's diff.
+- **Nine amps on nine cylinders** (1, 2, 3, 4, 5, 6, 7, 8, 10): `makeAmp(stages, cuts)` holds the stages in a 4x
+  region, then `mul(0.35)` (the old extra trim of Kokon's `guitarShape`), then the line's cuts as slots (`amp.hp`,
+  `amp.lp`), then `classic()`. `chug` and `wings` share the heavy amp on cylinder 4. Spin plays open in the parts
+  that set no cut (20 Hz, 20 kHz), beat's top likewise (20 kHz).
+- **Der Schmetterling's guitar compressor** (threshold -14.9, ratio 4, knee 6, attack 0.001, release `beats(0.1)`)
+  on all nine, in one bus function per cylinder. On `swell`'s cylinder the room goes through it (the strip's order).
+- **Every override in the parts is ported** (a reviewer checked each): gains to the fader, cuts to `katp`.
+- **Levels, one rough pass:** each guitar cylinder rendered alone, old against new, its fader trimmed to the line's
+  old overall RMS (`spinTrim` 2.11, `singTrim` 1.14, `beatTrim` 0.86, `heavyTrim` 2.19, `strikeTrim` 2.26,
+  `soarTrim` 1.32, `swellTrim` 2.32, `strumTrim` 2.12, `chimeTrim` 1.60), marked as rough starting values. Uneven
+  within a line: spin about +5 dB at the start of the cocoon, strike about +4 dB in its ring-out. After the measured
+  pass, `chug` got `.gain(0.73)` into the shared amp (its old ratio to `wings`, 0.40 / 0.55); the pair's trim was
+  measured with both at 1.0 and not measured again.
+- **To listen for:** a drift to the middle on `spin`, `sing`, `chime`, `strum` (pan before the amp, D13 option b);
+  grit on the clean lines when notes ring into each other (they start at `.gain(0.5)`); the tremolo before the amp.
+- **Checks:** `:apps:common:jvmTest` 28, `:apps:studio:jvmTest` 172, 0 failed; the studio compiles for the browser;
+  one chain name per guitar cylinder and equal bus settings on cylinder 4 (1606 onsets); the renders hold no bad
+  sample and no silent stretch. Review: one round (`reviewer-opus-high`), CLEAN; 1 MINOR and 2 NIT applied.
+- **Not done:** no one has listened. What `beats(0.1)` gives at Kokon's tempo in live play was not checked. No
+  browser tests, no benchmark.

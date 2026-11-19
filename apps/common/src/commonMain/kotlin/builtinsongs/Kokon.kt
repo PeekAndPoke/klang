@@ -20,11 +20,12 @@ import * from "sprudel"
 
 // Kokon: before there is a butterfly, there is a cocoon.
 //
-// One guitar: the instrument of Der Schmetterling, its rig stages and its makeGuitar, played through four rigs picked
-// from its menu. A clean arpeggio is spun one thread at a time, a second guitar answers, a heartbeat starts under the
-// skin, volume swells stretch it from inside, it holds its breath, and the high gain rig splits it open. The heavy block
-// plays twice, and the second time the band of Der Schmetterling joins with its drums. What flies out at the end is the
-// Schmetterling's own lead, and the last chord is major.
+// One guitar: the instrument of Der Schmetterling, its rig parts and its makeGuitar, played through four rigs picked
+// from its menu, every line through an amp on its cylinder (chug and wings share one). A clean arpeggio is spun one thread at a
+// time, a second guitar answers, a heartbeat starts under the skin, volume swells stretch it from inside, it holds its
+// breath, and the high gain rig splits it open. The heavy block plays twice, and the second time the band of Der
+// Schmetterling joins with its drums. What flies out at the end is the Schmetterling's own lead, and the last chord is
+// major.
 //
 // How it is built, bottom up:
 //   notes  the harmony and the melodies, as patterns without scale or timing
@@ -39,13 +40,15 @@ let songScale = "c3:minor" // which scale to play the song in
 let endScale  = "c3:major" // which chord the song ends on
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
-// string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
+// string -> pickup -> pedal -> preamp -> power amp -> snare cut -> cab -> level. The string and the pickup are the voice,
+// one per note. Everything after the pickup is the amp, one per cylinder: a Katalyst chain on the line's cylinder, so the
+// notes meet in it as they do in a real amp. Every stage is a function of the signal, and every
 // stage has a menu of caricatures with 2 to 4 tells each, tuned by ear. The *Stock preset of every stage is the sound
 // before that stage existed, so a rig of all-stock presets is the A/B reference. Pick presets one stage at a time, in
 // signal order, with the rest held where they are. A preset you cannot name in an A/B gets deleted, not tuned.
 
 // Pickups: the coil's resonance sets the colour, its output sets how hard the amp is pushed, its position on the string
-// cancels one harmonic.
+// cancels one harmonic. They stay in the voice (Ign.fn): the neck pickup's notch follows the note.
 let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
@@ -55,7 +58,7 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3300, 2.2)                              // the peak, low and wide
+  .lowpass(3000, 1.7)                              // the peak, low and wide
   .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -66,90 +69,92 @@ let pickupNeck = Ign.fn(x => x
 
 // Pedals: a box in front of the amp. What it filters BEFORE clipping is the tell, not the clipping itself. The last
 // mul is the pedal's level knob, set so the three guitars land within 2 dB of the stock rig (a louder A/B always wins).
-let pedalStock = Ign.fn(x => x)
+let pedalStock = Kat.fn(x => x)
 
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
-let pedalScreamer = Ign.fn(x => x
-  .parallel(
+let pedalScreamer = Kat.fn(x => x.parallel(
     clean => clean,
-    dirt => dirt.highpass(600).distort(0.25, "soft").mul(0.5)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+    dirt => dirt
+      .highpass(720)
+      .distort(0.20, "soft")
+      .lowpass(4200) // the tone knob, half way
+      .mul(0.4)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
-  .lowpass(4200)                                   // the tone knob, half way
-  .mul(0.55))                                       // level
+  .mul(0.50))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
-let pedalFuzz = Ign.fn(x => x
+let pedalFuzz = Kat.fn(x => x
   .distort(0.70, "asym")
   .lowpass(4500)
   .mul(0.28))                                      // level
 
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
-let pedalBoost = Ign.fn(x => x
-  .highpass(300)
-  .mul(1.3))                                       // level
+let pedalBoost = Kat.fn(x => x.parallel(
+  clean => clean, 
+  dirt => dirt.highpass(300).mul(1.4)
+).mul(0.6))
 
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
 // is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
-let preampStock = Ign.fn(x => x
+let preampStock = Kat.fn(x => x
   .distort(0.20, "tube").highpass(100)
   .distort(0.50, "soft").highpass(100))
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
-let preampClean = Ign.fn(x => x
+let preampClean = Kat.fn(x => x
   .distort(0.12, "tube")
   .highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
   .mul(3.5))                                       // volume
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
-let preampCrunch = Ign.fn(x => x
+let preampCrunch = Kat.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
   .distort(0.18, "asym").highpass(100)
-  .lowpass(5800)
+  .lowpass(5500)
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
-let preampHighGain = Ign.fn(x => x
+let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.10, "tube").highpass(120)
+  .distort(0.15, "tube").highpass(120)
   .distort(0.09, "asym").highpass(100)
   .distort(0.35, "soft")
-  .lowpass(5200)                                   // the fizz
+  .lowpass(4800)                                   // the fizz
   .mul(0.67))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
-let powerStock = Ign.fn(x => x.drive(0.3))
+let powerStock = Kat.fn(x => x.drive(0.3))
 
 // Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
-let powerPushPull = Ign.fn(x => x
+let powerPushPull = Kat.fn(x => x
   .distort(0.25, "soft")
   .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0)) // presence
   .mul(1.6))                                       // master
 
 // Class A: a lopsided clip, even harmonics, the chime.
-let powerClassA = Ign.fn(x => x
+let powerClassA = Kat.fn(x => x
   .distort(0.25, "asym")
   .mul(1.3))                                       // master
 
-// Cabinets: the linear half of the amp. All of these are static and linear, so they move to the cylinder unchanged once
-// the Katalyst DSL lands.
+// Cabinets: the linear half of the amp. All of these are static and linear.
 
 // Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.
-let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
+let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
-let cab4x12 = Ign.fn(x => x
+let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  3.10)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.5, db =  4.90)        // roar:  low mids
-    .band(freq = 2700, q = 1.8, db =  2.60)        // bark:  the upper-mid speaker peak
+    .band(freq =  160, q = 0.6, db =  3.80)        // thump: closed-back box resonance
+    .band(freq =  800, q = 0.5, db =  4.60)        // roar:  low mids
+    .band(freq = 2700, q = 1.9, db =  2.00)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(105, 0.707, x => x.passes(2)))
+  .highpass(100, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
-let cab1x12 = Ign.fn(x => x
+let cab1x12 = Kat.fn(x => x
   .highpass(120, 0.707, x => x.passes(2))          // open back: no low end below the box
   .eq(e => e
     .band(freq = 3200, q = 1.0, db = 3.0)          // chime: broad upper presence
@@ -157,7 +162,7 @@ let cab1x12 = Ign.fn(x => x
   .lowpass(6500, 0.707, x => x.passes(2)))         // soft, late roll-off, some air stays
 
 // Small combo: a tiny speaker in a tiny box. No bass, a boxy honk, and the highs die early.
-let cabCombo = Ign.fn(x => x
+let cabCombo = Kat.fn(x => x
   .highpass(160, 0.707, x => x.passes(2))          // small speaker: nothing down low
   .eq(e => e
     .band(freq = 750, q = 1.4, db = 4.0)           // honk: the boxy midrange
@@ -165,14 +170,17 @@ let cabCombo = Ign.fn(x => x
   .lowpass(3800, 0.707, x => x.passes(2)))         // early roll-off
 
 // Let the snare cut through: a stage of its own, between the power amp and the cab.
-let snareCut = Ign.fn(x => x
+let snareCut = Kat.fn(x => x
   .eq(e => e
     .band(freq = snareHz, q = 3.0, db = -4)        // notch the snare
   ))
 
+// The Mircophone for the guitar: from rig level to mix level, the last stage of the amp. Was guitarShape.
+let ampLevel = Kat.fn(x => x.mul(0.18).parallel(c => c, c => c.shape("soft")))
+
 // Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
-// The string, the pregain and the envelope; the rig is everything after the string, in the order the signal takes.
-let makeGuitar = (rig) => {
+// The string, the pregain and the envelope, then the pickup: the voice ends there, the amp is the line's cylinder.
+let makeGuitar = (pickup) => {
 
   // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices     = Ign.slot.voices
@@ -205,38 +213,60 @@ let makeGuitar = (rig) => {
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "exp"))
            
-  // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
+  // the string through the pickup. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
-  return rig(signal)    
+  return pickup(signal)
     // sprudel classic
     .classic()
 }
 
-// The Mircophone for the guitar
-let guitarShape = Ign.fn(x => x.mul(0.18).parallel(c => c, c => c.shape("soft")).mul(0.35))
-
 // Four rigs, one guitar. The cocoon is clean and dark, the answer is bright, the heartbeat is the clean rig into the big
-// box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig.
-// The pedal, the preamp and the power amp share ONE oversampling region per rig, at the highest rate a stage of them
-// asks for (the stages' own regions inside then convert nothing); the pickup, the snare cut and the cab are linear and
-// stay outside, as in Der Schmetterling.
-let cleanRig  = Ign.fn(x => x.oversampleAtLeast(4, y => y
-  .serial(pickupNeck, pedalStock, preampClean, powerClassA, snareCut, cab1x12, guitarShape)))
+// box (the 4x12 keeps the thump the 1x12 cuts), and the wings are the Schmetterling's own rhythm rig. A rig is a pickup
+// in the voice and the stages of its amp, in signal order. A/B one stage at a time:
+//   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck      (in the voice: makeGuitar)
+//   pedal:  pedalStock  | pedalScreamer | pedalFuzz       | pedalBoost
+//   preamp: preampStock | preampClean   | preampCrunch    | preampHighGain
+//   power:  powerStock  | powerPushPull | powerClassA
+//   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
+let cleanStages  = Kat.fn(x => x.serial(pedalStock, preampClean, powerClassA, snareCut, cab1x12, ampLevel))
+let brightStages = Kat.fn(x => x.serial(pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, ampLevel))
+let deepStages   = Kat.fn(x => x.serial(pedalStock, preampClean, powerClassA, snareCut, cab4x12, ampLevel))
+let heavyStages  = Kat.fn(x => x.serial(pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, ampLevel))
 
-let brightRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
-  .serial(pickupSingle, pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, guitarShape)))
+let clean  = makeGuitar(pickupNeck)
+let bright = makeGuitar(pickupSingle)
+let deep   = makeGuitar(pickupNeck)            // the clean rig's voice: the deep rig differs in its amp, the 4x12
+let heavy  = makeGuitar(pickupHumbucker)
 
-let deepRig   = Ign.fn(x => x.oversampleAtLeast(4, y => y
-  .serial(pickupNeck, pedalStock, preampClean, powerClassA, snareCut, cab4x12, guitarShape)))
+// A line's own low cut and top cut, behind its amp. They were the voice's hpf and lpf after the rig per note; on the
+// voice now they would filter what goes INTO the amp. Slots, because the parts move them: katp("amp.hp", ...) and
+// katp("amp.lp", ...). A line that never cuts has no such stage.
+let lowCut = hz => Kat.fn(x => x.highpass(Kat.param("amp.hp", hz)))
+let topCut = hz => Kat.fn(x => x.lowpass(Kat.param("amp.lp", hz)))
+let noCuts = Kat.fn(x => x)
 
-let heavyRig  = Ign.fn(x => x.oversampleAtLeast(4, y => y
-  .serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, guitarShape)))
+// One amp: the stages in one 4x region, the trim the rig per note had after the microphone (Kokon's guitarShape ended
+// in mul(0.35), ampLevel does not), the line's cuts, then the cylinder's usual strip (body, reverb, compressor, fader),
+// so the lines' body, reverb, compressor and katp("gain.gain") still land.
+let makeAmp = (stages, cuts) => Katalyst(k => k
+  .oversampleAtLeast(4, r => r.serial(stages))
+  .mul(0.35)
+  .serial(cuts)
+  .classic())
 
-let clean  = makeGuitar(cleanRig)
-let bright = makeGuitar(brightRig)
-let deep   = makeGuitar(deepRig)
-let heavy  = makeGuitar(heavyRig)
+// One amp per guitar cylinder. Spin cuts only in some parts and plays open in the others (20 Hz, 20 kHz); beat's top plays open (20 kHz).
+let spinAmp   = makeAmp(cleanStages,  Kat.fn(x => x.serial(lowCut(20), topCut(20000))))    // cylinder 1
+let singAmp   = makeAmp(brightStages, Kat.fn(x => x.serial(
+  lowCut(180),                                     // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
+  topCut(4200))))                                  // the crunch fizz on held notes covers the arp's picks; cylinder 2
+let beatAmp   = makeAmp(deepStages,   Kat.fn(x => x.serial(lowCut(80), topCut(20000))))    // cylinder 3
+let heavyAmp  = makeAmp(heavyStages,  noCuts)                                              // cylinder 4: chug and wings
+let strikeAmp = makeAmp(heavyStages,  noCuts)                                              // cylinder 5
+let soarAmp   = makeAmp(brightStages, lowCut(240)) // two octaves up, nothing of the melody lives below; cylinder 6
+let swellAmp  = makeAmp(brightStages, topCut(6500))                                        // cylinder 7
+let strumAmp  = makeAmp(cleanStages,  noCuts)                                              // cylinder 8
+let chimeAmp  = makeAmp(cleanStages,  noCuts)                                              // cylinder 10
 
 let metalKick = (() => {
   let thump = Ign.sine()
@@ -342,18 +372,78 @@ export melodyTwo = `<[7@4 6 [0 1] 2 [4 6]] [8@4 ~ 4 2 [4 8]] [9@3 8 7@2 2 [2 3]]
 export schmetterlingLead = `<[-7 0 2 4] [-7 0 4 [2 0]] [-5 -1 2 4|[4 4|4|-1]] [-6 -1 4 3|3|[3 3]]>`
 
 // Lines  -----------------------------------------------------------------------------------------------------------
-// One guitarist, one way of playing. Each line sets its own level; a part may set another.
+// One guitarist, one way of playing, each with an amp on its cylinder (chug and wings share one). A line's voice gain is how hard
+// its amp is hit; its level in the mix is its cylinder's fader (katp "gain.gain"). A part may set either.
 
 // A plucked string drops after the pick, then rings and fades. The clean lines pick a little softer (pregain), so the
 // amp squeezes the drop less and each note stands out from the one still ringing.
+
+// The trims: the fader of each line is its old voice gain times its trim, which brings the line near its old level in
+// the mix (the parts, the level trim and the compressor changed with the amp on the cylinder). Measured once, each line
+// alone, old against new. Rough starting values for the maintainer's fine tuning (2026-11-19).
+let spinTrim   = 2.11                              // rough: +6.5 dB; the parts alone asked for +1.5 to +8 dB
+let singTrim   = 1.14                              // rough: +1.1 dB
+let beatTrim   = 0.86                              // rough: -1.3 dB
+let heavyTrim  = 2.19                              // rough: +6.8 dB; chug and wings together, one fader
+let strikeTrim = 2.26                              // rough: +7.1 dB
+let soarTrim   = 1.32                              // rough: +2.4 dB
+let swellTrim  = 2.32                              // rough: +7.3 dB
+let strumTrim  = 2.12                              // rough: +6.5 dB
+let chimeTrim  = 1.60                              // rough: +4.1 dB
+
+// The guitar cylinders: everything a cylinder does, written once, in the function every line on it applies. The
+// compressor is Der Schmetterling's guitar compressor.
+let spinBus = x => x.cylinder(1).katalyst(spinAmp)
+  .body(wet = 0.1, material = "oak")
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.20 * spinTrim)
+
+let singBus = x => x.cylinder(2).katalyst(singAmp)
+  .body(wet = 0.15, material = "rosewood")
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.15 * singTrim)
+
+let beatBus = x => x.cylinder(3).katalyst(beatAmp)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.25 * beatTrim)
+
+// Chug and wings play through ONE heavy amp, as they share the cylinder, and one fader: 0.55 was the gain of wings,
+// 0.40 the gain of chug. Chug keeps that ratio as how hard it hits the amp (0.73 = 0.40 / 0.55).
+let heavyBus = x => x.cylinder(4).katalyst(heavyAmp)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.55 * heavyTrim)
+
+let strikeBus = x => x.cylinder(5).katalyst(strikeAmp)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.48 * strikeTrim)
+
+let soarBus = x => x.cylinder(6).katalyst(soarAmp)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.45 * soarTrim)
+
+// The swells' room comes before the compressor in the cylinder's strip, so the compressor holds the room too.
+let swellBus = x => x.cylinder(7).katalyst(swellAmp)
+  .reverb(wet = 0.2, size = 6)                     // a slight room of their own, inside the hall
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.05 * swellTrim)
+
+let strumBus = x => x.cylinder(8).katalyst(strumAmp)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.18 * strumTrim)
+
+let chimeBus = x => x.cylinder(10).katalyst(chimeAmp)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.32 * chimeTrim)
 
 // Spin: the clean arpeggio, each note picked, then ringing under the next.
 export spin = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 11, spread = 0.08).pregain(0.7)
   .ignp("decay", 1.50).ignp("sustain", 0.25).ignp("release", 0.8).clip(2.0)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.05)))
-  .gain(0.20).pan(0.5).vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.07))  
-  .cylinder(1).body(wet = 0.1, material = "oak")
+  .gain(0.5)                                       // the clean amp hit softly: notes ring into each other in it
+  .pan(0.5)                                        // 0.25 in the parts, before the amp: listen for a drift to the middle
+  .vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.07))
+  .apply(spinBus)
 
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
@@ -361,34 +451,32 @@ export sing = notes => n(notes.add(7))
   .ignp("decay", 10.0).clip(0.99)
   .tremolo(rate = beatRate(0.33), depth = perlin(0.200, 0.250))  // The guitar finger
   .vibrato(rate = beatRate(0.33), semitones = perlin(0.025, 0.040))
-  .hpf(180)                                        // the 4x12 roar sits on the arp; the lowest note is D4 at 293 Hz
-  .lpf(4200)                                       // the crunch fizz on held notes covers the arp's picks
-  .gain(0.15).pan(0.6)                             // the melody stands near the centre, a little right
-  .cylinder(2).body(wet = 0.15, material = "rosewood").late(perlin(0.0005, 0.0015))
+  .gain(1.0)
+  .pan(0.6)                                        // a little right of centre, before the amp: listen for a drift to the middle
+  .apply(singBus).late(perlin(0.0005, 0.0015))
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
   .ignp("decay", 3.0).clip(1.5)
-  .hpf(240)                                        // two octaves up, nothing of the melody lives below
-  .gain(0.45).pan(0.5)
-  .cylinder(6)
+  .gain(1.0).pan(0.5)
+  .apply(soarBus)
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
   .sound(bright).adsrOff().unison(voices = 5, spread = 0.04)
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
-  .lpf(6500).late(0.030)
-  .gain(0.05).pan(0.0).superimpose(x => x.pan(1.0)) // far left and far right, the right a little late
-  .cylinder(7).reverb(wet = 0.2, size = 6)       // a slight room of their own, inside the hall
+  .late(0.030)
+  .gain(1.0).pan(0.0).superimpose(x => x.pan(1.0)) // far left and far right, the right a little late
+  .apply(swellBus)
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
 export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .sound(deep).adsrOff().unison(voices = 11, spread = 0.06)
-  .ignp("decay", 2.0).clip(2).hpf(80)
+  .ignp("decay", 2.0).clip(2)
   .velocity("1.0 0.9 0.85")
-  .gain(0.25).pan(0.5)                             // on the left, across from the melody on the right
-  .cylinder(3)
+  .gain(1.0).pan(0.5)                              // on the left, across from the melody on the right
+  .apply(beatBus)
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
@@ -396,10 +484,10 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.90 0.85 0.90 0.93".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.40).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.73).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.50),
     // x => x.pan(0.10),
-  ).cylinder(4)
+  ).apply(heavyBus)
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
@@ -407,35 +495,38 @@ export wings = chords => n(chords).ply(16)
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.92 0.85 0.90 0.94".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.55).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .gain(1.0).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.95),
     x => x.pan(0.05),
   )
-  .cylinder(4)
+  .apply(heavyBus)
 
-// Strike: one heavy chord, let ring. It shares the wings' cylinder and room.
+// Strike: one heavy chord, let ring, through a heavy amp of its own.
 export strike = chords => n(chords)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
   .ignp("decay", 4.5).clip(1)
-  .gain(0.48).apply(x => x.pan(0.10),x => x.pan(0.90))
-  .cylinder(5)
+  .gain(1.0).apply(x => x.pan(0.10),x => x.pan(0.90))
+  .apply(strikeBus)
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.08).pregain(0.45)
   .ignp("decay", 0.30).ignp("sustain", 0.35).ignp("release", 1.1).clip(2)
   .velocity("1.0 0.8 0.9 0.8 0.95 0.8 0.9 0.8".sub(perlin(0.0, 0.10)))
-  .gain(0.32).pan(0.75).late(perlin(0.001, 0.002))
+  .gain(0.5)                                       // the clean amp hit softly: notes ring into each other in it
+  .pan(0.75)                                       // before the amp: listen for a drift to the middle
+  .late(perlin(0.001, 0.002))
   .tremolo(rate = beatRate(0.166), depth = perlin(0.100, 0.150))     // The guitar finger
   .vibrato(rate = beatRate(0.166), semitones = perlin(0.020, 0.030))
-  .cylinder(10)
+  .apply(chimeBus)
 
 // Strum: the clean rig, one slow strum, let ring.
 export strum = notes => n(notes)
   .sound(clean).adsrOff().unison(voices = 7, spread = 0.06).pregain(0.7)
   .ignp("decay", 0.30).ignp("sustain", 0.50).ignp("release", 5.0).clip(40)
-  .gain(0.18).pan(0.45)
-  .cylinder(8)
+  .gain(0.5)                                       // the clean amp hit softly: the strum rings into itself in it
+  .pan(0.45)                                       // before the amp: listen for a drift to the middle
+  .apply(strumBus)
 
 // The drums, for the second run of the heavy block: the band of Der Schmetterling, heavy and half time. The kick on one,
 // the snare on three, the Trommel rolling in on the off-beats of two and four, a crash on one and open hats on two to
@@ -473,30 +564,34 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
 // The cocoon is spun one thread at a time, over two rounds, in the middle; the answer and the heartbeat will stand to
 // either side of it.
 let spinning = stack(
-  spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.02)
+    .katp("gain.gain", 0.28 * spinTrim).katp("amp.hp", 120).katp("amp.lp", 3300)
     .mask("<[1 0 0 0 1 0 0 0]!2 [1 0 1 0 1 0 1 0]!2 [1 0 1 1 1 0 1 1]!2 1!2>"),
 )
 
 // A second guitar answers.
 let answering = stack(
-  spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.02)
+    .katp("gain.gain", 0.28 * spinTrim).katp("amp.hp", 120).katp("amp.lp", 3300)
     .mask("<[1 1 1 0 1 0 0 0]!2 [1 0 1 1 1 0 1 0]!2>"),
-  sing(melodyOne).pan(0.75).gain(0.24).hpf(300),
+  sing(melodyOne).pan(0.75).katp("gain.gain", 0.24 * singTrim).katp("amp.hp", 300),
 )
 
 // The heartbeat starts.
 let quickening = stack(
-  spin(cocoonArp).pan(0.25).gain(0.28).hpf(120).lpf(3300).unison(voices = 5, spread = 0.02)
+  spin(cocoonArp).pan(0.25).unison(voices = 5, spread = 0.02)
+    .katp("gain.gain", 0.28 * spinTrim).katp("amp.hp", 120).katp("amp.lp", 3300)
     .mask("<[1 1 1 1 1 0 1 1]!2 1!2>"),
-  sing(melodyTwo).pan(0.75).gain(0.24).hpf(312),
-  beat(cocoonRoots).pan(0.5).gain(saw(0.0, 0.22).slow(4)).lpf(1500),
+  sing(melodyTwo).pan(0.75).katp("gain.gain", 0.24 * singTrim).katp("amp.hp", 312),
+  beat(cocoonRoots).pan(0.5).katp("gain.gain", saw(0.0, 0.22).slow(4).mul(beatTrim)).katp("amp.lp", 1500),
 )
 
 // Swells stretch it from inside, the arpeggio grows.
 let stretching = stack(
-  spin(cocoonArp.ply(2)).pan(0.25).gain("<0.28 0.29 0.30 0.31>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyOne.ply(2)).pan(0.75).gain("<0.25 0.26 0.27 0.28>").hpf(325),
-  beat(cocoonRoots).pan(0.5).gain(0.18).lpf(1600),
+  spin(cocoonArp.ply(2)).pan(0.25).unison(voices = 5, spread = 0.02)
+    .katp("gain.gain", "<0.28 0.29 0.30 0.31>".mul(spinTrim)).katp("amp.lp", 3300),
+  sing(melodyOne.ply(2)).pan(0.75).katp("gain.gain", "<0.25 0.26 0.27 0.28>".mul(singTrim)).katp("amp.hp", 325),
+  beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.18 * beatTrim).katp("amp.lp", 1600),
   swell(cocoonSwell),
 )
 
@@ -504,9 +599,10 @@ let stretching = stack(
 let breath = "<1!3 [1 0]>"
 
 let holdingBreath = stack(
-  spin(cocoonArp.ply(2)).pan(0.25).gain("<0.30 0.31 0.32 0.33>").lpf(3300).unison(voices = 5, spread = 0.02),
-  sing(melodyTwo.struct("x!32")).pan(0.75).gain("<0.22 0.25 0.28 0.31>").hpf(325),
-  beat(cocoonRoots).pan(0.5).gain(0.20).lpf(1600),
+  spin(cocoonArp.ply(2)).pan(0.25).unison(voices = 5, spread = 0.02)
+    .katp("gain.gain", "<0.30 0.31 0.32 0.33>".mul(spinTrim)).katp("amp.lp", 3300),
+  sing(melodyTwo.struct("x!32")).pan(0.75).katp("gain.gain", "<0.22 0.25 0.28 0.31>".mul(singTrim)).katp("amp.hp", 325),
+  beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.20 * beatTrim).katp("amp.lp", 1600),
   swell(cocoonSwell),
 )
 
@@ -517,37 +613,37 @@ let breakingOpen = stack(
     .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.03)),
   wings(cocoonPower),
   chug(cocoonRoots),
-  beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
+  beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.10 * beatTrim).katp("amp.lp", 1600),
 )
 
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).gain(0.48).pregain(1.2).pan(0.25).superimpose(pan(0.75)),
+  spin(cocoonArp.add(7)).ply(2).katp("gain.gain", 0.48 * spinTrim).pregain(1.2).pan(0.25).superimpose(pan(0.75)),
   wings(cocoonPower2),
   chug(cocoonRoots),
-  beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
+  beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.10 * beatTrim).katp("amp.lp", 1600),
 )
 
 // The lift: Bb, C, Dm.
 let lifting = stack(
-  //spin(liftArp.add(14).ply(4)).gain(0.05).ignp("sustain", 0.0).clip(0.25).pan(0.25).superimpose(pan(0.75)),
+  //spin(liftArp.add(14).ply(4)).katp("gain.gain", 0.05 * spinTrim).ignp("sustain", 0.0).clip(0.25).pan(0.25).superimpose(pan(0.75)),
   soar(melodyTwo)
     .tremolo(rate = beatRate(0.25), depth = saw.slow(4).pow(3).mul(0.25).add(0.05))
     .vibrato(rate = beatRate(0.25), semitones = saw.slow(4).pow(3).mul(0.10).add(0.05)),
   wings(liftPower),
   chug(liftRoots),    
-  beat(cocoonRoots).pan(0.5).gain(0.10).lpf(1600),
+  beat(cocoonRoots).pan(0.5).katp("gain.gain", 0.10 * beatTrim).katp("amp.lp", 1600),
 )
 
 // It lands on one heavy chord with the low D under it, and the melody holds its A.
 let landing = stack(
-  spin("[0 4 7 9 11 9 7 4]".add(7)).gain(0.35).ignp("sustain", 0.15).clip(0.66),
-  soar("[4@6 ~@2]").gain(0.35)
+  spin("[0 4 7 9 11 9 7 4]".add(7)).katp("gain.gain", 0.35 * spinTrim).ignp("sustain", 0.15).clip(0.66),
+  soar("[4@6 ~@2]").katp("gain.gain", 0.35 * soarTrim)
     .tremolo(rate = beatRate(0.25), depth = 0.25)
     .vibrato(rate = beatRate(0.25), semitones = 0.30),
   strike("[-7,0,4]").accelerate("0.05".add(perlin(-0.20, 0.20))).ignp("release", 3.5),
-  beat("0").gain(0.45),
+  beat("0").katp("gain.gain", 0.45 * beatTrim),
 )
 
 // The cocoon again, empty now, and the butterfly flies off.
