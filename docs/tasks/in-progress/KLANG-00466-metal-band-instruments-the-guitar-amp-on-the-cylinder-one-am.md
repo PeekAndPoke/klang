@@ -73,7 +73,7 @@ Each is written with the choice the plan makes. A "no" to one of them changes th
 | D8 | What the optimizer merges | Adjacent `eq` stages whose knobs are all numbers; never an `eq` holding a `tap` into the one before it; no kill switch | A tap reads its EQ's input, so merging would move what it hears. A slot knob can move while the chain runs, and the stage answers a move as a whole, so merging would change how a move sounds. With both refusals the merged chain renders the same bits as the written one, always, so there is nothing to settle by ear. |
 | D9 | Where the optimizer runs | In the backend, when a chain is registered | The voice's optimizer runs there (`IgnitorRegistry`); the wire carries what was written. |
 | D10 | Section words inside `eq(...)` (`e.lowpass(...)`) | Not added now | That is KLANG-00250 (general EQ core); by the parity rule it would have to land on the voice's EQ builder too. |
-| D11 | How the two variants are compared | Both in the song behind one switch, the old rig deleted after the verdict | The maintainer edits the songs daily; a copied song file would be stale within a day. |
+| D11 | How the two variants are compared | REPLACED 2026-11-19 by the maintainer: a copy of the current song as a second built-in song, and a full port, no switch. Was: both in the song behind one switch, the old rig deleted after the verdict | The maintainer edits the songs daily; a copied song file would be stale within a day. |
 | D12 | The bass rig | On the bass's cylinder too | Its first stage is a compressor, and a compressor exists only on a cylinder. |
 | D13 | Pan after the amp | OPEN, found while planning. A chain has no `pan`; with the amp on the cylinder a voice's `pan` comes before the amp. Der Schmetterling does not need it, Kokon has four lines that do | KLANG-00470 (step 4) has the options: a `pan` stage on a chain, accepting the drift, or leaving those lines on the per-note rig. |
 
@@ -145,3 +145,4 @@ acceptance.
 - 2026-11-18: step 1 done (KLANG-00467, 62910fb0a).
 - 2026-11-19: D8 and D9 confirmed by the maintainer; step 2 starts.
 - 2026-11-19: step 2 done (KLANG-00468): the chain's pass, and a chain's stages are in place before its first block (found by review, fixed on the maintainer's word).
+- 2026-11-19: D11 replaced by the maintainer (a copy and a full port, no switch); step 3 starts.

@@ -1,6 +1,6 @@
 # KLANG-00469: Cylinder amp step 3: Der Schmetterling's guitars on cylinder amps
 
-> **Status (2026-11-18): IDEA.** 
+> **Status (2026-11-19): IN PROGRESS.** Klang-Main-Dev: step 3 starts, on the maintainer's rework of 2026-11-19
 >
 > **Part of:** KLANG-00466 (Metal band instruments: the guitar amp on the cylinder, one amp per guitarist)
 
@@ -11,6 +11,29 @@ note to one amp per guitarist, and its two rhythm guitars share one amp (the mai
 stays in the song behind one switch until the maintainer has compared the two.
 
 Needs KLANG-00467 (step 1). KLANG-00468 (step 2) is not needed to start: it only makes the chain cheaper.
+
+## Reworked by the maintainer (2026-11-19, to Klang-Main-Dev)
+
+"Please make a copy of the current version. Then a full port of the song, not a switch please." This replaces D11
+of KLANG-00466 and every line below that speaks of the switch (`ampOnCylinder`), of "both positions", of parts
+written without `Ign.fn` / `Kat.fn` so that they serve both variants, and of deleting the loser after the verdict.
+What holds now:
+
+- **The copy.** The song as it is today becomes a second built-in song, playable beside the port, so the two can
+  be compared by ear: its own file (`DerSchmetterlingAmpPerNote.kt`), its own id and title ("Der Schmetterling (amp
+  per note)"), listed right after Der Schmetterling in `BuiltInSongs`. Its code is today's, byte for byte, apart
+  from what a second song needs (id, title, and nothing that would make two songs export under one module name).
+  It is the reference; it is not edited after that. Whether it stays is the maintainer's to say after listening.
+- **The port.** Der Schmetterling itself is ported in full: the voice keeps the string and the pickup (pickups stay
+  `Ign.fn`), every other rig part becomes a chain function written with `Kat.fn(...)`, and the amp runs on the
+  guitarist's cylinder. No switch, no old branch left in the song.
+- **`drive` ports as `drive`.** Step 1 added it to a chain: `powerStock` keeps `drive(0.3)`, not `mul(2.29)`.
+- **The target is the decided shape** (decision 4 of KLANG-00466): the two rhythm guitars through ONE amp on one
+  cylinder (stage B below), with the ticket's start values, the wood of the first rhythm guitar in the file, and a
+  comment naming the choices that are the maintainer's by ear (the wood, how hard the amp is hit). Stage A (each
+  guitar on a cylinder of its own) is not shipped; it is the configuration the port is MEASURED in against the
+  copy, since there the two should be close.
+- The header comment is rewritten for the new signal path, and the stale lines go, as "After the verdict" says.
 
 ## Read first
 
@@ -211,3 +234,5 @@ Known differences that are NOT faults of the port:
 ## History
 
 - 2026-11-18: created, as step 3 of KLANG-00466.
+- 2026-11-19: reworked by the maintainer: a copy of the current song and a full port, no switch.
+- 2026-11-19: IN PROGRESS. Klang-Main-Dev: step 3 starts, on the maintainer's rework of 2026-11-19
