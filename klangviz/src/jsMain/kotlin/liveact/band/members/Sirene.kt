@@ -39,9 +39,13 @@ val SIRENE: Member = Member(
     bearing = null,
     // in the order of rank: she answers a look; she stares at the camera seldom and long (a chance every 23 s, a third
     // of them taken, held four to six seconds, and then not again for 30 s); she glances at one of the band (a chance
-    // every 14 s, half of them taken, held a second or two); she looks at nothing (a chance every 19 s, half of them
+    // every 14 s, half of them taken, there a second or two); she looks at nothing (a chance every 19 s, half of them
     // taken, held three to five seconds); and most of the time between them her gaze wanders over
-    // the crowd (a chance every 9 s, three in four taken, held four to six seconds, resting on a spot 1.5 to 2.5 s)
+    // the crowd (a chance every 9 s, three in four taken, held four to six seconds, resting on a spot 1.5 to 2.5 s).
+    // Her timed looks may come suddenly, but go back slowly, over 1.6 to 1.8 s, never faster than they came (the
+    // maintainer, 2026-11-19: "One sudden movement is fine, but the way back then needs to be slower, as if she was
+    // 'startled' for a moment and then comes back to normal"); the glance's hold grew by its longer fall, so it
+    // stays there about as long as before. (The eye contact is no timed look: it falls as the whole band's does.)
     skills = listOf(
         EyeContact,
         CameraStare(
@@ -54,7 +58,7 @@ val SIRENE: Member = Member(
                 earliest = 0.5,
                 reserve = 7.5,
                 rise = 0.9,
-                fall = 1.1,
+                fall = 1.8,
             ),
         ),
         BandGlance(
@@ -62,12 +66,12 @@ val SIRENE: Member = Member(
                 every = 14.0,
                 chance = 0.5,
                 cooldown = 0.0,
-                least = 1.2,
-                most = 2.2,
+                least = 2.2,
+                most = 3.2,
                 earliest = 0.5,
-                reserve = 3.5,
+                reserve = 4.2,
                 rise = 0.5,
-                fall = 0.5,
+                fall = 1.6,
             ),
         ),
         InwardStare(
@@ -80,7 +84,7 @@ val SIRENE: Member = Member(
                 earliest = 0.5,
                 reserve = 6.5,
                 rise = 1.0,
-                fall = 1.1,
+                fall = 1.8,
             ),
         ),
         CrowdGaze(
@@ -93,7 +97,7 @@ val SIRENE: Member = Member(
                 earliest = 0.5,
                 reserve = 7.5,
                 rise = 0.9,
-                fall = 1.0,
+                fall = 1.8,
             ),
             spotLeast = 1.5,
             spotMost = 2.5,

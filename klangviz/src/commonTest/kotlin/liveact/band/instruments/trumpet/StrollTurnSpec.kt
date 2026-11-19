@@ -10,14 +10,15 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import kotlin.math.PI
+import kotlin.math.sin
 
 class StrollTurnSpec : StringSpec({
 
-    "she turns to where she wants to face, never faster than a calm turn, and stays there" {
+    "she turns to where she wants to face, never faster than a body walking a bend, and stays there" {
         val turn = StrollTurn(from = 10.0, to = 60.0) { 2.0 }
 
-        withClue("a second in: 57 degrees a second at most (eleven steps are worked out by then)") {
-            turn.at(11.0) shouldBe (1.1 plusOrMinus 1e-9)
+        withClue("half a second in: 120 degrees a second at most (six steps are worked out by then)") {
+            turn.at(10.5) shouldBe (1.26 plusOrMinus 1e-9)
         }
 
         withClue("there after a while") {
@@ -57,6 +58,25 @@ class StrollTurnSpec : StringSpec({
         withClue("ended as it began, or a step before") {
             StrollTurn(from = 5.0, to = 5.0) { 2.0 }.at(5.0) shouldBe 0.0
             StrollTurn(from = 5.0, to = 4.9) { 2.0 }.at(5.0) shouldBe 0.0
+        }
+    }
+
+    "a turn handed over to a stroll that replaces its own (its end changed) is the same at the hand-over, then follows the new way" {
+        val old = StrollTurn(from = 10.0, to = 70.0) { x -> 1.5 * sin(x / 3) }
+        val new = StrollTurn(from = 10.0, to = 50.0, handOver = old, at = 23.37) { -1.0 }
+
+        withClue("at the hand-over, and before it") {
+            new.at(23.37) shouldBe old.at(23.37)
+            new.at(17.0) shouldBe old.at(17.0)
+        }
+
+        withClue("well after it, where the new way wants it") {
+            new.at(45.0) shouldBe (-1.0 plusOrMinus 1e-3)
+        }
+
+        withClue("a hand-over before the stroll begins takes nothing over") {
+            StrollTurn(from = 10.0, to = 50.0, handOver = old, at = 5.0) { -1.0 }.at(10.5) shouldBe
+                StrollTurn(from = 10.0, to = 50.0) { -1.0 }.at(10.5)
         }
     }
 })

@@ -13,8 +13,12 @@ import io.peekandpoke.klang.viz.liveact.around
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.figure.TALL
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.camera.HOME
+import io.peekandpoke.klang.viz.liveact.camera.TOTAL_DRIFT_Y
+import io.peekandpoke.klang.viz.liveact.camera.TOTAL_DRIFT_Z
 import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
@@ -42,6 +46,7 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.math.tan
 
 // The trumpet player, who plays a tune of held notes (which of a song's parts that is, the cast says): raises the
 // trumpet to the lips before a phrase, fingers the valves on every note, points the bell higher for a high note and
@@ -90,8 +95,22 @@ class TrumpetPlayer(
     class Sound(val note: Note?, val sounding: Double, val high: Double, val blow: Double)
 
     private companion object {
-        /** Back at her place from a stroll, she turns to the front within this many seconds. */
+        /**
+         * Back at her place from a stroll, she turns to the front within this many seconds. A guard only: her way
+         * home arrives facing the front (see [StrollHome]), and the body's inertia ([StrollTurn]) has caught up by
+         * then, so there is next to nothing left to turn.
+         */
         const val TURN_HOME = 3.0
+
+        /** A look out of her sight on a stroll lets go over this many seconds, as her looks fall (`SIRENE`). */
+        const val LOOK_LET_GO = 1.6
+
+        /** The moments before that it is let go from, this many seconds apart. */
+        const val LOOK_STEP = 0.1
+
+        /** How far her face is before her middle, and the room left before the camera, in her sizes. */
+        const val FACE = 0.1
+        const val ROOM = 0.1
     }
 
     /** Which way the stroll goes at one moment: how fast, how much it walks (0 to 1), and the turn into its way. */
@@ -99,17 +118,25 @@ class TrumpetPlayer(
 
     /**
      * A stretch in which she has nothing to play and strolls about the front of the stage, from [from] to [to]
-     * seconds. Which way she faces on it is worked out once per stroll (see [StrollTurn]): the direction of her way
-     * jumps where she turns round or nearly stands, so she follows it with a body's inertia.
+     * seconds, her end known since [known] (see [StrollHome]: her route, and a way home in time). Which way she
+     * faces on it is worked out once per stroll (see [StrollTurn]): she follows her way with a body's inertia.
+     * [before]: the stroll it replaces, where her end changed while she strolled (the same start): up to [known] she
+     * goes and faces as she did on it. Only what is needed is taken over, so no line of replaced strolls is kept.
      */
-    private inner class Stroll(val from: Double, val to: Double) {
-        private val turn = StrollTurn(from = from, to = to) { x -> facing(this, x).turn }
+    private inner class Stroll(val from: Double, val to: Double, known: Double, before: Stroll? = null) {
+        /** Where the stroll has her, off her place, in her sizes. */
+        val way: StrollHome = StrollHome(route = route, from = from, to = to, notBefore = known, before = before?.way)
+
+        private val turn: StrollTurn = StrollTurn(from = from, to = to, handOver = before?.turn, at = known) { x -> facing(this, x).turn }
 
         /** Which way she faces at [t], off the way she faces at her place. */
         fun turnAt(t: Double): Double = turn.at(t)
     }
 
     private val mover = Mover(show = show, seed = seed, traits = traits)
+
+    /** Her way on a stroll, the same for every stroll (see [StrollRoute]): a stroll only shifts its time. */
+    private val route: StrollRoute
     private val bpm: Double = show.bpm
     private val s: Double = rig.s
 
@@ -150,6 +177,11 @@ class TrumpetPlayer(
 
         home = rig.root.position.clone()
         homeTurn = rig.root.rotation.y
+        route = StrollRoute(
+            seed = show.seed,
+            restTurn = homeTurn,
+            closest = closestToCamera(chin = rig.bone("head").getWorldPosition(vec()).y),
+        )
 
         part.refresh()
         plan(now = Double.NEGATIVE_INFINITY)
@@ -163,50 +195,50 @@ class TrumpetPlayer(
         val before = strolls
 
         planned = planTrumpet(notes = part.events, now = now, before = planned)
-        // the same stroll as before keeps what was worked out for it
+        // the same stroll as before keeps what was worked out for it; one whose end changed goes on from where the
+        // one it replaces had her (see [StrollHome])
         strolls = planned.strolls.map { stroll ->
-            before.firstOrNull { it.from == stroll.from && it.to == stroll.to } ?: Stroll(from = stroll.from, to = stroll.to)
+            val old = before.firstOrNull { it.from == stroll.from }
+
+            if (old != null && old.to == stroll.to) {
+                old
+            } else {
+                Stroll(from = stroll.from, to = stroll.to, known = now, before = old)
+            }
         }
     }
 
-    /** Where the stroll [k] has her at [t], off her place: a slow wandering that leaves from her place and comes back to it. */
+    /**
+     * Where the stroll [k] has her at [t], off her place: her way through the front of the stage (see
+     * [StrollRoute]: out from her place, about, back to it, and there she waits a while before the next round), and
+     * in time a planned way home, so she is at her place, facing the front, as the stroll ends (see [StrollHome]).
+     */
     private fun strollAt(k: Stroll, t: Double): Vector3 {
-        val ease = ::smooth
-        // a stroll is rounds: out from her place, about, back to it, and there she waits a while before the next round.
-        // The rounds differ in length, so it is no clockwork
-        // (under the show's seed: the rounds start elsewhere in their order, and her way is another one)
-        val z = show.seed
-        val rounds = listOf(listOf(47, 61, 53, 69), listOf(61, 53, 69, 47), listOf(53, 69, 47, 61), listOf(69, 47, 61, 53))[z.mod(4)]
-        var x = t - k.from
-        var round = 0
+        val at = k.way.at(t)
 
-        while (x > rounds[round % rounds.size]) {
-            x -= rounds[round % rounds.size]
-            round++
-        }
+        return vec(at.x * s, 0.0, at.z * s)
+    }
 
-        val length = rounds[round % rounds.size]
-        // at her place she stands a good while (the maintainer, 2026-11-16: "stand still more between walking")
-        val wait = 20
-        val out = ease(x / 6) * ease((length - wait - x) / 6) * ease((k.to - t) / 7)
-        // on her way she stops too: seven seconds of walking, then four of standing where she is, and on
-        val leg = (t - k.from) / 11
-        val tau = 7 * (floor(leg) + ease((leg - floor(leg)) * 11 / 7))
-        // toward the audience: a little about, and in some rounds (about two in five, by the seed) she comes right
-        // up to the camera in the round's middle, stays a moment and goes back
-        // (the sum as a floating number, as the prototype has it: a large seed must not wrap round)
-        val close = if (((round * 7.0 + z * 3.0) % 5) < 2) {
-            3.4 * s * ease((x - 0.22 * length) / (0.2 * length)) * ease((0.72 * length - x) / (0.2 * length)) *
-                ease((k.to - t) / 9)
-        } else {
-            0.0
-        }
+    /**
+     * The nearest she may come to the total's camera on a stroll (see [StrollRoute]), off her place in her sizes:
+     * right before the lens, as close as her head stays whole in the wide shot. The total drifts a little
+     * ([TOTAL_DRIFT_Z] toward the stage and [TOTAL_DRIFT_Y] up at most), so its nearest and highest place counts.
+     * The frame's lower edge falls from the lens at half the lens's angle plus the camera's tilt down to what it
+     * looks at, the upper edge rises at half the angle less the tilt: her chin (where her head's bone starts) stays
+     * above the one, the top of her head ([TALL]) below the other. Her face is [FACE] of her size before her
+     * middle, and [ROOM] more is left.
+     */
+    private fun closestToCamera(chin: Double): StrollRoute.Offset {
+        val lensY = HOME.pos.y + TOTAL_DRIFT_Y
+        val lensZ = HOME.pos.z - TOTAL_DRIFT_Z
+        val tilt = atan2(HOME.pos.y - HOME.at.y, HOME.pos.z - HOME.at.z)
+        val half = HOME.fov / 2 * PI / 180
+        val top = home.y + TALL * rig.height
+        val below = if (chin < lensY) (lensY - chin) / tan(half + tilt) else 0.0
+        val above = if (top > lensY) (top - lensY) / tan(half - tilt) else 0.0
+        val stand = lensZ - max(below, above) - (FACE + ROOM) * s
 
-        return vec(
-            out * (0.60 * sin(0.15 * tau + z * 1.7) + 0.18 * sin(0.34 * tau + 1.0 + z * 2.3) + 0.30) * s,
-            0.0,
-            out * (0.18 * sin(0.21 * tau + 2.0 + z * 0.9) + 0.30) * s + close,
-        )
+        return StrollRoute.Offset(x = (HOME.pos.x - home.x) / s, z = (stand - home.z) / s)
     }
 
     private fun facing(k: Stroll, x: Double): Facing {
@@ -262,19 +294,45 @@ class TrumpetPlayer(
     /**
      * The looks her skills ask for at [t], as far as she takes each: as far as she is free to look ([freeToLook]),
      * and as far as the place is in sight where she stands and faces ([walk]); a look at one behind her goes over
-     * her shoulder, and lets go where they are straight behind her.
+     * her shoulder, and lets go where they are straight behind her. Where she turns away from a look on a stroll,
+     * the head lets go of it slowly, over [LOOK_LET_GO] seconds, as a look falls ([lookReach]: by where she stood
+     * and faced over those seconds, from her own way, [walkAt]); not where she is put from outside ([put]), whose
+     * way before is not hers to know. Straight behind her it lets go all the same.
      */
-    private fun looksAt(t: Double, walk: Walk): List<Turn> {
+    private fun looksAt(t: Double, walk: Walk, put: Boolean): List<Turn> {
         val free = freeToLook(notes = notes, t = t)
 
         if (free <= 0) {
             return emptyList()
         }
 
+        // where she stood and faced a moment ago, at fixed times (so the head lets go smoothly as t goes on): worked
+        // out only where she has looks, and once for all of them
+        val grid = floor(t / LOOK_STEP) * LOOK_STEP
+        val past = HashMap<Int, Walk>()
+
+        fun yawOf(look: Look, from: Walk): Double {
+            val off = atan2(look.at.x - from.at.x, look.at.z - from.at.z) - from.turn
+
+            return atan2(sin(off), cos(off))
+        }
+
         return looks(t).map { look ->
-            val off = atan2(look.at.x - walk.at.x, look.at.z - walk.at.z) - walk.turn
-            val yaw = atan2(sin(off), cos(off))
-            val share = look.share * free * headReach(angle = yaw, behind = look.behind)
+            val yaw = yawOf(look = look, from = walk)
+            val before: ((Int) -> Double)? = if (put) {
+                null
+            } else {
+                { k -> yawOf(look = look, from = past.getOrPut(k) { walkAt(grid - k * LOOK_STEP) }) }
+            }
+            val reach = lookReach(
+                t = t,
+                yaw = yaw,
+                reach = { angle -> headReach(angle = angle, behind = look.behind) },
+                yawBefore = before,
+                fall = LOOK_LET_GO,
+                step = LOOK_STEP,
+            )
+            val share = look.share * free * reach
 
             Turn(look = look, share = share, yaw = max(-1.25, min(1.25, yaw)))
         }.filter { it.share > 0 }
@@ -320,7 +378,7 @@ class TrumpetPlayer(
         rig.root.rotation.y = walk.turn
 
         // where her skills ask the head to look, each as far as she may: a stare calms the nod and the wander
-        val turns = looksAt(t = t, walk = walk)
+        val turns = looksAt(t = t, walk = walk, put = put != null)
         val calm = turns.filter { it.look.still }.maxOfOrNull { it.share } ?: 0.0
 
         val beat = t * bpm / 60

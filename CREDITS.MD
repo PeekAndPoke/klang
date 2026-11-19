@@ -207,6 +207,10 @@ Visuals and editor effects are powered by these libraries (integrated via Kraft 
   in it by script and exported as glTF
 - **[OKLab](https://bottosson.github.io/posts/oklab/)** by Björn Ottosson: the perceptual colour space a look's
   spectrum steps blend in, so Copper's blue fades into its copper through a warm grey, not a green one
+- **Dubins paths**, after L. E. Dubins, *"On Curves of Minimal Length with a Constraint on Average Curvature, and
+  with Prescribed Initial and Terminal Positions and Tangents"* (American Journal of Mathematics, 1957): the
+  frontwoman's strolls go from place to place by the shortest way of a bend, a straight and a bend, so she leaves
+  and reaches every standstill facing the way she stands and never turns on the spot
 
 ## The Editor
 

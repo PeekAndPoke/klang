@@ -56,6 +56,11 @@ class Shot(val pos: Vector3, val at: Vector3, val fov: Double)
 /** The total, the start position. Never change it: copy first. */
 val HOME: Shot by lazy { Shot(pos = vec(TOTAL_FROM.x, 1.85, TOTAL_FROM.z), at = vec(0.0, 1.0, 0.0), fov = 35.0) }
 
+/** How far the total breathes from [HOME] at most (see `home`): across, up and down, and toward the stage and back. */
+const val TOTAL_DRIFT_X = 0.15
+const val TOTAL_DRIFT_Y = 0.04
+const val TOTAL_DRIFT_Z = 0.12
+
 /**
  * The looks at every player of a band that stands at [homes]: [looksOf], each camera moved where it would stand in
  * another player or their instrument, so that it is [CLEAR] m from where every other one stands (see [clearLook]).
@@ -257,7 +262,9 @@ class Choreography(
     /** The total at [t]. It breathes: a slow drift, never still. */
     fun home(t: Double): Shot {
         return Shot(
-            pos = HOME.pos.clone().add(vec(0.15 * sin(t * 0.07), 0.04 * sin(t * 0.05 + 1), 0.12 * sin(t * 0.04))),
+            pos = HOME.pos.clone().add(
+                vec(TOTAL_DRIFT_X * sin(t * 0.07), TOTAL_DRIFT_Y * sin(t * 0.05 + 1), TOTAL_DRIFT_Z * sin(t * 0.04)),
+            ),
             at = HOME.at.clone(),
             fov = HOME.fov,
         )

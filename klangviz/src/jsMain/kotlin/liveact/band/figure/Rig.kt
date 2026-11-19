@@ -50,6 +50,9 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+/** A figure from its feet to the top of its head, against how high its head's bone starts (see [Rig.height]). */
+const val TALL: Double = 1.2
+
 /**
  * A figure's rig: its bones by the names of the joints they end at, its measures, and the two-bone reach.
  *
@@ -96,9 +99,6 @@ class Rig(val root: Object3D) {
 
     private companion object {
         const val EYES_OPACITY = 0.95
-
-        /** The figure from its feet to the top of its head, against how high its head's bone starts. */
-        const val TALL = 1.2
 
         /** The sphere a figure's skin is kept within for every pose: so many times the figure's height from its middle. */
         const val REACH = 1.5

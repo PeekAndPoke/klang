@@ -1,0 +1,424 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
+
+import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollLeg.Pose
+import io.peekandpoke.klang.viz.liveact.hash01
+import io.peekandpoke.klang.viz.liveact.smoother
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+/**
+ * Where the trumpet player's stroll takes her, [at] a time: a planned way through points, walked in legs with a
+ * standstill after each (the maintainer, 2026-11-19: "she should 'plan' a route through certain points and then
+ * 'bezier-curve' her way ... the distances between the points can be small, but many of them", and the strolling
+ * should appear "more 'deliberate'"). Everything goes by the time and the [seed] alone, so any moment can be asked
+ * for in any order.
+ *
+ * A stroll is rounds of 47, 61, 53 and 69 seconds (by the seed they start elsewhere in that order), and every round
+ * ends with [WAIT] seconds standing at her place. In the time before, she walks legs, each ending in a standstill
+ * of [PAUSE] seconds, the last one at her place. She arrives at every standstill already facing the way she faces
+ * at rest ([restTurn], radians, as her turn on the stage: she faces (sin, cos) of it in x and z), and leaves it
+ * walking forward: the way bends into it and out of it, no tighter than a turn a walking body makes (see
+ * [bendsAndStraight]), so she never turns on the spot. Along a leg she goes by distance, eased in and out
+ * ([smoother]: no speed and no push at either end), all legs of a round at the same pace.
+ *
+ * What a round does (see [Kind]): most go from point to point in the front of the stage; some walk along its front
+ * edge in one long arc (the maintainer, 2026-11-19: "a long arc along the edge of the stage near the audience"); in
+ * about two of five she walks up to the camera, stands there a moment and goes back, and in some of those she comes
+ * on until her face nearly fills the wide shot, as far as [closest] (the maintainer, 2026-11-19: "'frighteningly
+ * close' to the total camera sometimes").
+ *
+ * Places are off her place, in her sizes: x across the stage, z toward the audience. [closest]: the nearest she may
+ * come to the camera, off her place in her sizes (who knows the camera works it out); she never passes it.
+ *
+ * A round is worked out once, when it is first asked for, and kept: a stroll begins with one of the first
+ * [FIRST_ROUNDS] rounds (see [StrollHome]) and an hour holds some 63 of them, so the route keeps at most some 80,
+ * and every stroll shares them.
+ */
+class StrollRoute(private val seed: Int, private val restTurn: Double, private val closest: Offset) {
+
+    /** Where she is, off her place: [x] across the stage, [z] toward the audience, in her sizes. */
+    data class Offset(val x: Double, val z: Double)
+
+    /** What a round does. */
+    internal enum class Kind {
+        /** From point to point in the front of the stage, each a little nearer the audience, and home. */
+        Plain,
+
+        /** Out to one end of the front edge, along it in one long shallow arc, and home. */
+        Edge,
+
+        /** Up toward the camera, as far as [CAMERA_Z], and back. */
+        Camera,
+
+        /** Up to the camera as far as she may come ([closest]), slowly and straight for the last stretch, and back. */
+        Close,
+    }
+
+    /** One leg in the round's time: walked from [start] for [time] seconds (seconds into the round). */
+    internal class Walk(val leg: StrollLeg, val start: Double, val time: Double)
+
+    /** A round worked out: what it does ([kind]) and its legs, in order. */
+    internal class Round(val kind: Kind, val walks: List<Walk>)
+
+    private val rounds: List<Int> = LENGTHS.indices.map { i -> LENGTHS[(i + seed.mod(LENGTHS.size)) % LENGTHS.size] }
+
+    /** The way she faces at rest, as a pose's heading (see [Pose]). */
+    internal val rest: Double = atan2(cos(restTurn), sin(restTurn))
+    private val restX: Double = sin(restTurn)
+    private val restZ: Double = cos(restTurn)
+
+    private val worked = HashMap<Int, Round>()
+
+    /** Where she is [x] seconds after the stroll began, off her place, in her sizes. */
+    fun at(x: Double): Offset {
+        if (x <= 0.0) {
+            return HOME
+        }
+
+        val round = roundAt(x)
+        val into = x - startOf(round)
+
+        for (walk in roundOf(round).walks) {
+            if (into < walk.start) {
+                return walk.leg.first
+            }
+
+            if (into <= walk.start + walk.time) {
+                return walk.leg.at(walk.leg.length * smoother((into - walk.start) / walk.time))
+            }
+        }
+
+        return HOME
+    }
+
+    /** Which round [x] seconds after the stroll began lies in (the first is 0). */
+    internal fun roundAt(x: Double): Int {
+        val cycles = floor(x / CYCLE).toInt()
+        var into = x - cycles * CYCLE
+        var i = 0
+
+        while (i < rounds.size - 1 && into > rounds[i]) {
+            into -= rounds[i]
+            i++
+        }
+
+        return cycles * rounds.size + i
+    }
+
+    /** When the round [round] begins, seconds after the stroll began. */
+    internal fun startOf(round: Int): Double {
+        val cycles = round / rounds.size
+
+        return cycles * CYCLE + (0 until round % rounds.size).sumOf { rounds[it] }.toDouble()
+    }
+
+    /** How long the round [round] is, in seconds. */
+    internal fun lengthOf(round: Int): Double = rounds[round % rounds.size].toDouble()
+
+    /** The round [round] worked out (once, then kept). */
+    internal fun roundOf(round: Int): Round = worked.getOrPut(round) { build(round = round, kind = wanted(round)) }
+
+    /** A number from 0 to 1 for the round [round], its leg [leg] and the [k]th choice there: the same every time. */
+    private fun roll(round: Int, leg: Int, k: Int): Double = hash01(seed * 12.9898 + round * 78.233 + leg * 37.719 + k * 4.581)
+
+    /** What the round [round] is meant to do (an edge round with no time for its way becomes a plain one, see [build]). */
+    private fun wanted(round: Int): Kind {
+        // about two rounds in five go to the camera (the sum as a floating number: a large seed must not wrap round;
+        // and taken modulo by floor, so a negative seed does not make every round one)
+        if ((round * 7.0 + seed * 3.0).mod(5.0) < 2) {
+            // and some of those come right up to it, where the round has time for the long way at a calm pace
+            val window = lengthOf(round) - WAIT
+            val far = 2 * hypot(closest.x, closest.z) + 1.5
+
+            return if (roll(round = round, leg = 97, k = 0) < CLOSE_SHARE && far / (window - 3) <= CLOSE_PACE) {
+                Kind.Close
+            } else {
+                Kind.Camera
+            }
+        }
+
+        return if (roll(round = round, leg = 99, k = 0) < EDGE_SHARE) Kind.Edge else Kind.Plain
+    }
+
+    /** The round [round] worked out as a round of the [kind]. */
+    private fun build(round: Int, kind: Kind): Round {
+        val window = lengthOf(round) - WAIT
+        // the standstills between the legs: at the camera up close a moment only, two to three seconds
+        val pauses: (Int) -> List<Double> = { legs ->
+            when (kind) {
+                Kind.Close -> listOf(2.0 + roll(round = round, leg = 0, k = 71))
+                Kind.Plain, Kind.Edge, Kind.Camera -> List(legs - 1) { PAUSE }
+            }
+        }
+        val ways: (Double) -> List<List<Pose>> = { radius ->
+            when (kind) {
+                Kind.Plain -> plainWays(round = round, window = window, radius = radius)
+                Kind.Edge -> edgeWays(round = round, radius = radius)
+                Kind.Camera, Kind.Close -> cameraWays(round = round, close = kind == Kind.Close, radius = radius)
+            }
+        }
+
+        // the round's pace sets how tight she may bend: on the long way to the camera she walks faster, and bends
+        // wider. Worked out three times over, as the bends make the way longer.
+        var radius = RADIUS
+        var legs = emptyList<StrollLeg>()
+        var walking = window
+        var total = 0.0
+        val passes = if (kind == Kind.Camera || kind == Kind.Close) 3 else 1
+
+        repeat(passes) {
+            legs = ways(radius).map { StrollLeg(it) }
+            walking = window - pauses(legs.size).sum()
+            total = legs.sumOf { it.length }
+
+            if (kind == Kind.Camera || kind == Kind.Close) {
+                radius = min(RADIUS_MOST, max(RADIUS, RADIUS_PER_PACE * total / walking))
+            }
+        }
+
+        if (kind == Kind.Edge && total / walking > EDGE_PACE) {
+            return build(round = round, kind = Kind.Plain)
+        }
+
+        val stands = pauses(legs.size)
+        val walks = mutableListOf<Walk>()
+        var t = 0.0
+
+        for ((i, leg) in legs.withIndex()) {
+            // every leg at the round's pace: its share of the walking time is its share of the way
+            val time = walking * leg.length / total
+
+            walks.add(Walk(leg = leg, start = t, time = time))
+            t += time + (stands.getOrNull(i) ?: 0.0)
+        }
+
+        return Round(kind = kind, walks = walks)
+    }
+
+    /** The way from [from] to [to], both standing, the way she faces at rest; [leg] and [round] choose its S. */
+    private fun way(from: Offset, to: Offset, round: Int, leg: Int, radius: Double): List<Pose> {
+        val start = Pose(x = from.x, z = from.z, heading = rest)
+
+        return listOf(start) + bendsAndStraight(
+            from = start,
+            to = Pose(x = to.x, z = to.z, heading = rest),
+            radius = radius,
+            sway = SWAY * (2 * roll(round = round, leg = leg, k = 50) - 1),
+            spacing = SPACING,
+        )
+    }
+
+    /**
+     * A plain round's ways: about one leg for every [LEG] seconds of the [window] (at least two), from her place
+     * from stop to stop and home. Each stop is a little nearer the audience than the one before and [STEP_LEAST]
+     * to [STEP_MOST] from it, so the way between two bends out of the one and into the other in an S.
+     */
+    private fun plainWays(round: Int, window: Double, radius: Double): List<List<Pose>> {
+        val n = max(2, (window / LEG).roundToInt())
+        val stops = mutableListOf(HOME)
+
+        for (j in 0 until n - 1) {
+            val before = stops.last()
+            val z = AREA_NEAR + (AREA_FAR - AREA_NEAR) * (j + 0.2 + 0.6 * roll(round = round, leg = j, k = 0)) / (n - 1)
+            val dz = z - before.z
+            val d = STEP_LEAST + (STEP_MOST - STEP_LEAST) * roll(round = round, leg = j, k = 1)
+            val dx = sqrt(max(0.0, d * d - dz * dz))
+            val side = if (roll(round = round, leg = j, k = 2) < 0.5) 1.0 else -1.0
+            var x = before.x + side * dx
+
+            if (x < AREA_LEFT || x > AREA_RIGHT) {
+                x = before.x - side * dx
+            }
+
+            stops.add(Offset(x = min(AREA_RIGHT, max(AREA_LEFT, x)), z = z))
+        }
+
+        stops.add(HOME)
+
+        return (0 until n).map { j -> way(from = stops[j], to = stops[j + 1], round = round, leg = j, radius = radius) }
+    }
+
+    /**
+     * An edge round's ways: out to one end of the front edge (which end, the roll says), along the whole width in
+     * one long arc that bulges a little toward the audience, with no standstill on it, and home. She stands at
+     * each end facing the audience: at the first a quarter turn before the arc, at the last a quarter turn after it.
+     */
+    private fun edgeWays(round: Int, radius: Double): List<List<Pose>> {
+        val toward = if (roll(round = round, leg = 98, k = 0) < 0.5) 1.0 else -1.0
+        val q = EDGE_TURN
+        val ze = EDGE_NEAR + EDGE_SPREAD * roll(round = round, leg = 98, k = 1)
+        val xa = if (toward > 0) EDGE_LEFT else EDGE_RIGHT
+        val xb = if (toward > 0) EDGE_RIGHT else EDGE_LEFT
+        // where the arc begins and ends, and the way she goes there: along the edge
+        val ax = xa + toward * q
+        val bx = xb - toward * q
+        val along = if (toward > 0) 0.0 else PI
+        // the stands at its ends: a quarter turn of radius q from facing the audience into the arc, and out of it
+        val sa = if (wrap(along - rest) > 0) 1.0 else -1.0
+        val sb = if (wrap(rest - along) > 0) 1.0 else -1.0
+        val caX = ax - sa * q * sin(along)
+        val caZ = ze + sa * q * cos(along)
+        val e1 = Offset(x = caX + sa * q * sin(rest), z = caZ - sa * q * cos(rest))
+        val cbX = bx - sb * q * sin(along)
+        val cbZ = ze + sb * q * cos(along)
+        val e2 = Offset(x = cbX + sb * q * sin(rest), z = cbZ - sb * q * cos(rest))
+        val k = max(2, ceil(abs(bx - ax) / EDGE_EVERY).toInt())
+        val arcStart = Pose(x = ax, z = ze, heading = along)
+        val arcEnd = Pose(x = bx, z = ze, heading = along)
+        val first = Pose(x = e1.x, z = e1.z, heading = rest)
+        val arc = mutableListOf(first)
+
+        arc += bendsAndStraight(from = first, to = arcStart, radius = q, sway = 0.0, spacing = SPACING)
+
+        for (i in 1 until k) {
+            val f = i.toDouble() / k
+            // a bulge of sin squared: flat where it meets the quarter turns
+            val z = ze + BULGE * sin(PI * f) * sin(PI * f)
+            val heading = atan2(BULGE * PI * sin(2 * PI * f), bx - ax)
+
+            arc.add(Pose(x = ax + (bx - ax) * f, z = z, heading = heading))
+        }
+
+        arc.add(arcEnd)
+        arc += bendsAndStraight(from = arcEnd, to = Pose(x = e2.x, z = e2.z, heading = rest), radius = q, sway = 0.0, spacing = SPACING)
+
+        return listOf(
+            way(from = HOME, to = e1, round = round, leg = 0, radius = radius),
+            arc,
+            way(from = e2, to = HOME, round = round, leg = 2, radius = radius),
+        )
+    }
+
+    /**
+     * A camera round's ways: up to a stop before the camera and back. Up close ([close]) the last [RUN_IN] of the
+     * way there is straight at the lens, and she turns back from the stop in the tightest bend ([RADIUS], while
+     * she is still slow): the stop lies that bend's width short of [closest], so that leaving it, forward and
+     * round, she comes no nearer than that.
+     */
+    private fun cameraWays(round: Int, close: Boolean, radius: Double): List<List<Pose>> {
+        if (!close) {
+            val stop = Offset(x = 0.3 * (roll(round = round, leg = 0, k = 70) - 0.5), z = CAMERA_Z)
+
+            return listOf(
+                way(from = HOME, to = stop, round = round, leg = 0, radius = radius),
+                way(from = stop, to = HOME, round = round, leg = 1, radius = radius),
+            )
+        }
+
+        val stop = Offset(x = closest.x - restX * 1.2 * RADIUS, z = closest.z - restZ * 1.2 * RADIUS)
+        val before = Offset(x = stop.x - restX * RUN_IN, z = stop.z - restZ * RUN_IN)
+        val there = way(from = HOME, to = before, round = round, leg = 0, radius = radius).toMutableList()
+        val n = ceil(RUN_IN / SPACING).toInt()
+
+        for (i in 1..n) {
+            val f = i.toDouble() / n
+
+            there.add(Pose(x = before.x + restX * RUN_IN * f, z = before.z + restZ * RUN_IN * f, heading = rest))
+        }
+
+        return listOf(there, way(from = stop, to = HOME, round = round, leg = 1, radius = RADIUS))
+    }
+
+    companion object {
+        /** Her place. */
+        val HOME: Offset = Offset(x = 0.0, z = 0.0)
+
+        /** A stroll begins with one of this many rounds (see [StrollHome]). */
+        internal const val FIRST_ROUNDS = 16
+
+        /** The lengths of the rounds, in seconds, in their order. */
+        private val LENGTHS = listOf(47, 61, 53, 69)
+
+        /** All four rounds, one after the other. */
+        private val CYCLE: Double = LENGTHS.sum().toDouble()
+
+        /**
+         * The seconds she stands at her place at the end of every round (the maintainer, 2026-11-16: "stand still
+         * more between walking").
+         */
+        internal const val WAIT = 20.0
+
+        /** The seconds she stands at the end of a leg, but at the camera up close. */
+        internal const val PAUSE = 4.0
+
+        /** About one leg of a plain round for so many seconds of its walking window. */
+        internal const val LEG = 12.0
+
+        /** The area of a plain round's stops: across the stage, and toward the audience. */
+        internal const val AREA_LEFT = -0.25
+        internal const val AREA_RIGHT = 0.95
+        internal const val AREA_NEAR = 0.1
+        internal const val AREA_FAR = 0.5
+
+        /** How far a plain round's stop lies from the one before. */
+        internal const val STEP_LEAST = 0.55
+        internal const val STEP_MOST = 0.9
+
+        /**
+         * The tightest bend: its radius. Bends of a round with a faster pace are wider, [RADIUS_PER_PACE] times
+         * the pace (up to [RADIUS_MOST]), so she never turns faster than a body walking a bend.
+         */
+        internal const val RADIUS = 0.13
+        internal const val RADIUS_PER_PACE = 1.0
+        internal const val RADIUS_MOST = 0.6
+
+        /** The poses of a straight, this far apart. */
+        internal const val SPACING = 0.12
+
+        /** The most a straight swings to the side, in its S. */
+        internal const val SWAY = 0.05
+
+        /** How far toward the camera she comes in a camera round. */
+        internal const val CAMERA_Z = 3.4
+
+        /** The share of camera rounds that come right up close, where the round has time for it at [CLOSE_PACE]. */
+        internal const val CLOSE_SHARE = 2.0 / 3.0
+
+        /** The fastest pace (in her sizes a second, on average) a round up close may ask of her. */
+        internal const val CLOSE_PACE = 0.4
+
+        /** The straight walk at the lens before the stop up close. */
+        internal const val RUN_IN = 1.0
+
+        /** The share of the other rounds that walk the edge, where the round has time for it at [EDGE_PACE]. */
+        internal const val EDGE_SHARE = 0.55
+
+        /** The fastest pace an edge round may ask of her; a round that would need more is a plain one. */
+        internal const val EDGE_PACE = 0.15
+
+        /** The ends of the front edge's arc: within the widths she strolls in. */
+        internal const val EDGE_LEFT = -0.25
+        internal const val EDGE_RIGHT = 0.95
+
+        /** How near the audience the edge's arc runs: from [EDGE_NEAR], up to [EDGE_SPREAD] more. */
+        internal const val EDGE_NEAR = 0.5
+        internal const val EDGE_SPREAD = 0.1
+
+        /** The quarter turns into the edge's arc and out of it: their radius. */
+        internal const val EDGE_TURN = 0.12
+
+        /** How far the edge's arc bulges toward the audience in its middle. */
+        internal const val BULGE = 0.08
+
+        /** The arc's points, about this far apart. */
+        internal const val EDGE_EVERY = 0.25
+
+        /** [a] as the same turn within -pi to pi. */
+        private fun wrap(a: Double): Double = atan2(sin(a), cos(a))
+    }
+}
