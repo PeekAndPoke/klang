@@ -25,6 +25,15 @@ What the figures already have and must not be lost in any change of style or bod
 - **Rune:** the Medusa hair in her shadow, and from the front she looks a little like the creature of the Alien
   films.
 - **The ladies' eyes sit low in their heads** (Sirene, Rune): keep these proportions or stay close to them.
+- **The hands stay mittens.** The critic proposed separate fingers for every figure; the maintainer, 2026-11-19, on
+  the restyled bodies: "the hands make the looks to much more 'real'". The abstract hands are part of the uncanny.
+
+Sirene's head as a sea shell (the maintainer, 2026-11-19, with a photo of a snail shell from above: "replace Sirenes
+'hair' with a sea shell ... only the upper half. imagine the dark on the right is the face", and: "But the shape of the
+'hair' / 'hat' must stay the same to still look 'alien'"): the outline of her egg skull stays exactly; its surface
+becomes the shell's spiral, the apex at the back of the head, the whorls widening toward the front, and her face looks
+out of the shell's opening with her low eyes inside it. Painted by Gemini in the gallery's characters section; the
+turnaround keeps the size, the portrait drew the shell too large.
 
 ## The characters (a start)
 
@@ -130,3 +139,4 @@ drummer): "The idea of heading the fog behind the wire mesh is also nice. And th
 - 2026-11-19: the guiding feeling, what to keep, the characters as far as named, the maintainer's choice among the styles, and the two worlds.
 - 2026-11-19: Klaue's styled hair over a wild child; the critic's characters for all six.
 - 2026-11-19: the fog behind the mesh that gives way to the shadows; the sun behind the drummer.
+- 2026-11-19: the hands stay mittens; Sirene's head as a sea shell, its outline kept.
