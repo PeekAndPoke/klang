@@ -44,4 +44,85 @@ class PictureQualitySpec : StringSpec({
         PictureQuality.measuresTwice(fps1x = 54.9, density = 1.0) shouldBe false
         PictureQuality.measuresTwice(fps1x = 60.0, density = 2.0) shouldBe false
     }
+
+    // The fog: the choices as notstrom gives them (low, medium, high), and a small display's most (medium)
+
+    "where the first part holds 55 frames, the fog stays high" {
+        fog(fpsFull = 60.0, fpsFew = null) shouldBe 12
+        fog(fpsFull = 55.0, fpsFew = null) shouldBe 12
+        PictureQuality.measuresFog(fpsFull = 55.0) shouldBe false
+    }
+
+    "where the first part does not hold 55, the fog part is run" {
+        PictureQuality.measuresFog(fpsFull = 54.9) shouldBe true
+        PictureQuality.measuresFog(fpsFull = 20.0) shouldBe true
+        PictureQuality.measuresFog(fpsFull = Double.NaN) shouldBe true
+    }
+
+    "a Fairphone: 20 frames with the fog high, 34 with it low, gives low" {
+        // t(4) = 29.4 ms, t(12) = 50 ms: 2.57 ms a sheet, so medium is foreseen at 25 frames, and even low holds no 55
+        fog(fpsFull = 20.0, fpsFew = 34.0) shouldBe 4
+        fog(fpsFull = 20.0, fpsFew = 34.0, small = true) shouldBe 4
+    }
+
+    "low at 60 frames, capped by the display: medium where the line foresees it at 55 or more" {
+        // taken at the 60 measured: 54 at high foresees 56.8 for medium, 52 foresees 55.7, 50 foresees 54.5
+        fog(fpsFull = 54.0, fpsFew = 60.0) shouldBe 8
+        fog(fpsFull = 52.0, fpsFew = 60.0) shouldBe 8
+        fog(fpsFull = 50.0, fpsFew = 60.0) shouldBe 4
+    }
+
+    "high is never foreseen where it was measured below 55, however fast low is" {
+        // 200 at low and 54.9 at high: medium foreseen at 86, high at the 54.9 measured
+        fog(fpsFull = 54.9, fpsFew = 200.0) shouldBe 8
+        fog(fpsFull = 40.0, fpsFew = 144.0) shouldBe 8
+    }
+
+    "a small display gets at most medium, whatever the rates" {
+        fog(fpsFull = 60.0, fpsFew = null, small = true) shouldBe 8
+        fog(fpsFull = 144.0, fpsFew = null, small = true) shouldBe 8
+        fog(fpsFull = 54.0, fpsFew = 60.0, small = true) shouldBe 8
+        fog(fpsFull = 50.0, fpsFew = 60.0, small = true) shouldBe 4
+    }
+
+    "where the line says nothing, the plain answer is low" {
+        // no fog part
+        fog(fpsFull = 30.0, fpsFew = null) shouldBe 4
+        // rates that are no number, not finite, or not above 0
+        fog(fpsFull = 30.0, fpsFew = Double.NaN) shouldBe 4
+        fog(fpsFull = Double.NaN, fpsFew = 200.0) shouldBe 4
+        fog(fpsFull = 30.0, fpsFew = Double.POSITIVE_INFINITY) shouldBe 4
+        fog(fpsFull = 0.0, fpsFew = 200.0) shouldBe 4
+        fog(fpsFull = 30.0, fpsFew = -60.0) shouldBe 4
+    }
+
+    "a fog part not clearly faster than the first: the fog is not what limits, the most the rules allow" {
+        // a display of 30 pictures a second caps both parts alike
+        fog(fpsFull = 30.0, fpsFew = 30.0) shouldBe 12
+        // 31 is less than 5 percent faster than 30
+        fog(fpsFull = 30.0, fpsFew = 31.0) shouldBe 12
+        // slower with fewer sheets: noise, not the fog
+        fog(fpsFull = 30.0, fpsFew = 25.0) shouldBe 12
+        fog(fpsFull = 30.0, fpsFew = 30.0, small = true) shouldBe 8
+        // 31.5 is 5 percent faster: the line is asked, and foresees no 55
+        fog(fpsFull = 30.0, fpsFew = 31.5) shouldBe 4
+        // clearly faster: the line as before
+        fog(fpsFull = 20.0, fpsFew = 34.0) shouldBe 4
+    }
+
+    "a small display: a shorter side below 600 of the page's pixels" {
+        PictureQuality.isSmall(width = 360, height = 800) shouldBe true
+        PictureQuality.isSmall(width = 1000, height = 599) shouldBe true
+        PictureQuality.isSmall(width = 600, height = 900) shouldBe false
+        PictureQuality.isSmall(width = 1280, height = 800) shouldBe false
+    }
 })
+
+/** The fog's sheets [PictureQuality.fogFor] chooses from low, medium and high, a small display's most medium. */
+private fun fog(fpsFull: Double, fpsFew: Double?, small: Boolean = false): Int = PictureQuality.fogFor(
+    fpsFull = fpsFull,
+    fpsFew = fpsFew,
+    choices = listOf(4, 8, 12),
+    small = small,
+    smallMost = 8,
+)

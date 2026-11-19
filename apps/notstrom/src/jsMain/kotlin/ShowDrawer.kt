@@ -5,7 +5,10 @@
 
 package io.peekandpoke.klang.notstrom
 
+import io.peekandpoke.klang.viz.liveact.Oversampling
 import io.peekandpoke.klang.viz.liveact.Picture
+import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -15,10 +18,9 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.html.onInput
 import io.peekandpoke.ultra.html.onKeyDown
 import io.peekandpoke.ultra.html.onKeyUp
-import io.peekandpoke.ultra.html.onMouseEnter
-import io.peekandpoke.ultra.html.onMouseLeave
 import kotlinx.browser.document
 import kotlinx.browser.window
+import kotlinx.html.FlowContent
 import kotlinx.html.InputType
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -26,6 +28,7 @@ import kotlinx.html.input
 import kotlinx.html.label
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.Node
 import org.w3c.dom.events.Event
 import kotlin.math.roundToInt
 
@@ -37,21 +40,31 @@ fun Tag.ShowDrawer(picture: Picture, release: String, onVolume: (Double) -> Unit
 }
 
 /**
- * The drawer at the bottom of the window while the show plays: only a moving mouse brings it, and it goes again
- * [HIDE_MS] after the last move (while the pointer rests on it, it stays: a visitor reading it does not move). The
- * mouse pointer hides with it. It holds a button for fullscreen, whose label follows the page's real state (also when
- * fullscreen was entered by the choice before the show, or left with Esc); the live act's oversampling, its steps
- * with the one in use marked, following the real state (the test's choice, the key o, the live act's own step down),
- * where a choice is the visitor's and holds ([Props.picture]), and beside it the frames a second the live act counts
- * (read once a second while the drawer is shown, nothing while it is hidden); and the volume, 0 to 100 percent, full
- * at first and not kept ([Props.onVolume] is told a gain from 0 to 1). At its end, small and quiet, the [Props.release].
+ * The drawer at the bottom of the window while the show plays, shown and hidden as [DrawerShowing] decides. With a
+ * mouse: a move brings it, and it goes again 3 s after the last move (while the pointer rests on it, it stays: a
+ * visitor reading it does not move); the mouse pointer hides with it. With a touch screen (or a pen): a tap on the
+ * stage brings it, another tap on the stage hides it (that tap does nothing else in the show), taps in the drawer
+ * keep it, and it goes by itself 10 s after the last touch on it, so a drawer left open does not stay over the show.
+ * Mouse and touch are told apart by the pointer events' kind: a tap also sends the browser's emulated mouse events,
+ * which would hold the drawer for ever as a mouse resting on it. It holds two rows.
+ *
+ * The first is the picture: the live act's oversampling, its steps (0.5x to 4x) with the one in use marked, the fog
+ * on the floor, its qualities (off to xhigh) likewise, and the lamps' shadows (low, high), each following the real
+ * state (the test's choice, the keys o and g, the live act's own step down), where a choice is the visitor's and
+ * holds ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
+ * nothing while it is hidden).
+ * The second: a button for fullscreen, whose label follows the page's real state (also when fullscreen was entered by
+ * the choice before the show, or left with Esc); the volume, 0 to 100 percent, full at first and not kept
+ * ([Props.onVolume] is told a gain from 0 to 1); and at its end, small and quiet, the [Props.release]. On a narrow
+ * window a row wraps within itself, a group of buttons too, so nothing runs past the window's edge.
  *
  * The live act listens for clicks and keys on the whole window: what is clicked or typed in the drawer goes no
  * further while it is shown, so it reaches the show neither as a pause nor as a camera key. When it hides it gives the
  * keyboard's focus back, so no hidden control takes the keys (an arrow on the volume, Space on fullscreen) and the
  * live act's keys work again.
  *
- * No pause: a cyclic playback cannot hold its sound and its time and take both up again (KLANG-00465).
+ * No pause, by design: a live act has none (the maintainer, 2026-11-19: "it is a liveact and there is no pause... when
+ * you miss something you missed it"; KLANG-00474, won't implement).
  */
 class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
 
@@ -65,7 +78,13 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
     private var volume: Int by value(100)
 
     /** The samples drawn for each pixel now, as the live act tells. */
-    private val samples: Int by subscribingTo(props.picture.samples)
+    private val samples: Double by subscribingTo(props.picture.samples)
+
+    /** The fog's quality now, as the live act tells. */
+    private val fog: FogQuality by subscribingTo(props.picture.fog)
+
+    /** The shadows' quality now, as the live act tells. */
+    private val shadows: ShadowQuality by subscribingTo(props.picture.shadows)
 
     /** The frames a second, as last read (while the drawer is shown). */
     private var fps: Int by value(0)
@@ -73,26 +92,73 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
     /** Reads the frame rate once a second while the drawer is shown. */
     private var fpsTimer: Int? = null
 
-    private var hovered = false
-    private var hideTimer: Int? = null
+    /** When the drawer is shown and hidden. */
+    private val showing = DrawerShowing()
 
-    private val onMove: (Event) -> Unit = { show() }
+    /** Asks [showing] four times a second, while the drawer is shown, whether its time has come. */
+    private var dueTimer: Int? = null
+
+    /** The click of a tap that hid the drawer: the show does not take it. */
+    private var swallowClick = false
+
+    /** A mouse moved: over the drawer, or over the stage. */
+    private val onPointerMove: (Event) -> Unit = { event ->
+        if (kindOf(event) == MOUSE) {
+            showing.mouseMoved(now = window.performance.now(), onDrawer = onDrawer(event))
+            follow()
+        }
+    }
+
+    /** A touch or a pen came down: on the drawer, or on the stage. */
+    private val onPointerDown: (Event) -> Unit = { event ->
+        // only the click of this very tap is swallowed, never a later one
+        swallowClick = false
+
+        if (kindOf(event) != MOUSE) {
+            swallowClick = showing.tapped(now = window.performance.now(), onDrawer = onDrawer(event))
+            follow()
+        }
+    }
+
+    /** The mouse left the drawer (also out of the window): it rests on it no more. */
+    private val onPointerLeave: (Event) -> Unit = { event ->
+        if (kindOf(event) == MOUSE) {
+            showing.mouseMoved(now = window.performance.now(), onDrawer = false)
+            follow()
+        }
+    }
+
+    /** The click of a tap that hid the drawer goes no further: the live act listens for clicks on the window. */
+    private val onClickFirst: (Event) -> Unit = { event ->
+        if (swallowClick) {
+            swallowClick = false
+            event.stopPropagation()
+            event.preventDefault()
+        }
+    }
 
     private val onFullscreenChange: (Event) -> Unit = { fullscreen = isFullscreen() }
 
     init {
         lifecycle {
             onMount {
-                window.addEventListener("mousemove", onMove)
+                window.addEventListener("pointermove", onPointerMove)
+                window.addEventListener("pointerdown", onPointerDown)
+                // before the live act's own listener on the window
+                window.addEventListener("click", onClickFirst, true)
+                dom?.addEventListener("pointerleave", onPointerLeave)
                 document.addEventListener("fullscreenchange", onFullscreenChange)
                 pointer()
             }
 
             onUnmount {
-                window.removeEventListener("mousemove", onMove)
+                window.removeEventListener("pointermove", onPointerMove)
+                window.removeEventListener("pointerdown", onPointerDown)
+                window.removeEventListener("click", onClickFirst, true)
+                dom?.removeEventListener("pointerleave", onPointerLeave)
                 document.removeEventListener("fullscreenchange", onFullscreenChange)
-                hideTimer?.let { window.clearTimeout(it) }
-                hideTimer = null
+                dueTimer?.let { window.clearInterval(it) }
+                dueTimer = null
                 fpsTimer?.let { window.clearInterval(it) }
                 fpsTimer = null
                 document.documentElement?.asDynamic()?.style?.cursor = ""
@@ -100,27 +166,37 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
         }
     }
 
-    /** Shows the drawer, and hides it again after [HIDE_MS] unless the pointer rests on it then. */
-    private fun show() {
-        if (!shown) {
-            shown = true
+    /** Whether [event] happened on the drawer (its buttons, the volume) rather than on the stage. */
+    private fun onDrawer(event: Event): Boolean {
+        val target = event.target as? Node ?: return false
+
+        return dom?.contains(target) == true
+    }
+
+    /** Shows or hides the drawer as [showing] has it now, with what goes with that. */
+    private fun follow() {
+        if (showing.shown == shown) {
+            return
+        }
+
+        shown = showing.shown
+
+        if (shown) {
             pointer()
             readFps()
             fpsTimer = window.setInterval({ readFps() }, FPS_MS)
+            dueTimer = window.setInterval({
+                showing.due(now = window.performance.now())
+                follow()
+            }, DUE_MS)
+        } else {
+            pointer()
+            letGoOfFocus()
+            fpsTimer?.let { window.clearInterval(it) }
+            fpsTimer = null
+            dueTimer?.let { window.clearInterval(it) }
+            dueTimer = null
         }
-
-        hideTimer?.let { window.clearTimeout(it) }
-        hideTimer = window.setTimeout({
-            hideTimer = null
-
-            if (!hovered) {
-                shown = false
-                pointer()
-                letGoOfFocus()
-                fpsTimer?.let { window.clearInterval(it) }
-                fpsTimer = null
-            }
-        }, HIDE_MS)
     }
 
     /** The keyboard's focus leaves the drawer, where one of its controls had it. */
@@ -155,9 +231,9 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 put("bottom", "0")
                 put("z-index", "20")
                 put("display", "flex")
-                put("justify-content", "center")
+                put("flex-direction", "column")
                 put("align-items", "center")
-                put("gap", "24px")
+                put("gap", "10px")
                 put("padding", "12px 16px")
                 put("background", "rgba(2, 3, 8, 0.82)")
                 put("border-top", "1px solid #1b2030")
@@ -185,31 +261,32 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 }
             }
 
-            onMouseEnter { hovered = true }
-            onMouseLeave {
-                hovered = false
-                show()
-            }
+            // the picture
+            row {
+                group {
+                    +"Oversampling"
 
-            plainButton(text = if (fullscreen) "Leave fullscreen" else "Enter fullscreen", primary = false) {
-                if (fullscreen) {
-                    leaveFullscreen()
-                } else {
-                    enterFullscreen()
-                }
-            }
-
-            div {
-                css {
-                    put("display", "flex")
-                    put("align-items", "center")
-                    put("gap", "8px")
+                    for (step in Picture.STEPS) {
+                        plainButton(text = Oversampling.label(step), primary = step == samples) { props.picture.choose(step) }
+                    }
                 }
 
-                +"Oversampling"
+                group {
+                    +"Fog"
 
-                for (step in Picture.STEPS) {
-                    plainButton(text = "${step}x", primary = step == samples) { props.picture.choose(step) }
+                    for (quality in FogQuality.entries) {
+                        plainButton(text = fogLabel(quality), primary = quality == fog) { props.picture.chooseFog(quality) }
+                    }
+                }
+
+                group {
+                    +"Shadows"
+
+                    for (quality in ShadowQuality.entries) {
+                        plainButton(text = shadowsLabel(quality), primary = quality == shadows) {
+                            props.picture.chooseShadows(quality)
+                        }
+                    }
                 }
 
                 div {
@@ -223,58 +300,122 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 }
             }
 
-            label {
-                css {
-                    put("display", "flex")
-                    put("align-items", "center")
-                    put("gap", "10px")
+            // the window and the sound
+            row {
+                plainButton(text = if (fullscreen) "Leave fullscreen" else "Enter fullscreen", primary = false) {
+                    if (fullscreen) {
+                        leaveFullscreen()
+                    } else {
+                        enterFullscreen()
+                    }
                 }
 
-                +"Volume"
-
-                input(type = InputType.range) {
-                    attributes["min"] = "0"
-                    attributes["max"] = "100"
-                    attributes["step"] = "1"
-                    value = "$volume"
+                label {
                     css {
-                        put("width", "160px")
+                        put("display", "flex")
+                        put("align-items", "center")
+                        put("gap", "10px")
                     }
-                    onInput { event ->
-                        val percent = (event.target as? HTMLInputElement)?.value?.toIntOrNull()?.coerceIn(0, 100)
 
-                        if (percent != null) {
-                            volume = percent
-                            props.onVolume(percent / 100.0)
+                    +"Volume"
+
+                    input(type = InputType.range) {
+                        attributes["min"] = "0"
+                        attributes["max"] = "100"
+                        attributes["step"] = "1"
+                        value = "$volume"
+                        css {
+                            put("width", "160px")
+                            put("max-width", "40vw")
                         }
+                        onInput { event ->
+                            val percent = (event.target as? HTMLInputElement)?.value?.toIntOrNull()?.coerceIn(0, 100)
+
+                            if (percent != null) {
+                                volume = percent
+                                props.onVolume(percent / 100.0)
+                            }
+                        }
+                    }
+
+                    div {
+                        css {
+                            put("width", "3.5em")
+                            put("white-space", "nowrap")
+                            put("font-variant-numeric", "tabular-nums")
+                        }
+                        +"$volume %"
                     }
                 }
 
                 div {
                     css {
-                        put("width", "3.5em")
+                        put("margin-left", "12px")
+                        put("color", "#6b7385")
+                        put("font-size", "13px")
                         put("white-space", "nowrap")
-                        put("font-variant-numeric", "tabular-nums")
                     }
-                    +"$volume %"
+                    +props.release
                 }
-            }
-
-            div {
-                css {
-                    put("margin-left", "12px")
-                    put("color", "#6b7385")
-                    put("font-size", "13px")
-                    put("white-space", "nowrap")
-                }
-                +props.release
             }
         }
     }
 
+    /** A row of the drawer: its parts side by side, centred, wrapping within the row where the window is narrow. */
+    private fun FlowContent.row(content: FlowContent.() -> Unit) {
+        div {
+            css {
+                put("display", "flex")
+                put("flex-wrap", "wrap")
+                put("justify-content", "center")
+                put("align-items", "center")
+                put("gap", "10px 24px")
+                put("max-width", "100%")
+            }
+
+            content()
+        }
+    }
+
+    /** A label and its buttons, side by side, wrapping where the window is narrow. */
+    private fun FlowContent.group(content: FlowContent.() -> Unit) {
+        div {
+            css {
+                put("display", "flex")
+                put("flex-wrap", "wrap")
+                put("justify-content", "center")
+                put("align-items", "center")
+                put("gap", "8px")
+            }
+
+            content()
+        }
+    }
+
+    /** A shadow quality's label on its button: `Low`, `High`. */
+    private fun shadowsLabel(quality: ShadowQuality): String = when (quality) {
+        ShadowQuality.Low -> "Low"
+        ShadowQuality.High -> "High"
+    }
+
+    /** A fog's label on its button: `Off`, `Low`, `Medium`, `High`, `XHigh`. */
+    private fun fogLabel(quality: FogQuality): String = when (quality) {
+        FogQuality.Off -> "Off"
+        FogQuality.Low -> "Low"
+        FogQuality.Medium -> "Medium"
+        FogQuality.High -> "High"
+        FogQuality.XHigh -> "XHigh"
+    }
+
     private companion object {
-        /** How long the drawer stays after the mouse last moved, in milliseconds. */
-        const val HIDE_MS = 3000
+        /** How often the drawer asks whether its time to go has come, while it is shown, in milliseconds. */
+        const val DUE_MS = 250
+
+        /** A pointer event's kind for a mouse (the others: `touch`, `pen`). */
+        const val MOUSE = "mouse"
+
+        /** The kind of pointer that sent [event]: [MOUSE], `touch` or `pen`; a mouse where it does not say. */
+        fun kindOf(event: Event): String = event.asDynamic().pointerType as? String ?: MOUSE
 
         /** How often the frame rate is read while the drawer is shown, in milliseconds. */
         const val FPS_MS = 1000

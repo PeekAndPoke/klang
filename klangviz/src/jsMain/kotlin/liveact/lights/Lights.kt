@@ -35,9 +35,12 @@ class Lamp(val light: SpotLight, val base: Double, val seed: Double, val group: 
  * breathes a little, shivers faintly, and now and then sags for a moment as if something else drew current; none
  * is ever quite steady and no two do the same (see [lampFlicker]).
  *
+ * Four lamps cast shadows (the two main lamps behind, the one between them, and the low front lamp), as finely as
+ * [shadows] asks; at another quality while the show plays: [shadows].
+ *
  * Listens for the key f on the window (trying the front lamp's colours): [dispose] stops that.
  */
-class Lights(show: Show, scene: Scene) {
+class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.High) {
 
     /** One of the two main lamps behind: its place as built, and which side of a mood it takes. */
     private class MainLamp(val lamp: Lamp, val home: Vector3, val side: (Mood) -> MoodLamp)
@@ -48,6 +51,12 @@ class Lights(show: Show, scene: Scene) {
     val lamps: List<Lamp>
 
     private val mains: List<MainLamp>
+
+    /** The lamps that cast a shadow at [ShadowQuality.High]: at another quality, some of them may cast none. */
+    private val casters: List<Lamp>
+
+    /** How finely the shadows are drawn now. */
+    private var shadowQuality: ShadowQuality = shadows
 
     /** The front lamp's colour tried by hand: an index into [FrontColors.TRY], -1 while the show has the lamp. */
     private var tried = -1
@@ -68,6 +77,7 @@ class Lights(show: Show, scene: Scene) {
         scene.add(Three.addon.createAmbientLight(color = 0x8090ff, intensity = 0.05))
 
         val all = mutableListOf<Lamp>()
+        val castsAtHigh = mutableListOf<Lamp>()
 
         fun spot(
             x: Double,
@@ -85,8 +95,8 @@ class Lights(show: Show, scene: Scene) {
             )
             light.position.set(x, y, z)
             light.target.position.set(targetX, 1.0, targetZ)
-            light.castShadow = shadow
-            light.tuneShadow(mapSize = 2048, bias = -0.0005)
+            light.castShadow = shadow && shadows.casts(place)
+            light.tuneShadow(mapSize = shadows.mapSize, bias = -0.0005)
             scene.add(light)
             scene.add(light.target)
             all.add(
@@ -98,6 +108,10 @@ class Lights(show: Show, scene: Scene) {
                     place = place,
                 )
             )
+
+            if (shadow) {
+                castsAtHigh.add(all.last())
+            }
         }
 
         spot(
@@ -123,13 +137,16 @@ class Lights(show: Show, scene: Scene) {
         )
         low.position.set(0.6, 0.25, 8.6)
         low.target.position.set(0.0, 2.6, -8.0)
-        low.castShadow = true
-        low.tuneShadow(mapSize = 2048, bias = -0.0006, near = 1.0, far = 30.0)
+        // the band's big shadows on the wall are the look: it casts at every quality
+        low.castShadow = shadows.casts(null)
+        low.tuneShadow(mapSize = shadows.mapSize, bias = -0.0006, near = 1.0, far = 30.0)
         scene.add(low)
         scene.add(low.target)
         all.add(Lamp(light = low, base = 95.0, seed = 31.7, group = LampGroup.FRONT))
+        castsAtHigh.add(all.last())
 
         lamps = all
+        casters = castsAtHigh
         mains = listOf<(Mood) -> MoodLamp>(Mood::left, Mood::right).mapIndexed { index, side ->
             val lamp = lamps[index]
 
@@ -186,6 +203,34 @@ class Lights(show: Show, scene: Scene) {
             val shadow = lamp.light.shadow
 
             shadow.autoUpdate = shadowDrawn(intensity = lamp.light.intensity, made = shadow.map != null)
+        }
+    }
+
+    /**
+     * The shadows at [quality], where it is another than now: each lamp's map is freed where its size changes or the
+     * lamp casts no more (three.js makes the new one at the next frame), and the lamps cast as [quality] says. A
+     * choice by hand: where the number of lamps that cast changes, every lit material is built anew once (a short
+     * hitch, the first time a quality is drawn).
+     */
+    fun shadows(quality: ShadowQuality) {
+        if (quality == shadowQuality) {
+            return
+        }
+
+        shadowQuality = quality
+
+        for (lamp in casters) {
+            val light = lamp.light
+            val shadow: dynamic = light.shadow
+            val casts = quality.casts(lamp.place)
+
+            if (!casts || shadow.mapSize.x != quality.mapSize) {
+                shadow.map?.dispose()
+                shadow.map = null
+            }
+
+            light.tuneShadow(mapSize = quality.mapSize)
+            light.castShadow = casts
         }
     }
 

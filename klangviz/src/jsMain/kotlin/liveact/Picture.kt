@@ -5,6 +5,8 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 
@@ -13,12 +15,17 @@ import io.peekandpoke.ultra.streams.StreamSource
  * ([samples]) whenever it changes (at its start, by the key o, by its own step down), takes what is asked with
  * [choose], and tells the frame rate ([fps]) the live act counts for its line at the top, each half second while the
  * page is seen. The oversampling steps are [STEPS], the samples drawn for each pixel, as the key o cycles through
- * them. It also tells how far the band's figures have loaded ([figures]). For an app's controls, its loading screen
- * and its picture test (notstrom's, KLANG-00465); one handle for one live act at a time.
+ * them. The fog on the floor likewise: it tells the [fog]'s quality whenever it changes (at its start, by the key g)
+ * and takes what is asked with [chooseFog]; and the lamps' [shadows], taken with [chooseShadows]. A choice through the
+ * handle is taken at once. It also tells how far the
+ * band's figures have loaded ([figures]). For an app's controls, its loading screen and its picture test (notstrom's,
+ * KLANG-00465); one handle for one live act at a time.
  */
 class Picture {
 
-    private val samplesSource = StreamSource(1)
+    private val samplesSource = StreamSource(Oversampling.PLAIN)
+    private val fogSource = StreamSource(FogQuality.High)
+    private val shadowsSource = StreamSource(ShadowQuality.High)
     private val fpsSource = StreamSource(0.0)
     private val figuresSource = StreamSource(Figures(arrived = 0, of = 0, failed = false))
 
@@ -28,11 +35,23 @@ class Picture {
         val done: Boolean get() = !failed && of > 0 && arrived >= of
     }
 
-    /** Who takes a choice: the live act this handle was given to, while it is mounted. */
-    private var taker: ((Int) -> Unit)? = null
+    /** Who takes a choice of the oversampling: the live act this handle was given to, while it is mounted. */
+    private var taker: ((Double) -> Unit)? = null
+
+    /** Who takes a choice of the fog: the same live act. */
+    private var fogTaker: ((FogQuality) -> Unit)? = null
+
+    /** Who takes a choice of the shadows: the same live act. */
+    private var shadowsTaker: ((ShadowQuality) -> Unit)? = null
 
     /** The samples drawn for each pixel now, as the live act draws them; 1 until one tells. */
-    val samples: Stream<Int> = samplesSource.readonly
+    val samples: Stream<Double> = samplesSource.readonly
+
+    /** The fog's quality now, as the live act draws it; high until one tells. */
+    val fog: Stream<FogQuality> = fogSource.readonly
+
+    /** The shadows' quality now, as the live act draws them; high until one tells. */
+    val shadows: Stream<ShadowQuality> = shadowsSource.readonly
 
     /** The frames a second of the last half second counted; 0 until one tells. */
     val fps: Stream<Double> = fpsSource.readonly
@@ -44,25 +63,59 @@ class Picture {
      * Asks the live act for [samples] for each pixel (one of [STEPS]; another is not taken). A choice by hand, as the
      * key o is: the live act steps down by itself no more in that show. Nothing happens while no live act has it.
      */
-    fun choose(samples: Int) {
+    fun choose(samples: Double) {
         if (samples in STEPS) {
             taker?.invoke(samples)
         }
     }
 
-    /** The live act takes the choices from now on. */
-    internal fun attach(take: (Int) -> Unit) {
+    /**
+     * Asks the live act for the fog drawn at [quality]: the old fog goes, with all it holds on the graphics card, and
+     * the new one is made (none for off). Nothing happens while no live act has it.
+     */
+    fun chooseFog(quality: FogQuality) {
+        fogTaker?.invoke(quality)
+    }
+
+    /**
+     * Asks the live act for the lamps' shadows at [quality]: maps of another size are made anew, and where the number
+     * of lamps that cast changes, every lit material is built anew once (a short hitch). Nothing happens while no live
+     * act has it.
+     */
+    fun chooseShadows(quality: ShadowQuality) {
+        shadowsTaker?.invoke(quality)
+    }
+
+    /**
+     * The live act takes the choices from now on: [take] the oversampling's, [takeFog] the fog's, [takeShadows] the
+     * shadows'.
+     */
+    internal fun attach(take: (Double) -> Unit, takeFog: (FogQuality) -> Unit, takeShadows: (ShadowQuality) -> Unit) {
         taker = take
+        fogTaker = takeFog
+        shadowsTaker = takeShadows
     }
 
     /** The live act is gone. */
     internal fun detach() {
         taker = null
+        fogTaker = null
+        shadowsTaker = null
     }
 
     /** The live act tells what it draws now. */
-    internal fun tellSamples(samples: Int) {
+    internal fun tellSamples(samples: Double) {
         samplesSource(samples)
+    }
+
+    /** The live act tells the fog it draws now. */
+    internal fun tellFog(quality: FogQuality) {
+        fogSource(quality)
+    }
+
+    /** The live act tells the shadows it draws now. */
+    internal fun tellShadows(quality: ShadowQuality) {
+        shadowsSource(quality)
     }
 
     /** The live act tells the frame rate it counted. */
@@ -76,7 +129,7 @@ class Picture {
     }
 
     companion object {
-        /** The oversampling steps: the samples drawn for each pixel. */
-        val STEPS = listOf(1, 2, 4)
+        /** The oversampling steps: the samples drawn for each pixel ([Oversampling.STEPS]). */
+        val STEPS: List<Double> = Oversampling.STEPS
     }
 }

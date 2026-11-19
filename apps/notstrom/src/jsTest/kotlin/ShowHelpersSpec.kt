@@ -9,6 +9,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
+import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
 
 class ShowHelpersSpec : StringSpec({
@@ -64,5 +65,49 @@ class ShowHelpersSpec : StringSpec({
         showSeed(switches = Switches.parse("seed=42"), random = Random(1)) shouldBe 42
         showSeed(switches = Switches.parse("seed=x"), random = Random(1)) shouldBe Random(1).nextInt(100_000)
         showSeed(switches = Switches(), random = Random(5)) shouldBe Random(5).nextInt(100_000)
+    }
+
+    "the test's fog is handed on, unless the address sets it (fog= or nofog); high sets nothing" {
+        showSwitches(query = "", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "low"
+        showSwitches(query = "", strobe = true, fog = FogQuality.High).has(Switch.Fog) shouldBe false
+        showSwitches(query = "?fog=xhigh", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "xhigh"
+        showSwitches(query = "?nofog", strobe = true, fog = FogQuality.Low) shouldBe Switches.parse("nofog&nohud")
+        setsFog("?seed=1&fog=low") shouldBe true
+        setsFog("?nofog") shouldBe true
+        setsFog("?foggy&seed=1") shouldBe false
+    }
+
+    "a test's result is kept only under an address with no switch but the app's own" {
+        keepsTest("") shouldBe true
+        keepsTest("?nostrobe&hud&notest") shouldBe true
+        keepsTest("?nofog") shouldBe false
+        keepsTest("?shadows=low") shouldBe false
+        keepsTest("?fog=low&nostrobe") shouldBe false
+        keepsTest("?nosky") shouldBe false
+        keepsTest("?seed=3") shouldBe false
+        keepsTest("?t=5&nohud") shouldBe true
+    }
+
+    "keys that name no live-act switch (a shared link's) do not stop a result from being kept" {
+        keepsTest("?fbclid=x") shouldBe true
+        keepsTest("?utm_source=feed&nostrobe") shouldBe true
+        keepsTest("?fbclid=x&still") shouldBe false
+    }
+
+    "the address's shadows are carried into the show; the test chooses none" {
+        showSwitches(query = "?shadows=low", strobe = true, fog = FogQuality.Low)[Switch.Shadows] shouldBe "low"
+        showSwitches(query = "", strobe = true, fog = FogQuality.Low).has(Switch.Shadows) shouldBe false
+    }
+
+    "the result's line says the oversampling and the fog, or which of them the address sets" {
+        qualityLine(query = "", oversample = 1, fog = FogQuality.Low) shouldBe "Picture quality: standard, fog low."
+        qualityLine(query = "?seed=2", oversample = 2, fog = FogQuality.High) shouldBe
+            "Picture quality: high (2x oversampling), fog high."
+        qualityLine(query = "?oversample=4", oversample = 2, fog = FogQuality.Medium) shouldBe
+            "Picture quality: oversampling as the address sets it, fog medium."
+        qualityLine(query = "?nofog", oversample = 2, fog = FogQuality.Low) shouldBe
+            "Picture quality: high (2x oversampling), fog as the address sets it."
+        qualityLine(query = "?fog=low&oversample=1", oversample = 1, fog = FogQuality.Low) shouldBe
+            "Picture quality: as the address sets it (oversampling and fog)."
     }
 })

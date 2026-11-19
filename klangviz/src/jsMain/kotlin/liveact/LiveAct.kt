@@ -15,9 +15,11 @@ import io.peekandpoke.klang.viz.liveact.band.members.Members
 import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
+import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
+import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
 import io.peekandpoke.klang.workshop.threejs.info
@@ -54,7 +56,7 @@ import kotlin.math.sqrt
  * asked for with each file (a release's figures may be cached for long, and a new release asks anew). The music is
  * the show's ([Show.music]). [walkInAtOnce]: the walk-in begins as soon as the band stands, without a click; [frameTimes]: told
  * the time of every frame drawn; [stepsDown]: the oversampling steps down where the frames stay slow; [picture]: the
- * oversampling seen and set, and the frame rate seen, from outside (all four: see [LiveAct.Props]).
+ * oversampling and the fog seen and set, and the frame rate seen, from outside (all four: see [LiveAct.Props]).
  */
 @Suppress("FunctionName")
 fun Tag.LiveAct(
@@ -115,15 +117,16 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         val frameTimes: ((Double) -> Unit)? = null,
         /**
          * Where the picture starts with oversampling (`?oversample=2`), it takes a step down to fewer samples when
-         * the frames stay slow for a while ([Downshift]), and never steps up again by itself. For an app that chose
+         * the frames stay slow for a while ([Downshift]), never below 1x, and never steps up again by itself. For an app that chose
          * the oversampling by a test of this machine (notstrom's, KLANG-00465). False: the oversampling stays where
          * it is set, as before.
          */
         val stepsDown: Boolean = false,
         /**
-         * The picture seen and set from outside the live act ([Picture]): it is told every change of the oversampling
-         * and the frame rate counted for the line at the top, and an oversampling chosen through it is taken as the
-         * key o's is (by hand: no step down by itself after it). Null: none.
+         * The picture seen and set from outside the live act ([Picture]): it is told every change of the oversampling,
+         * the fog and the shadows, and the frame rate counted for the line at the top. An oversampling chosen through
+         * it is taken as the key o's is (by hand: no step down by itself after it), a fog as the key g's, the shadows
+         * at once. Null: none.
          */
         val picture: Picture? = null,
     )
@@ -176,26 +179,42 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     }
 
     /**
-     * Oversampling: the picture is drawn with more pixels than the screen shows and scaled down, which smooths edges
-     * and the glitter. 2x and 4x are the number of pixels drawn (so 1.41 and 2 times as many each way); the cost in
-     * frames grows about as much. The key o steps through them; `?oversample=2` starts with one.
+     * Oversampling, the samples drawn for each pixel ([Oversampling]): at 2x and 4x the picture is drawn with more
+     * pixels than the screen shows and scaled down, which smooths edges and the glitter; at 0.5x with fewer, softer
+     * and faster. The cost in frames goes about with the samples. The key o steps through them; `?oversample=2`
+     * starts with one.
      */
-    private var over: Int = maxOf(0, SAMPLES.indexOf(props.show.switches[Switch.Oversample]?.toIntOrNull() ?: 1))
+    private var samples: Double = Oversampling.parse(props.show.switches[Switch.Oversample])
 
     /** The oversampling was chosen by hand (the key o, or [Props.picture]): it holds, no step down by itself. */
     private var byHand = false
 
     /**
-     * How finely the picture is drawn: it follows the frame rate (see [Sharpness]). Not where the picture is frozen
-     * (a still is the same on every machine), not with oversampling (that asks for more pixels), and not with
-     * `?sharp`, which keeps the screen's own pixels whatever the frames do.
+     * How the fog on the floor is drawn ([FogQuality]): `?fog=low` (or `?nofog`) starts with another than high; the
+     * key g steps through them. It does not step down by itself: where the frames are slow, [sharpness] and the
+     * oversampling's step down are the safety net.
+     */
+    private var fog: FogQuality = FogQuality.of(props.show.switches)
+
+    /**
+     * How finely the lamps' shadows are drawn ([ShadowQuality]): `?shadows=low` starts with low. Changed only by hand
+     * ([Props.picture]), no key.
+     */
+    private var shadows: ShadowQuality = ShadowQuality.of(props.show.switches)
+
+    /**
+     * How finely the picture is drawn: it follows the frame rate (see [Sharpness]), at 1x and at 0.5x (half the
+     * pixels of what 1x draws then). Not where the picture is frozen (a still is the same on every machine), not
+     * with oversampling above 1x (that asks for more pixels), and not with `?sharp`, which keeps the screen's own
+     * pixels whatever the frames do.
      */
     private val sharpness = Sharpness(full = screenRatio())
 
     /** When the oversampling takes a step down, where [Props.stepsDown] asks for it. */
     private val downshift = Downshift()
 
-    private val adapts: Boolean get() = over == 0 && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
+    private val adapts: Boolean
+        get() = Oversampling.follows(samples) && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
 
     /** The line that says what the camera does, once it was looked up, and when it was last written. */
     private var hud: HTMLElement? = null
@@ -203,9 +222,15 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
     private val onKey: (Event) -> Unit = { event ->
         val e = event as? KeyboardEvent
+        val plain = e != null && !event.fromTyping() && !e.ctrlKey && !e.metaKey && !e.altKey
+        val key = e?.key?.lowercase()
 
-        if (e != null && !event.fromTyping() && e.key.lowercase() == "o" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            oversample(step = (over + 1) % SAMPLES.size, byHand = true)
+        if (plain && key == "o") {
+            oversample(to = Oversampling.next(samples), byHand = true)
+        }
+
+        if (plain && key == "g") {
+            chooseFog(FogQuality.entries[(fog.ordinal + 1) % FogQuality.entries.size])
         }
     }
 
@@ -213,8 +238,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         lifecycle {
             onMount {
                 props.picture?.let {
-                    it.attach { samples -> oversample(step = SAMPLES.indexOf(samples), byHand = true) }
-                    it.tellSamples(SAMPLES[over])
+                    it.attach(
+                        take = { samples -> oversample(to = samples, byHand = true) },
+                        takeFog = { quality -> chooseFog(quality) },
+                        takeShadows = { quality -> chooseShadows(quality) },
+                    )
+                    it.tellSamples(samples)
+                    it.tellFog(fog)
+                    it.tellShadows(shadows)
                 }
                 window.addEventListener("resize", onResize)
                 window.document.addEventListener("visibilitychange", onVisibility)
@@ -282,7 +313,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         // line's first number is too high, for a tenth of a second)
         ctx.renderer.info.autoReset = false
 
-        val stage = Stage(show = show, scene = ctx.scene, camera = lens, renderer = ctx.renderer)
+        val stage = Stage(show = show, scene = ctx.scene, camera = lens, renderer = ctx.renderer, fog = fog, shadows = shadows)
 
         this.stage = stage
         scene = ctx.scene
@@ -292,7 +323,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         resize()
 
-        if (over > 0) {
+        if (samples != Oversampling.PLAIN) {
             sample()
         }
 
@@ -399,9 +430,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 sample()
             }
 
-            // one step fewer samples where the frames stay slow, as the key o changes them (`stepsDown`)
-            if (props.stepsDown && over > 0 && downshift.judge(fps = fps, byHand = byHand)) {
-                oversample(step = over - 1, byHand = false)
+            // one step fewer samples where the frames stay slow, as the key o changes them (`stepsDown`); never
+            // below 1x: 0.5x is a choice by hand only
+            val below = Oversampling.below(samples)
+
+            if (props.stepsDown && below != null && downshift.judge(fps = fps, byHand = byHand)) {
+                oversample(to = below, byHand = false)
             }
         }
 
@@ -416,7 +450,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 "music: ${show.music.source}",
                 "camera: ${now.view.what()}",
                 "seed ${show.seed}",
-                "oversampling ${SAMPLES[over]}x (key o)",
+                "oversampling ${Oversampling.label(samples)} (key o)",
+                "fog ${fog.word} (key g)",
+                "shadows ${shadows.word}",
                 "${fps.toFixed(0)} fps",
                 "slowest frame $worstShown ms",
                 "pixels ${sharpness.ratio.toFixed(2)}x",
@@ -446,27 +482,45 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     }
 
     /**
-     * The oversampling at [step] of [SAMPLES]: the pixels judged anew from full, and drawn so. [byHand]: the key o or
-     * a choice from outside, which holds (no step down by itself after it). Tells [Props.picture].
+     * The oversampling at [to] samples (one of [Oversampling.STEPS]; another is not taken): the pixels judged anew
+     * from full, and drawn so. [byHand]: the key o or a choice from outside, which holds (no step down by itself
+     * after it). Tells [Props.picture].
      */
-    private fun oversample(step: Int, byHand: Boolean) {
-        if (step !in SAMPLES.indices) {
+    private fun oversample(to: Double, byHand: Boolean) {
+        if (to !in Oversampling.STEPS) {
             return
         }
 
-        over = step
+        samples = to
         this.byHand = this.byHand || byHand
         sharpness.reset(full = screenRatio())
         sample()
-        props.picture?.tellSamples(SAMPLES[over])
+        props.picture?.tellSamples(samples)
+    }
+
+    /**
+     * The fog on the floor at [quality], at once: the stage makes it anew where it is another (before the stage is
+     * built, it is built so). Tells [Props.picture].
+     */
+    private fun chooseFog(quality: FogQuality) {
+        fog = quality
+        stage?.fog(quality)
+        props.picture?.tellFog(quality)
+    }
+
+    /** The lamps' shadows at [quality], at once ([Stage.shadows]). Tells [Props.picture]. */
+    private fun chooseShadows(quality: ShadowQuality) {
+        shadows = quality
+        stage?.shadows(quality)
+        props.picture?.tellShadows(quality)
     }
 
     /**
      * Sets the renderer's pixels: the screen's (at most 2) or fewer where the frames come too slowly ([sharpness]),
-     * times the oversampling chosen.
+     * times the oversampling chosen, each way.
      */
     private fun sample() {
-        renderer?.setPixelRatio(sharpness.ratio * sqrt(SAMPLES[over].toDouble()))
+        renderer?.setPixelRatio(sharpness.ratio * sqrt(samples))
         resize()
     }
 
@@ -496,8 +550,5 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         /** The screen's pixels for each of the page's, each way, as it is now; at most 2. */
         fun screenRatio(): Double = minOf(window.devicePixelRatio, 2.0)
-
-        /** How many times the screen's pixels are drawn. */
-        val SAMPLES = Picture.STEPS
     }
 }

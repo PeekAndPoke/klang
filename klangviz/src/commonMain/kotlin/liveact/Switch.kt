@@ -5,6 +5,9 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+
 /**
  * Every switch a page's address can give the live act ([Switches]), with what it does. [key] is its name in the
  * address (`?nosky`, `?t=62.1`); the keys stay as they are, the maintainer and the test plans use them. A switch is
@@ -31,13 +34,19 @@ enum class Switch(val key: String) {
     NoHud("nohud"),
 
     /**
-     * `?oversample=2`: the picture starts drawn with that many pixels for each pixel shown: 1, 2 or 4 (the key o
-     * steps through them); any other value is 1.
+     * `?oversample=2`: the picture starts drawn with that many samples for each pixel shown: 0.5, 1, 2 or 4 (the key o
+     * steps through them, [Oversampling]); any other value is 1.
      */
     Oversample("oversample"),
 
     /** `?sharp`: the picture keeps the screen's own pixels and does not get coarser when the frames get slow. */
     Sharp("sharp"),
+
+    /**
+     * `?shadows=low`: how finely the lamps' shadows are drawn: low or high ([ShadowQuality]); any other value is high,
+     * the shadows as they were made.
+     */
+    Shadows("shadows"),
 
     // The camera
 
@@ -128,8 +137,14 @@ enum class Switch(val key: String) {
     /** `?nosky`: no night sky over the theatre. */
     NoSky("nosky"),
 
-    /** `?nofog`: no fog on the floor. */
+    /** `?nofog`: no fog on the floor, as `?fog=off`. */
     NoFog("nofog"),
+
+    /**
+     * `?fog=low`: how finely the fog on the floor is drawn: off, low, medium, high or xhigh (0, 4, 8, 12 or 16 level
+     * sheets, [FogQuality]); any other value is high, the fog as it was made. It wins over [NoFog].
+     */
+    Fog("fog"),
 
     /** `?fullfog`: the floor's fog worked out by every pixel for itself instead of from its maps, to compare. */
     FullFog("fullfog"),

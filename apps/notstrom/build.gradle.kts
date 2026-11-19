@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter
 
 plugins {
     kotlin("multiplatform")
+    // The machine test's result, kept in the browser, is a data class with a serializer (StoredTest)
+    kotlin("plugin.serialization")
     // Kotest's spec discovery on JS runs through KSP, as in the other modules with browser tests.
     id("com.google.devtools.ksp")
     id("io.kotest")
@@ -41,6 +43,9 @@ kotlin {
                 implementation(project(":klangviz"))
                 // Which browser this is: the apps warn outside desktop Chrome (BrowserCheck)
                 implementation(Deps.KotlinLibs.Kraft.addons_browserdetect)
+                // The machine test's result, kept in the browser as JSON (StoredTest)
+                implementation(Deps.KotlinX.serialization_core)
+                implementation(Deps.KotlinX.serialization_json)
                 // Injects the bundle (its name with a content hash) into index.html
                 implementation(devNpm("html-webpack-plugin", "5.6.0"))
             }

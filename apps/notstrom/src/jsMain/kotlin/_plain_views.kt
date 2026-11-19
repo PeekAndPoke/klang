@@ -271,16 +271,19 @@ fun FlowContent.plainCheckbox(text: String, checked: Boolean, onChange: (Boolean
 }
 
 /**
- * The tests' result: the three numbers, the sentence, the picture's quality chosen ([quality]), the choices made
- * before the show ([options]), and the button that starts it.
+ * The tests' result: the three numbers, the sentence, the picture's quality chosen ([quality]), when it was measured
+ * where it is a kept result ([measured]; null: none), the choices made before the show ([options]), and the button
+ * that starts it; beside it, where [onTestAgain] is given, a quiet one that runs the tests again.
  */
 fun FlowContent.testResult(
     voices: Int,
     frames: FrameStats,
     score: MachineScore,
     quality: String,
+    measured: String? = null,
     options: FlowContent.() -> Unit,
     onStart: () -> Unit,
+    onTestAgain: (() -> Unit)? = null,
 ) {
     leadLine("This machine")
 
@@ -298,12 +301,23 @@ fun FlowContent.testResult(
 
     bodyText { +quality }
 
+    measured?.let { line ->
+        bodyText(color = "#6b7385") { +line }
+    }
+
     options()
 
     actions(gap = "28px") {
         actionButton(text = "Start the show", onClick = onStart)
+
+        onTestAgain?.let { again ->
+            actionButton(text = TEST_AGAIN, primary = false, onClick = again)
+        }
     }
 }
+
+/** The quiet button beside a kept result's start: both tests run again, and their result is kept instead. */
+const val TEST_AGAIN = "Run the machine test again"
 
 private fun FlowContent.resultLine(label: String, value: Int, detail: String) {
     div {

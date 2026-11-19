@@ -31,6 +31,7 @@ import io.peekandpoke.klang.viz.liveact.Picture
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
+import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetectAddon
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -40,6 +41,8 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import kotlinx.browser.window
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -58,6 +61,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.serialization.builtins.nullable
+import kotlin.js.Date
 import kotlin.random.Random
 
 @Suppress("FunctionName")
@@ -76,18 +81,23 @@ fun Tag.NotstromApp(query: String) = comp(
  * that is not secure (plain http on a network address) cannot have the engine's sound: the start screen says so and
  * starts nothing. Outside desktop Chrome it warns first ([BrowserCheck], as the studio does). With the click (or
  * "Continue anyway") the player is made, then the machine is tested: the engine's dynamometer ([KlangBenchmark], the
- * studio's PS) and the stage drawn for a few seconds ([FrameStats]), at 1x and, where it may matter, at 2x
- * oversampling ([PictureQuality]). The result is shown as a score ([MachineScore]) with the choices for the show (the
- * stroboscope, fullscreen) right above the button that starts it; `?notest` skips the tests ([skipsTests]) and shows
- * the choices on the start screen. Nothing of the result is sent or kept.
+ * studio's PS) and the stage drawn for a few seconds ([FrameStats]), at 1x with the fog high and then, where it may
+ * matter, at 2x oversampling or, where 1x was slow, with the fog low ([PictureQuality]). The result is shown as a
+ * score ([MachineScore]) with the choices for the show (the stroboscope, fullscreen) right above the button that
+ * starts it; `?notest` skips the tests ([skipsTests]) and shows the choices on the start screen. Nothing of the
+ * result is sent. It is kept in this browser ([StoredTest]): where a kept result fits this machine as it is now, the
+ * click on Start shows it at once, with when it was measured and a button that runs the tests again; the player is
+ * then made, and the band's figures load (their bar on the screen that says the show gets ready), with the click
+ * that starts the show, as with `?notest`.
  *
  * For the show the song is compiled once, its playback is made and read ahead for the band ([SongReading]: the band
  * plays the notes that will sound), and it is played for the show alone ([ShowPlayback]): the walk-in begins at once
- * (the click was taken here), and the live act's clock starts the song when the walk-in is over. The live act steps the oversampling down by itself where the frames stay slow. While the
- * show plays, a moving mouse brings up a drawer at the bottom ([ShowDrawer]: fullscreen, the oversampling, the volume). What fails on
- * the way is said on the start screen, in plain words.
+ * (the click was taken here), and the live act's clock starts the song when the walk-in is over. The live act steps
+ * the oversampling down by itself where the frames stay slow. While the show plays, a moving mouse brings up a
+ * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, fullscreen, the volume). What fails on the way is
+ * said on the start screen, in plain words.
  *
- * The address's switches are the live act's ([Switch]: `?seed=7`, `?still`, `?oversample=2` and the rest);
+ * The address's switches are the live act's ([Switch]: `?seed=7`, `?still`, `?oversample=2`, `?fog=low` and the rest);
  * `?nostrobe` presets the choice for the stroboscope. The line of text at the top is hidden for visitors; `?hud` shows
  * it ([showSwitches]).
  */
@@ -119,12 +129,22 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
     /**
      * A mounted stage: the show or the picture test ([test]); [key] is another one for every stage; [picture] sees and
-     * sets its oversampling (the test's 2x part, the drawer) and sees its frame rate (the drawer).
+     * sets its oversampling and its fog (the test's second part, the drawer) and sees its frame rate (the drawer).
      */
     private class Running(val show: Show, val key: String, val test: Boolean, val picture: Picture = Picture())
 
-    /** What the tests found, and the oversampling the picture test chose. */
-    private class Tested(val voices: Int, val frames: FrameStats, val score: MachineScore, val oversample: Int)
+    /**
+     * What the tests found, and the oversampling and the fog the picture test chose; [keptAt]: when it was measured,
+     * where it is a kept result ([StoredTest]), null for one just measured.
+     */
+    private class Tested(
+        val voices: Int,
+        val frames: FrameStats,
+        val score: MachineScore,
+        val oversample: Int,
+        val fog: FogQuality,
+        val keptAt: Double? = null,
+    )
 
     private val scope = MainScope()
 
@@ -154,11 +174,22 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /** The dynamometer's progress while it runs. */
     private var soundProgress: KlangBenchmark.Progress? by value(null)
 
-    /** How far the picture test is, in tenths: 0 to 10, over both its parts. */
+    /** How far the picture test is, in tenths: 0 to 10, over its two parts (the first, then the 2x or the fog part). */
     private var pictureTenths: Int by value(0)
 
     /** The tests' result, once there is one. */
     private var tested: Tested? by value(null)
+
+    /**
+     * The last result this browser keeps ([StoredTest]); null where none is kept. Where the browser keeps nothing
+     * (a private window, storage that is full or refused), it holds the result for this page only, and the next
+     * visit tests again.
+     */
+    private val kept: StreamSource<StoredTest?> =
+        StreamSource<StoredTest?>(null).persistInLocalStorage(
+            key = StoredTest.STORAGE_KEY,
+            serializer = StoredTest.serializer().nullable,
+        )
 
     /** Whether a click on Start waits for the browser's detection (it loads with the page). */
     private var checking = false
@@ -260,9 +291,37 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         }
     }
 
-    /** On after Start (or "Continue anyway"): the tests, or with `?notest` the show at once. */
+    /**
+     * On after Start (or "Continue anyway"): the tests; or the result this browser keeps, where it fits this machine
+     * ([StoredTest.fits]); or with `?notest` the show at once.
+     */
     private fun goOn() {
-        go(test = !skipsTests(props.query))
+        if (skipsTests(props.query)) {
+            go(test = false)
+
+            return
+        }
+
+        val screen = window.screen
+        val fitting = kept()?.takeIf { it.fits(ratio = window.devicePixelRatio, width = screen.width, height = screen.height) }
+        val fog = fitting?.fogQuality
+
+        if (fitting == null || fog == null) {
+            go(test = true)
+
+            return
+        }
+
+        tested = Tested(
+            voices = fitting.voices,
+            frames = fitting.frames,
+            score = MachineScore.of(safeVoices = fitting.voices, fps = fitting.fps),
+            oversample = fitting.oversample,
+            fog = fog,
+            keptAt = fitting.at,
+        )
+        problem = null
+        phase = Phase.Result
     }
 
     /** "Continue anyway" on the warning: a click too, so it goes on as with Start. */
@@ -360,12 +419,14 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         phase = Phase.TestingPicture
 
         val density = window.devicePixelRatio
+        val small = PictureQuality.isSmall(width = window.screen.width, height = window.screen.height)
 
         pictureTenths = 0
 
         val stage = testStage()
 
-        // the progress counts both parts as one, the 1x part the first two thirds; without a 2x part it jumps to full
+        // the progress counts the two parts as one, the first the first two thirds; without a second part it jumps to
+        // full
         val frames = measurePicture(stage = stage, warmMs = PICTURE_WARM_MS, measureMs = PICTURE_MS, from = 0.0, to = 2.0 / 3)
 
         // not one frame: the band never stood (its figures did not load), and there is nothing to measure
@@ -375,8 +436,17 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         val twice = if (PictureQuality.measuresTwice(fps1x = frames.fps, density = density)) {
             // the same stage, at 2x: a new render target and new shaders, so a warm-up of its own
-            stage.picture.choose(2)
+            stage.picture.choose(2.0)
             measurePicture(stage = stage, warmMs = TWICE_WARM_MS, measureMs = TWICE_MS, from = 2.0 / 3, to = 1.0).fps
+        } else {
+            null
+        }
+
+        // where 1x was slow (and so there was no 2x part): the same stage at 1x with the fog low, new sheets and maps,
+        // so a warm-up of its own; not where the address sets the fog, which wins over the test's choice
+        val fewer = if (PictureQuality.measuresFog(fpsFull = frames.fps) && !setsFog(props.query)) {
+            stage.picture.chooseFog(StoredTest.FOG_CHOICES.first())
+            measurePicture(stage = stage, warmMs = FOG_WARM_MS, measureMs = FOG_MS, from = 2.0 / 3, to = 1.0).fps
         } else {
             null
         }
@@ -384,25 +454,58 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         mount(null)
         pictureTenths = 10
 
-        tested = Tested(
+        val layers = PictureQuality.fogFor(
+            fpsFull = frames.fps,
+            fpsFew = fewer,
+            choices = StoredTest.FOG_CHOICES.map { it.layers },
+            small = small,
+            smallMost = FogQuality.Medium.layers,
+        )
+
+        val result = Tested(
             voices = voices,
             frames = frames,
+            // from the first part: the full picture, as the show starts it
             score = MachineScore.of(safeVoices = voices, fps = frames.fps),
             oversample = PictureQuality.oversampleFor(fps1x = frames.fps, fps2x = twice, density = density),
+            fog = StoredTest.FOG_CHOICES.firstOrNull { it.layers == layers } ?: StoredTest.FOG_CHOICES.first(),
         )
+
+        tested = result
+
+        // kept for the next visit on this machine, in place of what was kept before; not where the address made the
+        // picture lighter or heavier than the show's own (keepsTest)
+        if (keepsTest(props.query)) {
+            kept(
+                StoredTest(
+                    version = StoredTest.TEST_VERSION,
+                    at = Date.now(),
+                    ratio = density,
+                    width = window.screen.width,
+                    height = window.screen.height,
+                    voices = voices,
+                    fps = frames.fps,
+                    slowestMs = frames.slowestMs,
+                    oversample = result.oversample,
+                    fog = result.fog.word,
+                )
+            )
+        }
+
         phase = Phase.Result
     }
 
     /**
      * The picture test's stage: the stage the show draws, with the band standing at their places (the show frozen at
      * its start, so nothing moves the measure: no music, no flashing stroboscope, the full picture the show starts
-     * with), at 1x whatever the address says. It is not seen: the checking screen covers it (an opaque layer over the
-     * full-size canvas, which stays in the layout at its real size and is really drawn; a canvas hidden or made small
-     * could be skipped by the browser and would measure nothing true).
+     * with), at 1x whatever the address says. The fog and the shadows are high, or as the address sets them: what the
+     * show will draw (where the address sets the fog, the test does not choose it). It is not seen: the checking
+     * screen covers it (an opaque layer over the full-size canvas, which stays in the layout at its real size and is
+     * really drawn; a canvas hidden or made small could be skipped by the browser and would measure nothing true).
      */
     private fun testStage(): Running {
         // the address's switches, frozen at the start (`t=0`: the band at their places), at 1x, and without the
-        // stroboscope (nobody has chosen yet)
+        // stroboscope (nobody has chosen yet); the fog and the shadows the address's, else the live act's own, high
         val switches = showSwitches(query = props.query + "&${Switch.Oversample.key}=1", strobe = false, frozenAt = 0.0)
         val stage = Running(
             show = Show(seed = showSeed(switches = switches, random = Random.Default), switches = switches),
@@ -505,7 +608,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             },
         )
 
-        val switches = showSwitches(query = props.query, strobe = strobe, oversample = tested?.oversample ?: 1)
+        val switches = showSwitches(
+            query = props.query,
+            strobe = strobe,
+            oversample = tested?.oversample ?: 1,
+            fog = tested?.fog ?: FogQuality.High,
+        )
 
         preparing = null
 
@@ -654,9 +762,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                             voices = it.voices,
                             frames = it.frames,
                             score = it.score,
-                            quality = quality(it.oversample),
+                            quality = qualityLine(query = props.query, oversample = it.oversample, fog = it.fog),
+                            measured = it.keptAt?.let { at -> measuredLine(at) },
                             options = { options() },
                             onStart = { go(test = false) },
+                            // a kept result can be measured anew: both tests, as after Start
+                            onTestAgain = if (it.keptAt != null) ({ go(test = true) }) else null,
                         )
                     }
                 }
@@ -665,13 +776,6 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                 }
             }
         }
-    }
-
-    /** The picture's quality the show starts with, in one short line. */
-    private fun quality(oversample: Int): String = when {
-        setsOversample(props.query) -> "Picture quality: as the address sets it."
-        oversample > 1 -> "Picture quality: high (${oversample}x oversampling)."
-        else -> "Picture quality: standard."
     }
 
     /** The choices for the show, right above the button that starts it. */
@@ -775,5 +879,11 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         /** How long the picture test measures at 2x, in milliseconds. */
         const val TWICE_MS = 2_000.0
+
+        /** How long the picture test draws with the fog low before it measures (new sheets and maps), in ms. */
+        const val FOG_WARM_MS = 1_000.0
+
+        /** How long the picture test measures with the fog low, in milliseconds. */
+        const val FOG_MS = 2_000.0
     }
 }

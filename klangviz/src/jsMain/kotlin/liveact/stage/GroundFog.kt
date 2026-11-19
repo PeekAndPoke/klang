@@ -14,6 +14,7 @@ import io.peekandpoke.klang.workshop.threejs.BlendFactor
 import io.peekandpoke.klang.workshop.threejs.Blending
 import io.peekandpoke.klang.workshop.threejs.Data3DTexture
 import io.peekandpoke.klang.workshop.threejs.RenderTargetOptions
+import io.peekandpoke.klang.workshop.threejs.ShaderMaterial
 import io.peekandpoke.klang.workshop.threejs.ShaderMaterialParameters
 import io.peekandpoke.klang.workshop.threejs.TextureDataType
 import io.peekandpoke.klang.workshop.threejs.TextureFormat
@@ -32,6 +33,7 @@ import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.setRenderTarget
 import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.klang.workshop.threejs.uniformsOf
+import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
 import io.peekandpoke.kraft.addons.threejs.js.Camera
 import io.peekandpoke.kraft.addons.threejs.js.MaterialSide
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
@@ -58,10 +60,11 @@ import kotlin.random.Random
 // graphics card blends between its points. Five readings a pixel and sheet stand in place of forty computed random
 // numbers, which made the fog cost more than everything else on the stage together (measured 2026-11-16).
 //
-// The sheets cover much of the picture twelve times over, so working the fog out for every pixel of every sheet
-// costs with the number of pixels. But what the fog is at a place on the stage does not depend on the camera. So it
-// is worked out once a frame as a map of the stage for each sheet (a point every seven centimetres, all twelve maps
-// side by side in one picture), and the sheets are drawn into the scene reading their maps: one reading a pixel.
+// The sheets cover much of the picture many times over (twelve at the quality the fog was made with, FogQuality), so
+// working the fog out for every pixel of every sheet costs with the number of pixels. But what the fog is at a place
+// on the stage does not depend on the camera. So it is worked out once a frame as a map of the stage for each sheet
+// (a point every seven centimetres, all the maps side by side in one picture), and the sheets are drawn into the
+// scene reading their maps: one reading a pixel.
 // The cost of the maps is the same whatever the screen's size, and what stands in the fog cuts it exactly, at the
 // picture's own fineness.
 // (A first try drew the fog into a picture of half the screen's size and laid that over the finished one. Where
@@ -69,16 +72,21 @@ import kotlin.random.Random
 // aliasing on the legs".)
 
 /**
- * The fog on the floor of [scene], drawn by [renderer]. Each frame, after the lamps are set and before the scene is
- * drawn: [update]. When the stage goes: [dispose].
+ * The fog on the floor of [scene], drawn by [renderer] at [quality] (its number of sheets; not [FogQuality.Off],
+ * which is no fog to make). Each frame, after the lamps are set and before the scene is drawn: [update]. When the
+ * stage goes, or the fog is made anew at another quality: [dispose].
  *
  * [mapped]: the fog is worked out as maps of the stage (see the top of the file), where the graphics card can hold
  * such a picture; else, and with `?fullfog` (to compare), every pixel of every sheet works it out for itself.
  */
-class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boolean) {
-
-    /** One sheet of the stack, with its own see-through share. */
-    private class Layer(val mesh: Mesh, val alpha: Uniform<Double>)
+class GroundFog(
+    private val scene: Scene,
+    private val renderer: WebGLRenderer,
+    private val quality: FogQuality,
+    mapped: Boolean,
+) {
+    /** One sheet of the stack, with its material and its own see-through share. */
+    private class Layer(val mesh: Mesh, val material: ShaderMaterial, val alpha: Uniform<Double>)
 
     // What the fog is made from: the time, and the lamps (place, direction, colour times intensity, the cone's cosine)
     private val time = uniform(0.0)
@@ -97,23 +105,31 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
     /** The maps of the stage, where the fog is worked out as maps; null where every pixel works it out. */
     private val maps: Maps? = if (mapped && canHoldMaps()) Maps() else null
 
+    /** The sheets' shape, one for all of them. */
+    private val sheet: BufferGeometry = Three.addon.createPlaneGeometry(WIDE, DEEP)
+
     private val layers: List<Layer>
     private val target = vec()
 
     init {
-        // every sheet has its map in the picture, and the picture no map to spare
-        require(COLS * ROWS == LAYERS) { "$LAYERS sheets do not fill $COLS by $ROWS maps" }
+        // a fog of two sheets at least, from the floor to the top; every sheet has its map in the picture, and the
+        // picture no map to spare
+        require(quality.layers >= 2) { "a fog of ${quality.layers} sheets is no fog to make" }
+        require(quality.cols * quality.rows == quality.layers) {
+            "${quality.layers} sheets do not fill ${quality.cols} by ${quality.rows} maps"
+        }
 
-        val sheet = Three.addon.createPlaneGeometry(WIDE, DEEP)
+        val count = quality.layers
+        val cols = quality.cols
 
-        layers = (0 until LAYERS).map { i ->
-            val share = i.toDouble() / (LAYERS - 1)
+        layers = (0 until count).map { i ->
+            val share = i.toDouble() / (count - 1)
             val alpha = uniform(0.0)
             val uniforms = uniformsOf("uAlpha" to alpha)
 
             if (maps != null) {
                 uniforms["uMaps"] = uniform(maps.picture.texture)
-                uniforms["uCell"] = uniform(Three.addon.createVector2(x = (i % COLS).toDouble(), y = (i / COLS).toDouble()))
+                uniforms["uCell"] = uniform(Three.addon.createVector2(x = (i % cols).toDouble(), y = (i / cols).toDouble()))
             } else {
                 fogUniforms(uniforms)
                 uniforms["uHeight"] = uniform(share)
@@ -122,7 +138,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
                 this.uniforms = uniforms
                 vertexShader = if (maps != null) MAP_VERTEX else VERTEX
-                fragmentShader = if (maps != null) SHEET_FRAGMENT else FRAGMENT
+                fragmentShader = if (maps != null) sheetFragment(quality) else FRAGMENT
                 transparent = true
                 depthWrite = false
                 side = MaterialSide.DoubleSide
@@ -139,7 +155,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
             mesh.renderOrder = 10 + i
             scene.add(mesh)
 
-            Layer(mesh = mesh, alpha = alpha)
+            Layer(mesh = mesh, material = material, alpha = alpha)
         }
     }
 
@@ -165,11 +181,13 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
             cosines[i] = cos(light.angle)
         }
 
+        val share = quality.share
+
         for (layer in layers) {
             val y = layer.mesh.position.y
             // a sheet seen edge-on would show as a line: it fades out as the camera comes to its height
             val off = abs(camera.position.y - y)
-            layer.alpha.value = 0.22 * min(1.0, off / 0.25)
+            layer.alpha.value = share * min(1.0, off / 0.25)
             // drawn from the far side toward the camera: from the floor up when it looks from above
             layer.mesh.drawOrder = 10 + (if (camera.position.y > y) 1 else -1) * y * 10
         }
@@ -178,10 +196,16 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
     }
 
     /**
-     * Frees the noise's picture on the graphics card, and the maps with what draws them. The sheets go with the
-     * scene.
+     * Takes the sheets out of the scene and frees all the fog holds on the graphics card: the sheets' materials and
+     * their shape, the noise's picture, and the maps with what draws them. The fog is gone after it; call it once.
      */
     fun dispose() {
+        for (layer in layers) {
+            scene.remove(layer.mesh)
+            layer.material.dispose()
+        }
+
+        sheet.dispose()
         noise.dispose()
         maps?.dispose()
     }
@@ -202,8 +226,8 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
      */
     private inner class Maps {
         val picture: WebGLRenderTarget = Three.addon.createWebGLRenderTarget(
-            width = COLS * MAP_WIDE,
-            height = ROWS * MAP_DEEP,
+            width = quality.cols * MAP_WIDE,
+            height = quality.rows * MAP_DEEP,
             options = jsObject<RenderTargetOptions> {
                 type = TextureDataType.HalfFloatType
                 depthBuffer = false
@@ -220,7 +244,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
                 this.uniforms = uniforms
                 vertexShader = FILL_VERTEX
-                fragmentShader = FILL_FRAGMENT
+                fragmentShader = fillFragment(quality)
                 depthWrite = false
                 depthTest = false
             })
@@ -278,7 +302,6 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
             return block
         }
 
-        const val LAYERS = 12
         const val LAMPS = 5
 
         /** The lowest and the highest sheet's height, in metres. */
@@ -289,9 +312,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
         const val WIDE = 26.0
         const val DEEP = 22.0
 
-        /** The maps lie in the picture in this many columns and rows; a map has this many points each way (7 cm). */
-        const val COLS = 4
-        const val ROWS = 3
+        /** A map has this many points each way (7 cm); the maps lie in the picture as [FogQuality] lays them out. */
         const val MAP_WIDE = 384
         const val MAP_DEEP = 324
 
@@ -368,15 +389,15 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
     gl_Position = vec4(position.xy, 0.0, 1.0);
   }"""
 
-        val FILL_FRAGMENT = """
+        fun fillFragment(quality: FogQuality) = """
   varying vec2 vUv;
   $FOG_AT
 
   void main() {
-    vec2 map = vUv * vec2(${COLS}.0, ${ROWS}.0);
+    vec2 map = vUv * vec2(${quality.cols}.0, ${quality.rows}.0);
     vec2 cell = floor(map);
     vec2 here = fract(map);
-    float height = (cell.y * ${COLS}.0 + cell.x) / ${LAYERS - 1}.0;
+    float height = (cell.y * ${quality.cols}.0 + cell.x) / ${quality.layers - 1}.0;
     // a sheet lies flat: its upper edge is the far one, toward the wall
     vec3 world = vec3(
       (here.x - 0.5) * ${WIDE.glsl()}, ${BOTTOM.glsl()} + ${(TOP - BOTTOM).glsl()} * height, (0.5 - here.y) * ${DEEP.glsl()}
@@ -393,7 +414,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }"""
 
-        val SHEET_FRAGMENT = """
+        fun sheetFragment(quality: FogQuality) = """
   varying vec2 vUv;
   uniform sampler2D uMaps;
   uniform vec2 uCell;
@@ -403,7 +424,7 @@ class GroundFog(scene: Scene, private val renderer: WebGLRenderer, mapped: Boole
     // not from the map's outermost half points: there the card would blend in the map next to it
     vec2 edge = vec2(0.5 / ${MAP_WIDE}.0, 0.5 / ${MAP_DEEP}.0);
     vec2 here = clamp(vUv, edge, 1.0 - edge);
-    gl_FragColor = texture2D(uMaps, (uCell + here) / vec2(${COLS}.0, ${ROWS}.0)) * uAlpha;
+    gl_FragColor = texture2D(uMaps, (uCell + here) / vec2(${quality.cols}.0, ${quality.rows}.0)) * uAlpha;
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""

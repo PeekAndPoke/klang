@@ -23,11 +23,11 @@ class SwitchSpec : StringSpec({
     "the keys are the ones the addresses use" {
         Switch.entries.map { it.key } shouldBe listOf(
             "seed", "t", "test",
-            "nohud", "oversample", "sharp",
+            "nohud", "oversample", "sharp", "shadows",
             "still", "move", "view", "cam", "at", "head", "from", "down", "far", "outline",
             "warm", "snakes", "nosnakes", "straight",
             "rig", "fcolor", "front", "nostrobe",
-            "nosky", "nofog", "fullfog",
+            "nosky", "nofog", "fog", "fullfog",
         )
     }
 

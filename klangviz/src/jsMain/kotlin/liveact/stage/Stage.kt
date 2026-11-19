@@ -10,6 +10,7 @@ import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.dress.dressLevel
 import io.peekandpoke.klang.viz.liveact.lights.Lights
+import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.theatre.Crowd
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.theatre.NightSky
@@ -43,17 +44,20 @@ import kotlin.math.min
 
 /**
  * The stage, built into [scene]: floor, the wall behind, the lamps ([Lights]), the drummer's [riser], the crowd's
- * lights, the night sky and the fog on the floor. Sets on [renderer], [scene] and [camera] what the show needs of them: the
- * shadows, the tone mapping, the dark and the distance fog, the camera's lens.
+ * lights, the night sky and the fog on the floor; the fog at [fog]'s quality, the lamps' shadows at [shadows]' (the
+ * address's, without them). Sets on [renderer], [scene] and [camera] what the show needs of them: the shadows, the
+ * tone mapping, the dark and the distance fog, the camera's lens.
  *
- * Each frame: [light], and [follow] once the camera is placed. Once the band stands: [shade]. When the stage goes:
- * [dispose].
+ * Each frame: [light], and [follow] once the camera is placed. Once the band stands: [shade]. The fog at another
+ * quality, while the show plays: [fog]; the shadows: [shadows]. When the stage goes: [dispose].
  */
 class Stage(
     private val show: Show,
     private val scene: Scene,
     private val camera: PerspectiveCamera,
     private val renderer: WebGLRenderer,
+    fog: FogQuality = FogQuality.of(show.switches),
+    shadows: ShadowQuality = ShadowQuality.of(show.switches),
 ) {
     /** The wall's material: black unless the front lamp is on. */
     private val backMaterial: MeshStandardMaterial
@@ -71,8 +75,11 @@ class Stage(
     /** The night sky over the theatre; none with ?nosky. */
     private val sky: NightSky?
 
-    /** The fog on the floor; none with ?nofog. */
-    private val groundFog: GroundFog?
+    /** The quality the fog on the floor is drawn at. */
+    private var fogQuality: FogQuality = fog
+
+    /** The fog on the floor; none at [FogQuality.Off] (`?fog=off`, `?nofog`). */
+    private var groundFog: GroundFog?
 
     init {
         renderer.setPixelRatio(min(window.devicePixelRatio, 2.0))
@@ -117,7 +124,7 @@ class Stage(
         wallFront = wall(backMaterial, amount = 0.014)
         scene.add(back)
 
-        lights = Lights(show, scene)
+        lights = Lights(show = show, scene = scene, shadows = shadows)
 
         riser = Three.addon.createMesh(
             Three.addon.createBoxGeometry(2.9, RISER, 2.2),
@@ -134,11 +141,39 @@ class Stage(
 
         crowd = Crowd(scene)
         sky = if (show.switches.has(Switch.NoSky)) null else NightSky(scene)
-        // fog on the floor (?nofog: none; ?fullfog: every pixel works it out for itself, to compare)
-        groundFog = when {
-            show.switches.has(Switch.NoFog) -> null
-            else -> GroundFog(scene = scene, renderer = renderer, mapped = !show.switches.has(Switch.FullFog))
+        groundFog = makeFog(fog)
+    }
+
+    /**
+     * The fog on the floor at [quality], where it is another than now: the old fog leaves the scene, with all it
+     * holds on the graphics card ([GroundFog.dispose]), and the new one is made (none at [FogQuality.Off]).
+     */
+    fun fog(quality: FogQuality) {
+        if (quality == fogQuality) {
+            return
         }
+
+        fogQuality = quality
+        groundFog?.dispose()
+        // where the new one cannot be made, no freed fog is left to draw
+        groundFog = null
+        groundFog = makeFog(quality)
+    }
+
+    /**
+     * The lamps' shadows at [quality] ([Lights.shadows]): a choice by hand, with a short hitch where lamps stop or
+     * start casting.
+     */
+    fun shadows(quality: ShadowQuality) {
+        lights.shadows(quality)
+    }
+
+    /** A fog on the floor at [quality]: none at [FogQuality.Off]; with `?fullfog` every pixel works it out for itself. */
+    private fun makeFog(quality: FogQuality): GroundFog? = when (quality) {
+        FogQuality.Off -> null
+
+        FogQuality.Low, FogQuality.Medium, FogQuality.High, FogQuality.XHigh ->
+            GroundFog(scene = scene, renderer = renderer, quality = quality, mapped = !show.switches.has(Switch.FullFog))
     }
 
     /**
@@ -225,6 +260,7 @@ class Stage(
     fun dispose() {
         lights.dispose()
         groundFog?.dispose()
+        groundFog = null
     }
 
     companion object {

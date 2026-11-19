@@ -9,6 +9,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.workshop.threejs.fog
@@ -16,6 +18,8 @@ import io.peekandpoke.klang.workshop.threejs.isLight
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.addons.registry.addons
 import io.peekandpoke.kraft.addons.threejs.ThreeJsAddon
+import io.peekandpoke.kraft.addons.threejs.js.Object3D
+import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.addons.threejs.threeJs
 import io.peekandpoke.kraft.components.NoProps
@@ -236,4 +240,191 @@ class StageSpec : StringSpec({
             }
         }
     }
+
+    "the fog starts at the address's quality: as many sheets, and none with ?nofog or ?fog=off" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+
+            for ((query, sheets) in listOf("?fog=low" to 4, "?fog=xhigh" to 16, "?nofog" to 0, "?fog=off" to 0, "" to 12)) {
+                val scene = three.createScene()
+                val show = Show(seed = 1, switches = Switches.parse(query))
+                val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+
+                try {
+                    sheetsOf(scene).size shouldBe sheets
+                    scene.children.size shouldBe 17 + sheets
+                } finally {
+                    stage.dispose()
+                }
+            }
+        }
+    }
+
+    "the fog at another quality: the old one leaves the scene with all it holds freed, the new one comes" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val renderer = standInRenderer()
+            val r: dynamic = renderer
+
+            // a card that can hold the maps, drawing nothing
+            r.extensions = js("({ has: function (name) { return name === 'EXT_color_buffer_float' } })")
+            r.getRenderTarget = { null }
+            r.setRenderTarget = { _: dynamic -> Unit }
+            r.render = { _: dynamic, _: dynamic -> Unit }
+
+            val scene = three.createScene()
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer)
+
+            try {
+                val high = sheetsOf(scene)
+                val freed = mutableListOf<String>()
+                val picture: dynamic = high.first().asDynamic().material.uniforms.uMaps.value.renderTarget
+
+                high.size shouldBe 12
+
+                for (sheet in high) {
+                    sheet.asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("material") }
+                }
+
+                high.first().asDynamic().geometry.addEventListener("dispose") { _: dynamic -> freed.add("geometry") }
+                picture.addEventListener("dispose") { _: dynamic -> freed.add("maps") }
+
+                // the same quality again changes nothing
+                stage.fog(FogQuality.High)
+                freed shouldBe emptyList()
+                sheetsOf(scene) shouldBe high
+
+                stage.fog(FogQuality.Low)
+                freed.count { it == "material" } shouldBe 12
+                freed.count { it == "geometry" } shouldBe 1
+                freed.count { it == "maps" } shouldBe 1
+
+                // four sheets, none of the old, reading a picture of 2 by 2 maps
+                val low = sheetsOf(scene)
+                val maps: dynamic = low.first().asDynamic().material.uniforms.uMaps.value.renderTarget
+
+                low.size shouldBe 4
+                low.none { it in high } shouldBe true
+                scene.children.size shouldBe 17 + 4
+                (maps.width.unsafeCast<Int>() to maps.height.unsafeCast<Int>()) shouldBe (2 * 384 to 2 * 324)
+                low.map { it.asDynamic().material.uniforms.uCell.value.x.unsafeCast<Double>() } shouldBe listOf(0.0, 1.0, 0.0, 1.0)
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+
+                // off: no sheet at all; and back to a fog
+                stage.fog(FogQuality.Off)
+                scene.children.size shouldBe 17
+                stage.light(t = 62.1, house = 1.0, waiting = false)
+                stage.fog(FogQuality.Medium)
+                sheetsOf(scene).size shouldBe 8
+            } finally {
+                stage.dispose()
+            }
+
+            scene.children.size shouldBe 17
+        }
+    }
+
+    "a fog made anew frees its noise too, where every sheet works the fog out for itself" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val scene = three.createScene()
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            var freed = 0
+
+            try {
+                val noise: dynamic = sheetsOf(scene).first().asDynamic().material.uniforms.uNoise.value
+
+                noise.addEventListener("dispose") { _: dynamic -> freed++ }
+                stage.fog(FogQuality.XHigh)
+                freed shouldBe 1
+                sheetsOf(scene).size shouldBe 16
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the shadows at low: three lamps cast, in maps of 1024, the old maps freed; at high again four of 2048" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val scene = three.createScene()
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            val spots = scene.children.filter { it.asDynamic().isSpotLight == true }.map { it.asDynamic() }
+
+            /** The lamps that cast, by the size of their maps. */
+            fun casting(): List<Int> = spots.filter { it.castShadow == true }.map { it.shadow.mapSize.x.unsafeCast<Int>() }
+
+            var freed = 0
+
+            /** A map as three.js would have made it, that counts when it is freed. */
+            fun mapsMade() {
+                for (spot in spots.filter { it.castShadow == true }) {
+                    val map: dynamic = js("({})")
+
+                    map.dispose = { freed++ }
+                    spot.shadow.map = map
+                }
+            }
+
+            try {
+                casting() shouldBe listOf(2048, 2048, 2048, 2048)
+                mapsMade()
+
+                // the same quality again changes nothing
+                stage.shadows(ShadowQuality.High)
+                freed shouldBe 0
+
+                stage.shadows(ShadowQuality.Low)
+                freed shouldBe 4
+                spots.count { it.shadow.map != null } shouldBe 0
+                casting() shouldBe listOf(1024, 1024, 1024)
+                // the inner lamp behind casts none, the low front lamp still does
+                spots.single { it.position.x == 0.0 && it.position.z == -4.5 }.castShadow.unsafeCast<Boolean>() shouldBe false
+                spots.single { it.position.z == 8.6 }.castShadow.unsafeCast<Boolean>() shouldBe true
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+
+                mapsMade()
+                stage.shadows(ShadowQuality.High)
+                freed shouldBe 7
+                casting() shouldBe listOf(2048, 2048, 2048, 2048)
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the shadows start at the address's quality" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val scene = three.createScene()
+            val show = Show(seed = 1, switches = Switches.parse("?shadows=low"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+
+            try {
+                val spots = scene.children.filter { it.asDynamic().isSpotLight == true }.map { it.asDynamic() }
+
+                spots.filter { it.castShadow == true }.map { it.shadow.mapSize.x.unsafeCast<Int>() } shouldBe
+                    listOf(1024, 1024, 1024)
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
 })
+
+/** The fog's sheets in [scene]: what reads the fog's maps, or works it out at its own height. */
+private fun sheetsOf(scene: Scene): List<Object3D> = scene.children.filter {
+    val uniforms: dynamic = it.asDynamic().material?.uniforms
+
+    uniforms?.uMaps != null || uniforms?.uHeight != null
+}
