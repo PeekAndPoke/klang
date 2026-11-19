@@ -111,8 +111,22 @@ gallery page). The maintainer: "The two worlds shots are amazing."
 The critic's recommendation: the fence as the core, driven over a song by the time-of-day value; the mirror for one
 moment. Not decided.
 
+The maintainer, 2026-11-19, on the restyles (the mirror underworld on the cold/hot still, kept as
+`prototypes/band/ignored/previews/gemini/liked-fog-behind-mesh.webp`, and the day still with the sun behind the
+drummer): "The idea of having the fog behind the wire mesh is also nice. And the fog could give way to the
+'shadows' ... I also like the image with 'sun' behind the drummer. These moods also already work well without the
+'shadows'." So:
+
+- **Fog behind the mesh:** the haze lives in the space behind the wire-mesh wall, lit from behind (a warm glow
+  through the fog), not on the floor in front of the band.
+- **The fog gives way to the shadows:** where a true self is shown, the fog behind the mesh parts or clears and the
+  shadow appears in its place.
+- **The sun behind the drummer:** a big low glow behind the drum riser, as in the day restyle.
+- These moods stand on their own: a show can run whole stretches with no alter-ego shadows at all.
+
 ## History
 
 - 2026-11-19: created, with the eyes in Sirene's shadow and the four style directions.
 - 2026-11-19: the guiding feeling, what to keep, the characters as far as named, the maintainer's choice among the styles, and the two worlds.
 - 2026-11-19: Klaue's styled hair over a wild child; the critic's characters for all six.
+- 2026-11-19: the fog behind the mesh that gives way to the shadows; the sun behind the drummer.
