@@ -151,3 +151,4 @@ acceptance.
 - 2026-11-19: step 4 starts (KLANG-00470): Kokon with Schmetterling's parts and guitar compressor, no copy; D13 option b (listen for the drift first).
 - 2026-11-19: step 3 done on the maintainer's word (KLANG-00469): the band keeps the cylinder amp. Step 4 (Kokon, KLANG-00470) is built and being listened to.
 - 2026-11-19: step 4 done on the maintainer's word (KLANG-00470): Kokon is ported; the fuzz on the shared bus is theirs to tweak. Paused here by the maintainer until the token refill. Open: step 5 (KLANG-00471, the bass rig, not started), the notes (KLANG-00472), whether the copy "Der Schmetterling (amp per note)" can go, D13 undecided (not raised after listening).
+- 2026-11-19: the maintainer: "The old Schmetterling copy can go" (removed, with its benchmark case and its place in the voice optimizer's song list); "Kokon: all good here, will take over." D13 stays undecided and unbuilt.

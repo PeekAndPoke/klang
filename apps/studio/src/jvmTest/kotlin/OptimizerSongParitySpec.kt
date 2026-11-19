@@ -42,10 +42,7 @@ class OptimizerSongParitySpec : StringSpec({
     val sampleRate = 48000
 
     val songs = listOf(
-        // the amp-per-note copy keeps the guitar rig in the voice, the corpus this pass had in Der Schmetterling until
-        // its amp moved to the cylinder (KLANG-00469)
-        BuiltInSongs.derSchmetterling, BuiltInSongs.derSchmetterlingAmpPerNote,
-        BuiltInSongs.tetris, BuiltInSongs.tetrisRemix, BuiltInSongs.soundOfTheSea,
+        BuiltInSongs.derSchmetterling, BuiltInSongs.tetris, BuiltInSongs.tetrisRemix, BuiltInSongs.soundOfTheSea,
         BuiltInSongs.sakura, BuiltInSongs.aTruthWorthLyingFor, BuiltInSongs.strangerThings,
         BuiltInSongs.irishLamentTechno, BuiltInSongs.irishLament, BuiltInSongs.finalFantasy7Prelude,
         BuiltInSongs.smallTownBoy, BuiltInSongs.drunkenSailor,
