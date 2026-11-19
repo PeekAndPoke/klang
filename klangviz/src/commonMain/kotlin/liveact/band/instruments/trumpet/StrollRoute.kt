@@ -72,8 +72,11 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
     /** One leg in the round's time: walked from [start] for [time] seconds (seconds into the round). */
     internal class Walk(val leg: StrollLeg, val start: Double, val time: Double)
 
-    /** A round worked out: what it does ([kind]) and its legs, in order. */
-    internal class Round(val kind: Kind, val walks: List<Walk>)
+    /**
+     * A round worked out: what it does ([kind]), its legs in order, and in a round to the camera when she stares at
+     * it ([stare], seconds into the round: see [stareOf]).
+     */
+    internal class Round(val kind: Kind, val walks: List<Walk>, val stare: ClosedFloatingPointRange<Double>? = null)
 
     private val rounds: List<Int> = LENGTHS.indices.map { i -> LENGTHS[(i + seed.mod(LENGTHS.size)) % LENGTHS.size] }
 
@@ -129,6 +132,22 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
 
     /** How long the round [round] is, in seconds. */
     internal fun lengthOf(round: Int): Double = rounds[round % rounds.size].toDouble()
+
+    /**
+     * When she stares at the camera around [x] seconds after the stroll began (see [stareOf]), seconds after it
+     * began: the window of the round [x] lies in; null where it goes to no camera.
+     */
+    internal fun stareAround(x: Double): ClosedFloatingPointRange<Double>? {
+        if (x <= 0.0) {
+            return null
+        }
+
+        val round = roundAt(x)
+        val window = roundOf(round).stare ?: return null
+        val start = startOf(round)
+
+        return (start + window.start)..(start + window.endInclusive)
+    }
 
     /** The round [round] worked out (once, then kept). */
     internal fun roundOf(round: Int): Round = worked.getOrPut(round) { build(round = round, kind = wanted(round)) }
@@ -207,7 +226,73 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
             t += time + (stands.getOrNull(i) ?: 0.0)
         }
 
-        return Round(kind = kind, walks = walks)
+        val stare = when (kind) {
+            Kind.Camera, Kind.Close -> stareOf(there = walks[0], back = walks[1])
+            Kind.Plain, Kind.Edge -> null
+        }
+
+        return Round(kind = kind, walks = walks, stare = stare)
+    }
+
+    /**
+     * When she stares at the camera in a round to it, seconds into the round (the maintainer, 2026-11-19: "when she
+     * comes close to the total camera she should also stare at the camera, already while walking towards it"). One
+     * rule for both rounds to the camera, the one up close and the one as far as [CAMERA_Z]: from the moment she has
+     * turned onto her way [there], walking at the lens (her way points at it within [APPROACH]; not where the leg
+     * begins with a bend away from it), through her stand before it, until she begins to turn away from it on her
+     * way [back] (her way more than [AWAY] off it): so it is let go while the camera is still in her sight, before her
+     * body has turned from it. The lens lies [LENS] of her size straight on from [closest], toward
+     * the audience (the camera stands across the stage where [closest] does). Where she never walks at the lens, from
+     * the end of the way there.
+     */
+    private fun stareOf(there: Walk, back: Walk): ClosedFloatingPointRange<Double> {
+        val lensX = closest.x
+        val lensZ = closest.z + LENS
+
+        // how far off the lens the way she goes is at [t] of [walk] (radians); null where she is slower than a slow walk
+        fun offLens(walk: Walk, t: Double): Double? {
+            fun placeAt(x: Double): Offset = walk.leg.at(walk.leg.length * smoother((x - walk.start) / walk.time))
+
+            val a = placeAt(t - 0.5 * SCAN)
+            val b = placeAt(t + 0.5 * SCAN)
+
+            if (hypot(b.x - a.x, b.z - a.z) / SCAN < SLOW_WALK) {
+                return null
+            }
+
+            return abs(wrap(atan2(b.z - a.z, b.x - a.x) - atan2(lensZ - a.z, lensX - a.x)))
+        }
+
+        var start = there.start + there.time
+        var t = there.start
+
+        while (t <= there.start + there.time) {
+            val off = offLens(walk = there, t = t)
+
+            if (off != null && off <= APPROACH) {
+                start = t
+                break
+            }
+
+            t += SCAN
+        }
+
+        var end = back.start + back.time
+
+        t = back.start
+
+        while (t <= back.start + back.time) {
+            val off = offLens(walk = back, t = t)
+
+            if (off != null && off > AWAY) {
+                end = t
+                break
+            }
+
+            t += SCAN
+        }
+
+        return start..max(start, end)
     }
 
     /** The way from [from] to [to], both standing, the way she faces at rest; [leg] and [round] choose its S. */
@@ -382,6 +467,26 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
 
         /** The most a straight swings to the side, in its S. */
         internal const val SWAY = 0.05
+
+        /** The step she is looked at in, to find when she stares at the camera (see [stareOf]), in seconds. */
+        internal const val SCAN = 0.05
+
+        /** A slow walk, in her sizes a second: slower, the way she goes says nothing (see [stareOf]). */
+        internal const val SLOW_WALK = 0.05
+
+        /** How far off the lens her way may point when she walks at it (see [stareOf]), in radians: 25 degrees. */
+        internal const val APPROACH = 25 * PI / 180
+
+        /**
+         * How far off the lens her way may point on her way back while she still stares (see [stareOf]), in radians:
+         * 15 degrees. Let go later (at a right angle, 60 or 40 degrees), the camera went out of her sight while the
+         * stare still fell, and what she took of it fell 1.37, 1.14 or 1.17 a second, faster than over 1.5 s; from 15
+         * degrees it falls 0.83 a second at most, as the stare itself does (StrollStareSpec, 2026-11-19).
+         */
+        internal const val AWAY = 15 * PI / 180
+
+        /** Where the lens lies, straight on from [closest] toward the audience, in her sizes (see [stareOf]). */
+        internal const val LENS = 1.5
 
         /** How far toward the camera she comes in a camera round. */
         internal const val CAMERA_Z = 3.4

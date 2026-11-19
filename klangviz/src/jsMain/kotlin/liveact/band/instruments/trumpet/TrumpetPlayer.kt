@@ -72,7 +72,9 @@ private object Raise {
  * where her skills ask the head to look at a time (see `lookAt`, the last in rank first; none unless given): the
  * head turns to each as far as it is asked, each over the ones before it, only as far as she is free to look (never
  * with the trumpet at her lips, see [freeToLook]) and, but for a look at one behind her, as far as the place is in
- * sight.
+ * sight. [camera]: where the camera is (a live vector the show keeps, as her skills' looks at it have it; where it
+ * is not given, where the total stands): on a stroll to it she stares at it (see [StrollHome.stareAt]), over all her
+ * other looks.
  */
 class TrumpetPlayer(
     private val show: Show,
@@ -81,6 +83,7 @@ class TrumpetPlayer(
     traits: Traits,
     seed: Double = 3.0,
     private val looks: (Double) -> List<Look> = { emptyList() },
+    private val camera: Vector3 = HOME.pos.clone(),
 ) {
     /**
      * Where she is and how she walks: [at] her place on the stage, [turn] which way she faces, [speed] how fast she
@@ -288,6 +291,17 @@ class TrumpetPlayer(
         return Sound(note = note, sounding = sounding, high = high, blow = if (before != null) before.v * sounding else 0.0)
     }
 
+    /**
+     * Her stare at the [camera] on a stroll to it at [t] (see [StrollHome.stareAt]), as a still look, last so that it
+     * lies over all her other looks; also as it is let go after the stroll's end. Null where there is none.
+     */
+    private fun stareAt(t: Double): Look? {
+        val k = strolls.lastOrNull { t > it.from && t < it.to + StrollHome.STARE_FALL } ?: return null
+        val share = k.way.stareAt(t)
+
+        return if (share > 0) Look(share = share, at = camera, still = true) else null
+    }
+
     /** A [look] as far as she takes it ([share]), toward [yaw]: off the way she faces, as far as a head turns. */
     private class Turn(val look: Look, val share: Double, val yaw: Double)
 
@@ -317,7 +331,7 @@ class TrumpetPlayer(
             return atan2(sin(off), cos(off))
         }
 
-        return looks(t).map { look ->
+        return (looks(t) + listOfNotNull(stareAt(t))).map { look ->
             val yaw = yawOf(look = look, from = walk)
             val before: ((Int) -> Double)? = if (put) {
                 null

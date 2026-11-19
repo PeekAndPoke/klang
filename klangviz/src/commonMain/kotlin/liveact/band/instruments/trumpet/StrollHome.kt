@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollLeg.Pose
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Offset
 import io.peekandpoke.klang.viz.liveact.hash01
+import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.smoother
 import kotlin.math.atan2
 import kotlin.math.floor
@@ -78,7 +79,7 @@ class StrollHome(
     }
 
     /** Where the route's time stands as the stroll begins: the start of its first round. */
-    private val shift: Double = route.startOf(
+    internal val shift: Double = route.startOf(
         min(StrollRoute.FIRST_ROUNDS - 1, floor(hash01(from * 0.7317 + 11.3) * StrollRoute.FIRST_ROUNDS).toInt())
     )
 
@@ -98,6 +99,15 @@ class StrollHome(
     /** Her last way home where she walks one; null where she is at her place by then, and stays. */
     internal val way: Way? get() = ways.last().takeIf { it.leg != null }
 
+    /**
+     * When she left her route, seconds into the stroll: as she turned home the first time, also where this stroll
+     * replaces one in which she had turned home already (whose ways may since be dropped, see [keep]). The stare at
+     * the camera is let go from there ([stareAt]). Taken over, not read from the ways kept, it guards the case of a
+     * [KEEP] shorter than the stare's fall ([STARE_FALL]): as long as [KEEP] is the longer, a way that is dropped
+     * began so long ago that the stare had been let go by then, and the difference cannot be seen.
+     */
+    internal val leftRoute: Double
+
     init {
         val end = max(0.0, to - from)
         val least = max(0.0, notBefore - from)
@@ -113,6 +123,28 @@ class StrollHome(
             // on her way home, and her end came sooner: she goes home from where she is, as fast as she goes
             else -> kept + fromWay(ways = kept, end = end, least = least)
         }
+
+        leftRoute = if (turned != null && before != null) before.leftRoute else ways.first().start
+    }
+
+    /**
+     * How far she stares at the camera at [t] (seconds into the show), 0 to 1: in a round to the camera, while the
+     * route has her walk at it and stand before it (see [StrollRoute.stareAround]), rising over [STARE_RISE] seconds
+     * and let go over [STARE_FALL] as she turns away from it, as her timed looks fall. A stroll that leaves the route
+     * before (its way home) lets go as it leaves it. It goes by the time, the route and when she left it alone, so a
+     * replaced stroll stares as the one it replaces did.
+     */
+    fun stareAt(t: Double): Double {
+        val x = t - from
+        val window = route.stareAround(x + shift) ?: return 0.0
+        val start = window.start - shift
+        val end = min(window.endInclusive - shift, leftRoute)
+
+        if (x <= start || start >= leftRoute) {
+            return 0.0
+        }
+
+        return smooth((x - start) / STARE_RISE) * (1 - smooth((x - end) / STARE_FALL))
     }
 
     /** Where she is at [t] (seconds into the show), off her place, in her sizes. */
@@ -229,6 +261,12 @@ class StrollHome(
          * some 3.3 times what her step covers at 120 bpm.
          */
         internal const val LATE_FASTEST = 1.45
+
+        /** The stare at the camera rises over this many seconds (see [stareAt]). */
+        internal const val STARE_RISE = 0.8
+
+        /** The stare at the camera is let go over this many seconds, as her timed looks fall (`SIRENE`). */
+        internal const val STARE_FALL = 1.8
 
         /** How long the ways home of a replaced stroll are kept, seconds back from when it was replaced. */
         internal const val KEEP = 2.0
