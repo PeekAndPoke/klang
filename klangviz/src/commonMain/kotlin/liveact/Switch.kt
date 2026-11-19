@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.StageLook
 
 /**
  * Every switch a page's address can give the live act ([Switches]), with what it does. [key] is its name in the
@@ -148,4 +149,11 @@ enum class Switch(val key: String) {
 
     /** `?fullfog`: the floor's fog worked out by every pixel for itself instead of from its maps, to compare. */
     FullFog("fullfog"),
+
+    /**
+     * `?stage=mesh`: what stands behind the band ([StageLook]): mesh, a wire-mesh fence with a dark surface behind
+     * it, a haze between the two in place of the fog on the floor, and a low glow behind the drummer; any other
+     * value, or none, the wall as it was made.
+     */
+    Stage("stage"),
 }

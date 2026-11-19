@@ -13,6 +13,7 @@ import io.peekandpoke.klang.workshop.threejs.autoUpdate
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.lerp
 import io.peekandpoke.klang.workshop.threejs.tuneShadow
+import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.addons.threejs.js.SpotLight
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
@@ -207,6 +208,19 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
     }
 
     /**
+     * The sun behind the drummer at [t] (`?stage=mesh`, [Sun]): sets [into] to its colour in the mood and under the
+     * front lamp's state [front] (from [frontAt]), and gives how bright it is, from 0: [house] 0 dark to 1, dimmed
+     * under the front lamp, and flickering like the lamps.
+     */
+    fun sun(t: Double, house: Double, front: FrontLight, into: Color): Double {
+        val lamp = if (front.strobing) FrontColors.BLUE else plan.frontColor(t, tried)
+
+        into.setHex(Sun.color(mood = plan.moodAt(t), front = lamp, frontLevel = front.level))
+
+        return lampFlicker(t, plan.own(SUN_SEED)) * house * Sun.share(front = front.level, strobing = front.strobing)
+    }
+
+    /**
      * The shadows at [quality], where it is another than now: each lamp's map is freed where its size changes or the
      * lamp casts no more (three.js makes the new one at the next frame), and the lamps cast as [quality] says. A
      * choice by hand: where the number of lamps that cast changes, every lit material is built anew once (a short
@@ -237,5 +251,10 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
     /** Stops listening for the key f on the window. */
     fun dispose() {
         window.removeEventListener("keydown", onKey)
+    }
+
+    private companion object {
+        /** The sun's own number for its flicker, as a lamp's seed: none of the lamps has it. */
+        const val SUN_SEED = 43.9
     }
 }

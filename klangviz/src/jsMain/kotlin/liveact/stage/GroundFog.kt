@@ -35,11 +35,13 @@ import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.klang.workshop.threejs.uniformsOf
 import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
 import io.peekandpoke.kraft.addons.threejs.js.Camera
+import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.MaterialSide
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.addons.threejs.js.TextureFilter
 import io.peekandpoke.kraft.addons.threejs.js.TextureWrapping
+import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
 import org.khronos.webgl.Uint8Array
@@ -60,6 +62,10 @@ import kotlin.random.Random
 // graphics card blends between its points. Five readings a pixel and sheet stand in place of forty computed random
 // numbers, which made the fog cost more than everything else on the stage together (measured 2026-11-16).
 //
+// Behind the wire mesh (`?stage=mesh`, FogBed.BehindMesh) the same sheets stand upright, parallel to the wall, between
+// the mesh and the dark surface behind it: a haze from the floor to well above the band's heads that rises and drifts
+// slowly, lit from behind by the sun behind the drummer (Fence) and only faintly by the lamps.
+//
 // The sheets cover much of the picture many times over (twelve at the quality the fog was made with, FogQuality), so
 // working the fog out for every pixel of every sheet costs with the number of pixels. But what the fog is at a place
 // on the stage does not depend on the camera. So it is worked out once a frame as a map of the stage for each sheet
@@ -72,9 +78,10 @@ import kotlin.random.Random
 // aliasing on the legs".)
 
 /**
- * The fog on the floor of [scene], drawn by [renderer] at [quality] (its number of sheets; not [FogQuality.Off],
- * which is no fog to make). Each frame, after the lamps are set and before the scene is drawn: [update]. When the
- * stage goes, or the fog is made anew at another quality: [dispose].
+ * The fog of [scene], on the floor or behind the mesh as [bed] says, drawn by [renderer] at [quality] (its number of
+ * sheets; not [FogQuality.Off], which is no fog to make). Each frame, after the lamps are set and before the scene is
+ * drawn: [update] (behind the mesh, after [sun]). When the stage goes, or the fog is made anew at another quality:
+ * [dispose].
  *
  * [mapped]: the fog is worked out as maps of the stage (see the top of the file), where the graphics card can hold
  * such a picture; else, and with `?fullfog` (to compare), every pixel of every sheet works it out for itself.
@@ -84,6 +91,7 @@ class GroundFog(
     private val renderer: WebGLRenderer,
     private val quality: FogQuality,
     mapped: Boolean,
+    private val bed: FogBed = FogBed.Floor,
 ) {
     /** One sheet of the stack, with its material and its own see-through share. */
     private class Layer(val mesh: Mesh, val material: ShaderMaterial, val alpha: Uniform<Double>)
@@ -99,6 +107,10 @@ class GroundFog(
     private val colorsUniform = uniform(colors)
     private val cosinesUniform = uniform(cosines)
 
+    /** The sun behind the drummer, as the haze behind the mesh takes it: its colour times its brightness. */
+    private val sunLight = vec()
+    private val sunUniform = uniform(sunLight)
+
     /** The random numbers the noise is read from (see the top of the file). */
     private val noise: Data3DTexture = noiseBlock()
 
@@ -106,7 +118,7 @@ class GroundFog(
     private val maps: Maps? = if (mapped && canHoldMaps()) Maps() else null
 
     /** The sheets' shape, one for all of them. */
-    private val sheet: BufferGeometry = Three.addon.createPlaneGeometry(WIDE, DEEP)
+    private val sheet: BufferGeometry = Three.addon.createPlaneGeometry(bed.wide, bed.tall)
 
     private val layers: List<Layer>
     private val target = vec()
@@ -138,7 +150,7 @@ class GroundFog(
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
                 this.uniforms = uniforms
                 vertexShader = if (maps != null) MAP_VERTEX else VERTEX
-                fragmentShader = if (maps != null) sheetFragment(quality) else FRAGMENT
+                fragmentShader = if (maps != null) sheetFragment(quality = quality, bed = bed) else fragment(bed)
                 transparent = true
                 depthWrite = false
                 side = MaterialSide.DoubleSide
@@ -146,17 +158,38 @@ class GroundFog(
                 blendSrc = BlendFactor.OneFactor
                 blendDst = BlendFactor.OneMinusSrcAlphaFactor
             })
-            // a level sheet shows the camera one side only: drawn once, where three.js draws what is see-through
-            // and two-sided twice
+            // a sheet shows the camera one side only: drawn once, where three.js draws what is see-through and
+            // two-sided twice
             material.forceSinglePass = true
             val mesh = Three.addon.createMesh(sheet, material)
-            mesh.rotation.x = -PI / 2
-            mesh.position.y = BOTTOM + (TOP - BOTTOM) * share
+            place(mesh = mesh, share = share)
             mesh.renderOrder = 10 + i
             scene.add(mesh)
 
             Layer(mesh = mesh, material = material, alpha = alpha)
         }
+    }
+
+    /**
+     * Puts a sheet where it stands, [share] of the way through the stack: level, from the lowest to the highest; or
+     * upright, from just behind the mesh to just before the surface behind it.
+     */
+    private fun place(mesh: Mesh, share: Double): Unit = when (bed) {
+        FogBed.Floor -> {
+            mesh.rotation.x = -PI / 2
+            mesh.position.y = BOTTOM + (TOP - BOTTOM) * share
+        }
+
+        FogBed.BehindMesh -> {
+            mesh.position.y = bed.tall / 2
+            mesh.position.z = HAZE_FRONT + (HAZE_BACK - HAZE_FRONT) * share
+        }
+    }
+
+    /** Where a sheet stands across the stack: a level one's height, an upright one's place toward the back. */
+    private fun across(of: Vector3): Double = when (bed) {
+        FogBed.Floor -> of.y
+        FogBed.BehindMesh -> of.z
     }
 
     /** Puts what the fog is made from into [uniforms]. */
@@ -167,6 +200,15 @@ class GroundFog(
         uniforms["uDir"] = directionsUniform
         uniforms["uCol"] = colorsUniform
         uniforms["uCos"] = cosinesUniform
+        uniforms["uSun"] = sunUniform
+    }
+
+    /**
+     * The sun behind the drummer for this frame, in [color] at [level] (from 0): the haze behind the mesh glows with
+     * it. The fog on the floor does not take it.
+     */
+    fun sun(color: Color, level: Double) {
+        sunLight.set(color.r, color.g, color.b).multiplyScalar(level)
     }
 
     /** Sets the fog for [t], lit by the first of [lamps], seen by [camera]; and works out its maps. */
@@ -182,14 +224,23 @@ class GroundFog(
         }
 
         val share = quality.share
+        val seenFrom = across(camera.position)
+        // behind the mesh the sheets are drawn first of all that is see-through, as all the rest stands in front of
+        // them; the mesh comes right after them (Fence.ORDER)
+        val first = when (bed) {
+            FogBed.Floor -> 10.0
+            FogBed.BehindMesh -> 0.0
+        }
 
         for (layer in layers) {
-            val y = layer.mesh.position.y
-            // a sheet seen edge-on would show as a line: it fades out as the camera comes to its height
-            val off = abs(camera.position.y - y)
+            val at = across(layer.mesh.position)
+            // a sheet seen edge-on would show as a line: it fades out as the camera comes to its height (or, upright,
+            // to its depth)
+            val off = abs(seenFrom - at)
             layer.alpha.value = share * min(1.0, off / 0.25)
-            // drawn from the far side toward the camera: from the floor up when it looks from above
-            layer.mesh.drawOrder = 10 + (if (camera.position.y > y) 1 else -1) * y * 10
+            // drawn from the far side toward the camera: from the floor up when it looks from above, from the back
+            // to the mesh when it looks from the front
+            layer.mesh.drawOrder = first + (if (seenFrom > at) 1 else -1) * at * 10
         }
 
         maps?.draw(camera)
@@ -226,8 +277,8 @@ class GroundFog(
      */
     private inner class Maps {
         val picture: WebGLRenderTarget = Three.addon.createWebGLRenderTarget(
-            width = quality.cols * MAP_WIDE,
-            height = quality.rows * MAP_DEEP,
+            width = quality.cols * bed.mapWide,
+            height = quality.rows * bed.mapTall,
             options = jsObject<RenderTargetOptions> {
                 type = TextureDataType.HalfFloatType
                 depthBuffer = false
@@ -244,7 +295,7 @@ class GroundFog(
             val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
                 this.uniforms = uniforms
                 vertexShader = FILL_VERTEX
-                fragmentShader = fillFragment(quality)
+                fragmentShader = fillFragment(quality = quality, bed = bed)
                 depthWrite = false
                 depthTest = false
             })
@@ -304,27 +355,23 @@ class GroundFog(
 
         const val LAMPS = 5
 
-        /** The lowest and the highest sheet's height, in metres. */
+        /** On the floor: the lowest and the highest sheet's height, in metres. */
         const val BOTTOM = 0.03
         const val TOP = 0.50
 
-        /** A sheet's size on the floor, in metres. */
-        const val WIDE = 26.0
-        const val DEEP = 22.0
-
-        /** A map has this many points each way (7 cm); the maps lie in the picture as [FogQuality] lays them out. */
-        const val MAP_WIDE = 384
-        const val MAP_DEEP = 324
+        /** Behind the mesh: the first sheet's place, just behind the mesh, and the last's, just before the back. */
+        const val HAZE_FRONT = Fence.MESH_Z - 0.3
+        const val HAZE_BACK = Fence.BACK_Z + 0.3
 
         /**
-         * The fog at a place on the stage, for both ways of drawing it: `fogAt(world, height)` gives the light it
-         * sends (as the sheet adds it) and how much it veils, for a sheet at `height` (0 the lowest, 1 the highest)
-         * that lets all of it through; the sheet's own share is multiplied in by whoever draws it.
+         * What the fog is made from, and what both beds share: the noise, and the light of the lamps at a place
+         * (each lights the fog inside its cone, weaker with the square of the distance).
          */
-        private val FOG_AT = """
+        private val FOG_COMMON = """
   uniform float uTime;
   uniform vec3 uPos[${LAMPS}], uDir[${LAMPS}], uCol[${LAMPS}];
   uniform float uCos[${LAMPS}];
+  uniform vec3 uSun;
   uniform highp sampler3D uNoise;
 
   // a random number at every whole point, blended smoothly between them: the card blends, between the points' middles
@@ -334,6 +381,29 @@ class GroundFog(
     return texture(uNoise, (i + f + 0.5) / ${NOISE}.0).r;
   }
 
+  vec3 lampsAt(vec3 world) {
+    vec3 light = vec3(0.0);
+    for (int i = 0; i < ${LAMPS}; i++) {
+      vec3 to = uPos[i] - world;
+      float far2 = dot(to, to);
+      float cone = smoothstep(uCos[i], uCos[i] + 0.12, dot(-normalize(to), uDir[i]));
+      light += uCol[i] * cone / far2;
+    }
+    return light;
+  }"""
+
+        /**
+         * The fog at a place on the stage, for both ways of drawing it: `fogAt(world, height)` gives the light it
+         * sends (as the sheet adds it) and how much it veils, for a sheet at `height` through the stack (0 the
+         * first, 1 the last) that lets all of it through; the sheet's own share is multiplied in by whoever draws it.
+         */
+        fun fogAt(bed: FogBed): String = FOG_COMMON + when (bed) {
+            FogBed.Floor -> FLOOR_AT
+            FogBed.BehindMesh -> HAZE_AT
+        }
+
+        /** On the floor: thick at the floor and near the machines, only its billows reach the top. */
+        private val FLOOR_AT = """
   vec4 fogAt(vec3 world, float height) {
     // the wind: everything drifts slowly across the stage and a little toward the audience
     vec3 p = vec3(world.x + 0.11 * uTime, world.y * 5.0 + 0.02 * uTime, world.z + 0.05 * uTime);
@@ -348,15 +418,32 @@ class GroundFog(
     // it settles: at the floor nearly everywhere, higher up only where it billows
     float density = smoothstep(0.36 + 0.42 * height, 0.74 + 0.16 * height, d + 0.40 * amount);
     density *= 1.0 - smoothstep(8.0, 11.0, length(at * vec2(0.8, 1.0)));
-    // the lamps: each lights the fog inside its cone, weaker with the square of the distance
-    vec3 light = vec3(0.004, 0.005, 0.008);
-    for (int i = 0; i < ${LAMPS}; i++) {
-      vec3 to = uPos[i] - world;
-      float far2 = dot(to, to);
-      float cone = smoothstep(uCos[i], uCos[i] + 0.12, dot(-normalize(to), uDir[i]));
-      light += uCol[i] * cone / far2;
-    }
+    vec3 light = vec3(0.004, 0.005, 0.008) + lampsAt(world);
     return vec4(0.035 * light * density, 0.5 * density);     // it glows where lit, and veils a little what is behind
+  }"""
+
+        /**
+         * Behind the mesh: a haze that rises slowly and drifts across, thick low and thinning upward to some 6 m, in
+         * billows with clear gaps between them; lit by the sun behind the drummer, near it most, and faintly by the
+         * lamps. It veils less than the fog on the floor, so the shadows on the back still read through it.
+         */
+        private val HAZE_AT = """
+  vec4 fogAt(vec3 world, float height) {
+    // it drifts slowly across and rises; the turbulence curls it
+    vec3 p = vec3(world.x * 0.55 + 0.06 * uTime, world.y * 0.7 - 0.045 * uTime, world.z * 0.9 + 0.02 * uTime);
+    vec3 stir = vec3(noise(p * 0.4 + vec3(0.0, 0.02 * uTime, 0.0)), noise(p * 0.4 + vec3(17.0, -0.017 * uTime, 5.0)), 0.0) - 0.5;
+    vec3 q = p + 1.7 * stir;
+    float d = 0.55 * noise(q) + 0.30 * noise(q * 2.1 + 3.0) + 0.15 * noise(q * 4.3 + 7.0);
+    // thick low, thinning upward, its upper edge ragged; on the floor it lies thick everywhere
+    float body = 1.0 - smoothstep(0.15, 1.0, world.y / 6.5 + 0.5 * (d - 0.5));
+    float density = smoothstep(0.34, 0.80, d + 0.22 * body - 0.08) * body;
+    density = max(density, (1.0 - smoothstep(0.0, 1.2, world.y)) * smoothstep(0.15, 0.55, d));
+    density *= 1.0 - smoothstep(8.5, 11.5, abs(world.x));
+    // the sun behind the drummer: a close glow and a wide one
+    vec3 fromSun = world - vec3(${Fence.SUN_X.glsl()}, ${Fence.SUN_Y.glsl()}, ${Fence.BACK_Z.glsl()});
+    float sun2 = dot(fromSun, fromSun);
+    vec3 light = vec3(0.006, 0.006, 0.009) + lampsAt(world) + uSun * (7.0 / (1.0 + sun2 / 2.5) + 1.2 / (1.0 + sun2 / 40.0));
+    return vec4(0.08 * light * density, 0.30 * density);
   }"""
 
         // A sheet that works the fog out for each of its pixels
@@ -369,10 +456,10 @@ class GroundFog(
     gl_Position = projectionMatrix * viewMatrix * world;
   }"""
 
-        val FRAGMENT = """
+        fun fragment(bed: FogBed) = """
   varying vec3 vWorld;
   uniform float uHeight, uAlpha;
-  $FOG_AT
+  ${fogAt(bed)}
 
   void main() {
     gl_FragColor = fogAt(vWorld, uHeight) * uAlpha;
@@ -389,21 +476,31 @@ class GroundFog(
     gl_Position = vec4(position.xy, 0.0, 1.0);
   }"""
 
-        fun fillFragment(quality: FogQuality) = """
+        fun fillFragment(quality: FogQuality, bed: FogBed) = """
   varying vec2 vUv;
-  $FOG_AT
+  ${fogAt(bed)}
 
   void main() {
     vec2 map = vUv * vec2(${quality.cols}.0, ${quality.rows}.0);
     vec2 cell = floor(map);
     vec2 here = fract(map);
     float height = (cell.y * ${quality.cols}.0 + cell.x) / ${quality.layers - 1}.0;
-    // a sheet lies flat: its upper edge is the far one, toward the wall
-    vec3 world = vec3(
-      (here.x - 0.5) * ${WIDE.glsl()}, ${BOTTOM.glsl()} + ${(TOP - BOTTOM).glsl()} * height, (0.5 - here.y) * ${DEEP.glsl()}
-    );
+    vec3 world = ${worldOf(bed)};
     gl_FragColor = fogAt(world, height);
   }"""
+
+        /** Where a point of a sheet's map (`here`, 0 to 1 each way) is on the stage, for the sheet at `height`. */
+        private fun worldOf(bed: FogBed): String = when (bed) {
+            // a sheet lies flat: its upper edge is the far one, toward the wall
+            FogBed.Floor ->
+                "vec3((here.x - 0.5) * ${bed.wide.glsl()}, ${BOTTOM.glsl()} + ${(TOP - BOTTOM).glsl()} * height, " +
+                    "(0.5 - here.y) * ${bed.tall.glsl()})"
+
+            // a sheet stands upright, its lower edge on the floor
+            FogBed.BehindMesh ->
+                "vec3((here.x - 0.5) * ${bed.wide.glsl()}, here.y * ${bed.tall.glsl()}, " +
+                    "${HAZE_FRONT.glsl()} + ${(HAZE_BACK - HAZE_FRONT).glsl()} * height)"
+        }
 
         // A sheet that reads its map
 
@@ -414,7 +511,7 @@ class GroundFog(
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }"""
 
-        fun sheetFragment(quality: FogQuality) = """
+        fun sheetFragment(quality: FogQuality, bed: FogBed) = """
   varying vec2 vUv;
   uniform sampler2D uMaps;
   uniform vec2 uCell;
@@ -422,7 +519,7 @@ class GroundFog(
 
   void main() {
     // not from the map's outermost half points: there the card would blend in the map next to it
-    vec2 edge = vec2(0.5 / ${MAP_WIDE}.0, 0.5 / ${MAP_DEEP}.0);
+    vec2 edge = vec2(0.5 / ${bed.mapWide}.0, 0.5 / ${bed.mapTall}.0);
     vec2 here = clamp(vUv, edge, 1.0 - edge);
     gl_FragColor = texture2D(uMaps, (uCell + here) / vec2(${quality.cols}.0, ${quality.rows}.0)) * uAlpha;
     #include <tonemapping_fragment>

@@ -21,6 +21,7 @@ import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.Stage
+import io.peekandpoke.klang.viz.liveact.stage.StageLook
 import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
 import io.peekandpoke.klang.workshop.threejs.info
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -446,13 +447,15 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             val line = hud ?: element(HUD_ID).also { hud = it }
             val drawn = renderer?.info?.render
 
-            line?.textContent = listOf(
+            line?.textContent = listOfNotNull(
                 "music: ${show.music.source}",
                 "camera: ${now.view.what()}",
                 "seed ${show.seed}",
                 "oversampling ${Oversampling.label(samples)} (key o)",
                 "fog ${fog.word} (key g)",
                 "shadows ${shadows.word}",
+                // only where it is not the wall as it was made
+                StageLook.of(show.switches).takeIf { it != StageLook.Wall }?.let { "stage ${it.word}" },
                 "${fps.toFixed(0)} fps",
                 "slowest frame $worstShown ms",
                 "pixels ${sharpness.ratio.toFixed(2)}x",

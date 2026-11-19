@@ -44,7 +44,8 @@ import kotlin.math.min
 
 /**
  * The stage, built into [scene]: floor, the wall behind, the lamps ([Lights]), the drummer's [riser], the crowd's
- * lights, the night sky and the fog on the floor; the fog at [fog]'s quality, the lamps' shadows at [shadows]' (the
+ * lights, the night sky and the fog on the floor; with `?stage=mesh` ([StageLook.Mesh]) a wire-mesh [Fence] in place
+ * of the wall, with the sun behind the drummer, and the fog as a haze behind the mesh. The fog at [fog]'s quality, the lamps' shadows at [shadows]' (the
  * address's, without them). Sets on [renderer], [scene] and [camera] what the show needs of them: the shadows, the
  * tone mapping, the dark and the distance fog, the camera's lens.
  *
@@ -59,11 +60,20 @@ class Stage(
     fog: FogQuality = FogQuality.of(show.switches),
     shadows: ShadowQuality = ShadowQuality.of(show.switches),
 ) {
-    /** The wall's material: black unless the front lamp is on. */
-    private val backMaterial: MeshStandardMaterial
+    /** What stands behind the band: the wall, or the fence (`?stage=mesh`). */
+    private val look: StageLook = StageLook.of(show.switches)
+
+    /** The wall's material: black unless the front lamp is on; none where the [fence] stands. */
+    private val backMaterial: MeshStandardMaterial?
 
     /** Sets the wall's face: the ornament under the back light, the wire mesh under the front lamp (0 to 1). */
-    private val wallFront: (Double) -> Unit
+    private val wallFront: ((Double) -> Unit)?
+
+    /** The wire-mesh fence in place of the wall, with `?stage=mesh`; none else. */
+    private val fence: Fence?
+
+    /** The sun's colour behind the fence, set each frame. */
+    private val sunColor = Three.addon.createColor(0xffffff)
 
     private val lights: Lights
 
@@ -109,20 +119,31 @@ class Stage(
         floor.receiveShadow = true
         scene.add(floor)
 
-        // A wall behind the stage, well clear of the riser: it takes the front lamp's light and the band's shadows. It
-        // has two faces (see wall()): an ornament in its own faint glow under the back light, a wire mesh under the front
-        // lamp. It takes no light from the other lamps (its colour is black unless the front lamp is on), and the fog
-        // does not dim it.
-        backMaterial = Three.addon.createMeshStandardMaterial(jsObject {
-            color = 0x000000
-            roughness = 0.95
-        })
-        backMaterial.fog = false
-        val back = Three.addon.createMesh(Three.addon.createPlaneGeometry(60.0, 16.0), backMaterial)
-        back.position.set(0.0, 8.0, -8.0)
-        back.receiveShadow = true
-        wallFront = wall(backMaterial, amount = 0.014)
-        scene.add(back)
+        fence = when (look) {
+            StageLook.Wall -> null
+            StageLook.Mesh -> Fence(scene)
+        }
+
+        if (fence == null) {
+            // A wall behind the stage, well clear of the riser: it takes the front lamp's light and the band's shadows.
+            // It has two faces (see wall()): an ornament in its own faint glow under the back light, a wire mesh under
+            // the front lamp. It takes no light from the other lamps (its colour is black unless the front lamp is on),
+            // and the fog does not dim it.
+            val material = Three.addon.createMeshStandardMaterial(jsObject {
+                color = 0x000000
+                roughness = 0.95
+            })
+            material.fog = false
+            val back = Three.addon.createMesh(Three.addon.createPlaneGeometry(60.0, 16.0), material)
+            back.position.set(0.0, 8.0, -8.0)
+            back.receiveShadow = true
+            backMaterial = material
+            wallFront = wall(material, amount = 0.014)
+            scene.add(back)
+        } else {
+            backMaterial = null
+            wallFront = null
+        }
 
         lights = Lights(show = show, scene = scene, shadows = shadows)
 
@@ -168,25 +189,44 @@ class Stage(
         lights.shadows(quality)
     }
 
-    /** A fog on the floor at [quality]: none at [FogQuality.Off]; with `?fullfog` every pixel works it out for itself. */
+    /**
+     * A fog at [quality], on the floor or (with the [fence]) behind the mesh: none at [FogQuality.Off]; with
+     * `?fullfog` every pixel works it out for itself.
+     */
     private fun makeFog(quality: FogQuality): GroundFog? = when (quality) {
         FogQuality.Off -> null
 
-        FogQuality.Low, FogQuality.Medium, FogQuality.High, FogQuality.XHigh ->
-            GroundFog(scene = scene, renderer = renderer, quality = quality, mapped = !show.switches.has(Switch.FullFog))
+        FogQuality.Low, FogQuality.Medium, FogQuality.High, FogQuality.XHigh -> GroundFog(
+            scene = scene,
+            renderer = renderer,
+            quality = quality,
+            mapped = !show.switches.has(Switch.FullFog),
+            bed = when (look) {
+                StageLook.Wall -> FogBed.Floor
+                StageLook.Mesh -> FogBed.BehindMesh
+            },
+        )
     }
 
     /**
-     * Sets every lamp for this frame at [t]: [house] 0 dark to 1; [waiting]: before the click. Then the fog, which
-     * the lamps light, and the crowd.
+     * Sets every lamp for this frame at [t]: [house] 0 dark to 1; [waiting]: before the click. Then the fence and its
+     * sun, where it stands, the fog, which the lamps (and the sun) light, and the crowd.
      */
     fun light(t: Double, house: Double, waiting: Boolean) {
         lights.mood(t)
         val front = lights.frontAt(t, waiting)
-        backMaterial.color.setHex(0x8a8f9c).scale(front.level)
-        wallFront(min(1.0, front.level))
+        backMaterial?.color?.setHex(0x8a8f9c)?.scale(front.level)
+        wallFront?.invoke(min(1.0, front.level))
         dressLevel = min(1.0, front.level)
         lights.shine(t, house, front)
+
+        if (fence != null) {
+            val sun = lights.sun(t = t, house = house, front = front, into = sunColor)
+
+            fence.light(front = front.level, sun = sunColor, level = sun)
+            groundFog?.sun(color = sunColor, level = sun)
+        }
+
         groundFog?.update(t, lights.lamps, camera)
 
         sky?.update(t = t, ratio = renderer.getPixelRatio())
