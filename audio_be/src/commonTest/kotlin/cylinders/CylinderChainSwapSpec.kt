@@ -125,6 +125,27 @@ class CylinderChainSwapSpec : StringSpec({
         rig.cylinder.cachedChainCount shouldBe 1
     }
 
+    "a second voice naming the chain in service on a SOUNDING cylinder starts no swap" {
+        // Two patterns on one cylinder through one amp (Der Schmetterling's rhythm guitars, KLANG-00469): every onset
+        // of either names the chain again while the cylinder sounds, and the amp must keep running, its state and all.
+        val rig = Rig()
+        rig.registry.register("amp", gainChain(1.5))
+
+        rig.cylinder.requestChain("amp")
+        val installed = rig.cylinder.pipeline
+
+        rig.sound()
+        rig.sound(VoiceTestHelpers.createSynthVoice())
+        rig.cylinder.requestChain("amp")
+
+        withClue("a second voice on the amp in service starts no fade") {
+            rig.cylinder.isFading shouldBe false
+        }
+
+        rig.cylinder.pipeline shouldBeSameInstanceAs installed
+        rig.cylinder.cachedChainCount shouldBe 1
+    }
+
     "a name the registry does not know is remembered, never resolved to classic, and retried" {
         val rig = Rig()
 

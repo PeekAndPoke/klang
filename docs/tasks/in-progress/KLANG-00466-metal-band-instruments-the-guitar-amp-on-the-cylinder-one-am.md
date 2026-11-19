@@ -104,7 +104,8 @@ Each is written with the choice the plan makes. A "no" to one of them changes th
 - **`Ign.fn(f)` returns `f` as it is.** A rig part is a plain function already; `Ign.fn` only tells the editor the
   type.
 - **No built-in song puts a chain on a cylinder yet** (`.katalyst(...)` on a pattern); every one uses a chain only
-  at the output (`master(...)`). The song steps are the first real use.
+  at the output (`master(...)`). The song steps are the first real use. (2026-11-19: Der Schmetterling does, since
+  step 3, KLANG-00469.)
 
 ## For the agent that carries a step out
 

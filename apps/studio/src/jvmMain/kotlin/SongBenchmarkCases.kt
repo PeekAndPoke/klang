@@ -453,7 +453,9 @@ object SongBenchmarkCases {
 
     /**
      * The CURRENT (live) built-in Der Schmetterling: reads `builtinsongs/DerSchmetterling.kt` as edited,
-     * next to the frozen snapshot for a same-run comparison. Use `--args=live`.
+     * next to the frozen snapshot for a same-run comparison, and its copy with the amp per note
+     * (`builtinsongs/DerSchmetterlingAmpPerNote.kt`, KLANG-00469), so one run sets the cylinder amp's cost beside the
+     * per-note rig's. Use `--args=live`.
      */
     fun live(): List<SongBenchmark.Case> = listOf(
         SongBenchmark.Case(
@@ -470,6 +472,15 @@ object SongBenchmarkCases {
             code = BuiltInSongs.derSchmetterling.code,
             group = "full-song",
             rpm = BuiltInSongs.derSchmetterling.rpm,
+            cycles = 48,
+            warmupPasses = 1,
+            measurePasses = 3,
+        ),
+        SongBenchmark.Case(
+            name = "Der Schmetterling (LIVE, amp per note)",
+            code = BuiltInSongs.derSchmetterlingAmpPerNote.code,
+            group = "full-song",
+            rpm = BuiltInSongs.derSchmetterlingAmpPerNote.rpm,
             cycles = 48,
             warmupPasses = 1,
             measurePasses = 3,

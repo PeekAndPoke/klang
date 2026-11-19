@@ -236,3 +236,35 @@ Known differences that are NOT faults of the port:
 - 2026-11-18: created, as step 3 of KLANG-00466.
 - 2026-11-19: reworked by the maintainer: a copy of the current song and a full port, no switch.
 - 2026-11-19: IN PROGRESS. Klang-Main-Dev: step 3 starts, on the maintainer's rework of 2026-11-19
+
+## Built (2026-11-19), waiting for the maintainer's ear
+
+Built by an Opus worker, coordinated and checked by Klang-Main-Dev. The ticket stays in progress: its acceptance is
+the maintainer's listening.
+
+- **The copy:** `DerSchmetterlingAmpPerNote.kt`, "Der Schmetterling (amp per note)", right after the original in
+  `BuiltInSongs`. Its code equals the song of 5d1a35995 character for character (31687 characters, the same
+  SHA-256); only the val, the id and the title differ. Not published as an importable module, so no export collides.
+- **The port:** the voice ends at the pickup; all 19 other rig parts are `Kat.fn` chain parts with their stages,
+  numbers and comments unchanged (a reviewer diffed them); `guitarShape` is `ampLevel` (it was not exported);
+  `powerStock` keeps `drive(0.3)`. `makeAmp(stages, level)`: the stages in a 4x region, then the old voice gain as
+  the level, then `classic()`. Rhythm guitars 2 and 3 share `rhythmBus` on cylinder 2; the melody guitar has
+  `melodyBus` on cylinder 1; cylinder 3 is unused.
+- **The maintainer's by ear, each with a comment in the song:** the shared rhythm amp's wood (maple, guitar 2's;
+  mahogany was guitar 3's); how hard the rhythm amp is hit (`.gain(0.7)` per guitar); how hard the melody amp is hit
+  (`.gain(1.0)`; centred it reaches each side's amp 3 dB lower than before, 1.4 would make that up).
+- **Exported functions keep their names and changed what they do:** `guitarN_shape` no longer applies `body`;
+  `guitarN_arrange` no longer sets the voice gain and now carries the amp, `body`, the compressor and the fader. No
+  song in the repo imports Der Schmetterling.
+- **Engine checks** (the maintainer: "for engine correctness only ... do not overdo it"): the song specs green
+  (`:apps:common:jvmTest` 28, `:apps:studio:jvmTest` 172); both rhythm guitars carry one chain name and equal bus
+  settings; a new row in `CylinderChainSwapSpec` pins that a second voice naming the chain in service on a sounding
+  cylinder starts no swap (three guards hold it; the row goes red only when all fail); the pass merges the rhythm
+  amp's 11 eq stages to 8 and the melody amp's 10 to 6, the same bits either way; one render of guitar 2 alone, 16
+  cycles, port against copy at equal drive: peak 0.104 against 0.127, RMS 0.0264 against 0.0257, 125 Hz to 3 kHz
+  within 0.9 dB, no bad sample. The studio and notstrom compile for the browser.
+- **Review:** one round (`reviewer-opus-high`), CLEAN; 1 MINOR and 1 NIT applied.
+- **Not done:** no one has listened. No browser tests. The song benchmark was not run (it writes into
+  `docs/benchmarks/`): `./gradlew :apps:studio:runSongBenchmark --args=live` has a case for the copy now.
+- **Found, older, not touched:** `SongBenchmarkCases.ungated()` looks for the seed line
+  `seed(timeOfDay.mul(60*60*60*24))`, which the song no longer has, so the ledger's live rows would fail.

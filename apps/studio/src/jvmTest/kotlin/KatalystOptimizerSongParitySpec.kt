@@ -27,8 +27,9 @@ import kotlin.random.Random
 
 /**
  * The Katalyst chain's pass (KLANG-00468) on every chain a built-in song declares: each song is compiled, its first
- * cycles queried, and every distinct chain its events carry (today the master chains, with their `bands`; a cylinder's
- * `katalyst(...)` as soon as a song writes one) is rendered as written and as the pass leaves it, over the same stereo
+ * cycles queried, and every distinct chain its events carry (the master chains, with their `bands`, and a cylinder's
+ * `katalyst(...)`: Der Schmetterling's two guitar amps since KLANG-00469) is rendered as written and as the pass
+ * leaves it, over the same stereo
  * input, and must give the same samples bit for bit. The twin of `OptimizerSongParitySpec`, which holds the voice's
  * pass to its margin over the songs' instruments; the chain's pass promises the same bits, so there is no margin here.
  * Only cycles 0 to 8 are queried, so a chain a song first declares later than that is not rendered.

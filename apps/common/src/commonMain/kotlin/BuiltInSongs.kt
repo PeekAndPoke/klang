@@ -8,6 +8,7 @@
 package io.peekandpoke.klang.apps.common
 
 import io.peekandpoke.klang.apps.common.builtinsongs.aTruthWorthLyingForSong
+import io.peekandpoke.klang.apps.common.builtinsongs.derSchmetterlingAmpPerNoteSong
 import io.peekandpoke.klang.apps.common.builtinsongs.derSchmetterlingSong
 import io.peekandpoke.klang.apps.common.builtinsongs.drunkenSailorSong
 import io.peekandpoke.klang.apps.common.builtinsongs.finalFantasy7PreludeSong
@@ -36,6 +37,10 @@ object BuiltInSongs {
     const val PREFIX = "builtin-song"
 
     val derSchmetterling: Song = derSchmetterlingSong
+
+    /** Der Schmetterling as it was before its amp moved to the cylinder (KLANG-00469): the reference to compare by ear. */
+    val derSchmetterlingAmpPerNote: Song = derSchmetterlingAmpPerNoteSong
+
     val tetris: Song = tetrisSong
     val tetrisRemix: Song = tetrisRemixSong
     val soundOfTheSea: Song = soundOfTheSeaSong
@@ -56,6 +61,7 @@ object BuiltInSongs {
         kokon,
         sakura,
         derSchmetterling,
+        derSchmetterlingAmpPerNote,
         soundOfTheSea,
         strangerThings,
         tetris,

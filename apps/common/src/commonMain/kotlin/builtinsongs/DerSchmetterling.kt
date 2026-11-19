@@ -26,13 +26,15 @@ let drunk         =  0.8    // How many liters of beers did each band member hav
 let snareHz       =  207    // Where does the snare cut through?
 
 // Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
-// string -> pickup -> pedal -> preamp -> tone stack -> power amp -> cab. Every stage is a function of the signal, and every
+// string -> pickup -> pedal -> preamp -> power amp -> snare cut -> cab -> level. The string and the pickup are the voice,
+// one per note. Everything after the pickup is the amp, one per guitarist: a Katalyst chain on the guitarist's cylinder,
+// so the notes meet in it as they do in a real amp. Every stage is a function of the signal, and every
 // stage has a menu of caricatures with 2 to 4 tells each, tuned by ear. The *Stock preset of every stage is the sound
 // before that stage existed, so a rig of all-stock presets is the A/B reference. Pick presets one stage at a time, in
 // signal order, with the rest held where they are. A preset you cannot name in an A/B gets deleted, not tuned.
 
 // Pickups: the coil's resonance sets the colour, its output sets how hard the amp is pushed, its position on the string
-// cancels one harmonic.
+// cancels one harmonic. They stay in the voice (Ign.fn): the neck pickup's notch follows the note.
 let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
@@ -53,10 +55,10 @@ let pickupNeck = Ign.fn(x => x
 
 // Pedals: a box in front of the amp. What it filters BEFORE clipping is the tell, not the clipping itself. The last
 // mul is the pedal's level knob, set so the three guitars land within 2 dB of the stock rig (a louder A/B always wins).
-let pedalStock = Ign.fn(x => x)
+let pedalStock = Kat.fn(x => x)
 
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
-let pedalScreamer = Ign.fn(x => x.parallel(
+let pedalScreamer = Kat.fn(x => x.parallel(
     clean => clean,
     dirt => dirt
       .highpass(720)
@@ -67,32 +69,32 @@ let pedalScreamer = Ign.fn(x => x.parallel(
   .mul(0.50))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
-let pedalFuzz = Ign.fn(x => x
+let pedalFuzz = Kat.fn(x => x
   .distort(0.70, "asym")
   .lowpass(4500)
   .mul(0.28))                                      // level
 
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
-let pedalBoost = Ign.fn(x => x.parallel(
+let pedalBoost = Kat.fn(x => x.parallel(
   clean => clean, 
   dirt => dirt.highpass(300).mul(1.4)
 ).mul(0.6))
 
 // Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
 // is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
-let preampStock = Ign.fn(x => x
+let preampStock = Kat.fn(x => x
   .distort(0.20, "tube").highpass(100)
   .distort(0.50, "soft").highpass(100))
 
 // Clean: one lightly driven tube stage and a bright cap that lets the top through.
-let preampClean = Ign.fn(x => x
+let preampClean = Kat.fn(x => x
   .distort(0.12, "tube")
   .highpass(80)
   .eq(e => e.band(freq = 3500, q = 0.7, db = 2.0)) // the bright cap
   .mul(3.5))                                       // volume
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
-let preampCrunch = Ign.fn(x => x
+let preampCrunch = Kat.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
   .distort(0.18, "asym").highpass(100)
@@ -100,7 +102,7 @@ let preampCrunch = Ign.fn(x => x
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
-let preampHighGain = Ign.fn(x => x
+let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
   .distort(0.15, "tube").highpass(120)
   .distort(0.09, "asym").highpass(100)
@@ -109,27 +111,26 @@ let preampHighGain = Ign.fn(x => x
   .mul(0.67))                                      // volume
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
-let powerStock = Ign.fn(x => x.drive(0.3))
+let powerStock = Kat.fn(x => x.drive(0.3))
 
 // Push-pull (class AB): symmetric clip, odd harmonics, and presence: the top opens up as it works.
-let powerPushPull = Ign.fn(x => x
+let powerPushPull = Kat.fn(x => x
   .distort(0.25, "soft")
   .eq(e => e.band(freq = 4000, q = 0.7, db = 2.0)) // presence
   .mul(1.6))                                       // master
 
 // Class A: a lopsided clip, even harmonics, the chime.
-let powerClassA = Ign.fn(x => x
+let powerClassA = Kat.fn(x => x
   .distort(0.25, "asym")
   .mul(1.3))                                       // master
 
-// Cabinets: the linear half of the amp. All of these are static and linear, so they move to the cylinder unchanged once
-// the Katalyst DSL lands.
+// Cabinets: the linear half of the amp. All of these are static and linear.
 
 // Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.
-let cabStock = Ign.fn(x => x.lowpass(5000).lowpass(5000))
+let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
-let cab4x12 = Ign.fn(x => x
+let cab4x12 = Kat.fn(x => x
   .eq(e => e
     .band(freq =  160, q = 0.6, db =  3.80)        // thump: closed-back box resonance
     .band(freq =  800, q = 0.5, db =  4.60)        // roar:  low mids
@@ -139,7 +140,7 @@ let cab4x12 = Ign.fn(x => x
   .highpass(100, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
-let cab1x12 = Ign.fn(x => x
+let cab1x12 = Kat.fn(x => x
   .highpass(120, 0.707, x => x.passes(2))          // open back: no low end below the box
   .eq(e => e
     .band(freq = 3200, q = 1.0, db = 3.0)          // chime: broad upper presence
@@ -147,7 +148,7 @@ let cab1x12 = Ign.fn(x => x
   .lowpass(6500, 0.707, x => x.passes(2)))         // soft, late roll-off, some air stays
 
 // Small combo: a tiny speaker in a tiny box. No bass, a boxy honk, and the highs die early.
-let cabCombo = Ign.fn(x => x
+let cabCombo = Kat.fn(x => x
   .highpass(160, 0.707, x => x.passes(2))          // small speaker: nothing down low
   .eq(e => e
     .band(freq = 750, q = 1.4, db = 4.0)           // honk: the boxy midrange
@@ -155,14 +156,17 @@ let cabCombo = Ign.fn(x => x
   .lowpass(3800, 0.707, x => x.passes(2)))         // early roll-off
 
 // Let the snare cut through: a stage of its own, between the power amp and the cab.
-let snareCut = Ign.fn(x => x
+let snareCut = Kat.fn(x => x
   .eq(e => e
     .band(freq = snareHz, q = 3.0, db = -4)        // notch the snare
   ))
 
+// The Mircophone for the guitar: from rig level to mix level, the last stage of the amp. Was guitarShape.
+let ampLevel = Kat.fn(x => x.mul(0.18).parallel(c => c, c => c.shape("soft")))
+
 // Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
-// The string, the pregain and the envelope; the rig is everything after the string, in the order the signal takes.
-let makeGuitar = (rig) => {
+// The string, the pregain and the envelope, then the pickup: the voice ends there, the amp is the guitarist's cylinder.
+let makeGuitar = (pickup) => {
 
   // --- Overridable params ---------------------------------------------------------------------------------------
   let pVoices     = Ign.slot.voices
@@ -195,33 +199,37 @@ let makeGuitar = (rig) => {
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "exp"))
            
-  // the string through the rig. No note-following highpass after the cab: the preamp tightens the bass at a fixed
+  // the string through the pickup. No note-following highpass after the cab: the preamp tightens the bass at a fixed
   // frequency, and a filter that moves with every note gave every note the same shape, which the ear reads as
   // synthetic (2026-09-14)
-  return rig(signal)    
+  return pickup(signal)
     // sprudel classic
     .classic()
 }
 
-// The Mircophone for the guitar
-let guitarShape = Ign.fn(x => x.mul(0.18).parallel(c => c, c => c.shape("soft")))
-
-// The rigs: the signal path after the string, stage by stage. A/B one stage at a time:
-//   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck
+// The amps: the stages after the pickup, in signal order. A/B one stage at a time:
+//   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck      (in the voice: makeGuitar)
 //   pedal:  pedalStock  | pedalScreamer | pedalFuzz       | pedalBoost
 //   preamp: preampStock | preampClean   | preampCrunch    | preampHighGain
 //   power:  powerStock  | powerPushPull | powerClassA
 //   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
-// Two guitarists, two rigs: the rhythm rig on guitars 2 and 3 (hard left and right), the melody rig on guitar 1 in the
+// Two guitarists, two amps: the rhythm amp for guitars 2 and 3 (hard left and right), the melody amp for guitar 1 in the
 // centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
-let rhythmRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
-  .serial(pickupHumbucker, pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, guitarShape)))
- 
-let melodyRig = Ign.fn(x => x.oversampleAtLeast(4, y => y
-  .serial(pickupSingle, pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, guitarShape)))
+let rhythmStages = Kat.fn(x => x.serial(pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, ampLevel))
+let melodyStages = Kat.fn(x => x.serial(pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, ampLevel))
 
-let guitar       = makeGuitar(rhythmRig)
-let guitarMelody = makeGuitar(melodyRig)
+// One amp: the stages in one 4x region, the voice gain of the rig per note as its level, then the cylinder's usual
+// strip (body, reverb, compressor, fader), so the patterns' body, reverb, compressor and katp("gain.gain") still land.
+let makeAmp = (stages, level) => Katalyst(k => k
+  .oversampleAtLeast(4, r => r.serial(stages))
+  .mul(level)
+  .classic())
+
+let rhythmAmp = makeAmp(rhythmStages, 0.220)     // 0.220 was the gain of guitars 2 and 3
+let melodyAmp = makeAmp(melodyStages, 0.280)     // 0.280 was the gain of guitar 1
+
+let guitar       = makeGuitar(pickupHumbucker)
+let guitarMelody = makeGuitar(pickupSingle)
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
 let bass = (() => {
@@ -305,15 +313,21 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
   .sound(guitarMelody).adsrOff().unison(voices = 11, spread = 0.07) // . solo()
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", guitarDecay(1)) //. mute()
-  .clip(guitarClip(1).fast(2)).pan(0.5).body(material = "spruce", wet = 0.15)
+  .clip(guitarClip(1).fast(2)).pan(0.5)
 
-export guitar1_arrange = x => x.cylinder(1)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").gain(0.280)  // .mute()
-  .mute("<0!128 1!64 0!32>")
-  .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
-  // Shaping
+// The melody guitarist's cylinder: everything it does, written once.
+let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
+  // How hard the amp is hit: the maintainer's by ear. Centred, the guitar reaches each side's amp 3 dB lower than
+  // the rig per note heard it (constant-power pan); 1.4 would make that up, 1.0 is the start value.
+  .gain(1.0)
+  .body(material = "spruce", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
   .katp("gain.gain", 0.40)
+
+export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
+  .mute("<0!128 1!64 0!32>")
+  .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
 
@@ -329,14 +343,20 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
   .ignp("attack", perlin(0.005, 0.006).seed(2))
   .ignp("decay", guitarDecay(2))
   .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
-  .body(material = "maple", wet = 0.15)
 
-export guitar2_arrange = x => x.cylinder(2)  // . solo()
-  .scale("<e2:minor>").gain(0.220).mute("<0!128 1!16 0!16>") // .mute()
-  .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
-  // Shaping
+// The rhythm guitarists' cylinder: guitars 2 and 3 play through ONE amp. Everything the cylinder does is written here
+// once, so the two never write different bus settings (only the newest voice's would be heard).
+let rhythmBus = x => x.cylinder(2).katalyst(rhythmAmp)
+  // How hard the amp is hit: the maintainer's by ear. Two guitars feed one amp now, and one compressor.
+  .gain(0.7)
+  // One amp, one wood: the maintainer's by ear. Maple was guitar 2's, mahogany guitar 3's.
+  .body(material = "maple", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
   .katp("gain.gain", 0.40)
+
+export guitar2_arrange = x => x.apply(rhythmBus)  // . solo()
+  .scale("<e2:minor>").mute("<0!128 1!16 0!16>") // .mute()
+  .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
 
@@ -352,14 +372,10 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .ignp("attack", perlin(0.005, 0.006).seed(3))
   .ignp("decay", guitarDecay(3))
   .clip(guitarClip(3).fast(2)).pan(0.20).superimpose(pan(0.80))
-  .body(material = "mahogany", wet = 0.15)
 
-export guitar3_arrange = x => x.cylinder(3) //  . solo()
-  .scale("<e2:minor>").gain(0.220).mute("<0!128 1!16 0!16>") //.mute()
+export guitar3_arrange = x => x.apply(rhythmBus) //  . solo()
+  .scale("<e2:minor>").mute("<0!128 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
-  // Shaping
-  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.40)
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
 
