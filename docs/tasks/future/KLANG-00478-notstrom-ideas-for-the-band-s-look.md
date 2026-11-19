@@ -33,8 +33,20 @@ we need the real figures... And their characters..."):
 
 - **Rune:** mysterious ("geheimnisvoll"); her true self is the Medusa.
 - **Sirene:** attention seeking; her eyes go onto the wall (below).
-- **Klaue:** could be the band's "manager".
+- **Klaue:** could be the band's "manager". The maintainer, 2026-11-19, on a Shadow Play restyle whose wall
+  showed a boy with tousled hair behind him: "Klaue could be very styled hair (manager hair) but in reality he is
+  still a child with 'wild' hair somehow." So: on the figure, sculpted, lacquered manager hair (faceless head
+  kept); his true self on the wall, a wild-haired child in the same stance.
 - **Skalpell, Beben, Wucht:** open.
+
+The critic's proposals (2026-11-19, not decided; turnarounds, body changes and each true self painted by Gemini in
+the third section of the gallery page): Skalpell the Surgeon (beauty and cruelty; his shadow holds a sword), Beben
+the Watcher (tenderness and dread; a heron-giant whose neck bends down over the band), Sirene the Lure (a winged
+siren with talons, her eyes in the shadow), Wucht the Bull (innocence and violence; a minotaur), Rune the Oracle
+(the Medusa), Klaue the Manager (charm and predation; a wolf pulling strings, before the maintainer's child).
+Below the neck all six share one body today (mitten hands, flipper feet, tube legs); the critic gives each its own
+hands, shorter feet and a posture. Gemini gave Wucht and Klaue faces, which loses the uncanny: keep the heads
+faceless.
 
 ## The ideas
 
@@ -103,3 +115,4 @@ moment. Not decided.
 
 - 2026-11-19: created, with the eyes in Sirene's shadow and the four style directions.
 - 2026-11-19: the guiding feeling, what to keep, the characters as far as named, the maintainer's choice among the styles, and the two worlds.
+- 2026-11-19: Klaue's styled hair over a wild child; the critic's characters for all six.
