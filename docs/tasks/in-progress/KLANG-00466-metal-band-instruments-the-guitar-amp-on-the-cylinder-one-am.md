@@ -147,3 +147,4 @@ acceptance.
 - 2026-11-19: D8 and D9 confirmed by the maintainer; step 2 starts.
 - 2026-11-19: step 2 done (KLANG-00468): the chain's pass, and a chain's stages are in place before its first block (found by review, fixed on the maintainer's word).
 - 2026-11-19: D11 replaced by the maintainer (a copy and a full port, no switch); step 3 starts.
+- 2026-11-19: the maintainer listened to the port: "brilliant! it sound so much better and smoother... like real guitars! very very nice..."

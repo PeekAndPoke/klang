@@ -268,3 +268,4 @@ the maintainer's listening.
   `docs/benchmarks/`): `./gradlew :apps:studio:runSongBenchmark --args=live` has a case for the copy now.
 - **Found, older, not touched:** `SongBenchmarkCases.ungated()` looks for the seed line
   `seed(timeOfDay.mul(60*60*60*24))`, which the song no longer has, so the ledger's live rows would fail.
+- 2026-11-19: the maintainer listened to the port: "brilliant! it sound so much better and smoother... like real guitars! very very nice..."
