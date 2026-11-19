@@ -20,21 +20,14 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =    8    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =   12    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  207    // Where does the snare cut through?
 
-// Guitar rig  ------------------------------------------------------------------------------------------------------------------------------------------------
-// string -> pickup -> pedal -> preamp -> power amp -> snare cut -> cab -> level. The string and the pickup are the voice,
-// one per note. Everything after the pickup is the amp, one per guitarist: a Katalyst chain on the guitarist's cylinder,
-// so the notes meet in it as they do in a real amp. Every stage is a function of the signal, and every
-// stage has a menu of caricatures with 2 to 4 tells each, tuned by ear. The *Stock preset of every stage is the sound
-// before that stage existed, so a rig of all-stock presets is the A/B reference. Pick presets one stage at a time, in
-// signal order, with the rest held where they are. A preset you cannot name in an A/B gets deleted, not tuned.
+// Guitar rig - Pickups  ---------------------------------------------------------------------------------------------------------------------------
 
-// Pickups: the coil's resonance sets the colour, its output sets how hard the amp is pushed, its position on the string
-// cancels one harmonic. They stay in the voice (Ign.fn): the neck pickup's notch follows the note.
+// Simplest pickup ... direct passthrough
 let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
@@ -53,8 +46,9 @@ let pickupNeck = Ign.fn(x => x
   .notch(freq = Ign.freq().mul(4), q = 2.0)        // the neck sits a quarter along the string
   .mul(1.2))
 
-// Pedals: a box in front of the amp. What it filters BEFORE clipping is the tell, not the clipping itself. The last
-// mul is the pedal's level knob, set so the three guitars land within 2 dB of the stock rig (a louder A/B always wins).
+// Guitar rig - Pedals  ---------------------------------------------------------------------------------------------------------------------------
+
+// Simplest pedal ... direct passthrough
 let pedalStock = Kat.fn(x => x)
 
 // Screamer: only the mids go through the clipper, the clean signal goes around it: the mid hump over a clean bass.
@@ -80,8 +74,8 @@ let pedalBoost = Kat.fn(x => x.parallel(
   dirt => dirt.highpass(300).mul(1.4)
 ).mul(0.6))
 
-// Preamps: the amp's gain stages. Tells: how many stages, what each coupling cap lets through, and how tight the bass
-// is BEFORE it clips. The last mul is the preamp's volume, set so the power amp is pushed about as hard as stock.
+// Guitar rig - Pre-Amps  ---------------------------------------------------------------------------------------------------------------------------
+
 let preampStock = Kat.fn(x => x
   .distort(0.20, "tube").highpass(100)
   .distort(0.50, "soft").highpass(100))
@@ -110,6 +104,8 @@ let preampHighGain = Kat.fn(x => x
   .lowpass(4800)                                   // the fizz
   .mul(0.64))                                      // volume
 
+// Guitar rig - Power Amps  --------------------------------------------------------------------------------------------------------------------------
+
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
 let powerStock = Kat.fn(x => x.drive(0.3))
 
@@ -124,7 +120,8 @@ let powerClassA = Kat.fn(x => x
   .distort(0.25, "asym")
   .mul(1.3))                                       // master
 
-// Cabinets: the linear half of the amp. All of these are static and linear.
+// Guitar rig - Cabinets  --------------------------------------------------------------------------------------------------------------------------
+// the linear half of the amp. All of these are static and linear.
 
 // Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.
 let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
@@ -295,9 +292,9 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).ad
 
 export lead_arrange = x => x.cylinder(0) //  .mute()
   .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.50))
-  .velocity()
-  .shuffle("<1!80 1!1 4/8!14 1!33>")
-  .mute("<1!64 0!32 1!32 0!32 1!64>")
+  .velocity("<1.1 0.95 1.00 0.95>*4")
+  .shuffle("<1!64  17!1 4!14 1!1 1!32  1!1 4!14 1!1  1!64>")
+  .mute(   "<1!64  0!32          1!32  0!32          1!64>")
   .late(berlin(0.0015, 0.0035).mul(drunk).fast(8))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -322,7 +319,7 @@ let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
   .gain(1.0)
   .body(material = "spruce", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.37)
+  .katp("gain.gain", 0.36)
 
 export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
@@ -423,7 +420,7 @@ let trumpet = (() => {
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
     .oversampleAtLeast(2, y => y.distort(0.90, "diode"))
-    .mul(0.1)
+    .mul(0.25)
     .shape("hard")
     .classic()
 })()
@@ -435,14 +432,14 @@ export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
   .hpf(550).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.35)
   .apply(
     x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
-    x => x.pan(0.62).late(berlin(0.0017, 0.0022).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
   )
 
-export trommel_arrange = x => x.cylinder(5)  // .solo(0.5)
-  .scale("e5:minor").gain(0.42)
-  .mute("<1!96 0!32 1!96>")                          
+export trumpet_arrange = x => x.cylinder(5)  // .solo(0.5)
+  .scale("e5:minor").gain(0.16)
+  .mute("<1!96 0!32 1!96 0!32 1!64>")                          
 
-export trommel = n(trumpet_pat).apply(trumpet_shape).tag("trommel")
+export trumpet = n(trumpet_pat).apply(trumpet_shape).tag("trommel")
 
 // Metal kick  ------------------------------------------------------------------------------------------------------------------------------------------------
 // Thump and crack, and nothing in between. The "bd" sample rings a partial at 115 Hz, 11 dB under its 68 Hz body, for
@@ -571,7 +568,7 @@ export song_body = stack(
     , // Bass
     bass.apply(bass_arrange) // .solo() // .mute()
     , // Orchestertrommel
-    trommel.apply(trommel_arrange).reverb(wet = 0.20, size = 6.0) // .solo() .mute()
+    trumpet.apply(trumpet_arrange).reverb(wet = 0.20, size = 6.0) // .solo() .mute()
   ).analog(feel).transpose(transposition)
   , // Drums
   stack(
