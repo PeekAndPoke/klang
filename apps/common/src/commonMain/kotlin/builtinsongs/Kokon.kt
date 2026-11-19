@@ -408,7 +408,7 @@ let beatBus = x => x.cylinder(3).katalyst(beatAmp)
 // 0.40 the gain of chug. Chug keeps that ratio as how hard it hits the amp (0.73 = 0.40 / 0.55).
 let heavyBus = x => x.cylinder(4).katalyst(heavyAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.55 * heavyTrim)
+  .katp("gain.gain", 0.50 * heavyTrim)
 
 let strikeBus = x => x.cylinder(5).katalyst(strikeAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
@@ -481,7 +481,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.90 0.85 0.90 0.93".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.53).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .gain(0.6).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.50),
     // x => x.pan(0.10),
   ).apply(heavyBus)
@@ -690,16 +690,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    [8, spinning],
-    [4, answering],
-    [4, quickening],
-    [4, stretching],
-    [4, holdingBreath],
+    // [8, spinning],
+    // [4, answering],
+    // [4, quickening],
+    // [4, stretching],
+    // [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    [12, flyingOff],
-    [4, lastChord],
-    [2, silence]
+    // [12, flyingOff],
+    // [4, lastChord],
+    // [2, silence]
   )
     .scale(songScale)
     .analog(feel)
