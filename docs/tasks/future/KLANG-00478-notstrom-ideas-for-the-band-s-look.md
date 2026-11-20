@@ -40,8 +40,12 @@ turnaround keeps the size, the portrait drew the shell too large.
 The true selves on the wall need the characters first (the maintainer, 2026-11-19: "Before we can show the true self
 we need the real figures... And their characters..."):
 
-- **Rune:** mysterious ("geheimnisvoll"); her true self is the Medusa.
-- **Sirene:** attention seeking; her eyes go onto the wall (below).
+- **Rune:** mysterious ("geheimnisvoll"); her true self is the Medusa. Her own build and head (the target chosen
+  2026-11-20: long and columnar, a little face, a skull that sweeps back into the tail of hair), and the tail hangs
+  and swings on its own. The heels are hers (below).
+- **Sirene:** attention seeking; her eyes go onto the wall (below). Her feet: the body of 2026-11-20 (2ffaee471)
+  reads as high heels, which the maintainer does not want for her (2026-11-20): "she should wear comfortable
+  'footware' so she can walk around a lot easily. Rune can he the heals." To be reworked once Rune is done.
 - **Klaue:** could be the band's "manager". The maintainer, 2026-11-19, on a Shadow Play restyle whose wall
   showed a boy with tousled hair behind him: "Klaue could be very styled hair (manager hair) but in reality he is
   still a child with 'wild' hair somehow." So: on the figure, sculpted, lacquered manager hair (faceless head
@@ -168,3 +172,4 @@ Not built: the bodies and the true-self shadows (they need modelling and the cha
 - 2026-11-19: the hands stay mittens; Sirene's head as a sea shell, its outline kept.
 - 2026-11-20: steps 1 to 6 of the new look built behind keys (e17a1ffa3 to e52c06039).
 - 2026-11-20: the ghosts: a dark stage with the light behind the fence, in several colours.
+- 2026-11-20: Sirene's feet become comfortable ones, the heels are Rune's; Rune's target chosen.
