@@ -444,7 +444,7 @@ export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
 
 export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "steel", wet = 0.10)
-  .vibrato(rate = 5.5, semitones = 0.12)
+  .vibrato(rate = 5.5, semitones = 0.15)
   .hpf(250).lpf("5500".add(perlin(-300, 300).fast(4))).clip(0.85)
   .apply(
     x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
@@ -452,7 +452,7 @@ export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
   )
 
 export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
-  .scale("e5:minor").gain(0.18)
+  .scale("e5:minor").gain(0.17)
   .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
 export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
