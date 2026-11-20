@@ -6,8 +6,10 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
 
@@ -115,6 +117,13 @@ enum class Switch(val key: String) {
      */
     Straight("straight"),
 
+    /**
+     * `?eyes=shadow`: where Sirene's eyes glow while the front lamp is on ([EyesLook]): shadow, in the head of her
+     * shadow on the wall or behind the fence; any other value, or none, in her face as she was made. The key i turns
+     * it over while the show plays ([LookVariants]).
+     */
+    Eyes("eyes"),
+
     // The lights
 
     /** `?rig=inner`: the back lamps' rig held all through: all, outer or inner; another name leaves it to the show. */
@@ -165,4 +174,11 @@ enum class Switch(val key: String) {
      * while the show plays ([LookVariants]).
      */
     Floor("floor"),
+
+    /**
+     * `?haze=parts`: the haze behind the fence ([HazeLook]): parts, it draws back where the front lamp throws the
+     * band's shadows on the surface behind; any other value, or none, the haze as it was made. Only with the fence
+     * ([Stage]). The key h turns it over while the show plays ([LookVariants]).
+     */
+    Haze("haze"),
 }

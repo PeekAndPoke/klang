@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.stage
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.lights.Lamp
+import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.BlendFactor
@@ -66,6 +67,13 @@ import kotlin.random.Random
 // the mesh and the dark surface behind it: a haze from the floor to well above the band's heads that rises and drifts
 // slowly, lit from behind by the sun behind the drummer (Fence) and only faintly by the lamps.
 //
+// With `?haze=parts` (HazeLook.Parts) the haze gives way to the band's shadows: each point of it asks the front lamp's
+// shadow map whether the lamp's light is held back on its way there by something well before the haze (the band, the
+// riser), and the haze thins there, so each big shadow on the surface behind stands in a clearing. The test sits in
+// the maps (see below), six readings of the lamp's map for each point of them (a point every 9 cm), whatever the
+// screen's size: some 1.5 million readings a frame at high, about what the noise already costs there. The sheets
+// themselves read only their maps, as before.
+//
 // The sheets cover much of the picture many times over (twelve at the quality the fog was made with, FogQuality), so
 // working the fog out for every pixel of every sheet costs with the number of pixels. But what the fog is at a place
 // on the stage does not depend on the camera. So it is worked out once a frame as a map of the stage for each sheet
@@ -106,6 +114,15 @@ class GroundFog(
     private val directionsUniform = uniform(directions)
     private val colorsUniform = uniform(colors)
     private val cosinesUniform = uniform(cosines)
+
+    // The front lamp's shadows, which the haze behind the mesh gives way to (`?haze=parts`): the lamp's map of what
+    // it lights (three.js's, a depth picture), where a place of the world lands on it, where the lamp stands, and how
+    // far the haze draws back (0: not at all, the haze as it was made)
+    private val frontShadow: Uniform<dynamic> = uniform(null)
+    private val frontShadowMatrix: Uniform<dynamic> = uniform(mat4())
+    private val frontLamp = vec()
+    private val frontLampUniform = uniform(frontLamp)
+    private val parts = uniform(0.0)
 
     /** The sun behind the drummer, as the haze behind the mesh takes it: its colour times its brightness. */
     private val sunLight = vec()
@@ -201,6 +218,38 @@ class GroundFog(
         uniforms["uCol"] = colorsUniform
         uniforms["uCos"] = cosinesUniform
         uniforms["uSun"] = sunUniform
+        uniforms["uFrontShadow"] = frontShadow
+        uniforms["uFrontShadowMatrix"] = frontShadowMatrix
+        uniforms["uFrontLamp"] = frontLampUniform
+        uniforms["uParts"] = parts
+    }
+
+    /**
+     * How far the haze behind the mesh draws back from the band's shadows this frame: [share] from 0 (not at all, the
+     * haze as it was made) to 1, where the front lamp [front] throws them, by its shadow map as the frame before drew
+     * it. Not at all where the lamp has no map yet (it is made at the first frame it casts). The fog on the floor
+     * does not take it.
+     */
+    fun clearings(front: Lamp, share: Double) {
+        val shadow: dynamic = front.light.asDynamic().shadow
+        val depth: dynamic = shadow?.map?.depthTexture
+
+        if (depth == null) {
+            // none for the frame the lamp has no map (the first one, or a new shadow quality: Lights freed the old
+            // map); a freed one kept here would be made anew on the card by three.js and never freed
+            frontShadow.value = null
+            parts.value = 0.0
+
+            return
+        }
+
+        // the lamp's map is handed on whether the haze parts or not: with the haze's shadow sampler left empty all
+        // the time, the fence lost the front lamp's light in the stills (2026-11-20; three.js's stand-in for an
+        // empty shadow sampler seems to disturb the lamp's own map), so it is empty for a frame at most
+        frontShadow.value = depth
+        frontShadowMatrix.value = shadow.matrix
+        frontLamp.copy(front.light.position)
+        parts.value = if (share > 0.0) share else 0.0
     }
 
     /**
@@ -374,6 +423,16 @@ class GroundFog(
         const val HAZE_BACK = Fence.BACK_Z + 0.3
 
         /**
+         * How far toward the front lamp a place of the haze is tested for the band's shadow, in metres: past the
+         * fence's posts (0.35 m before the first sheet) and short of the riser's back (some 3 m before the place
+         * then) and the band.
+         */
+        const val BAND_GAP = 2.5
+
+        /** How far around a place of the haze the band's shadow is read as well, in metres: the clearing's soft edge. */
+        const val CLEARING = 0.12
+
+        /**
          * What the fog is made from, and what both beds share: the noise, and the light of the lamps at a place
          * (each lights the fog inside its cone, weaker with the square of the distance).
          */
@@ -436,8 +495,39 @@ class GroundFog(
          * Behind the mesh: a haze that rises slowly and drifts across, thick low and thinning upward to some 6 m, in
          * billows with clear gaps between them; lit by the sun behind the drummer, near it most, and faintly by the
          * lamps. It veils less than the fog on the floor, so the shadows on the back still read through it.
+         *
+         * Where `uParts` is above 0 (`?haze=parts`), it thins where the front lamp's light is held back by the band
+         * (`bandShadow`): the place is moved [BAND_GAP] toward the lamp first, so only what stands well before the
+         * haze counts (the band, the riser), not the fence's posts right before it; and four more readings
+         * [CLEARING] m around it make the clearing's edge soft and a little wider than the shadow, as if the haze drew
+         * back from it.
          */
         private val HAZE_AT = """
+  uniform highp sampler2DShadow uFrontShadow;
+  uniform mat4 uFrontShadowMatrix;
+  uniform vec3 uFrontLamp;
+  uniform float uParts;
+
+  // 1 where the front lamp's light is held back on its way to this place, 0 where it gets there (or the place is
+  // outside what the lamp's map sees)
+  float heldBack(vec3 at) {
+    vec4 c = uFrontShadowMatrix * vec4(at, 1.0);
+    if (c.w <= 0.0) return 0.0;
+    c.xyz /= c.w;
+    if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0 || c.z > 1.0) return 0.0;
+    return 1.0 - texture(uFrontShadow, c.xyz);
+  }
+
+  // how much this place of the haze lies in the band's shadow, 0 to 1, its edge soft and a little wider than the shadow
+  float bandShadow(vec3 world) {
+    vec3 toLamp = normalize(uFrontLamp - world);
+    vec3 near = world + toLamp * ${BAND_GAP.glsl()};
+    vec3 across = normalize(cross(toLamp, vec3(0.0, 1.0, 0.0))) * ${CLEARING.glsl()};
+    vec3 up = normalize(cross(across, toLamp)) * ${CLEARING.glsl()};
+    float held = 2.0 * heldBack(near) + heldBack(near + across) + heldBack(near - across) + heldBack(near + up) + heldBack(near - up);
+    return smoothstep(0.12, 0.7, held / 6.0);
+  }
+
   vec4 fogAt(vec3 world, float height) {
     // it drifts slowly across and rises; the turbulence curls it
     vec3 p = vec3(world.x * 0.55 + 0.06 * uTime, world.y * 0.7 - 0.045 * uTime, world.z * 0.9 + 0.02 * uTime);
@@ -449,6 +539,10 @@ class GroundFog(
     float density = smoothstep(0.34, 0.80, d + 0.22 * body - 0.08) * body;
     density = max(density, (1.0 - smoothstep(0.0, 1.2, world.y)) * smoothstep(0.15, 0.55, d));
     density *= 1.0 - smoothstep(8.5, 11.5, abs(world.x));
+    // it gives way to the band's shadows (?haze=parts): nearly all of it, a whisper stays
+    if (uParts > 0.0) {
+      density *= 1.0 - uParts * 0.94 * bandShadow(world);
+    }
     // the sun behind the drummer: a close glow and a wide one
     vec3 fromSun = world - vec3(${Fence.SUN_X.glsl()}, ${Fence.SUN_Y.glsl()}, ${Fence.BACK_Z.glsl()});
     float sun2 = dot(fromSun, fromSun);

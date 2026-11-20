@@ -110,7 +110,7 @@ class BackWall(private val scene: Scene) {
     init {
         material.fog = false
         mesh = Three.addon.createMesh(Three.addon.createPlaneGeometry(60.0, 16.0), material)
-        mesh.position.set(0.0, 8.0, -8.0)
+        mesh.position.set(0.0, 8.0, Z)
         mesh.receiveShadow = true
         face = wall(material, amount = 0.014)
         scene.add(mesh)
@@ -126,5 +126,10 @@ class BackWall(private val scene: Scene) {
     fun dispose() {
         scene.remove(mesh)
         mesh.disposeTree()
+    }
+
+    companion object {
+        /** Where the wall stands, in metres along z: the front lamp's shadows of the band land here. */
+        const val Z = -8.0
     }
 }

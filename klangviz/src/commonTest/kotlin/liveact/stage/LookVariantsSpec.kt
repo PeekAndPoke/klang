@@ -14,6 +14,51 @@ class LookVariantsSpec : StringSpec({
     "without a switch the look is the one it was made with: the wall and the plain floor" {
         LookVariants.of(Switches.parse("")) shouldBe LookVariants(stage = StageLook.Wall, floor = FloorLook.Plain)
         LookVariants() shouldBe LookVariants.of(Switches.parse(""))
+        LookVariants().haze shouldBe HazeLook.Whole
+        LookVariants().eyes shouldBe EyesLook.Face
+    }
+
+    "?haze=parts and ?eyes=shadow are the new variants; no switch, an empty one or another word the look as made" {
+        HazeLook.of(Switches.parse("?haze=parts")) shouldBe HazeLook.Parts
+        HazeLook.of(Switches.parse("?haze")) shouldBe HazeLook.Whole
+        HazeLook.of(Switches.parse("?haze=whole")) shouldBe HazeLook.Whole
+        HazeLook.of(Switches.parse("?haze=clear")) shouldBe HazeLook.Whole
+        EyesLook.of(Switches.parse("?eyes=shadow")) shouldBe EyesLook.Shadow
+        EyesLook.of(Switches.parse("?eyes")) shouldBe EyesLook.Face
+        EyesLook.of(Switches.parse("?eyes=face")) shouldBe EyesLook.Face
+        EyesLook.of(Switches.parse("?eyes=wall")) shouldBe EyesLook.Face
+        LookVariants.of(Switches.parse("?stage=mesh&haze=parts&eyes=shadow")) shouldBe
+            LookVariants(stage = StageLook.Mesh, floor = FloorLook.Plain, haze = HazeLook.Parts, eyes = EyesLook.Shadow)
+    }
+
+    "the keys h and i turn the haze and the eyes over and leave the rest; twice is back where it was" {
+        val start = LookVariants(stage = StageLook.Mesh, floor = FloorLook.Mirror)
+
+        start.nextHaze() shouldBe start.copy(haze = HazeLook.Parts)
+        start.nextHaze().nextHaze() shouldBe start
+        start.nextEyes() shouldBe start.copy(eyes = EyesLook.Shadow)
+        start.nextEyes().nextEyes() shouldBe start
+        start.nextHaze().nextEyes().nextStage() shouldBe
+            LookVariants(stage = StageLook.Wall, floor = FloorLook.Mirror, haze = HazeLook.Parts, eyes = EyesLook.Shadow)
+    }
+
+    "the haze parts only where it is chosen and the fence stands" {
+        LookVariants(stage = StageLook.Mesh, haze = HazeLook.Parts).partsHaze shouldBe true
+        LookVariants(stage = StageLook.Wall, haze = HazeLook.Parts).partsHaze shouldBe false
+        LookVariants(stage = StageLook.Mesh, haze = HazeLook.Whole).partsHaze shouldBe false
+        LookVariants().partsHaze shouldBe false
+    }
+
+    "the haze's and the eyes' lines, and why a chosen parting does nothing" {
+        val parts = LookVariants(stage = StageLook.Mesh, haze = HazeLook.Parts)
+
+        LookVariants().hazeLine(FogQuality.High) shouldBe "haze: whole"
+        parts.hazeLine(FogQuality.High) shouldBe "haze: parts"
+        parts.hazeLine(FogQuality.Low) shouldBe "haze: parts"
+        parts.hazeLine(FogQuality.Off) shouldBe "haze: parts (no haze at fog off)"
+        parts.copy(stage = StageLook.Wall).hazeLine(FogQuality.High) shouldBe "haze: parts (with the fence only)"
+        LookVariants().eyesLine() shouldBe "eyes: face"
+        LookVariants(eyes = EyesLook.Shadow).eyesLine() shouldBe "eyes: shadow"
     }
 
     "?floor=mirror is the mirror; no switch, an empty one or another word the plain floor" {

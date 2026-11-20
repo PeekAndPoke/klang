@@ -10,9 +10,11 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
@@ -32,6 +34,7 @@ import io.peekandpoke.kraft.testing.TestBed
 import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.browser.window
+import kotlinx.coroutines.delay
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlin.time.Duration.Companion.seconds
@@ -595,6 +598,140 @@ class StageSpec : StringSpec({
 
                 spots.filter { it.castShadow == true }.map { it.shadow.mapSize.x.unsafeCast<Int>() } shouldBe
                     listOf(1024, 1024, 1024)
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the haze gives way to the band's shadows behind the fence with ?haze=parts, once the lamp has a map; it closes slowly" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val scene = three.createScene()
+            val show = Show(seed = 1, switches = Switches.parse("?stage=mesh&haze=parts&front=1"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
+
+            /** How far each sheet of the haze has drawn back. */
+            fun parts(): List<Double> = sheetsOf(scene).map { it.asDynamic().material.uniforms.uParts.value.unsafeCast<Double>() }
+
+            try {
+                // the lamp is on, but has no map yet: nothing parts
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+                parts().size shouldBe 12
+                parts().all { it == 0.0 } shouldBe true
+
+                // a map as three.js would have made it: the haze opens with the lamp, reading that map
+                val depth: dynamic = js("({})")
+
+                front.shadow.map = js("({})")
+                front.shadow.map.depthTexture = depth
+                delay(150)
+                stage.light(t = 62.1, house = 1.0, waiting = false)
+
+                val opened = parts().first()
+
+                opened shouldBeGreaterThan 0.0
+                parts().all { it == opened } shouldBe true
+                (sheetsOf(scene).first().asDynamic().material.uniforms.uFrontShadow.value === depth) shouldBe true
+                (sheetsOf(scene).first().asDynamic().material.uniforms.uFrontShadowMatrix.value === front.shadow.matrix) shouldBe true
+
+                // turned back (the key h): it closes over a second or two, not in one frame
+                stage.haze(HazeLook.Whole)
+                delay(30)
+                stage.light(t = 62.2, house = 1.0, waiting = false)
+
+                val closing = parts().first()
+
+                closing shouldBeGreaterThan 0.0
+                (closing < opened) shouldBe true
+            } finally {
+                front.shadow.map = null
+                stage.dispose()
+            }
+        }
+    }
+
+    "without ?haze=parts, or before the wall, the haze never reads the lamp's shadows" {
+        withThree { three ->
+            Three.addon = three
+
+            for (query in listOf("?stage=mesh&front=1", "?haze=parts&front=1")) {
+                val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+                val scene = three.createScene()
+                val show = Show(seed = 1, switches = Switches.parse(query))
+                val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+                val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
+
+                try {
+                    front.shadow.map = js("({ depthTexture: {} })")
+                    stage.light(t = 62.0, house = 1.0, waiting = false)
+                    delay(100)
+                    stage.light(t = 62.1, house = 1.0, waiting = false)
+                    sheetsOf(scene).size shouldBe 12
+                    sheetsOf(scene).all { it.asDynamic().material.uniforms.uParts.value == 0.0 } shouldBe true
+                } finally {
+                    front.shadow.map = null
+                    stage.dispose()
+                }
+            }
+        }
+    }
+
+    "behind the fence the haze holds the lamp's map even where it does not part, and lets go of a map the lamp gave up" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val scene = three.createScene()
+            val show = Show(seed = 1, switches = Switches.parse("?stage=mesh&front=1"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
+
+            /** What each sheet of the haze reads as the lamp's map. */
+            fun held(): List<dynamic> = sheetsOf(scene).map { it.asDynamic().material.uniforms.uFrontShadow.value }
+
+            try {
+                // an empty shadow sampler all the time took the front lamp's light off the fence (the stills of
+                // 2026-11-20): the haze reads the lamp's own map as soon as there is one
+                val depth: dynamic = js("({})")
+
+                front.shadow.map = js("({})")
+                front.shadow.map.depthTexture = depth
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+                held().all { it === depth } shouldBe true
+                sheetsOf(scene).all { it.asDynamic().material.uniforms.uParts.value == 0.0 } shouldBe true
+
+                // the map given up (another shadow quality): not kept, three.js would make a freed one anew
+                front.shadow.map = null
+                stage.light(t = 62.1, house = 1.0, waiting = false)
+                held().all { it == null } shouldBe true
+            } finally {
+                front.shadow.map = null
+                stage.dispose()
+            }
+        }
+    }
+
+    "the front lamp's shadows land on the wall, or behind the fence on the surface there; the stage says which and the lamp" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val scene = three.createScene()
+            val show = Show(seed = 1, switches = Switches.parse("?front=1"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+
+            try {
+                stage.shadowsAt shouldBe -8.0
+                stage.front shouldBe FrontLight.off
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+                stage.front shouldBe FrontLight(level = 1.0, strobing = false)
+                listOf(stage.frontLamp.x, stage.frontLamp.y, stage.frontLamp.z) shouldBe listOf(0.6, 0.25, 8.6)
+                stage.look(StageLook.Mesh)
+                stage.shadowsAt shouldBe -10.5
             } finally {
                 stage.dispose()
             }

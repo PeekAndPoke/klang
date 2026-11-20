@@ -51,6 +51,9 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
     /** Every lamp: the two main ones behind first, then the one between them, the fill, and the front lamp last. */
     val lamps: List<Lamp>
 
+    /** The low front lamp, the last of [lamps]: it throws the band's big shadows on the wall. */
+    val front: Lamp
+
     private val mains: List<MainLamp>
 
     /** The lamps behind the band, where each hangs and its light at full: how brightly they light the stage ([Sun.lit]). */
@@ -150,6 +153,7 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
         castsAtHigh.add(all.last())
 
         lamps = all
+        front = all.last()
         casters = castsAtHigh
         behind = all.mapNotNull { lamp -> lamp.place?.let { place -> place to lamp.base } }
         mains = listOf<(Mood) -> MoodLamp>(Mood::left, Mood::right).mapIndexed { index, side ->

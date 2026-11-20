@@ -9,6 +9,8 @@ import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.dress.dressLevel
+import io.peekandpoke.klang.viz.liveact.lights.FrontFade
+import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.lights.Lights
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.theatre.Crowd
@@ -29,6 +31,7 @@ import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.PerspectiveCamera
 import io.peekandpoke.kraft.addons.threejs.js.Scene
+import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
 import kotlinx.browser.document
@@ -44,14 +47,16 @@ import kotlin.math.min
  * The stage, built into [scene]: floor, the wall behind, the lamps ([Lights]), the drummer's [riser], the crowd's
  * lights, the night sky and the fog on the floor; with `?stage=mesh` ([StageLook.Mesh]) a wire-mesh [Fence] in place
  * of the wall, with the sun behind the drummer, and the fog as a haze behind the mesh; with `?floor=mirror`
- * ([FloorLook.Mirror]) the floor as polished stone that mirrors the stage ([MirrorFloor]). The look as [variants] says
+ * ([FloorLook.Mirror]) the floor as polished stone that mirrors the stage ([MirrorFloor]); with `?haze=parts`
+ * ([HazeLook.Parts]) the haze behind the fence gives way to the band's shadows. The look as [variants] says
  * (the address's, without them), the fog at [fog]'s quality, the lamps' shadows at [shadows]'. Sets on [renderer],
  * [scene] and [camera] what the show needs of them: the shadows, the tone mapping, the dark and the distance fog, the
  * camera's lens.
  *
  * Each frame: [light], and [follow] once the camera is placed. Once the band stands: [shade]. The fog at another
- * quality, while the show plays: [fog]; the shadows: [shadows]; the look behind the band: [look]; the floor: [floor].
- * When the stage goes: [dispose].
+ * quality, while the show plays: [fog]; the shadows: [shadows]; the look behind the band: [look]; the floor: [floor];
+ * the haze: [haze]. What the band needs of the front lamp's shadows ([front], [frontLamp], [shadowsAt]): after
+ * [light]. When the stage goes: [dispose].
  */
 class Stage(
     private val show: Show,
@@ -81,6 +86,19 @@ class Stage(
     private val sunColor = Three.addon.createColor(0xffffff)
 
     private val lights: Lights
+
+    /** The front lamp as the last [light] set it: how much it is on, and whether it strobes. */
+    var front: FrontLight = FrontLight.off
+        private set
+
+    /**
+     * How far the haze has drawn back from the band's shadows (`?haze=parts`): it opens with the front lamp, in a
+     * second, and closes again over 1.6 s after the lamp went off (the key f turns the lamp off in one frame).
+     */
+    private val clearing = FrontFade(rise = 1.0, fall = 1.6)
+
+    /** When the last [light] ran, in milliseconds of the page; none before the first. */
+    private var lightAt = Double.NaN
 
     /** The drummer's riser. */
     val riser: Mesh
@@ -187,6 +205,29 @@ class Stage(
     }
 
     /**
+     * The haze behind the fence turned to [to]: it gives way to the band's shadows ([HazeLook.Parts]) or stays whole.
+     * Nothing to make or free: the haze reads the front lamp's shadows only while it parts, and closes again over a
+     * second or two when it is turned back.
+     */
+    fun haze(to: HazeLook) {
+        variants = variants.copy(haze = to)
+    }
+
+    /** Where the front lamp stands, in the world. */
+    val frontLamp: Vector3
+        get() = lights.front.light.position
+
+    /**
+     * Where the front lamp's shadows of the band land, in metres along z: on the wall ([BackWall.Z]), or, behind the
+     * fence, on the dark surface behind it ([Fence.BACK_Z]).
+     */
+    val shadowsAt: Double
+        get() = when (variants.stage) {
+            StageLook.Wall -> BackWall.Z
+            StageLook.Mesh -> Fence.BACK_Z
+        }
+
+    /**
      * The mirror in the floor as [variants] and the fog's quality say ([LookVariants.mirrors]): made where it is wanted
      * and there is none, freed where it is not wanted (its picture is freed with it, not kept hidden).
      */
@@ -262,8 +303,17 @@ class Stage(
      * sun, where it stands, the fog, which the lamps (and the sun) light, and the crowd.
      */
     fun light(t: Double, house: Double, waiting: Boolean) {
+        val nowMs = window.performance.now()
+        // the time since the last frame, for what follows the front lamp at its own pace; a long gap (a hidden page,
+        // the first frame) counts as a short one
+        val dt = if (lightAt.isNaN()) 0.0 else ((nowMs - lightAt) / 1000).coerceIn(0.0, 0.25)
+
+        lightAt = nowMs
         lights.mood(t)
+
         val front = lights.frontAt(t, waiting)
+
+        this.front = front
         wall?.light(front.level)
         dressLevel = min(1.0, front.level)
         lights.shine(t, house, front)
@@ -275,6 +325,13 @@ class Stage(
 
             fence.light(front = front.level, sun = sunColor, level = sun)
             groundFog?.sun(color = sunColor, level = sun)
+        }
+
+        // the haze draws back from the band's shadows as much as the lamp is on, where it parts and the fence stands
+        val parting = clearing.follow(target = if (variants.partsHaze) FrontFade.level(front) else 0.0, dt = dt)
+
+        if (fence != null) {
+            groundFog?.clearings(front = lights.front, share = parting)
         }
 
         groundFog?.update(t, lights.lamps, camera)

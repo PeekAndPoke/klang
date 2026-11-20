@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.band.dress.EyeWarmth
+import io.peekandpoke.klang.viz.liveact.band.dress.ShadowEyes
 import io.peekandpoke.klang.viz.liveact.band.figure.breathing
 import io.peekandpoke.klang.viz.liveact.band.figure.eyeContact
 import io.peekandpoke.klang.viz.liveact.band.figure.eyesWarm
@@ -19,6 +21,7 @@ import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
+import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.Stage
@@ -90,13 +93,15 @@ fun Tag.LiveAct(
  * the players take their figures' places as home): the stage, the band, the clock, the view. Each frame, in this
  * order: the sound's energy first (the nod reads it); then everyone's place and pose; then what is laid over the
  * poses (eye contact, the eyes' glow, what goes with a head, breath; breath last because it widens bones); then the
- * lights; then the camera, which follows the figures; and the viewer's place for the next frame's looks.
+ * lights; then (with `?eyes=shadow`) Sirene's eyes in her shadow, which follow the front lamp and her eyes' glow;
+ * then the camera, which follows the figures; and the viewer's place for the next frame's looks.
  *
  * The keys: space plays and pauses, the arrows skip ([ShowClock]); q, 0 (or escape), 1 to 6, a, s, d, e, r, t, y (or
  * z), w and u move the camera by hand ([View]); f tries the front lamp's colours ([Lights]); o steps through the
- * oversampling, g through the fog; m turns over what stands behind the band (wall or fence) and p the floor (plain or
- * mirror) ([LookVariants]). A key that turns a variant over says the new one for two seconds below the line at the
- * top.
+ * oversampling, g through the fog; m turns over what stands behind the band (wall or fence), p the floor (plain or
+ * mirror), h the haze behind the fence (whole, or giving way to the band's shadows) and i Sirene's eyes under the
+ * front lamp (in her face, or in her shadow) ([LookVariants]). A key that turns a variant over says the new one for
+ * two seconds below the line at the top.
  *
  * Two limits, as the prototype it was ported from has them. It takes the page for its own: its keys (space, the
  * arrows, single letters and digits) and a click anywhere are the show's, except while the user types in a field;
@@ -224,10 +229,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         get() = Oversampling.follows(samples) && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
 
     /**
-     * The look's variants ([LookVariants]): what stands behind the band (`?stage=mesh`, the key m) and the floor
-     * (`?floor=mirror`, the key p), as chosen now.
+     * The look's variants ([LookVariants]): what stands behind the band (`?stage=mesh`, the key m), the floor
+     * (`?floor=mirror`, the key p), the haze (`?haze=parts`, the key h) and Sirene's eyes (`?eyes=shadow`, the key
+     * i), as chosen now.
      */
     private var variants: LookVariants = LookVariants.of(props.show.switches)
+
+    /** Sirene's eyes in her shadow, where they are chosen (`?eyes=shadow`, the key i) and the band stands. */
+    private var shadowEyes: ShadowEyes? = null
 
     /** The timer that clears the line a variant's key wrote ([flash]), while it runs. */
     private var flashTimer: Int? = null
@@ -259,6 +268,18 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             variants = variants.nextFloor()
             stage?.floor(variants.floor)
             flash(variants.floorLine(fog))
+        }
+
+        if (plain && key == "h") {
+            variants = variants.nextHaze()
+            stage?.haze(variants.haze)
+            flash(variants.hazeLine(fog))
+        }
+
+        if (plain && key == "i") {
+            variants = variants.nextEyes()
+            eyesAsChosen()
+            flash(variants.eyesLine())
         }
     }
 
@@ -294,6 +315,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     it.clock.dispose()
                 }
                 running = null
+                shadowEyes?.dispose()
+                shadowEyes = null
                 stage?.dispose()
                 stage = null
                 // what the scene holds on the graphics card (the renderer and its context are Kraft's to give up)
@@ -412,6 +435,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             since = window.performance.now()
             before = since
             running = Running(stage = stage, band = band, clock = clock, view = view)
+            eyesAsChosen()
             ctx.scene.visible = true
         }
     }
@@ -443,6 +467,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         now.band.afterPose(t)
         breathing(show = show, rigs = now.band.rigs, t = t, slow = energy.slow)
         now.stage.light(t = t, house = now.clock.houseAt(), waiting = now.clock.waiting())
+        shadowEyes?.update(front = now.stage.front, lamp = now.stage.frontLamp, planeZ = now.stage.shadowsAt)
         now.view.look(t)
         now.stage.follow()
         camera?.let { viewer.copy(it.position) }
@@ -499,6 +524,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 "shadows ${shadows.word}",
                 "${variants.stageLine()} (key m)",
                 "${variants.floorLine(fog)} (key p)",
+                "${variants.hazeLine(fog)} (key h)",
+                "${variants.eyesLine()} (key i)",
                 "${fps.toFixed(0)} fps",
                 "slowest frame $worstShown ms",
                 "pixels ${sharpness.ratio.toFixed(2)}x",
@@ -532,6 +559,25 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             shown.textContent = ""
             flashTimer = null
         }, FLASH_MS)
+    }
+
+    /**
+     * Sirene's eyes as [variants] say: in her shadow ([ShadowEyes]) where it is chosen and the band stands, made where
+     * there are none; freed where they are not chosen (her face's eyes are hers again from the next frame on).
+     */
+    private fun eyesAsChosen() {
+        val wanted = variants.eyes == EyesLook.Shadow
+        val rig = running?.band?.rigs?.get(Player.Sirene)
+        val into = scene
+
+        if (wanted && shadowEyes == null && rig != null && into != null) {
+            shadowEyes = ShadowEyes.of(scene = into, rig = rig)
+        }
+
+        if (!wanted) {
+            shadowEyes?.dispose()
+            shadowEyes = null
+        }
     }
 
     /** Starts the counting of frames anew at [nowMs]: what was counted so far is not judged. */
