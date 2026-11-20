@@ -133,6 +133,17 @@ drummer): "The idea of heading the fog behind the wire mesh is also nice. And th
 - **The sun behind the drummer:** a big low glow behind the drum riser, as in the day restyle.
 - These moods stand on their own: a show can run whole stretches with no alter-ego shadows at all.
 
+## Built so far (2026-11-20, all behind switches and keys; the show's default look is unchanged)
+
+The maintainer asked to build as many of the ideas as possible, with a key for each variant, judged by eye, without
+code review for these steps. In the order built: the fence with the haze behind it and the sun behind the drummer
+(key m, `?stage=mesh`); the mirror floor (key p, `?floor=mirror`); the haze giving way to the shadows (key h,
+`?haze=parts`); Sirene's eyes in her shadow (key i, `?eyes=shadow`); black lacquer with gold that only catches the
+light (key l, `?skin=lacquer`); two worlds as a time of day, with the cold world seen through the shadows at night
+(key n, `?world=day|night|ember|drift`); the underworld in the mirror (key v, `?underworld=on`); and the whole new
+look at once (key x, `?look=new`). Stills of each step: `prototypes/band/ignored/previews/step1/` to `step6/`.
+Not built: the bodies and the true-self shadows (they need modelling and the characters decided).
+
 ## History
 
 - 2026-11-19: created, with the eyes in Sirene's shadow and the four style directions.
@@ -140,3 +151,4 @@ drummer): "The idea of heading the fog behind the wire mesh is also nice. And th
 - 2026-11-19: Klaue's styled hair over a wild child; the critic's characters for all six.
 - 2026-11-19: the fog behind the mesh that gives way to the shadows; the sun behind the drummer.
 - 2026-11-19: the hands stay mittens; Sirene's head as a sea shell, its outline kept.
+- 2026-11-20: steps 1 to 6 of the new look built behind keys (e17a1ffa3 to e52c06039).
