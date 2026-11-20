@@ -45,9 +45,10 @@ class DressedBody(val mesh: SkinnedMesh, val material: MeshStandardMaterial, val
 
 /**
  * The band in black lacquer with gold inlay (`?skin=lacquer`, KLANG-00478, to be judged by eye): while it is made,
- * every [DressedBody] wears a material of its own in place of its suit, and the instruments are polished; [dispose]
- * gives back what they wore and frees what it made. Made when the look is chosen, freed when it is turned off (nothing
- * is kept hidden): its materials are built anew the next time, a short hitch.
+ * every [DressedBody] wears a material of its own in place of its suit, and the instruments are polished. Made the
+ * first time the look is chosen (its materials are built then, a short hitch); turned off and on again with [wear]
+ * (the suits and the instruments as they were, the lacquer's materials and its room kept, so it comes back at once);
+ * [dispose] gives back what they wore and frees what it made.
  *
  * - **The lacquer:** three.js's physical material, near black, under a clear coat that is almost a mirror; no
  *   glitter. The lamps leave long, clean highlights along the limbs, and the room (below) what it shows.
@@ -84,9 +85,32 @@ class Lacquer private constructor(
         lacquerFor(name = it.material.name, cloth = it.cloth, hair = it.hair, room = room.texture, gold = gold)
     }
 
+    /** Whether the band wears the lacquer now ([wear]). */
+    var worn: Boolean = false
+        private set
+
     init {
-        bodies.forEachIndexed { i, body -> body.mesh.material = lacquered[i] }
-        polished.forEach { it.on(room.texture) }
+        wear(true)
+    }
+
+    /**
+     * Puts the lacquer on the band ([on]) or takes it off: off, every body wears its suit again and the instruments
+     * are as they were; the lacquer's materials and its room are kept for the next time.
+     */
+    fun wear(on: Boolean) {
+        if (on == worn) {
+            return
+        }
+
+        worn = on
+
+        if (on) {
+            bodies.forEachIndexed { i, body -> body.mesh.material = lacquered[i] }
+            polished.forEach { it.on(room.texture) }
+        } else {
+            bodies.forEach { it.mesh.material = it.material }
+            polished.forEach { it.off() }
+        }
     }
 
     /**
@@ -114,8 +138,7 @@ class Lacquer private constructor(
 
     /** Gives every body and instrument back what it wore, and frees the lacquered materials and the room. */
     fun dispose() {
-        bodies.forEach { it.mesh.material = it.material }
-        polished.forEach { it.off() }
+        wear(false)
         lacquered.forEach { it.dispose() }
         room.dispose()
     }

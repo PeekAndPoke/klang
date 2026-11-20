@@ -50,8 +50,14 @@ import kotlin.math.max
  * the stage hides the fog that lies on the floor there. The rest is mirrored: the band, the riser, the instruments,
  * the wall or the fence, the haze behind it and the sun, the crowd.
  *
- * [dispose] gives the floor its own material back and frees the picture, its depth and the material; the camera holds
- * nothing on the graphics card.
+ * The underworld (`?underworld=on`, [UnderworldLook]): [underworld] turns the mirror image, as far as its share goes,
+ * into the other world: cold blue silver, darker, the ripple stiller, and what is brightest in it (the sun behind the
+ * drummer) a cold white moon. A tint in the floor's own shader, no drawing of its own.
+ *
+ * [use] takes the mirror off the floor and puts it on again (the floor turned over while the show plays): off, the
+ * floor has its own material back and the picture is freed, but the mirror's material is kept, so putting it on again
+ * builds nothing. [dispose] gives the floor its own material back and frees the picture, its depth and the material;
+ * the camera holds nothing on the graphics card.
  */
 class MirrorFloor(
     private val floor: Mesh,
@@ -84,6 +90,12 @@ class MirrorFloor(
     private val range: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 0.1, y = 100.0))
     private val lens: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 1.0, y = 1.0))
 
+    /** How far the mirror shows the underworld, 0 (the stage) to 1 ([underworld]). */
+    private val under: Uniform<Double> = uniform(0.0)
+
+    /** Whether the mirror is on the floor now ([use]). */
+    private var worn = false
+
     private val material: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject {
         color = 0x050609
         roughness = 0.5
@@ -98,6 +110,7 @@ class MirrorFloor(
             shader.uniforms["uMirrorCamera"] = toCamera
             shader.uniforms["uMirrorRange"] = range
             shader.uniforms["uMirrorLens"] = lens
+            shader.uniforms["uMirrorUnder"] = under
             shader.vertexShader = shader.vertexShader
                 .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vFloorWorld;")
                 .replaceFirst(
@@ -109,12 +122,42 @@ class MirrorFloor(
                 .replaceFirst(
                     "#include <opaque_fragment>",
                     // the lamps' pools softer, the mirror image over them
-                    "outgoingLight = outgoingLight * 0.3 + mirrored(vFloorWorld);\n#include <opaque_fragment>",
+                    "outgoingLight = underFloor(outgoingLight * 0.3) + mirrored(vFloorWorld);\n#include <opaque_fragment>",
                 )
         }
 
-        floor.material = material
-        floor.asDynamic().onBeforeRender = { _: dynamic, _: dynamic, camera: Camera -> draw(camera) }
+        use(true)
+    }
+
+    /**
+     * Puts the mirror on the floor ([on]) or takes it off: off, the floor wears its own material and draws nothing
+     * before itself, and the picture is freed; the mirror's material is kept for the next time.
+     */
+    fun use(on: Boolean) {
+        if (on == worn) {
+            return
+        }
+
+        worn = on
+
+        if (on) {
+            floor.material = material
+            floor.asDynamic().onBeforeRender = { _: dynamic, _: dynamic, camera: Camera -> draw(camera) }
+
+            return
+        }
+
+        floor.material = plain
+        // the floor draws nothing before itself again: three.js's own (empty) onBeforeRender is the prototype's
+        val mesh: dynamic = floor
+
+        js("delete mesh.onBeforeRender")
+        free()
+    }
+
+    /** How far the mirror shows the underworld this frame: [share] from 0 (the stage as it is) to 1. */
+    fun underworld(share: Double) {
+        under.value = share.coerceIn(0.0, 1.0)
     }
 
     /** Draws the mirror for the frame seen by [camera], before the floor is drawn. */
@@ -227,12 +270,7 @@ class MirrorFloor(
 
     /** Gives the floor its own material back and frees what the mirror holds. The mirror is gone after it; call it once. */
     fun dispose() {
-        floor.material = plain
-        // the floor draws nothing before itself again: three.js's own (empty) onBeforeRender is the prototype's
-        val mesh: dynamic = floor
-
-        js("delete mesh.onBeforeRender")
-        free()
+        use(false)
         material.dispose()
     }
 
@@ -245,11 +283,17 @@ class MirrorFloor(
          * string does not break into dots) and the more it fades (to 0.7, over some 3 m). Then the stone's own
          * share: 0.6 looking down on it, more at a glancing angle (after Schlick's Fresnel); none far out
          * among the audience. The floor's own light (the lamps' pools) is turned down to 0.3 under it.
+         *
+         * The underworld, as far as `uMirrorUnder` goes: the ripple a quarter as strong (stiller), and the image's
+         * light turned to moonlight: its brightness kept, its colour a cold blue silver, at 0.75 of it (darker), over a
+         * faint cold mist where nothing is mirrored; what is brightest goes toward a cold white, so the sun behind the
+         * drummer is a white moon in it. The floor's own light under it leans cold and darker too (`underFloor`).
          */
         val MIRRORED = """
 uniform sampler2D uMirror, uMirrorDepth;
 uniform mat4 uMirrorPicture, uMirrorCamera;
 uniform vec2 uMirrorRange, uMirrorLens;
+uniform float uMirrorUnder;
 varying vec3 vFloorWorld;
 const vec2 MIRROR_TAPS[4] = vec2[4](vec2(0.7, 0.2), vec2(-0.2, 0.7), vec2(-0.7, -0.2), vec2(0.2, -0.7));
 float mirrorNoise(vec2 p) {
@@ -261,6 +305,11 @@ float mirrorNoise(vec2 p) {
   float d = fract(sin(dot(i + vec2(1.0, 1.0), vec2(12.9898, 78.233))) * 43758.5453);
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
+// the floor's own light (the lamps' pools) in the underworld: colder and darker as well
+vec3 underFloor(vec3 c) {
+  float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  return mix(c, lum * vec3(0.6, 0.8, 1.3), 0.7 * uMirrorUnder) * (1.0 - 0.35 * uMirrorUnder);
+}
 vec3 mirrored(vec3 world) {
   float near = -(uMirrorCamera * vec4(world, 1.0)).z;
   vec4 at = uMirrorPicture * vec4(world, 1.0);
@@ -268,7 +317,7 @@ vec3 mirrored(vec3 world) {
   // the stone is not quite flat: a slow ripple, larger and finer, bends the image a little
   vec2 ripple = vec2(mirrorNoise(world.xz * 1.3), mirrorNoise(world.xz * 1.3 + 17.0)) - 0.5;
   ripple += 0.5 * (vec2(mirrorNoise(world.xz * 4.1 + 5.0), mirrorNoise(world.xz * 4.1 + 23.0)) - 0.5);
-  uv += ripple * 0.006;
+  uv += ripple * 0.006 * (1.0 - 0.75 * uMirrorUnder);
   float d = texture2D(uMirrorDepth, uv).x;
   float n = uMirrorRange.x, f = uMirrorRange.y;
   float hit = n * f / (f - (f - n) * d);
@@ -281,6 +330,12 @@ vec3 mirrored(vec3 world) {
   vec3 seen = textureLod(uMirror, uv, lod).rgb * 0.4;
   for (int i = 0; i < 4; i++) {
     seen += textureLod(uMirror, uv + MIRROR_TAPS[i] * spread, lod).rgb * 0.15;
+  }
+  if (uMirrorUnder > 0.0) {
+    float lum = dot(seen, vec3(0.2126, 0.7152, 0.0722));
+    vec3 moonlit = lum * mix(vec3(0.7, 0.95, 1.6), vec3(0.95, 1.0, 1.12), smoothstep(0.08, 0.8, lum));
+    // and where nothing is mirrored, the other world's night: a faint cold mist
+    seen = mix(seen, 0.75 * moonlit + vec3(0.004, 0.008, 0.02), uMirrorUnder);
   }
   float keep = mix(0.7, 1.0, exp(-gap / 3.0));
   vec3 toEye = normalize(cameraPosition - world);

@@ -12,11 +12,15 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.BackWall
+import io.peekandpoke.klang.viz.liveact.stage.Fence
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
+import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
+import io.peekandpoke.klang.viz.liveact.stage.UnderworldLook
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.isLight
@@ -407,18 +411,18 @@ class StageSpec : StringSpec({
         }
     }
 
-    "the look behind the band turns over while the show plays: the old one leaves with all it holds freed" {
+    "the look behind the band turns over while the show plays: the old one is hidden and kept, and freed with the stage" {
         withThree { three ->
             Three.addon = three
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
             val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            val freed = mutableListOf<String>()
 
             try {
                 val wall = scene.children.single { it.asDynamic().geometry?.parameters?.width == 60.0 }
                 val floorFog = sheetsOf(scene)
-                val freed = mutableListOf<String>()
 
                 wall.asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("wall") }
                 floorFog.first().asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("fog") }
@@ -427,17 +431,21 @@ class StageSpec : StringSpec({
                 stage.look(StageLook.Wall)
                 freed shouldBe emptyList()
 
-                // the fence: the wall and the fog on the floor go, the mesh, the posts and the surface behind come,
-                // and the haze stands upright behind the mesh
+                // the fence: the wall and the fog on the floor are hidden, the mesh, the posts and the surface behind
+                // come, and the haze stands upright behind the mesh
                 stage.look(StageLook.Mesh)
-                freed shouldBe listOf("wall", "fog")
-                (wall in scene.children) shouldBe false
-                scene.children.size shouldBe 17 - 1 + 3 + 12
-                sheetsOf(scene).none { it in floorFog } shouldBe true
-                sheetsOf(scene).all { it.rotation.x == 0.0 } shouldBe true
+                freed shouldBe emptyList()
+                wall.visible shouldBe false
+                floorFog.none { it.visible } shouldBe true
+                scene.children.size shouldBe 17 + 12 + 3 + 12
+
+                val haze = sheetsOf(scene).filter { it !in floorFog }
+
+                haze.size shouldBe 12
+                haze.all { it.rotation.x == 0.0 && it.visible } shouldBe true
                 stage.light(t = 62.0, house = 1.0, waiting = false)
 
-                val fence = scene.children.filter { it.asDynamic().geometry?.parameters?.width == 60.0 }
+                val fence = scene.children.filter { it.asDynamic().geometry?.parameters?.width == 60.0 && it !== wall }
 
                 fence.size shouldBe 2
 
@@ -445,25 +453,40 @@ class StageSpec : StringSpec({
                     part.asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("fence") }
                 }
 
-                // and back to the wall as it was made
+                haze.first().asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("haze") }
+
+                // and back to the wall as it was made: the same wall and fog shown again, nothing new made or freed
                 stage.look(StageLook.Wall)
-                freed.count { it == "fence" } shouldBe 2
-                scene.children.size shouldBe 17 + 12
-                sheetsOf(scene).all { it.rotation.x != 0.0 } shouldBe true
+                freed shouldBe emptyList()
+                wall.visible shouldBe true
+                floorFog.all { it.visible } shouldBe true
+                fence.none { it.visible } shouldBe true
+                haze.none { it.visible } shouldBe true
+                scene.children.size shouldBe 17 + 12 + 3 + 12
                 stage.light(t = 62.1, house = 1.0, waiting = false)
+
+                // and to the fence again: the one made before
+                stage.look(StageLook.Mesh)
+                fence.all { it.visible } shouldBe true
+                haze.all { it.visible } shouldBe true
+                scene.children.size shouldBe 17 + 12 + 3 + 12
             } finally {
                 stage.dispose()
             }
+
+            // the stage frees both fogs; the wall and the fence are the scene's to free
+            freed.sorted() shouldBe listOf("fog", "haze")
         }
     }
 
-    "the mirror floor comes where it is chosen and the fog is medium or finer, and goes with all it holds" {
+    "the mirror floor comes where it is chosen and the fog is medium or finer, goes off the floor, and is freed with the stage" {
         withThree { three ->
             Three.addon = three
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
             val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            var freed = 0
 
             try {
                 // the floor is the first thing on the stage
@@ -476,27 +499,32 @@ class StageSpec : StringSpec({
                 stage.floor(FloorLook.Mirror)
 
                 val polished: dynamic = floor.material
-                var freed = 0
 
                 (polished !== plain) shouldBe true
                 (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
                 scene.children.size shouldBe 17 + 12
                 polished.addEventListener("dispose") { _: dynamic -> freed++ }
 
-                // the fog at low takes the mirror with it, and gives the floor its own material back
+                // the fog at low takes the mirror off the floor, and gives the floor its own material back; the
+                // mirror's material is kept for the next time
                 stage.fog(FogQuality.Low)
-                freed shouldBe 1
+                freed shouldBe 0
                 (floor.material === plain) shouldBe true
                 (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe false
 
-                // the fog at high again brings it back; the plain floor chosen takes it away
+                // the fog at high again brings the same one back; the plain floor chosen takes it off
                 stage.fog(FogQuality.High)
-                (floor.material !== plain) shouldBe true
+                (floor.material === polished) shouldBe true
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
                 stage.floor(FloorLook.Plain)
                 (floor.material === plain) shouldBe true
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe false
+                freed shouldBe 0
             } finally {
                 stage.dispose()
             }
+
+            freed shouldBe 1
         }
     }
 
@@ -649,6 +677,83 @@ class StageSpec : StringSpec({
                 (closing < opened) shouldBe true
             } finally {
                 front.shadow.map = null
+                stage.dispose()
+            }
+        }
+    }
+
+    "the underworld comes into the mirror over about two seconds and goes over three; without the mirror it never comes" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val mirrored = Stage(
+                show = Show(seed = 1, switches = Switches.parse("?floor=mirror&underworld=on")),
+                scene = three.createScene(),
+                camera = camera,
+                renderer = standInRenderer(),
+            )
+            val plain = Stage(
+                show = Show(seed = 1, switches = Switches.parse("?underworld=on")),
+                scene = three.createScene(),
+                camera = camera,
+                renderer = standInRenderer(),
+            )
+
+            try {
+                mirrored.light(t = 62.0, house = 1.0, waiting = false)
+                plain.light(t = 62.0, house = 1.0, waiting = false)
+                delay(200)
+                mirrored.light(t = 62.1, house = 1.0, waiting = false)
+                plain.light(t = 62.1, house = 1.0, waiting = false)
+
+                val coming = mirrored.underworld
+
+                coming shouldBeGreaterThan 0.0
+                (coming < 0.25) shouldBe true
+                plain.underworld shouldBe 0.0
+
+                // turned off (the key v): it goes, more slowly than it came
+                mirrored.underworld(UnderworldLook.Off)
+                delay(200)
+                mirrored.light(t = 62.2, house = 1.0, waiting = false)
+
+                val going = mirrored.underworld
+
+                (going < coming) shouldBe true
+                going shouldBeGreaterThan 0.0
+            } finally {
+                mirrored.dispose()
+                plain.dispose()
+            }
+        }
+    }
+
+    "the whole look turned at once (the key x): the fence, the mirror and the haze behind it; and back" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val scene = three.createScene()
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+
+            try {
+                val floor: dynamic = scene.children.first()
+                val plain: dynamic = floor.material
+                val wall = scene.children.single { it.asDynamic().geometry?.parameters?.width == 60.0 }
+
+                stage.turn(LookVariants.NEW)
+                stage.shadowsAt shouldBe Fence.BACK_Z
+                wall.visible shouldBe false
+                (floor.material !== plain) shouldBe true
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+
+                stage.turn(LookVariants())
+                stage.shadowsAt shouldBe BackWall.Z
+                wall.visible shouldBe true
+                (floor.material === plain) shouldBe true
+                stage.light(t = 62.1, house = 1.0, waiting = false)
+            } finally {
                 stage.dispose()
             }
         }

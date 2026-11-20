@@ -51,9 +51,14 @@ import kotlin.math.min
  * sticker on it. They are drawn first of all that is see-through, so the haze behind the fence veils them as it veils
  * her shadow, and the mirror floor mirrors them as it mirrors the rest.
  *
+ * In the underworld (`?underworld=on`) her eyes, while they are in her shadow, also shine in her reflection in the
+ * mirror floor: while the mirror draws ([inMirror]) her face's eyes have back as much of their light as the
+ * underworld shows.
+ *
  * One plane of a few pixels in [scene], hidden while the eyes are in her face. Each frame, after the eyes' glow is
- * set and the lamps are: [update]. [dispose] takes the plane out of the scene and frees its shape and material; her
- * face's eyes are hers again from the next frame on (their glow is set anew every frame).
+ * set and the lamps are: [update]. Not chosen any more: [rest] (the plane hidden, kept for the next time, her face's
+ * eyes hers again from the next frame on, as their glow is set anew every frame). [dispose] takes the plane out of the
+ * scene and frees its shape and material.
  */
 class ShadowEyes private constructor(
     private val scene: Scene,
@@ -76,8 +81,16 @@ class ShadowEyes private constructor(
     private val halfHigh: Double
     private val apart: Double
 
-    /** How far the eyes have crossed into her shadow, 0 (in her face) to 1. */
-    private val crossing = FrontFade(rise = CROSSING, fall = CROSSING)
+    /** How far the eyes have crossed into her shadow, 0 (in her face) to 1; anew after each [rest]. */
+    private var crossing = FrontFade(rise = CROSSING, fall = CROSSING)
+
+    /**
+     * Her face's eyes' brightness as the last [update] found it ([faceFull]) and as it left it ([faceShown]): what
+     * [inMirror] gives the reflection and takes back. Not while resting ([resting]).
+     */
+    private var faceFull = 0.0
+    private var faceShown = 0.0
+    private var resting = true
 
     /** When the last [update] ran, in milliseconds of the page; none before the first. */
     private var updatedAt = Double.NaN
@@ -186,7 +199,10 @@ class ShadowEyes private constructor(
 
         // her eyes' light as it is set this frame, before it leaves her face
         glow.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b).multiplyScalar(eyes.emissiveIntensity * onWall * GLOW)
+        faceFull = eyes.emissiveIntensity
         eyes.emissiveIntensity *= EyesInShadow.face(share)
+        faceShown = eyes.emissiveIntensity
+        resting = false
 
         if (onWall <= 0.0) {
             mesh.visible = false
@@ -226,6 +242,34 @@ class ShadowEyes private constructor(
         mesh.rotation.z = atan2(dy, dx)
         mesh.scale.set(size.x, size.y, 1.0)
         mesh.visible = true
+    }
+
+    /**
+     * The mirror floor starts drawing ([drawing]) or is done: while it draws, her face's eyes shine with [share] (0 to
+     * 1, how far the underworld shows) of the light they gave up to her shadow, so her reflection has them; done, they
+     * are as [update] left them. Nothing while resting.
+     */
+    fun inMirror(drawing: Boolean, share: Double) {
+        val eyes = rig.eyes ?: return
+
+        if (resting) {
+            return
+        }
+
+        val back = share.coerceIn(0.0, 1.0)
+
+        eyes.emissiveIntensity = if (drawing) faceShown + (faceFull - faceShown) * back else faceShown
+    }
+
+    /**
+     * The eyes are not chosen any more: the plane hidden and kept, the crossing begun anew the next time; her face's
+     * eyes are hers again from the next frame on.
+     */
+    fun rest() {
+        mesh.visible = false
+        crossing = FrontFade(rise = CROSSING, fall = CROSSING)
+        updatedAt = Double.NaN
+        resting = true
     }
 
     /** Takes the plane out of the scene and frees its shape and its material. Call it once. */

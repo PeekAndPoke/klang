@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.dress.jsText
+import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.workshop.threejs.CompiledShader
 import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
@@ -39,13 +40,15 @@ private const val BRAID_WALL = "1.0 - smoothstep(0.06, 0.16, min(min(abs(sin(p.x
  *   lamp comes.
  *
  * [amount]: how bright the ornament's own glow is; [width]: how far it reaches to the sides before it fades, in
- * metres; [color]: its colour, as red, green and blue.
+ * metres; [color]: its colour, as red, green and blue; [lean]: the lamps' light on it at the time of day, where it
+ * follows it ([WallLean]).
  */
 fun wall(
     material: MeshStandardMaterial,
     amount: Double = 0.017,
     width: Double = 5.5,
     color: Triple<Double, Double, Double> = Triple(0.55, 0.62, 1.0),
+    lean: WallLean? = null,
 ): (front: Double) -> Unit {
     val uFront = uniform(0.0)
     val ornament = """
@@ -65,6 +68,7 @@ fun wall(
 
     material.onBeforeCompile("wall-two-faces-braid-glow") { shader: CompiledShader ->
         shader.uniforms["uFront"] = uFront
+        lean?.into(shader)
 
         shader.vertexShader = shader.vertexShader
             .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;")
@@ -93,8 +97,11 @@ fun wall(
  * the back light, a wire mesh under the front lamp. It takes no light from the other lamps (its colour is black
  * unless the front lamp is on), and the fog does not dim it.
  *
- * Each frame: [light]. It is freed with the scene, or with [dispose] where it goes before the scene does (the look
- * turned over to the fence while the show plays).
+ * By night the lamps' light on it leans cold and dims ([world], [WallLean]).
+ *
+ * Each frame: [light]. Hidden and shown again with [show] (the look turned over to the fence and back while the show
+ * plays: kept, so the turn back costs no new material). It is freed with the scene, or with [dispose] where it goes
+ * before the scene does.
  */
 class BackWall(private val scene: Scene) {
     private val material: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject {
@@ -104,6 +111,9 @@ class BackWall(private val scene: Scene) {
 
     private val mesh: Mesh
 
+    /** The lamps' light on the wall at the time of day ([world]). */
+    private val lean = WallLean()
+
     /** Sets the wall's face: the ornament under the back light, the wire mesh under the front lamp (0 to 1). */
     private val face: (Double) -> Unit
 
@@ -112,7 +122,7 @@ class BackWall(private val scene: Scene) {
         mesh = Three.addon.createMesh(Three.addon.createPlaneGeometry(60.0, 16.0), material)
         mesh.position.set(0.0, 8.0, Z)
         mesh.receiveShadow = true
-        face = wall(material, amount = 0.014)
+        face = wall(material, amount = 0.014, lean = lean)
         scene.add(mesh)
     }
 
@@ -120,6 +130,16 @@ class BackWall(private val scene: Scene) {
     fun light(front: Double) {
         material.color.setHex(0x8a8f9c).scale(front)
         face(min(1.0, front))
+    }
+
+    /** The lamps' light on the wall at the time of day [world] ([WallLean]): by night cold and dimmer. */
+    fun world(world: WorldTime) {
+        lean.world(world)
+    }
+
+    /** Shows the wall ([visible]) or hides it, kept as it is: hidden, it is not drawn. */
+    fun show(visible: Boolean) {
+        mesh.visible = visible
     }
 
     /** Takes the wall out of the scene and frees its shape and its material. Call it once. */

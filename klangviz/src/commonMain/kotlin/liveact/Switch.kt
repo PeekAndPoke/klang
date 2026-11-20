@@ -10,9 +10,11 @@ import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
+import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
+import io.peekandpoke.klang.viz.liveact.stage.UnderworldLook
 import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 
 /**
@@ -202,4 +204,22 @@ enum class Switch(val key: String) {
 
     /** `?drift=30`: with [World] at drift, one round from day to night and back in that many seconds (240 without it). */
     Drift("drift"),
+
+    /**
+     * `?underworld=on`: the mirror floor shows the other world ([UnderworldLook]): its reflection turns cold, darker
+     * and stiller, the sun in it a cold white moon, and Sirene's eyes, while they are in her shadow, shine in her
+     * reflection too. Only where the mirror floor is drawn ([Floor]); any other value, or none, off. The key v turns it
+     * over while the show plays, fading in over 2 s and out over 3 s ([LookVariants]).
+     */
+    Underworld("underworld"),
+
+    // The look as a whole
+
+    /**
+     * `?look=new`: the band's new look as a whole ([LookVariants.NEW]): the fence, the mirror floor, the haze giving
+     * way to the shadows, Sirene's eyes in her shadow, the lacquer and the drifting time of day. A switch of a single
+     * variant beside it wins (`?look=new&world=night`). Any other value, or none, the look as it was made. The key x
+     * flips between the two while the show plays ([LookFlip]).
+     */
+    Look("look"),
 }

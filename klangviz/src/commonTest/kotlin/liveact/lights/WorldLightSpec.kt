@@ -40,7 +40,21 @@ class WorldLightSpec : StringSpec({
             WorldLight.gold(off) shouldBe Triple(0.9, 0.64, 0.26)
             WorldLight.roomSun(off) shouldBe Triple(1.6, 0.62, 0.2)
             WorldLight.beyond(off) shouldBe 0.0
+            WorldLight.wallCold(off) shouldBe 0.0
+            WorldLight.wallLight(off) shouldBe 1.0
         }
+    }
+
+    "the light on the walls: by night leaning cold and dimmed to half; by day and at ember as made" {
+        WorldLight.wallCold(DAY) shouldBe near(0.0)
+        WorldLight.wallLight(DAY) shouldBe near(1.0)
+        WorldLight.wallCold(NIGHT) shouldBe near(0.8)
+        WorldLight.wallLight(NIGHT) shouldBe near(0.5)
+        WorldLight.wallCold(EMBER) shouldBe near(0.0)
+        WorldLight.wallLight(EMBER) shouldBe near(1.0)
+        // at dusk, halfway
+        WorldLight.wallCold(WorldTime(on = 1.0, night = 0.5, ember = 0.0)) shouldBe near(0.4)
+        WorldLight.wallLight(WorldTime(on = 0.5, night = 1.0, ember = 0.0)) shouldBe near(0.75)
     }
 
     "the sun: big, strong and amber by day; a small cold white moon, higher, by night; a deep red furnace at ember" {

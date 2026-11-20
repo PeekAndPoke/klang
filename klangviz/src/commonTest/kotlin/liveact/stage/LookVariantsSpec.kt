@@ -135,6 +135,60 @@ class LookVariantsSpec : StringSpec({
         LookVariants(eyes = EyesLook.Shadow).eyesLine() shouldBe "eyes: shadow"
     }
 
+    "?underworld=on is the underworld; no switch, an empty one or another word off" {
+        UnderworldLook.of(Switches.parse("?underworld=on")) shouldBe UnderworldLook.On
+        UnderworldLook.of(Switches.parse("?underworld")) shouldBe UnderworldLook.Off
+        UnderworldLook.of(Switches.parse("?underworld=off")) shouldBe UnderworldLook.Off
+        UnderworldLook.of(Switches.parse("?underworld=yes")) shouldBe UnderworldLook.Off
+        LookVariants().underworld shouldBe UnderworldLook.Off
+        LookVariants.of(Switches.parse("?floor=mirror&underworld=on")) shouldBe
+            LookVariants(floor = FloorLook.Mirror, underworld = UnderworldLook.On)
+        UnderworldLook.FADE_IN shouldBe 2.0
+        UnderworldLook.FADE_OUT shouldBe 3.0
+    }
+
+    "the key v turns the underworld over and leaves the rest; it shows only where the mirror is drawn; its line says why not" {
+        val start = LookVariants(stage = StageLook.Mesh, floor = FloorLook.Mirror, world = WorldLook.Night)
+        val under = start.nextUnderworld()
+
+        under shouldBe start.copy(underworld = UnderworldLook.On)
+        under.nextUnderworld() shouldBe start
+        under.underworlds(FogQuality.High) shouldBe true
+        under.underworlds(FogQuality.Medium) shouldBe true
+        under.underworlds(FogQuality.Low) shouldBe false
+        start.underworlds(FogQuality.High) shouldBe false
+        under.copy(floor = FloorLook.Plain).underworlds(FogQuality.High) shouldBe false
+        start.underworldLine(FogQuality.High) shouldBe "underworld: off"
+        under.underworldLine(FogQuality.High) shouldBe "underworld: on"
+        under.underworldLine(FogQuality.Low) shouldBe "underworld: on (no mirror at fog low)"
+        under.copy(floor = FloorLook.Plain).underworldLine(FogQuality.High) shouldBe "underworld: on (with the mirror floor only)"
+    }
+
+    "the new look is the fence, the mirror, the parting haze, the eyes in the shadow, the lacquer and the drift; no underworld" {
+        LookVariants.NEW shouldBe LookVariants(
+            stage = StageLook.Mesh,
+            floor = FloorLook.Mirror,
+            haze = HazeLook.Parts,
+            eyes = EyesLook.Shadow,
+            skin = SkinLook.Lacquer,
+            world = WorldLook.Drift,
+            underworld = UnderworldLook.Off,
+        )
+    }
+
+    "?look=new starts with the new look; a single variant's switch beside it wins; another word is the look as made" {
+        LookVariants.of(Switches.parse("?look=new")) shouldBe LookVariants.NEW
+        LookVariants.of(Switches.parse("?look=new&world=night")) shouldBe LookVariants.NEW.copy(world = WorldLook.Night)
+        LookVariants.of(Switches.parse("?look=new&world=night&underworld=on")) shouldBe
+            LookVariants.NEW.copy(world = WorldLook.Night, underworld = UnderworldLook.On)
+        LookVariants.of(Switches.parse("?look=new&stage=wall&skin")) shouldBe
+            LookVariants.NEW.copy(stage = StageLook.Wall, skin = SkinLook.Suit)
+        LookVariants.of(Switches.parse("?look")) shouldBe LookVariants()
+        LookVariants.of(Switches.parse("?look=old")) shouldBe LookVariants()
+        LookVariants.asksNew(Switches.parse("?look=new")) shouldBe true
+        LookVariants.asksNew(Switches.parse("?look=today")) shouldBe false
+    }
+
     "?floor=mirror is the mirror; no switch, an empty one or another word the plain floor" {
         FloorLook.of(Switches.parse("?floor=mirror")) shouldBe FloorLook.Mirror
         FloorLook.of(Switches.parse("?floor")) shouldBe FloorLook.Plain

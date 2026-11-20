@@ -25,6 +25,9 @@ import kotlin.math.cos
  * - **The lamps behind and the fill:** they lean toward the time's colour, a little dimmer by night.
  * - **The lacquer and the gold:** by day the coat glossy and the gold rich; by night the coat duller and the gold
  *   pale, cold highlights only; at ember red. What the lacquer mirrors of the sun follows the sun.
+ * - **The walls:** by night the light on the wall, the fence and the surface behind leans cold and is dimmed
+ *   ([wallCold], [wallLight]), so the windows into the cold world glow against a dark wall; by day and at ember as
+ *   made.
  * - **The cold world** behind the fence, seen through the band's shadows: none by day, all of it by night and at
  *   ember ([beyond]).
  */
@@ -122,6 +125,19 @@ object WorldLight {
      * (soft, faint true selves), by night and at ember 1 (hard).
      */
     fun frontSoftness(world: WorldTime): Double = blend(world, made = 1.0, day = 5.0, night = 1.0, ember = 1.0)
+
+    /**
+     * How far the light on the surfaces behind the band (the wall, the fence and the surface behind it) leans toward a
+     * cold moonlit grey blue, 0 to 1: none as made, by day or at ember (the ember stays red); by night 0.8, so the
+     * front lamp's warm light reads cold there. Only those surfaces: the band keeps the lamp's own colours and moods.
+     */
+    fun wallCold(world: WorldTime): Double = blend(world, made = 0.0, day = 0.0, night = 0.8, ember = 0.0)
+
+    /**
+     * How bright the light on the surfaces behind the band is against the stage as made: as made and by day 1, by
+     * night 0.5, so the windows into the cold world glow against a darker wall; at ember 1.
+     */
+    fun wallLight(world: WorldTime): Double = blend(world, made = 1.0, day = 1.0, night = 0.5, ember = 1.0)
 
     /** The colour the lamps behind and the fill lean toward: [DAY_TINT], [NIGHT_TINT], [EMBER_TINT]. */
     fun lampTint(world: WorldTime): Int = colorAt(world, day = DAY_TINT, night = NIGHT_TINT, ember = EMBER_TINT)

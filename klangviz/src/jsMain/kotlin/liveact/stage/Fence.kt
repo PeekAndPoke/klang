@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.stage
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.lights.Lamp
+import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.toFixed
@@ -41,10 +42,12 @@ import kotlin.math.PI
  * The two worlds (`?world=night`, [WorldLook]): the sun's size and height follow the time of day ([light]), and by
  * night and at ember the band's shadows on the surface behind become windows into a cold, moonlit world beyond it
  * ([beyond]): inside each shadow the surface shows a far land of hills under a night sky, seen with depth (it moves
- * against the surface as the camera moves); outside the shadows the surface stays as it is.
+ * against the surface as the camera moves); outside the shadows the surface stays as it is, and by night the lamps'
+ * light on it, and half as much on the wires, leans cold and dims ([world], [WallLean]).
  *
- * Everything it makes is in the scene and is freed with it, or with [dispose] where the fence goes before the scene
- * does (the look turned over to the wall while the show plays).
+ * Hidden and shown again with [show] (the look turned over to the wall and back while the show plays: kept, so the
+ * turn back costs no new materials). Everything it makes is in the scene and is freed with it, or with [dispose] where
+ * the fence goes before the scene does.
  */
 class Fence(private val scene: Scene) {
     /** The wire mesh, the posts and the surface behind: what [dispose] takes out of the scene and frees. */
@@ -67,6 +70,10 @@ class Fence(private val scene: Scene) {
     private val frontLamp = vec()
     private val beyondShare = uniform(0.0)
 
+    /** The lamps' light on the surface behind and on the wires at the time of day ([world]). */
+    private val backLean = WallLean()
+    private val wireLean = WallLean()
+
     init {
         val glowUniform = uniform(glow)
         val sunAtUniform = uniform(sunAt)
@@ -84,6 +91,7 @@ class Fence(private val scene: Scene) {
             shader.uniforms["uSunAt"] = sunAtUniform
             shader.uniforms["uSunSize"] = sunSize
             shader.vertexShader = shader.vertexShader.withWorld()
+            wireLean.into(shader)
             shader.fragmentShader = shader.fragmentShader
                 .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\n$SUN_GLOW\n$CHAIN_LINK")
                 .replaceFirst(
@@ -156,6 +164,7 @@ class Fence(private val scene: Scene) {
             shader.uniforms["uFrontLamp"] = uniform(frontLamp)
             shader.uniforms["uBeyond"] = beyondShare
             shader.vertexShader = shader.vertexShader.withWorld()
+            backLean.into(shader)
             shader.fragmentShader = shader.fragmentShader
                 .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\n$SUN_GLOW\n$STAINS\n$BEYOND")
                 .replaceFirst(
@@ -174,6 +183,22 @@ class Fence(private val scene: Scene) {
         scene.add(back)
 
         parts = listOf(mesh, posts, back)
+    }
+
+    /** Shows the fence ([visible]) or hides it, with all it holds kept: hidden, it is neither drawn nor casts. */
+    fun show(visible: Boolean) {
+        for (part in parts) {
+            part.visible = visible
+        }
+    }
+
+    /**
+     * The lamps' light on the surface behind at the time of day [world] ([WallLean]): by night cold and dimmer; on
+     * the wires half as much.
+     */
+    fun world(world: WorldTime) {
+        backLean.world(world)
+        wireLean.world(world = world, share = WIRE_LEAN)
     }
 
     /**
@@ -237,6 +262,9 @@ class Fence(private val scene: Scene) {
 
         /** The mesh's place among what is drawn see-through: after the haze, before all the rest. */
         const val ORDER = -50
+
+        /** How much of the night's lean the wires take ([world]). */
+        private const val WIRE_LEAN = 0.5
 
         /** How bright the sun glows on the surface at its middle, at its full brightness. */
         private const val GLOW = 0.5

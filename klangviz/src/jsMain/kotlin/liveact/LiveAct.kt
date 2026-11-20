@@ -24,6 +24,7 @@ import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.Stage
@@ -104,9 +105,12 @@ fun Tag.LiveAct(
  * z), w and u move the camera by hand ([View]); f tries the front lamp's colours ([Lights]); o steps through the
  * oversampling, g through the fog; m turns over what stands behind the band (wall or fence), p the floor (plain or
  * mirror), h the haze behind the fence (whole, or giving way to the band's shadows), i Sirene's eyes under the
- * front lamp (in her face, or in her shadow), l the band's skin (the suit, or black lacquer with gold) and n the two
- * worlds' time of day (off, day, night, ember, or a drift from day to night and back) ([LookVariants]). A key that
- * turns a variant over says the new one for two seconds below the line at the top.
+ * front lamp (in her face, or in her shadow), l the band's skin (the suit, or black lacquer with gold), n the two
+ * worlds' time of day (off, day, night, ember, or a drift from day to night and back) and v the underworld in the
+ * mirror floor (off, or on: the other world, cold, for a moment of a show) ([LookVariants]); x flips the whole look
+ * between today and the new look, each side as it was last tuned by the keys before ([LookFlip]). A key that turns a
+ * variant over says the new one for two seconds below the line at the top. The first turn of x to the new look builds
+ * what it needs (a hitch of the frames while the materials compile); from then on it flips at once both ways.
  *
  * Two limits, as the prototype it was ported from has them. It takes the page for its own: its keys (space, the
  * arrows, single letters and digits) and a click anywhere are the show's, except while the user types in a field;
@@ -234,17 +238,30 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         get() = Oversampling.follows(samples) && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
 
     /**
-     * The look's variants ([LookVariants]): what stands behind the band (`?stage=mesh`, the key m), the floor
-     * (`?floor=mirror`, the key p), the haze (`?haze=parts`, the key h), Sirene's eyes (`?eyes=shadow`, the key
-     * i), the band's skin (`?skin=lacquer`, the key l) and the time of day (`?world=night`, the key n), as chosen
-     * now.
+     * The whole look, today's and the new one ([LookFlip], `?look=new`, the key x), the one shown and the one kept for
+     * the next x.
      */
-    private var variants: LookVariants = LookVariants.of(props.show.switches)
+    private var look: LookFlip = LookFlip.of(props.show.switches)
 
-    /** Sirene's eyes in her shadow, where they are chosen (`?eyes=shadow`, the key i) and the band stands. */
+    /**
+     * The look's variants shown now ([LookVariants]): what stands behind the band (`?stage=mesh`, the key m), the floor
+     * (`?floor=mirror`, the key p), the haze (`?haze=parts`, the key h), Sirene's eyes (`?eyes=shadow`, the key
+     * i), the band's skin (`?skin=lacquer`, the key l), the time of day (`?world=night`, the key n) and the underworld
+     * in the mirror (`?underworld=on`, the key v).
+     */
+    private val variants: LookVariants
+        get() = look.shown
+
+    /**
+     * Sirene's eyes in her shadow, made the first time they are chosen (`?eyes=shadow`, the key i) once the band
+     * stands, and kept resting while they are not.
+     */
     private var shadowEyes: ShadowEyes? = null
 
-    /** The band in black lacquer and gold, where it is chosen (`?skin=lacquer`, the key l) and the band stands. */
+    /**
+     * The band in black lacquer and gold, made the first time it is chosen (`?skin=lacquer`, the key l) once the band
+     * stands, and kept off while it is not ([Lacquer.wear]).
+     */
     private var lacquer: Lacquer? = null
 
     /** The timer that clears the line a variant's key wrote ([flash]), while it runs. */
@@ -268,39 +285,53 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
 
         if (plain && key == "m") {
-            variants = variants.nextStage()
+            tune(variants.nextStage())
             stage?.look(variants.stage)
             flash(variants.stageLine())
         }
 
         if (plain && key == "p") {
-            variants = variants.nextFloor()
+            tune(variants.nextFloor())
             stage?.floor(variants.floor)
             flash(variants.floorLine(fog))
         }
 
         if (plain && key == "h") {
-            variants = variants.nextHaze()
+            tune(variants.nextHaze())
             stage?.haze(variants.haze)
             flash(variants.hazeLine(fog))
         }
 
         if (plain && key == "i") {
-            variants = variants.nextEyes()
+            tune(variants.nextEyes())
             eyesAsChosen()
             flash(variants.eyesLine())
         }
 
         if (plain && key == "l") {
-            variants = variants.nextSkin()
+            tune(variants.nextSkin())
             skinAsChosen()
             flash(variants.skinLine())
         }
 
         if (plain && key == "n") {
-            variants = variants.nextWorld()
+            tune(variants.nextWorld())
             stage?.world(variants.world)
             flash(variants.worldLine())
+        }
+
+        if (plain && key == "v") {
+            tune(variants.nextUnderworld())
+            stage?.underworld(variants.underworld)
+            flash(variants.underworldLine(fog))
+        }
+
+        if (plain && key == "x") {
+            look = look.flip()
+            stage?.turn(variants)
+            eyesAsChosen()
+            skinAsChosen()
+            flash(look.line())
         }
     }
 
@@ -407,6 +438,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         )
 
         this.stage = stage
+        // while the mirror draws, Sirene's eyes in her shadow also shine in her reflection, as far as the underworld shows
+        stage.mirrorDrawing = { drawing -> shadowEyes?.inMirror(drawing = drawing, share = stage.underworld) }
         scene = ctx.scene
         // Nothing is shown until the band stands: Kraft draws every frame from now on, and the stage alone, fully
         // lit, seen from where the camera happens to be, is no picture of the show
@@ -492,8 +525,11 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         now.band.afterPose(t)
         breathing(show = show, rigs = now.band.rigs, t = t, slow = energy.slow)
         now.stage.light(t = t, house = now.clock.houseAt(), waiting = now.clock.waiting())
-        shadowEyes?.update(front = now.stage.front, lamp = now.stage.frontLamp, planeZ = now.stage.shadowsAt)
-        lacquer?.light(house = now.clock.houseAt(), world = now.stage.world)
+        if (variants.eyes == EyesLook.Shadow) {
+            shadowEyes?.update(front = now.stage.front, lamp = now.stage.frontLamp, planeZ = now.stage.shadowsAt)
+        }
+
+        lacquer?.takeIf { it.worn }?.light(house = now.clock.houseAt(), world = now.stage.world)
         now.view.look(t)
         now.stage.follow()
         camera?.let { viewer.copy(it.position) }
@@ -545,6 +581,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 "music: ${show.music.source}",
                 "camera: ${now.view.what()}",
                 "seed ${show.seed}",
+                "${look.line()} (key x)",
                 "oversampling ${Oversampling.label(samples)} (key o)",
                 "fog ${fog.word} (key g)",
                 "shadows ${shadows.word}",
@@ -554,6 +591,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 "${variants.eyesLine()} (key i)",
                 "${variants.skinLine()} (key l)",
                 "${variants.worldLine()} (key n)",
+                "${variants.underworldLine(fog)} (key v)",
                 "${fps.toFixed(0)} fps",
                 "slowest frame $worstShown ms",
                 "pixels ${sharpness.ratio.toFixed(2)}x",
@@ -589,9 +627,15 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }, FLASH_MS)
     }
 
+    /** The variants shown changed to [to] by a variant's own key: the other side of the key x stays as it was. */
+    private fun tune(to: LookVariants) {
+        look = look.tune(to)
+    }
+
     /**
      * Sirene's eyes as [variants] say: in her shadow ([ShadowEyes]) where it is chosen and the band stands, made where
-     * there are none; freed where they are not chosen (her face's eyes are hers again from the next frame on).
+     * there are none; resting where they are not chosen (her face's eyes are hers again from the next frame on), kept
+     * for the next time.
      */
     private fun eyesAsChosen() {
         val wanted = variants.eyes == EyesLook.Shadow
@@ -603,14 +647,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
 
         if (!wanted) {
-            shadowEyes?.dispose()
-            shadowEyes = null
+            shadowEyes?.rest()
         }
     }
 
     /**
      * The band's skin as [variants] say: lacquer ([Lacquer]) where it is chosen and the band stands, made where there
-     * is none; freed where it is not chosen (the bodies wear their suits again from the next frame on).
+     * is none; taken off where it is not chosen (the bodies wear their suits again from the next frame on), kept for
+     * the next time ([Lacquer.wear]).
      */
     private fun skinAsChosen() {
         val wanted = variants.skin == SkinLook.Lacquer
@@ -621,10 +665,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             lacquer = Lacquer.of(renderer = drawer, bodies = band.bodies, brass = listOf(band.frontwoman.trumpet.brass))
         }
 
-        if (!wanted) {
-            lacquer?.dispose()
-            lacquer = null
-        }
+        lacquer?.wear(wanted)
     }
 
     /** Starts the counting of frames anew at [nowMs]: what was counted so far is not judged. */
