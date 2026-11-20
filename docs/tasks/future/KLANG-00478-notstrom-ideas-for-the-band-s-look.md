@@ -46,6 +46,10 @@ we need the real figures... And their characters..."):
 - **Sirene:** attention seeking; her eyes go onto the wall (below). Her feet: the body of 2026-11-20 (2ffaee471)
   reads as high heels, which the maintainer does not want for her (2026-11-20): "she should wear comfortable
   'footware' so she can walk around a lot easily. Rune can he the heals." To be reworked once Rune is done.
+  Her dress: "the 'belt' on her dress painting is sitting a little too low, which is most apparent from her back
+  side view" (the maintainer, 2026-11-20). The belt is the braid pattern's hoop at 0.90 m, the height of her hip
+  joint (the hoops lie every 0.45 m from the floor: knee, hip, collar); her waist sits higher. To be moved
+  with the same rework.
 - **Klaue:** could be the band's "manager". The maintainer, 2026-11-19, on a Shadow Play restyle whose wall
   showed a boy with tousled hair behind him: "Klaue could be very styled hair (manager hair) but in reality he is
   still a child with 'wild' hair somehow." So: on the figure, sculpted, lacquered manager hair (faceless head
