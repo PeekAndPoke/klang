@@ -50,6 +50,9 @@ we need the real figures... And their characters..."):
   side view" (the maintainer, 2026-11-20). The belt is the braid pattern's hoop at 0.90 m, the height of her hip
   joint (the hoops lie every 0.45 m from the floor: knee, hip, collar); her waist sits higher. To be moved
   with the same rework.
+  Her seat and legs, in the same rework (the maintainer, 2026-11-20): "Sirene now has to much 'butt', not a lot
+  but a little too much. ... I would like to keep the high calf muscles and maybe we can slight accentuate the thigh
+  muscles".
 - **Klaue:** could be the band's "manager". The maintainer, 2026-11-19, on a Shadow Play restyle whose wall
   showed a boy with tousled hair behind him: "Klaue could be very styled hair (manager hair) but in reality he is
   still a child with 'wild' hair somehow." So: on the figure, sculpted, lacquered manager hair (faceless head
@@ -207,3 +210,4 @@ Not built: the bodies and the true-self shadows (they need modelling and the cha
 - 2026-11-20: Sirene's feet become comfortable ones, the heels are Rune's; Rune's target chosen.
 - 2026-11-20: the belt of Sirene's dress; the eyes inside the skull with a slight glow.
 - 2026-11-20: a shared head builder for the figures (the maintainer's yes).
+- 2026-11-20: Sirene's seat a little smaller, calves kept, thighs a little more defined, with her feet.
