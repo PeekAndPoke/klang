@@ -26,6 +26,7 @@ import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
+import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
@@ -63,7 +64,8 @@ import kotlin.math.sqrt
  * asked for with each file (a release's figures may be cached for long, and a new release asks anew). The music is
  * the show's ([Show.music]). [walkInAtOnce]: the walk-in begins as soon as the band stands, without a click; [frameTimes]: told
  * the time of every frame drawn; [stepsDown]: the oversampling steps down where the frames stay slow; [picture]: the
- * oversampling and the fog seen and set, and the frame rate seen, from outside (all four: see [LiveAct.Props]).
+ * oversampling, the fog, the shadows and the reflections seen and set, and the frame rate seen, from outside (all
+ * four: see [LiveAct.Props]).
  */
 @Suppress("FunctionName")
 fun Tag.LiveAct(
@@ -110,7 +112,9 @@ fun Tag.LiveAct(
  * mirror floor (off, or on: the other world, cold, for a moment of a show), b how uneven the mirror floor's stone is
  * (none, faint, gentle or strong), c how blurred its reflection is (crisp, soft or stone), k its stone (plain or
  * marble) and j the stage's outline, a working aid (off or on) ([LookVariants]); x flips the whole look between today
- * and the new look, each side as it was last tuned by the keys before ([LookFlip]). A key that turns a variant over
+ * and the new look, each side as it was last tuned by the keys before ([LookFlip]). The shadows and the mirror
+ * floor's reflections have no key (every letter is taken): `?shadows=low`, `?reflections=off`, or an app's controls
+ * ([Props.picture]). A key that turns a variant over
  * says the new one for two seconds below the line at the top. The first turn of x to the new look builds what it
  * needs (a hitch of the frames while the materials compile); from then on it flips at once both ways.
  *
@@ -147,9 +151,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         val stepsDown: Boolean = false,
         /**
          * The picture seen and set from outside the live act ([Picture]): it is told every change of the oversampling,
-         * the fog and the shadows, and the frame rate counted for the line at the top. An oversampling chosen through
-         * it is taken as the key o's is (by hand: no step down by itself after it), a fog as the key g's, the shadows
-         * at once. Null: none.
+         * the fog, the shadows and the reflections, and the frame rate counted for the line at the top. An
+         * oversampling chosen through it is taken as the key o's is (by hand: no step down by itself after it), a fog
+         * as the key g's, the shadows and the reflections at once. Null: none.
          */
         val picture: Picture? = null,
     )
@@ -224,6 +228,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      * ([Props.picture]), no key.
      */
     private var shadows: ShadowQuality = ShadowQuality.of(props.show.switches)
+
+    /**
+     * Whether the mirror floor's reflections are drawn ([ReflectionQuality]), where the look has the mirror floor:
+     * `?reflections=off` starts without them. Changed only by hand ([Props.picture]), no key; the fog has no say in it.
+     */
+    private var reflections: ReflectionQuality = ReflectionQuality.of(props.show.switches)
 
     /**
      * How finely the picture is drawn: it follows the frame rate (see [Sharpness]), at 1x and at 0.5x (half the
@@ -345,12 +355,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                         take = { samples -> oversample(to = samples, byHand = true) },
                         takeFog = { quality -> chooseFog(quality) },
                         takeShadows = { quality -> chooseShadows(quality) },
+                        takeReflections = { quality -> chooseReflections(quality) },
                         takeLook = { to -> chooseLook(to) },
                         flipLook = { flipLook() },
                     )
                     it.tellSamples(samples)
                     it.tellFog(fog)
                     it.tellShadows(shadows)
+                    it.tellReflections(reflections)
                     it.tellLook(look)
                 }
                 window.addEventListener("resize", onResize)
@@ -440,6 +452,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             renderer = ctx.renderer,
             fog = fog,
             shadows = shadows,
+            reflections = reflections,
             variants = variants,
         )
 
@@ -602,23 +615,24 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     "oversampling ${Oversampling.label(samples)} (key o)",
                     "fog ${fog.word} (key g)",
                     "shadows ${shadows.word}",
+                    "reflections ${reflections.word}",
                 ),
                 listOf(
                     "${look.line()} (key x)",
                     "${variants.stageLine()} (key m)",
-                    "${variants.floorLine(fog)} (key p)",
+                    "${variants.floorLine(reflections)} (key p)",
                     "${variants.hazeLine(fog)} (key h)",
                 ),
                 listOf(
                     "${variants.eyesLine()} (key i)",
                     "${variants.skinLine()} (key l)",
                     "${variants.worldLine()} (key n)",
-                    "${variants.underworldLine(fog)} (key v)",
+                    "${variants.underworldLine(reflections)} (key v)",
                 ),
                 listOf(
-                    "${variants.rippleLine(fog)} (key b)",
-                    "${variants.blurLine(fog)} (key c)",
-                    "${variants.stoneLine(fog)} (key k)",
+                    "${variants.rippleLine(reflections)} (key b)",
+                    "${variants.blurLine(reflections)} (key c)",
+                    "${variants.stoneLine(reflections)} (key k)",
                     "${variants.outlineLine()} (key j)",
                 ),
             ).joinToString("\n") { items -> items.joinToString("  |  ") }
@@ -667,15 +681,15 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         val lines = listOfNotNull(
             to.stageLine().takeIf { to.stage != was.stage },
-            to.floorLine(fog).takeIf { to.floor != was.floor },
+            to.floorLine(reflections).takeIf { to.floor != was.floor },
             to.hazeLine(fog).takeIf { to.haze != was.haze },
             to.eyesLine().takeIf { to.eyes != was.eyes },
             to.skinLine().takeIf { to.skin != was.skin },
             to.worldLine().takeIf { to.world != was.world },
-            to.underworldLine(fog).takeIf { to.underworld != was.underworld },
-            to.rippleLine(fog).takeIf { to.ripple != was.ripple },
-            to.blurLine(fog).takeIf { to.blur != was.blur },
-            to.stoneLine(fog).takeIf { to.stone != was.stone },
+            to.underworldLine(reflections).takeIf { to.underworld != was.underworld },
+            to.rippleLine(reflections).takeIf { to.ripple != was.ripple },
+            to.blurLine(reflections).takeIf { to.blur != was.blur },
+            to.stoneLine(reflections).takeIf { to.stone != was.stone },
             to.outlineLine().takeIf { to.outline != was.outline },
         )
 
@@ -763,8 +777,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
     /**
      * The fog on the floor at [quality], at once: the stage makes it anew where it is another (before the stage is
-     * built, it is built so), and the mirror in the floor goes or comes with it ([LookVariants.mirrors]). Tells
-     * [Props.picture].
+     * built, it is built so). The mirror in the floor stays as it is: the reflections decide it ([chooseReflections]).
+     * Tells [Props.picture].
      */
     private fun chooseFog(quality: FogQuality) {
         fog = quality
@@ -777,6 +791,16 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         shadows = quality
         stage?.shadows(quality)
         props.picture?.tellShadows(quality)
+    }
+
+    /**
+     * The mirror floor's reflections at [quality], at once ([Stage.reflections]): off, the mirror floor is drawn plain
+     * and its pictures are freed; on, it mirrors again where the look has it. Tells [Props.picture].
+     */
+    private fun chooseReflections(quality: ReflectionQuality) {
+        reflections = quality
+        stage?.reflections(quality)
+        props.picture?.tellReflections(quality)
     }
 
     /**

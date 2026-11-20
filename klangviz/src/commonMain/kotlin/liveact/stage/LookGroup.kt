@@ -22,12 +22,14 @@ data class LookGroup(val label: String, val key: String, val options: List<Optio
 
     companion object {
         /**
-         * Every variant of [look] as the controls show it with the fog at [fog], the whole look (x) first, then each
-         * variant as its key turns it over. A new variant is one line more here.
+         * Every variant of [look] as the controls show it with the fog at [fog] (the haze needs it) and the
+         * reflections at [reflections] (the mirror needs them), the whole look (x) first, then each variant as its key
+         * turns it over. A new variant is one line more here. The reflection's blur (the key c) is labelled `Blur`, so
+         * it is not taken for the reflections themselves, which are a quality of the picture beside the fog.
          */
-        fun all(look: LookFlip, fog: FogQuality): List<LookGroup> {
+        fun all(look: LookFlip, fog: FogQuality, reflections: ReflectionQuality): List<LookGroup> {
             val v = look.shown
-            val mirror = v.mirrorHeld(fog)
+            val mirror = v.mirrorHeld(reflections)
 
             return listOf(
                 whole(look),
@@ -36,7 +38,7 @@ data class LookGroup(val label: String, val key: String, val options: List<Optio
                 },
                 of(
                     label = "Floor", key = "p", entries = FloorLook.entries, chosen = v.floor, word = { it.word },
-                    held = v.copy(floor = FloorLook.Mirror).mirrorHeld(fog),
+                    held = v.copy(floor = FloorLook.Mirror).mirrorHeld(reflections),
                 ) { v.copy(floor = it) },
                 of(label = "Haze", key = "h", entries = HazeLook.entries, chosen = v.haze, word = { it.word }, held = v.hazeHeld(fog)) {
                     v.copy(haze = it)
@@ -51,7 +53,7 @@ data class LookGroup(val label: String, val key: String, val options: List<Optio
                 of(label = "Ripple", key = "b", entries = RippleLook.entries, chosen = v.ripple, word = { it.word }, held = mirror) {
                     v.copy(ripple = it)
                 },
-                of(label = "Reflection", key = "c", entries = BlurLook.entries, chosen = v.blur, word = { it.word }, held = mirror) {
+                of(label = "Blur", key = "c", entries = BlurLook.entries, chosen = v.blur, word = { it.word }, held = mirror) {
                     v.copy(blur = it)
                 },
                 of(label = "Stone", key = "k", entries = StoneLook.entries, chosen = v.stone, word = { it.word }, held = mirror) {

@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookGroup
+import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -55,7 +56,8 @@ fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (D
  * which would hold the drawer for ever as a mouse resting on it. It holds two rows (and with `?dev` the look, below).
  *
  * The first is the picture: the live act's oversampling, its steps (0.5x to 4x) with the one in use marked, the fog
- * on the floor, its qualities (off, low, high) likewise, and the lamps' shadows (low, high), each following the real
+ * on the floor, its qualities (off, low, high) likewise, the lamps' shadows (low, high), and the mirror floor's
+ * reflections (off, on), each following the real
  * state (the test's choice, the keys o and g, the live act's own step down), where a choice is the visitor's and
  * holds ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
  * nothing while it is hidden).
@@ -66,7 +68,8 @@ fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (D
  *
  * With `?dev` ([Props.dev], [DEV]), for whoever works on the show: below the two rows a third part, the look, with
  * each of its variants as a group of buttons ([LookGroup]: `Stage (m)  [Wall] [Fence]`), the one in use marked, a
- * variant that does nothing now (the haze before the wall, the ripple without the mirror) dimmed with the reason, and
+ * variant that does nothing now (the haze before the wall, the ripple without the mirror or with the reflections off)
+ * dimmed with the reason, and
  * a quiet line with the show's other keys; the oversampling and the fog name their keys too. A choice there is taken
  * as the key would take it, with its line at the top ([Picture.chooseLook], [Picture.flipLook]). The drawer then
  * takes at most about a third of the window's height and scrolls within itself where it needs more.
@@ -100,6 +103,9 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
 
     /** The shadows' quality now, as the live act tells. */
     private val shadows: ShadowQuality by subscribingTo(props.picture.shadows)
+
+    /** Whether the reflections are drawn now, as the live act tells. */
+    private val reflections: ReflectionQuality by subscribingTo(props.picture.reflections)
 
     /** The look now, as the live act tells (shown with `?dev`). */
     private val look: LookFlip by subscribingTo(props.picture.look)
@@ -313,6 +319,16 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                     }
                 }
 
+                group {
+                    +"Reflections"
+
+                    for (quality in ReflectionQuality.entries) {
+                        plainButton(text = reflectionsLabel(quality), primary = quality == reflections) {
+                            props.picture.chooseReflections(quality)
+                        }
+                    }
+                }
+
                 div {
                     css {
                         put("width", "4.5em")
@@ -407,7 +423,7 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 put("font-size", "13px")
             }
 
-            for (variant in LookGroup.all(look = look, fog = fog)) {
+            for (variant in LookGroup.all(look = look, fog = fog, reflections = reflections)) {
                 div {
                     css {
                         put("display", "flex")
@@ -541,6 +557,12 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
     private fun shadowsLabel(quality: ShadowQuality): String = when (quality) {
         ShadowQuality.Low -> "Low"
         ShadowQuality.High -> "High"
+    }
+
+    /** The reflections' label on their button: `Off`, `On`. */
+    private fun reflectionsLabel(quality: ReflectionQuality): String = when (quality) {
+        ReflectionQuality.Off -> "Off"
+        ReflectionQuality.On -> "On"
     }
 
     /** A fog's label on its button: `Off`, `Low`, `High`. */

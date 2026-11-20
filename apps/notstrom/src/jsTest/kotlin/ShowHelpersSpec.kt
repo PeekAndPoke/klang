@@ -90,6 +90,8 @@ class ShowHelpersSpec : StringSpec({
         keepsTest("?nostrobe&dev&notest") shouldBe true
         keepsTest("?nofog") shouldBe false
         keepsTest("?shadows=low") shouldBe false
+        keepsTest("?reflections=off") shouldBe false
+        keepsTest("?reflections=on&dev") shouldBe false
         keepsTest("?fog=low&nostrobe") shouldBe false
         keepsTest("?nosky") shouldBe false
         keepsTest("?seed=3") shouldBe false
@@ -118,6 +120,12 @@ class ShowHelpersSpec : StringSpec({
     "the address's shadows are carried into the show; the test chooses none" {
         showSwitches(query = "?shadows=low", strobe = true, fog = FogQuality.Low)[Switch.Shadows] shouldBe "low"
         showSwitches(query = "", strobe = true, fog = FogQuality.Low).has(Switch.Shadows) shouldBe false
+    }
+
+    "the address's reflections are carried into the show; the test chooses none, whatever fog it chose" {
+        showSwitches(query = "?reflections=off", strobe = true, fog = FogQuality.Low)[Switch.Reflections] shouldBe "off"
+        showSwitches(query = "", strobe = true, fog = FogQuality.Low).has(Switch.Reflections) shouldBe false
+        showSwitches(query = "", strobe = true, fog = FogQuality.High).has(Switch.Reflections) shouldBe false
     }
 
     "the result's line says the oversampling and the fog, or which of them the address sets" {

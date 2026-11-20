@@ -15,20 +15,24 @@ private val TODAY = LookFlip.of(Switches.parse(""))
 /** The new look shown, the look as made kept. */
 private val NEW = LookFlip.of(Switches.parse("?look=new"))
 
+/** Every group of [look] as a show starts: the fog high, the reflections on. */
+private fun startsWith(look: LookFlip): List<LookGroup> =
+    LookGroup.all(look = look, fog = FogQuality.High, reflections = ReflectionQuality.On)
+
 /** The group labelled [label]. */
 private fun List<LookGroup>.named(label: String): LookGroup = single { it.label == label }
 
 class LookGroupSpec : StringSpec({
 
     "every variant with its key, the whole look first, then as the keys turn them over" {
-        LookGroup.all(look = TODAY, fog = FogQuality.High).map { "${it.label} (${it.key})" } shouldBe listOf(
+        startsWith(TODAY).map { "${it.label} (${it.key})" } shouldBe listOf(
             "Look (x)", "Stage (m)", "Floor (p)", "Haze (h)", "Eyes (i)", "Skin (l)", "World (n)", "Underworld (v)",
-            "Ripple (b)", "Reflection (c)", "Stone (k)", "Outline (j)",
+            "Ripple (b)", "Blur (c)", "Stone (k)", "Outline (j)",
         )
     }
 
     "each option labelled by its variant's word with a capital, the fence as the line says it" {
-        LookGroup.all(look = TODAY, fog = FogQuality.High).map { group -> group.options.map { it.label } } shouldBe listOf(
+        startsWith(TODAY).map { group -> group.options.map { it.label } } shouldBe listOf(
             listOf("Today", "New"),
             listOf("Wall", "Fence"),
             listOf("Plain", "Mirror"),
@@ -45,7 +49,7 @@ class LookGroupSpec : StringSpec({
     }
 
     "the one in use is marked, one in each group" {
-        fun marked(look: LookFlip) = LookGroup.all(look = look, fog = FogQuality.High).map { group ->
+        fun marked(look: LookFlip) = startsWith(look).map { group ->
             group.options.filter { it.marked }.map { it.label }
         }
 
@@ -64,13 +68,13 @@ class LookGroupSpec : StringSpec({
     }
 
     "a variant's option chooses the variants shown with that one changed, the rest as they are; none flips" {
-        val groups = LookGroup.all(look = NEW, fog = FogQuality.High)
+        val groups = startsWith(NEW)
         val night = groups.named("World").options.single { it.label == "Night" }
 
         night.to shouldBe LookVariants.NEW.copy(world = WorldLook.Night)
         night.flips shouldBe false
         groups.named("Stage").options.single { it.label == "Wall" }.to shouldBe LookVariants.NEW.copy(stage = StageLook.Wall)
-        groups.named("Reflection").options.single { it.label == "Stone" }.to shouldBe LookVariants.NEW.copy(blur = BlurLook.Stone)
+        groups.named("Blur").options.single { it.label == "Stone" }.to shouldBe LookVariants.NEW.copy(blur = BlurLook.Stone)
         groups.named("Eyes").options.single { it.label == "Face" }.to shouldBe LookVariants.NEW.copy(eyes = EyesLook.Face)
         // the marked one chooses what is shown already
         groups.drop(1).forEach { group -> group.options.single { it.marked }.to shouldBe LookVariants.NEW }
@@ -78,20 +82,20 @@ class LookGroupSpec : StringSpec({
     }
 
     "the whole look: the side not shown flips to it, as it was last tuned; the side shown stays" {
-        val today = LookGroup.all(look = TODAY, fog = FogQuality.High).named("Look").options
+        val today = startsWith(TODAY).named("Look").options
 
         today.map { it.flips } shouldBe listOf(false, true)
         today.map { it.to } shouldBe listOf(LookVariants(), LookVariants.NEW)
 
         val tuned = NEW.tune(NEW.shown.copy(world = WorldLook.Night))
-        val new = LookGroup.all(look = tuned, fog = FogQuality.High).named("Look").options
+        val new = startsWith(tuned).named("Look").options
 
         new.map { it.flips } shouldBe listOf(true, false)
         new.map { it.to } shouldBe listOf(LookVariants(), LookVariants.NEW.copy(world = WorldLook.Night))
     }
 
     "today: the haze and the mirror's looks do nothing, and say why; the rest shows" {
-        val held = LookGroup.all(look = TODAY, fog = FogQuality.High).associate { it.label to it.held }
+        val held = startsWith(TODAY).associate { it.label to it.held }
 
         held shouldBe mapOf(
             "Look" to null,
@@ -103,37 +107,43 @@ class LookGroupSpec : StringSpec({
             "World" to null,
             "Underworld" to "with the mirror floor only",
             "Ripple" to "with the mirror floor only",
-            "Reflection" to "with the mirror floor only",
+            "Blur" to "with the mirror floor only",
             "Stone" to "with the mirror floor only",
             "Outline" to null,
         )
     }
 
-    "the new look at fog high: everything shows" {
-        LookGroup.all(look = NEW, fog = FogQuality.High).mapNotNull { it.held } shouldBe emptyList()
+    "the new look with the reflections on: everything shows, at every fog but the haze at fog off" {
+        for (fog in FogQuality.entries) {
+            val held = LookGroup.all(look = NEW, fog = fog, reflections = ReflectionQuality.On).mapNotNull { it.held }
+
+            held shouldBe if (fog == FogQuality.Off) listOf("no haze at fog off") else emptyList()
+        }
     }
 
-    "the new look at fog low: no mirror, so the floor and the mirror's looks say so; the haze still parts" {
-        val held = LookGroup.all(look = NEW, fog = FogQuality.Low).associate { it.label to it.held }
+    "the new look with the reflections off: the floor and the mirror's looks say so; the haze still parts" {
+        val held = LookGroup.all(look = NEW, fog = FogQuality.High, reflections = ReflectionQuality.Off).associate { it.label to it.held }
 
         held.filterValues { it != null } shouldBe mapOf(
-            "Floor" to "no mirror at fog low",
-            "Underworld" to "no mirror at fog low",
-            "Ripple" to "no mirror at fog low",
-            "Reflection" to "no mirror at fog low",
-            "Stone" to "no mirror at fog low",
+            "Floor" to "reflections off",
+            "Underworld" to "reflections off",
+            "Ripple" to "reflections off",
+            "Blur" to "reflections off",
+            "Stone" to "reflections off",
         )
     }
 
-    "fog off: no haze to part either" {
-        val held = LookGroup.all(look = NEW, fog = FogQuality.Off).associate { it.label to it.held }
+    "fog off with the reflections on: no haze to part, and the mirror still shows" {
+        val held = LookGroup.all(look = NEW, fog = FogQuality.Off, reflections = ReflectionQuality.On).associate { it.label to it.held }
 
         held["Haze"] shouldBe "no haze at fog off"
-        held["Floor"] shouldBe "no mirror at fog off"
-        held["Stone"] shouldBe "no mirror at fog off"
+        held["Floor"] shouldBe null
+        held["Stone"] shouldBe null
     }
 
-    "the floor at fog low says why even where the plain floor is in use: the mirror would not be drawn" {
-        LookGroup.all(look = TODAY, fog = FogQuality.Low).named("Floor").held shouldBe "no mirror at fog low"
+    "the floor with the reflections off says why even where the plain floor is in use: the mirror would not be drawn" {
+        LookGroup.all(look = TODAY, fog = FogQuality.High, reflections = ReflectionQuality.Off).named("Floor").held shouldBe
+            "reflections off"
+        LookGroup.all(look = TODAY, fog = FogQuality.Low, reflections = ReflectionQuality.On).named("Floor").held shouldBe null
     }
 })

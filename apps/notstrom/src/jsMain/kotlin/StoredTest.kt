@@ -7,6 +7,7 @@ package io.peekandpoke.klang.notstrom
 
 import io.peekandpoke.klang.apps.common.FrameStats
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.js.Date
@@ -59,9 +60,12 @@ data class StoredTest(
          * The machine test's version. Raise it when the test or the show's cost changes in a way that matters (what
          * is measured, how it is judged, a heavier stage): every kept result then counts no more, and each visitor's
          * machine is tested anew. Not the release's name: every deploy would test again. 3 since 2026-11-20: three
-         * fog qualities, and a kept `high` meant twelve sheets, now eight.
+         * fog qualities, and a kept `high` meant twelve sheets, now eight. 4 since 2026-11-20: the mirror floor's
+         * reflections no longer go with the fog ([ReflectionQuality], on unless a visitor turns them off), so the
+         * test's fog part, at low, now draws the new look's mirror as well, which it did not before; a kept result
+         * chose its fog on a lighter stage than the show now draws there.
          */
-        const val TEST_VERSION = 3
+        const val TEST_VERSION = 4
 
         /** Where the browser keeps it. */
         const val STORAGE_KEY = "notstrom.machine-test"

@@ -14,6 +14,7 @@ import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.OutlineLook
+import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import io.peekandpoke.klang.viz.liveact.stage.RippleLook
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
@@ -60,6 +61,12 @@ enum class Switch(val key: String) {
      * the shadows as they were made.
      */
     Shadows("shadows"),
+
+    /**
+     * `?reflections=off`: whether the mirror floor's reflections are drawn, off or on ([ReflectionQuality]), where the
+     * look has the mirror floor ([Floor]); any other value is on, at every fog.
+     */
+    Reflections("reflections"),
 
     // The camera
 
@@ -186,7 +193,7 @@ enum class Switch(val key: String) {
 
     /**
      * `?floor=mirror`: the floor ([FloorLook]): mirror, polished dark stone that mirrors the stage, drawn where the
-     * fog is drawn at high (not at low or off); any other value, or none, the floor as it was made. The key p turns it over
+     * reflections are on ([Reflections]); any other value, or none, the floor as it was made. The key p turns it over
      * while the show plays ([LookVariants]).
      */
     Floor("floor"),

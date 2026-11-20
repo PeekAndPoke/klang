@@ -94,8 +94,8 @@ fun Tag.NotstromApp(query: String) = comp(
  * plays the notes that will sound), and it is played for the show alone ([ShowPlayback]): the walk-in begins at once
  * (the click was taken here), and the live act's clock starts the song when the walk-in is over. The live act steps
  * the oversampling down by itself where the frames stay slow. While the show plays, a moving mouse brings up a
- * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, fullscreen, the volume). What fails on the way is
- * said on the start screen, in plain words.
+ * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, the shadows, the reflections, fullscreen, the
+ * volume). What fails on the way is said on the start screen, in plain words.
  *
  * The address's switches are the live act's ([Switch]: `?seed=7`, `?still`, `?oversample=2`, `?fog=low` and the rest);
  * `?nostrobe` presets the choice for the stroboscope. The line of text at the top is hidden for visitors; `?dev` shows
@@ -498,14 +498,17 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /**
      * The picture test's stage: the stage the show draws, with the band standing at their places (the show frozen at
      * its start, so nothing moves the measure: no music, no flashing stroboscope, the full picture the show starts
-     * with), at 1x whatever the address says. The fog and the shadows are high, or as the address sets them: what the
-     * show will draw (where the address sets the fog, the test does not choose it). It is not seen: the checking
-     * screen covers it (an opaque layer over the full-size canvas, which stays in the layout at its real size and is
-     * really drawn; a canvas hidden or made small could be skipped by the browser and would measure nothing true).
+     * with), at 1x whatever the address says. The fog and the shadows are high, the reflections on, or as the address
+     * sets them: what the show will draw (where the address sets the fog, the test does not choose it; the reflections
+     * it never chooses, so the mirror floor is drawn in both its parts, also with the fog low). It is not seen: the
+     * checking screen covers it (an opaque layer over the full-size canvas, which stays in the layout at its real size
+     * and is really drawn; a canvas hidden or made small could be skipped by the browser and would measure nothing
+     * true).
      */
     private fun testStage(): Running {
         // the address's switches, frozen at the start (`t=0`: the band at their places), at 1x, and without the
-        // stroboscope (nobody has chosen yet); the fog and the shadows the address's, else the live act's own, high
+        // stroboscope (nobody has chosen yet); the fog and the shadows the address's, else the live act's own, high; the
+        // reflections the address's, else on
         val switches = showSwitches(query = props.query + "&${Switch.Oversample.key}=1", strobe = false, frozenAt = 0.0)
         val stage = Running(
             show = Show(seed = showSeed(switches = switches, random = Random.Default), switches = switches),

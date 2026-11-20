@@ -9,6 +9,7 @@ import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
+import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 
@@ -18,7 +19,8 @@ import io.peekandpoke.ultra.streams.StreamSource
  * [choose], and tells the frame rate ([fps]) the live act counts for its line at the top, each half second while the
  * page is seen. The oversampling steps are [STEPS], the samples drawn for each pixel, as the key o cycles through
  * them. The fog on the floor likewise: it tells the [fog]'s quality whenever it changes (at its start, by the key g)
- * and takes what is asked with [chooseFog]; and the lamps' [shadows], taken with [chooseShadows]. The look ([look],
+ * and takes what is asked with [chooseFog]; the lamps' [shadows], taken with [chooseShadows]; and the mirror floor's
+ * [reflections], taken with [chooseReflections]. The look ([look],
  * its variants and which side of the key x is shown) whenever it changes (at its start, by a variant's key, by x),
  * taken with [chooseLook] and [flipLook] as the keys take it, with the line at the top that says it. A choice through
  * the handle is taken at once. It also tells how far the
@@ -30,6 +32,7 @@ class Picture {
     private val samplesSource = StreamSource(Oversampling.PLAIN)
     private val fogSource = StreamSource(FogQuality.High)
     private val shadowsSource = StreamSource(ShadowQuality.High)
+    private val reflectionsSource = StreamSource(ReflectionQuality.On)
     private val fpsSource = StreamSource(0.0)
     private val figuresSource = StreamSource(Figures(arrived = 0, of = 0, failed = false))
     private val lookSource = StreamSource(LookFlip.of(Switches()))
@@ -49,6 +52,9 @@ class Picture {
     /** Who takes a choice of the shadows: the same live act. */
     private var shadowsTaker: ((ShadowQuality) -> Unit)? = null
 
+    /** Who takes a choice of the reflections: the same live act. */
+    private var reflectionsTaker: ((ReflectionQuality) -> Unit)? = null
+
     /** Who takes a choice of the look's variants: the same live act. */
     private var lookTaker: ((LookVariants) -> Unit)? = null
 
@@ -63,6 +69,9 @@ class Picture {
 
     /** The shadows' quality now, as the live act draws them; high until one tells. */
     val shadows: Stream<ShadowQuality> = shadowsSource.readonly
+
+    /** Whether the mirror floor's reflections are drawn now, as the live act draws them; on until one tells. */
+    val reflections: Stream<ReflectionQuality> = reflectionsSource.readonly
 
     /** The frames a second of the last half second counted; 0 until one tells. */
     val fps: Stream<Double> = fpsSource.readonly
@@ -101,6 +110,15 @@ class Picture {
     }
 
     /**
+     * Asks the live act for the reflections at [quality]: off, the mirror floor is drawn as the plain floor and what
+     * its pictures hold on the graphics card is freed; on, it is drawn again where the look has it. Nothing happens
+     * while no live act has it.
+     */
+    fun chooseReflections(quality: ReflectionQuality) {
+        reflectionsTaker?.invoke(quality)
+    }
+
+    /**
      * Asks the live act to show [variants]: each variant that differs is turned as its own key turns it (the key m for
      * the stage, ...), on the side of the key x shown now, and the line at the top says it for a moment. Nothing
      * happens while no live act has it.
@@ -116,18 +134,20 @@ class Picture {
 
     /**
      * The live act takes the choices from now on: [take] the oversampling's, [takeFog] the fog's, [takeShadows] the
-     * shadows', [takeLook] the look's variants, and [flipLook] flips the whole look.
+     * shadows', [takeReflections] the reflections', [takeLook] the look's variants, and [flipLook] flips the whole look.
      */
     internal fun attach(
         take: (Double) -> Unit,
         takeFog: (FogQuality) -> Unit,
         takeShadows: (ShadowQuality) -> Unit,
+        takeReflections: (ReflectionQuality) -> Unit,
         takeLook: (LookVariants) -> Unit,
         flipLook: () -> Unit,
     ) {
         taker = take
         fogTaker = takeFog
         shadowsTaker = takeShadows
+        reflectionsTaker = takeReflections
         lookTaker = takeLook
         lookFlipper = flipLook
     }
@@ -137,6 +157,7 @@ class Picture {
         taker = null
         fogTaker = null
         shadowsTaker = null
+        reflectionsTaker = null
         lookTaker = null
         lookFlipper = null
     }
@@ -159,6 +180,11 @@ class Picture {
     /** The live act tells the shadows it draws now. */
     internal fun tellShadows(quality: ShadowQuality) {
         shadowsSource(quality)
+    }
+
+    /** The live act tells whether it draws the reflections now. */
+    internal fun tellReflections(quality: ReflectionQuality) {
+        reflectionsSource(quality)
     }
 
     /** The live act tells the frame rate it counted. */

@@ -18,6 +18,7 @@ import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
+import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import io.peekandpoke.klang.viz.liveact.stage.Stage
 import io.peekandpoke.klang.viz.liveact.stage.StageEdge
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
@@ -480,7 +481,7 @@ class StageSpec : StringSpec({
         }
     }
 
-    "the mirror floor comes where it is chosen and the fog is high, goes off the floor, and is freed with the stage" {
+    "the mirror floor comes where it is chosen and the reflections are on, at every fog; goes off the floor; freed with the stage" {
         withThree { three ->
             Three.addon = three
 
@@ -506,15 +507,22 @@ class StageSpec : StringSpec({
                 scene.children.size shouldBe 17 + 8
                 polished.addEventListener("dispose") { _: dynamic -> freed++ }
 
-                // the fog at low takes the mirror off the floor, and gives the floor its own material back; the
+                // the fog has no say in it: at low and off the mirror stays on the floor
+                for (fog in listOf(FogQuality.Low, FogQuality.Off, FogQuality.High)) {
+                    stage.fog(fog)
+                    (floor.material === polished) shouldBe true
+                    (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
+                }
+
+                // the reflections off take the mirror off the floor, and give the floor its own material back; the
                 // mirror's material is kept for the next time
-                stage.fog(FogQuality.Low)
+                stage.reflections(ReflectionQuality.Off)
                 freed shouldBe 0
                 (floor.material === plain) shouldBe true
                 (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe false
 
-                // the fog at high again brings the same one back; the plain floor chosen takes it off
-                stage.fog(FogQuality.High)
+                // on again, the same one comes back; the plain floor chosen takes it off
+                stage.reflections(ReflectionQuality.On)
                 (floor.material === polished) shouldBe true
                 (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
                 stage.floor(FloorLook.Plain)
@@ -609,6 +617,84 @@ class StageSpec : StringSpec({
                 (drawn[2].unsafeCast<List<dynamic>>()[0] === picture) shouldBe true
                 stage.dispose()
                 freed shouldBe 1
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "at fog low the mirror is drawn from the start, and hides the fog that lies on the floor then, also one made anew" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val renderer = standInRenderer()
+            val r: dynamic = renderer
+            var target: dynamic = "the screen"
+            val scene = three.createScene()
+            // for each drawing of the scene itself: the fog's sheets there, and how many of them were shown
+            val fogSeen = mutableListOf<Pair<Int, Int>>()
+
+            r.domElement = js("({ width: 1280, height: 800 })")
+            r.autoClear = true
+            r.state = js("({ buffers: { depth: { setMask: function () {} } } })")
+            r.shadowMap.autoUpdate = true
+            r.getRenderTarget = { target }
+            r.setRenderTarget = { to: dynamic -> target = to }
+            r.render = { what: dynamic, _: dynamic ->
+                if (what === scene) {
+                    val fog = sheetsOf(scene)
+
+                    fogSeen.add(Pair(fog.size, fog.count { it.visible }))
+                }
+            }
+
+            val show = Show(seed = 1, switches = Switches.parse("?floor=mirror&fog=low"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+
+            try {
+                val floor: dynamic = scene.children.first()
+
+                camera.position.set(0.0, 2.5, 12.0)
+                camera.lookAt(0.0, 1.0, 0.0)
+                camera.asDynamic().updateMatrixWorld()
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
+                floor.onBeforeRender(renderer, scene, camera)
+
+                // the mirror drew the scene with the four sheets of the fog at low hidden, and shows them again after it
+                fogSeen shouldBe listOf(Pair(4, 0))
+                sheetsOf(scene).count { it.visible } shouldBe 4
+
+                // the fog made anew at high: its eight new sheets are the ones hidden now
+                stage.fog(FogQuality.High)
+                fogSeen.clear()
+                floor.onBeforeRender(renderer, scene, camera)
+                fogSeen shouldBe listOf(Pair(8, 0))
+                sheetsOf(scene).count { it.visible } shouldBe 8
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "?reflections=off: the mirror floor the look chose is not put on the floor until the reflections are on" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val scene = three.createScene()
+            val show = Show(seed = 1, switches = Switches.parse("?floor=mirror&reflections=off"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+
+            try {
+                val floor: dynamic = scene.children.first()
+                val plain: dynamic = floor.material
+
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe false
+
+                stage.reflections(ReflectionQuality.On)
+                (floor.material !== plain) shouldBe true
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
             } finally {
                 stage.dispose()
             }
@@ -736,14 +822,20 @@ class StageSpec : StringSpec({
                 shape.material.addEventListener("dispose") { _: dynamic -> drawingFreed++ }
                 shape.geometry.addEventListener("dispose") { _: dynamic -> shapeFreed++ }
 
-                // the fog at low takes the mirror off: the widths' picture goes with the mirror's, the drawing is kept
+                // the fog at low leaves the mirror as it is: the same widths' picture
                 stage.fog(FogQuality.Low)
+                frame()
+                (drawn[1].first === widths) shouldBe true
+                widthsFreed shouldBe 0
+
+                // the reflections off take the mirror off: the widths' picture goes with the mirror's, the drawing is kept
+                stage.reflections(ReflectionQuality.Off)
                 widthsFreed shouldBe 1
                 drawingFreed shouldBe 0
                 shapeFreed shouldBe 0
 
                 // on again: a new widths' picture, drawn by the same drawing
-                stage.fog(FogQuality.High)
+                stage.reflections(ReflectionQuality.On)
                 frame()
 
                 val again: dynamic = drawn[1].first
@@ -872,7 +964,7 @@ class StageSpec : StringSpec({
         }
     }
 
-    "the underworld comes into the mirror over about two seconds and goes over three; without the mirror it never comes" {
+    "the underworld comes into the mirror over about two seconds and goes over three; without the mirror drawn it never comes" {
         withThree { three ->
             Three.addon = three
 
@@ -889,19 +981,28 @@ class StageSpec : StringSpec({
                 camera = camera,
                 renderer = standInRenderer(),
             )
+            val unreflected = Stage(
+                show = Show(seed = 1, switches = Switches.parse("?floor=mirror&underworld=on&reflections=off")),
+                scene = three.createScene(),
+                camera = camera,
+                renderer = standInRenderer(),
+            )
 
             try {
                 mirrored.light(t = 62.0, house = 1.0, waiting = false)
                 plain.light(t = 62.0, house = 1.0, waiting = false)
+                unreflected.light(t = 62.0, house = 1.0, waiting = false)
                 delay(200)
                 mirrored.light(t = 62.1, house = 1.0, waiting = false)
                 plain.light(t = 62.1, house = 1.0, waiting = false)
+                unreflected.light(t = 62.1, house = 1.0, waiting = false)
 
                 val coming = mirrored.underworld
 
                 coming shouldBeGreaterThan 0.0
                 (coming < 0.25) shouldBe true
                 plain.underworld shouldBe 0.0
+                unreflected.underworld shouldBe 0.0
 
                 // turned off (the key v): it goes, more slowly than it came
                 mirrored.underworld(UnderworldLook.Off)
@@ -915,6 +1016,7 @@ class StageSpec : StringSpec({
             } finally {
                 mirrored.dispose()
                 plain.dispose()
+                unreflected.dispose()
             }
         }
     }

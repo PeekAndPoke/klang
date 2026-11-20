@@ -78,18 +78,16 @@ data class LookVariants(
         get() = haze == HazeLook.Parts && stage == StageLook.Mesh
 
     /**
-     * Whether the mirror is drawn with the fog at [fog]: where it is chosen and the fog is drawn at high (not at low or
-     * off).
-     * The mirror draws the stage a second time, and where the fog had to go down to low or off (a slow machine, a
-     * phone) it would cost the frames the fog gave back.
+     * Whether the mirror is drawn with the reflections at [reflections]: where the mirror floor is chosen and the
+     * reflections are on, at every fog.
      */
-    fun mirrors(fog: FogQuality): Boolean = floor == FloorLook.Mirror && fog == FogQuality.High
+    fun mirrors(reflections: ReflectionQuality): Boolean = floor == FloorLook.Mirror && reflections == ReflectionQuality.On
 
     /**
-     * Whether the mirror shows the underworld with the fog at [fog]: where it is chosen and the mirror is drawn
-     * ([mirrors]).
+     * Whether the mirror shows the underworld with the reflections at [reflections]: where it is chosen and the mirror
+     * is drawn ([mirrors]).
      */
-    fun underworlds(fog: FogQuality): Boolean = underworld == UnderworldLook.On && mirrors(fog)
+    fun underworlds(reflections: ReflectionQuality): Boolean = underworld == UnderworldLook.On && mirrors(reflections)
 
     /** What stands behind the band, in a word: the wall, or the fence (`?stage=mesh`). */
     val stageWord: String
@@ -102,11 +100,11 @@ data class LookVariants(
     fun stageLine(): String = "stage: $stageWord"
 
     /**
-     * The line shown for a moment when the floor is turned over, with the fog at [fog]: `floor: mirror`, and where the
-     * mirror is chosen but not drawn at that fog, why (`floor: mirror (not drawn at fog low)`).
+     * The line shown for a moment when the floor is turned over, with the reflections at [reflections]: `floor:
+     * mirror`, and where the mirror is chosen but not drawn, why (`floor: mirror (reflections off)`).
      */
-    fun floorLine(fog: FogQuality): String {
-        val held = if (floor == FloorLook.Mirror && !mirrors(fog)) " (not drawn at fog ${fog.word})" else ""
+    fun floorLine(reflections: ReflectionQuality): String {
+        val held = if (floor == FloorLook.Mirror && !mirrors(reflections)) " ($REFLECTIONS_OFF)" else ""
 
         return "floor: ${floor.word}$held"
     }
@@ -149,51 +147,45 @@ data class LookVariants(
     }
 
     /**
-     * The line shown for a moment when the underworld is turned over, with the fog at [fog]: `underworld: on`, and
-     * where it is chosen but not shown, why: on the plain floor (`underworld: on (with the mirror floor only)`), or
-     * with the mirror not drawn at that fog (`underworld: on (no mirror at fog low)`).
+     * The line shown for a moment when the underworld is turned over, with the reflections at [reflections]:
+     * `underworld: on`, and where it is chosen but not shown, why ([mirrorHeld]: `underworld: on (reflections off)`).
      */
-    fun underworldLine(fog: FogQuality): String {
-        val held = when {
-            underworld == UnderworldLook.Off -> ""
-            floor != FloorLook.Mirror -> " (with the mirror floor only)"
-            !mirrors(fog) -> " (no mirror at fog ${fog.word})"
-            else -> ""
-        }
+    fun underworldLine(reflections: ReflectionQuality): String {
+        val held = if (underworld == UnderworldLook.On) mirrorHeld(reflections) else null
 
-        return "underworld: ${underworld.word}$held"
+        return "underworld: ${underworld.word}${held.inBrackets()}"
     }
 
     /**
-     * The line shown for a moment when the stone's unevenness is stepped, with the fog at [fog]: `floor: faint ripple`,
-     * and where the mirror is not drawn, why: on the plain floor (`floor: faint ripple (with the mirror floor only)`),
-     * or at that fog (`floor: faint ripple (no mirror at fog low)`).
+     * The line shown for a moment when the stone's unevenness is stepped, with the reflections at [reflections]:
+     * `floor: faint ripple`, and where the mirror is not drawn, why: on the plain floor (`floor: faint ripple (with
+     * the mirror floor only)`), or with the reflections off (`floor: faint ripple (reflections off)`).
      */
-    fun rippleLine(fog: FogQuality): String = "floor: ${ripple.word} ripple${mirrorHeld(fog).inBrackets()}"
+    fun rippleLine(reflections: ReflectionQuality): String = "floor: ${ripple.word} ripple${mirrorHeld(reflections).inBrackets()}"
 
     /**
-     * The line shown for a moment when the reflection's blur is stepped, with the fog at [fog]: `floor: crisp
-     * reflection`, and where the mirror is not drawn, why, as [rippleLine] says it.
+     * The line shown for a moment when the reflection's blur is stepped, with the reflections at [reflections]:
+     * `floor: crisp reflection`, and where the mirror is not drawn, why, as [rippleLine] says it.
      */
-    fun blurLine(fog: FogQuality): String = "floor: ${blur.word} reflection${mirrorHeld(fog).inBrackets()}"
+    fun blurLine(reflections: ReflectionQuality): String = "floor: ${blur.word} reflection${mirrorHeld(reflections).inBrackets()}"
 
     /**
-     * The line shown for a moment when the stone is turned over, with the fog at [fog]: `floor: marble`, and where the
-     * mirror is not drawn, why, as [rippleLine] says it.
+     * The line shown for a moment when the stone is turned over, with the reflections at [reflections]: `floor:
+     * marble`, and where the mirror is not drawn, why, as [rippleLine] says it.
      */
-    fun stoneLine(fog: FogQuality): String = "floor: ${stone.word}${mirrorHeld(fog).inBrackets()}"
+    fun stoneLine(reflections: ReflectionQuality): String = "floor: ${stone.word}${mirrorHeld(reflections).inBrackets()}"
 
     /** The line shown for a moment when the stage's outline is turned over: `stage outline: on`. */
     fun outlineLine(): String = "stage outline: ${outline.word}"
 
     /**
-     * Why a look of the mirror (the underworld, the ripple, the blur, the stone) does not show with the fog at [fog]:
-     * no mirror floor (`with the mirror floor only`), or none drawn at that fog (`no mirror at fog low`); null where
-     * the mirror is drawn.
+     * Why a look of the mirror (the underworld, the ripple, the blur, the stone) does not show with the reflections at
+     * [reflections]: no mirror floor (`with the mirror floor only`), or the reflections off (`reflections off`); null
+     * where the mirror is drawn.
      */
-    fun mirrorHeld(fog: FogQuality): String? = when {
+    fun mirrorHeld(reflections: ReflectionQuality): String? = when {
         floor != FloorLook.Mirror -> "with the mirror floor only"
-        !mirrors(fog) -> "no mirror at fog ${fog.word}"
+        !mirrors(reflections) -> REFLECTIONS_OFF
         else -> null
     }
 
@@ -201,6 +193,9 @@ data class LookVariants(
     private fun String?.inBrackets(): String = if (this == null) "" else " ($this)"
 
     companion object {
+        /** Why the mirror is not drawn where it is chosen: the reflections are off ([ReflectionQuality.Off]). */
+        const val REFLECTIONS_OFF = "reflections off"
+
         /**
          * The band's new look as a whole (KLANG-00478; `?look=new`, the key x): the fence, the mirror floor, the haze
          * giving way to the shadows, Sirene's eyes in her shadow, the lacquer, and the time of day drifting from day

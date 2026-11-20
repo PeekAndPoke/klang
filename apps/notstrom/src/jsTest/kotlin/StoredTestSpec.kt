@@ -41,9 +41,10 @@ class StoredTestSpec : StringSpec({
         KEPT.fits(ratio = 1.25, width = 1280, height = 900) shouldBe false
     }
 
-    "a result of another test version counts no more, also one of version 2, before the three fog qualities" {
-        StoredTest.TEST_VERSION shouldBe 3
+    "a result of another test version counts no more: version 2, before the three fog qualities; 3, before the mirror at fog low" {
+        StoredTest.TEST_VERSION shouldBe 4
         KEPT.copy(version = 2, fog = "high").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+        KEPT.copy(version = 3, fog = "low").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION + 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION - 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
     }
@@ -60,12 +61,12 @@ class StoredTestSpec : StringSpec({
     // The stored text, pinned: a field renamed in the code must not change it, or every visitor's kept result is lost
     "the kept text, field by field" {
         JSON.encodeToString(StoredTest.serializer(), KEPT) shouldBe
-            """{"version":3,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """{"version":4,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low"}"""
     }
 
     "a kept text is read back, also with a field it does not know" {
-        val text = """{"version":3,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+        val text = """{"version":4,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low","later":true}"""
 
         JSON.decodeFromString(StoredTest.serializer(), text) shouldBe KEPT
