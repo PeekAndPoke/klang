@@ -452,7 +452,7 @@ export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
   )
 
 export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
-  .scale("e5:minor").gain(0.17)
+  .scale("e5:minor").gain(0.15)
   .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
 export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
