@@ -17,6 +17,7 @@ import io.peekandpoke.klang.viz.liveact.band.dress.DressedBody
 import io.peekandpoke.klang.viz.liveact.band.dress.HairPart
 import io.peekandpoke.klang.viz.liveact.band.dress.ShadowHair
 import io.peekandpoke.klang.viz.liveact.band.dress.pattern
+import io.peekandpoke.klang.viz.liveact.band.figure.HairTail
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.blend
@@ -206,6 +207,12 @@ class Notstrom private constructor(
             .map { player -> ShadowHair(rig = rig(player), shown = show.switches.has(Switch.Snakes)) }
     }
 
+    /**
+     * The tails of hair that hang and swing on their own, of every figure whose skeleton has one (see [HairTail]):
+     * Rune's. They are set last of all, in [afterPose].
+     */
+    private val tails: List<HairTail> = Player.entries.mapNotNull { player -> HairTail.of(rig(player)) }
+
     /** The marimba player's crossed mallets, where her sheet has them. */
     private val runeCrossing: CrossedMallets? =
         Members.of(SchmetterlingCast.MARIMBA).skills.filterIsInstance<CrossedMallets>().firstOrNull()
@@ -304,8 +311,9 @@ class Notstrom private constructor(
 
     /**
      * What goes with the figures as they are posed at last: a hand at the head or the neck (an idle skill, see
-     * `StringPlayer.afterPose` and `Drummer.afterPose`), and the snakes on a head. Call it once everything that turns
-     * a head has done so for this frame (the looks between the players come after [play]).
+     * `StringPlayer.afterPose` and `Drummer.afterPose`), the snakes on a head, and last a tail of hair, which hangs
+     * on the head and the body as they are held at last. Call it once everything that turns a head has done so for
+     * this frame (the looks between the players come after [play]).
      */
     fun afterPose(t: Double) {
         for ((_, stringPlayer) in strings) {
@@ -316,6 +324,10 @@ class Notstrom private constructor(
 
         for (hair in snakes) {
             hair.update(t)
+        }
+
+        for (tail in tails) {
+            tail.update(t)
         }
     }
 
