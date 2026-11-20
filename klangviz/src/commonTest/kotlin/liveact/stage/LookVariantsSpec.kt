@@ -95,6 +95,15 @@ class LookVariantsSpec : StringSpec({
         WorldLook.Drift.target(t = 60.0).night shouldBe WorldLight.drift(t = 60.0, period = WorldLight.DRIFT_PERIOD)
     }
 
+    "?opening= is the world the show opens in, a world's word; off, no switch, an empty one or another word none" {
+        WorldLook.opening(Switches.parse("?opening=ember")) shouldBe WorldLook.Ember
+        WorldLook.opening(Switches.parse("?opening=night&world=day")) shouldBe WorldLook.Night
+        WorldLook.opening(Switches.parse("?opening=off")) shouldBe WorldLook.Off
+        WorldLook.opening(Switches.parse("?opening")) shouldBe WorldLook.Off
+        WorldLook.opening(Switches.parse("?opening=dusk")) shouldBe WorldLook.Off
+        WorldLook.opening(Switches.parse("?world=ember")) shouldBe WorldLook.Off
+    }
+
     "?drift=30 sets the drift's round; without it, or with no number above 1 s, four minutes" {
         WorldLook.period(Switches.parse("?drift=30")) shouldBe 30.0
         WorldLook.period(Switches.parse("")) shouldBe WorldLight.DRIFT_PERIOD

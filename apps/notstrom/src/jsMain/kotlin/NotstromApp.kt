@@ -92,7 +92,10 @@ fun Tag.NotstromApp(query: String) = comp(
  *
  * For the show the song is compiled once, its playback is made and read ahead for the band ([SongReading]: the band
  * plays the notes that will sound), and it is played for the show alone ([ShowPlayback]): the walk-in begins at once
- * (the click was taken here), and the live act's clock starts the song when the walk-in is over. The live act steps
+ * (the click was taken here), and the live act's clock starts the song when the walk-in is over. The show's opening
+ * fades ([OpeningFade]): the screen of the click goes to black, the show gets ready on the black, and the stage comes
+ * up slowly from it as the band walks in, in the ember (`opening=ember`, [showSwitches]) that turns to the look's own
+ * world when the song begins; the tests' phases have no fade. The live act steps
  * the oversampling down by itself where the frames stay slow. While the show plays, a moving mouse brings up a
  * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, the shadows, the reflections, fullscreen, the
  * volume). What fails on the way is said on the start screen, in plain words.
@@ -132,6 +135,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
      * sets its oversampling and its fog (the test's second part, the drawer) and sees its frame rate (the drawer).
      */
     private class Running(val show: Show, val key: String, val test: Boolean, val picture: Picture = Picture())
+
+    /**
+     * A step of the show's opening that fades ([OpeningFade]): [step], after a click on the screen of [from] (the start
+     * screen, or the tests' result); [lastMs]: the page's clock at its last animation frame.
+     */
+    private class Fading(val step: OpeningFade.Step, val from: Phase, var lastMs: Double)
 
     /**
      * What the tests found, and the oversampling and the fog the picture test chose; [keptAt]: when it was measured,
@@ -232,9 +241,21 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
     private var stages = 0
 
+    /** The step of the show's opening that fades now; null outside the opening (the tests' phases have none). */
+    private var fading: Fading? by value(null)
+
+    /** The seconds since the [fading] step began, as its animation frames counted them ([OpeningFade.advance]). */
+    private var fadeSince: Double by value(0.0)
+
+    /** The animation frame that takes the fade on, while one is asked for. */
+    private var fadeFrame: Int? = null
+
     init {
         lifecycle {
-            onUnmount { scope.cancel() }
+            onUnmount {
+                scope.cancel()
+                stopFading()
+            }
         }
     }
 
@@ -350,6 +371,13 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             enterFullscreen()
         }
 
+        // the screen of the click fades out to black on the way to the show; the tests have no fade
+        if (test) {
+            stopFading()
+        } else {
+            fade(step = OpeningFade.Step.Click, from = phase)
+        }
+
         phase = Phase.Readying
         problem = null
         beside?.cancel()
@@ -380,10 +408,56 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         beside?.cancel()
         beside = null
         frameSink = null
+        stopFading()
         mount(null)
         preparing = null
         this.problem = problem
         phase = Phase.Start
+    }
+
+    /**
+     * Begins [step] of the show's opening's fade now, after a click on the screen of [from], and takes it on with each
+     * animation frame until its layers settle ([OpeningFade.settles]).
+     */
+    private fun fade(step: OpeningFade.Step, from: Phase) {
+        fading = Fading(step = step, from = from, lastMs = window.performance.now())
+        fadeSince = 0.0
+
+        if (fadeFrame == null) {
+            fadeFrame = window.requestAnimationFrame { fadeOn() }
+        }
+    }
+
+    /**
+     * One animation frame of the fade: the frame is counted ([OpeningFade.advance]), and the next one asked for until
+     * its layers settle. The black stays after the click until the band stands; once the stage is up, the fade is over.
+     */
+    private fun fadeOn() {
+        fadeFrame = null
+
+        val now = fading ?: return
+        val nowMs = window.performance.now()
+        val since = OpeningFade.advance(since = fadeSince, frame = (nowMs - now.lastMs) / 1000)
+
+        now.lastMs = nowMs
+        fadeSince = since
+
+        if (since < OpeningFade.settles(now.step)) {
+            fadeFrame = window.requestAnimationFrame { fadeOn() }
+
+            return
+        }
+
+        if (now.step == OpeningFade.Step.Standing) {
+            fading = null
+        }
+    }
+
+    /** No fade (the tests, a stop): nothing of it is drawn, and no frame is asked for. */
+    private fun stopFading() {
+        fading = null
+        fadeFrame?.let { window.cancelAnimationFrame(it) }
+        fadeFrame = null
     }
 
     /**
@@ -584,6 +658,13 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /** Makes the song and the show, and mounts it; the walk-in starts once the band stands. */
     private suspend fun begin() {
         val player = ensurePlayer()
+
+        // the song is compiled and the stage made once the screen of the click is out: both hold the page for a
+        // moment, which would stop its fade halfway
+        while (fading != null && fadeSince < OpeningFade.SCREEN_OUT) {
+            delay(SCREEN_WAIT_MS)
+        }
+
         val song = BuiltInSongs.derSchmetterling
         val pattern = compile(code = song.code)
         // made now and started after the walk-in: it answers its cycles before it sounds, so the band reads the very
@@ -605,8 +686,9 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             analyser = { player.getAnalyzer() },
             listen = {
                 // the clock is made: the band stands, the show can be seen and walks in (the click was taken here,
-                // so the walk-in begins by itself: LiveAct's walkInAtOnce)
+                // so the walk-in begins by itself: LiveAct's walkInAtOnce), and comes up from the black
                 phase = Phase.Playing
+                fade(step = OpeningFade.Step.Standing, from = Phase.Readying)
                 transport
             },
         )
@@ -714,6 +796,9 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     }
 
     override fun VDom.render() {
+        val opening = fading
+        val layers = opening?.let { OpeningFade.layers(step = it.step, since = fadeSince) }
+
         div {
             css {
                 put("position", "fixed")
@@ -745,9 +830,27 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                 }
             }
 
+            // while the show's opening fades: the black over the stage (which keeps its size and is really drawn)
+            layers?.let { blackLayer(it.black) }
+
             when (phase) {
                 Phase.Start -> startScreen()
-                Phase.Readying -> overScreen { readying() }
+                Phase.Readying -> if (opening != null && layers != null) {
+                    // on the way to the show: the screen of the click fades out, and on the black, where getting
+                    // ready takes a while, the readying screen's words come up
+                    faded(layers.screen) {
+                        if (opening.from == Phase.Result) {
+                            resultScreen()
+                        } else {
+                            startScreen()
+                        }
+                    }
+                    faded(layers.line) {
+                        notstromScreen(marked = false) { readying() }
+                    }
+                } else {
+                    overScreen { readying() }
+                }
                 Phase.TestingSound -> overScreen { soundTest(soundProgress) }
                 Phase.TestingPicture -> overScreen {
                     // the figures load first (their download is not measured), then the picture is measured
@@ -759,21 +862,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                         pictureTest(tenths = pictureTenths)
                     }
                 }
-                Phase.Result -> overScreen {
-                    tested?.let {
-                        testResult(
-                            voices = it.voices,
-                            frames = it.frames,
-                            score = it.score,
-                            quality = qualityLine(query = props.query, oversample = it.oversample, fog = it.fog),
-                            measured = it.keptAt?.let { at -> measuredLine(at) } ?: NOT_KEPT.takeIf { _ -> it.notKept },
-                            options = { options() },
-                            onStart = { go(test = false) },
-                            // a kept result can be measured anew: both tests, as after Start
-                            onTestAgain = if (it.keptAt != null) ({ go(test = true) }) else null,
-                        )
-                    }
-                }
+                Phase.Result -> resultScreen()
                 Phase.Playing -> running?.let { now ->
                     ShowDrawer(
                         picture = now.picture,
@@ -782,6 +871,25 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                         onVolume = { gain -> player?.setOutputVolume(gain) },
                     )
                 }
+            }
+        }
+    }
+
+    /** The tests' result, the choices for the show, and the button that starts it. */
+    private fun FlowContent.resultScreen() {
+        overScreen {
+            tested?.let {
+                testResult(
+                    voices = it.voices,
+                    frames = it.frames,
+                    score = it.score,
+                    quality = qualityLine(query = props.query, oversample = it.oversample, fog = it.fog),
+                    measured = it.keptAt?.let { at -> measuredLine(at) } ?: NOT_KEPT.takeIf { _ -> it.notKept },
+                    options = { options() },
+                    onStart = { go(test = false) },
+                    // a kept result can be measured anew: both tests, as after Start
+                    onTestAgain = if (it.keptAt != null) ({ go(test = true) }) else null,
+                )
             }
         }
     }
@@ -798,7 +906,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
     /** A screen before the show (start, checks, result): the band's name at the top, [content] centred below. */
     private fun FlowContent.overScreen(content: FlowContent.() -> Unit) {
-        notstromScreen(content)
+        notstromScreen(content = content)
     }
 
     /** After a click, before the tests or the show: the sound's preparation, then the band's figures as they load. */
@@ -872,6 +980,9 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         /** How long a click on Start waits for the browser's detection, in milliseconds. */
         const val DETECT_MS = 10_000L
+
+        /** How often the show's making looks whether the screen of the click is out yet, in milliseconds. */
+        const val SCREEN_WAIT_MS = 50L
 
         /** The dynamometer's rounds, averaged (as the studio runs it). */
         const val SOUND_ROUNDS = 3

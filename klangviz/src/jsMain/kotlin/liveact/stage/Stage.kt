@@ -13,6 +13,7 @@ import io.peekandpoke.klang.viz.liveact.lights.FrontFade
 import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.lights.Lights
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.lights.WorldCourse
 import io.peekandpoke.klang.viz.liveact.lights.WorldFade
 import io.peekandpoke.klang.viz.liveact.lights.WorldLight
 import io.peekandpoke.klang.viz.liveact.lights.WorldTime
@@ -58,7 +59,8 @@ import kotlin.math.min
  * ([HazeLook.Parts]) the haze behind the fence gives way to the band's shadows; with `?world=night` ([WorldLook]) the
  * time of day of the two worlds drives the lamps, the sun, the haze and, behind the fence, the cold world seen through
  * the band's shadows ([WorldLight]), and by night the lamps' light on the wall and the fence leans cold ([WallLean]);
- * with `?underworld=on` ([UnderworldLook]) the mirror floor shows the other world. The look as [variants] says
+ * with `?opening=ember` the show opens in that world before its song, and turns slowly to its own when the song begins
+ * ([WorldCourse]); with `?underworld=on` ([UnderworldLook]) the mirror floor shows the other world. The look as [variants] says
  * (the address's, without them), the fog at [fog]'s quality, the lamps' shadows at [shadows]', the mirror floor's
  * reflections as [reflections] say (`?reflections=off`: the mirror floor drawn plain). Sets on [renderer],
  * [scene] and [camera] what the show needs of them: the shadows, the tone mapping, the dark and the distance fog, the
@@ -140,15 +142,20 @@ class Stage(
      */
     private val opening = FrontFade(rise = 1.0, fall = 1.6)
 
-    /** How long a round of the drift takes (`?drift=30`), in seconds. */
-    private val driftPeriod = WorldLook.period(show.switches)
-
-    /** The time of day as the stage shows it: it follows the one chosen at its own pace ([WorldFade]). */
-    private val worldFade = WorldFade(start = variants.world.target(t = 0.0, period = driftPeriod))
+    /**
+     * The time of day as the stage shows it: it follows the one chosen at its own pace, and where the address asks
+     * for an opening (`?opening=ember`) the show opens in that world ([WorldCourse]); the drift's round as the address
+     * asks (`?drift=30`).
+     */
+    private val worldCourse = WorldCourse(opening = WorldLook.opening(show.switches), period = WorldLook.period(show.switches))
 
     /** The time of day of the two worlds as the last [light] set it ([WorldTime.OFF]: the stage as made). */
-    var world: WorldTime = worldFade.now
+    var world: WorldTime = WorldTime.OFF
         private set
+
+    /** Whether the show is still in its opening ([WorldCourse.opens]): for the line at the top. */
+    val worldOpens: Boolean
+        get() = worldCourse.opens
 
     /** When the last [light] ran, in milliseconds of the page; none before the first. */
     private var lightAt = Double.NaN
@@ -327,9 +334,14 @@ class Stage(
 
     /**
      * The time of day of the two worlds turned to [to] ([WorldLook]): the stage goes there at its own pace, in a second
-     * or three ([WorldFade]). Nothing to make or free.
+     * or three ([WorldFade]). Another world than the one shown ends the show's opening at once ([WorldCourse.chosen]).
+     * Nothing to make or free.
      */
     fun world(to: WorldLook) {
+        if (to != variants.world) {
+            worldCourse.chosen()
+        }
+
         variants = variants.copy(world = to)
     }
 
@@ -489,7 +501,7 @@ class Stage(
         lights.mood(t)
 
         val front = lights.frontAt(t, waiting)
-        val world = worldFade.follow(target = variants.world.target(t = t, period = driftPeriod), dt = dt)
+        val world = worldCourse.follow(t = t, look = variants.world, dt = dt)
 
         this.front = front
         this.world = world

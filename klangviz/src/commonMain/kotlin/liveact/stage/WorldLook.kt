@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
+import io.peekandpoke.klang.viz.liveact.lights.WorldCourse
 import io.peekandpoke.klang.viz.liveact.lights.WorldLight
 import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 
@@ -43,6 +44,12 @@ enum class WorldLook(val word: String) {
     companion object {
         /** The look the address asks for: `?world=day`, `night`, `ember` or `drift`; any other value, or none, [Off]. */
         fun of(switches: Switches): WorldLook = entries.firstOrNull { it.word == switches[Switch.World] } ?: Off
+
+        /**
+         * The world the show opens in, as the address asks (`?opening=ember`, [Switch.Opening]): a world's word; off,
+         * any other value, or none, [Off]: no opening ([WorldCourse]).
+         */
+        fun opening(switches: Switches): WorldLook = entries.firstOrNull { it.word == switches[Switch.Opening] } ?: Off
 
         /**
          * How long one round of the drift takes, in seconds, as the address asks (`?drift=30`, to watch it quickly or

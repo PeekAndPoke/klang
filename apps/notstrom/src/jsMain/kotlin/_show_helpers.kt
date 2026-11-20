@@ -27,6 +27,9 @@ import kotlin.random.Random
  * her shadow, the lacquer, the drifting world; the maintainer, 2026-11-20: "please make the new look the default look in
  * notstrom"), unless the address sets `?look=` itself ([setsLook]; `?look=today` gives the look as it was made). The key
  * x flips between the two while the show plays.
+ * The show opens in the ember (`opening=ember`, [OPENING]: dark and red before the song, turning slowly to the look's
+ * own when it begins; the maintainer, 2026-11-20: "It should also be dark in the beginning"), unless the address sets
+ * `?opening=` itself ([setsOpening]; `?opening=off` opens as before), and not in a frozen show (the picture test's).
  * [frozenAt]: the time the show is frozen at (the picture test's band, standing); the address's `?t=` is not taken,
  * as a frozen show would never start. Taken from the address: the live act's other switches (`seed`, `still`, the
  * camera's, `oversample`, `fog`, ...); decided here: `nostrobe`, `nohud`, `t`.
@@ -50,6 +53,7 @@ fun showSwitches(
         "${Switch.Oversample.key}=$oversample".takeUnless { byHand || oversample <= 1 },
         "${Switch.Fog.key}=${fog.word}".takeUnless { setsFog(query) || fog == FogQuality.High },
         "${Switch.Look.key}=$NEW_LOOK".takeUnless { setsLook(query) },
+        "${Switch.Opening.key}=$OPENING".takeUnless { setsOpening(query) || frozenAt != null },
         frozenAt?.let { "${Switch.Time.key}=$it" },
     )
 
@@ -69,13 +73,18 @@ val APP_SWITCHES: Set<String> = setOf(Switch.NoStrobe.key, Switch.NoHud.key, Swi
  * `?fog=low`, `?shadows=low`, `?reflections=off`, `?nosky`, `?seed=3`, ...) may make the picture lighter or heavier
  * than the show's own, and a result measured so would later be taken as the full picture's: it is shown, not kept
  * ([NOT_KEPT] says so on the result screen). Keys that name no switch (`?fbclid=...`, `?utm_source=...`, from a shared link) cannot change
- * the picture and do not count; nor does `?look=new`, which only names the look notstrom shows anyway ([NEW_LOOK]).
+ * the picture and do not count; nor does `?look=new`, which only names the look notstrom shows anyway ([NEW_LOOK]),
+ * nor `?opening=` of any value: the opening is drawn before the song only, and the test's stage stands frozen at the
+ * song's start, where no show opens ([OPENING]).
  */
 fun keepsTest(query: String): Boolean =
     query.removePrefix("?").split("&").filter { it.isNotEmpty() }.none { part ->
         val key = part.substringBefore("=")
 
-        key !in APP_SWITCHES && part != "${Switch.Look.key}=$NEW_LOOK" && Switch.entries.any { it.key == key }
+        key !in APP_SWITCHES &&
+            key != Switch.Opening.key &&
+            part != "${Switch.Look.key}=$NEW_LOOK" &&
+            Switch.entries.any { it.key == key }
     }
 
 /** Said on the result screen where a result just measured is not kept for the next visit ([keepsTest]). */
@@ -105,6 +114,16 @@ const val NEW_LOOK = "new"
 
 /** Whether the address sets the look itself (`?look=new`, `?look=today`): it wins over notstrom's own, the new one. */
 fun setsLook(query: String): Boolean = query.keys().any { it == Switch.Look.key }
+
+/**
+ * The world notstrom's show opens in unless the address sets one ([Switch.Opening]): the ember, the deep red furnace
+ * behind the drummer and red smoke (the maintainer, 2026-11-20, of the opening: "It should also be dark in the
+ * beginning. The 'amber' mood we call it i think").
+ */
+const val OPENING = "ember"
+
+/** Whether the address sets the opening itself (`?opening=off`, `?opening=night`): it wins over notstrom's own. */
+fun setsOpening(query: String): Boolean = query.keys().any { it == Switch.Opening.key }
 
 /** Whether the address sets the fog by hand (`?fog=low`, or `?nofog`): it wins over the test's choice. */
 fun setsFog(query: String): Boolean = query.keys().any { it == Switch.Fog.key || it == Switch.NoFog.key }

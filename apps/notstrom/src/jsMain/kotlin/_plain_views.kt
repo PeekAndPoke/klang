@@ -40,8 +40,10 @@ private const val ACTION_GAP = "44px"
  * same on every screen, so nothing jumps between them), and [content] below it, its middle at 60 percent of the
  * height: a grid keeps the mark's band (and a little air) free above, and below it a band that puts the middle row's
  * centre there. Content taller than the room starts right under the mark ("safe" centring) and runs on down.
+ * [marked] false leaves the mark out, and the content where it stands with it (the quiet line on the black while the
+ * show gets ready).
  */
-fun FlowContent.notstromScreen(content: FlowContent.() -> Unit) {
+fun FlowContent.notstromScreen(marked: Boolean = true, content: FlowContent.() -> Unit) {
     val top = "calc(${markBottom()} + 4vh)"
 
     div {
@@ -56,7 +58,9 @@ fun FlowContent.notstromScreen(content: FlowContent.() -> Unit) {
             put("overflow", "hidden")
         }
 
-        mark()
+        if (marked) {
+            mark()
+        }
 
         div {
             css {
@@ -71,6 +75,48 @@ fun FlowContent.notstromScreen(content: FlowContent.() -> Unit) {
             }
 
             content()
+        }
+    }
+}
+
+/**
+ * [content] (a screen) seen by [share], from 0 to 1, while the show's opening fades it ([OpeningFade]); it takes no
+ * clicks then. Nothing at all where nothing of it is seen.
+ */
+fun FlowContent.faded(share: Double, content: FlowContent.() -> Unit) {
+    if (share <= 0.0) {
+        return
+    }
+
+    div {
+        css {
+            put("position", "absolute")
+            put("inset", "0")
+            put("z-index", "10")
+            put("opacity", "$share")
+            put("pointer-events", "none")
+        }
+
+        content()
+    }
+}
+
+/**
+ * The black over the stage while the show's opening fades it ([OpeningFade]), seen by [share], from 0 to 1. The stage
+ * under it keeps its size and is really drawn; the black takes no clicks.
+ */
+fun FlowContent.blackLayer(share: Double) {
+    if (share <= 0.0) {
+        return
+    }
+
+    div {
+        css {
+            put("position", "absolute")
+            put("inset", "0")
+            put("background", "#020308")
+            put("opacity", "$share")
+            put("pointer-events", "none")
         }
     }
 }

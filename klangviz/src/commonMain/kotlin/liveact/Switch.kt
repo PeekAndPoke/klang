@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.lights.WorldCourse
 import io.peekandpoke.klang.viz.liveact.stage.BlurLook
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
@@ -215,6 +216,15 @@ enum class Switch(val key: String) {
 
     /** `?drift=30`: with [World] at drift, one round from day to night and back in that many seconds (240 without it). */
     Drift("drift"),
+
+    /**
+     * `?opening=ember`: the show opens in that world ([WorldLook.opening]): before the song (the wait for the click,
+     * the walk-in) the stage stands in it from its first frame, and when the song begins it turns slowly to the time
+     * of day of [World] ([WorldCourse]). Only where [World] is not off, and
+     * only in a show seen before its song (not with [Time] at 0 or later). A world's word (ember, night, day); off,
+     * any other value, or none: no opening.
+     */
+    Opening("opening"),
 
     /**
      * `?underworld=on`: the mirror floor shows the other world ([UnderworldLook]): its reflection turns cold, darker

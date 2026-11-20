@@ -37,16 +37,20 @@ class WorldFade(start: WorldTime) {
 
     /**
      * Takes it toward [target] by what [dt] seconds allow, each share at its pace and never past it; gives where it
-     * stands then. A [dt] below 0 or no number moves nothing; a share of [target] that is no number counts as 0.
+     * stands then. [turnSeconds]: how long a whole turn of the day and the night takes this time ([TURN_SECONDS]
+     * without it; the show's opening turns slower, [WorldCourse]). A [dt] below 0 or no number moves nothing; a share
+     * of [target] that is no number counts as 0; a [turnSeconds] that is no finite number above 0 is [TURN_SECONDS].
      */
-    fun follow(target: WorldTime, dt: Double): WorldTime {
+    fun follow(target: WorldTime, dt: Double, turnSeconds: Double = TURN_SECONDS): WorldTime {
         // NaN-guard: a time of no number is no time
         val step = if (dt != dt) 0.0 else max(0.0, dt)
+        // NaN-guard: a pace of no number (or an endless one) is the usual pace
+        val turn = if (turnSeconds.isFinite() && turnSeconds > 0.0) turnSeconds else TURN_SECONDS
 
         now = WorldTime(
             on = toward(from = now.on, to = target.on, by = step / ON_SECONDS),
-            night = toward(from = now.night, to = target.night, by = step / TURN_SECONDS),
-            ember = toward(from = now.ember, to = target.ember, by = step / TURN_SECONDS),
+            night = toward(from = now.night, to = target.night, by = step / turn),
+            ember = toward(from = now.ember, to = target.ember, by = step / turn),
         )
 
         return now

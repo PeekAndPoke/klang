@@ -33,6 +33,22 @@ class WorldFadeSpec : StringSpec({
         fade.follow(target = WorldTime.OFF, dt = 1.5) shouldBe WorldTime.OFF
     }
 
+    "a turn may be given its own pace for once; the whole time keeps its own, and a pace of no number is the usual" {
+        val ember = WorldTime(on = 1.0, night = 1.0, ember = 1.0)
+        val day = WorldTime(on = 1.0, night = 0.0, ember = 0.0)
+        val slow = WorldFade(start = ember)
+
+        slow.follow(target = day, dt = 2.0, turnSeconds = 8.0) shouldBe WorldTime(on = 1.0, night = 0.75, ember = 0.75)
+        slow.follow(target = day, dt = 2.0) shouldBe WorldTime(on = 1.0, night = 0.75 - 2.0 / 3, ember = 0.75 - 2.0 / 3)
+
+        WorldFade(start = WorldTime.OFF).follow(target = day, dt = 0.75, turnSeconds = 8.0).on shouldBe (0.5 plusOrMinus 1e-12)
+
+        listOf(0.0, -2.0, Double.NaN, Double.POSITIVE_INFINITY).forEach { pace ->
+            WorldFade(start = ember).follow(target = day, dt = 1.5, turnSeconds = pace) shouldBe
+                WorldTime(on = 1.0, night = 0.5, ember = 0.5)
+        }
+    }
+
     "no time, or a time below 0, moves nothing; a target of no number is 0" {
         val start = WorldTime(on = 1.0, night = 0.5, ember = 0.2)
         val fade = WorldFade(start = start)

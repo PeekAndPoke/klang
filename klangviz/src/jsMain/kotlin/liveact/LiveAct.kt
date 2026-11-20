@@ -626,7 +626,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 listOf(
                     "${variants.eyesLine()} (key i)",
                     "${variants.skinLine()} (key l)",
-                    "${variants.worldLine()} (key n)",
+                    "${variants.worldLine()}${if (now.stage.worldOpens) " (opening)" else ""} (key n)",
                     "${variants.underworldLine(reflections)} (key v)",
                 ),
                 listOf(
