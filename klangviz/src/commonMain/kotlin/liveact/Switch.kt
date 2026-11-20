@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.BlurLook
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
@@ -15,6 +16,7 @@ import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.RippleLook
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
+import io.peekandpoke.klang.viz.liveact.stage.StoneLook
 import io.peekandpoke.klang.viz.liveact.stage.UnderworldLook
 import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 
@@ -217,10 +219,24 @@ enum class Switch(val key: String) {
     /**
      * `?ripple=faint`: how uneven the mirror floor's stone is ([RippleLook]): none, faint, gentle or strong (the ripple
      * as it was first made); it bends the reflection and tilts the floor's own shading alike. Any other value, or none,
-     * gentle. Only where the mirror floor is drawn ([Floor]). The key b steps through them while the show plays
+     * faint. Only where the mirror floor is drawn ([Floor]). The key b steps through them while the show plays
      * ([LookVariants]).
      */
     Ripple("ripple"),
+
+    /**
+     * `?blur=crisp`: how blurred the mirror floor's reflection is ([BlurLook]): crisp, soft or stone (the blur as it
+     * was first made); near the floor it is crisp at every level. Any other value, or none, soft. Only where the
+     * mirror floor is drawn ([Floor]). The key c steps through them while the show plays ([LookVariants]).
+     */
+    Blur("blur"),
+
+    /**
+     * `?stone=marble`: the mirror floor's stone ([StoneLook]): marble, dark polished marble with a few soft veins; any
+     * other value, or none, plain, the stone as it was made. Only where the mirror floor is drawn ([Floor]). The key k
+     * turns it over while the show plays ([LookVariants]).
+     */
+    Stone("stone"),
 
     // The look as a whole
 

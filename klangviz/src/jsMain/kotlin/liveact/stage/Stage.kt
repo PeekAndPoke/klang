@@ -275,8 +275,8 @@ class Stage(
 
     /**
      * The whole look turned to [to] at once (the key x): what stands behind the band, the floor, the haze, the time of
-     * day, the underworld and the stone's unevenness. Sirene's eyes and the band's skin are the band's: the live act
-     * sets them.
+     * day, the underworld, the stone's unevenness, the reflection's blur and the stone. Sirene's eyes and the band's skin are the
+     * band's: the live act sets them.
      */
     fun turn(to: LookVariants) {
         look(to.stage)
@@ -285,6 +285,8 @@ class Stage(
         world(to.world)
         underworld(to.underworld)
         ripple(to.ripple)
+        blur(to.blur)
+        stone(to.stone)
     }
 
     /**
@@ -330,6 +332,24 @@ class Stage(
         mirror?.ripple(to)
     }
 
+    /**
+     * The mirror floor's reflection blurred as [to] ([BlurLook]), at once, now and in a mirror made later. Nothing to
+     * make or free.
+     */
+    fun blur(to: BlurLook) {
+        variants = variants.copy(blur = to)
+        mirror?.blur(to)
+    }
+
+    /**
+     * The mirror floor's stone turned to [to] ([StoneLook]), at once, now and in a mirror made later. Nothing to make or
+     * free.
+     */
+    fun stone(to: StoneLook) {
+        variants = variants.copy(stone = to)
+        mirror?.stone(to)
+    }
+
     /** Where the front lamp stands, in the world. */
     val frontLamp: Vector3
         get() = lights.front.light.position
@@ -364,7 +384,11 @@ class Stage(
                 }
 
                 mirrorDrawing?.invoke(hidden)
-            }.also { it.ripple(variants.ripple) }
+            }.also {
+                it.ripple(variants.ripple)
+                it.blur(variants.blur)
+                it.stone(variants.stone)
+            }
         }
 
         now?.use(wanted)

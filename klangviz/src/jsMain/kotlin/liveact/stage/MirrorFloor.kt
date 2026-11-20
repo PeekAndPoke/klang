@@ -44,7 +44,9 @@ import kotlin.math.max
  * dimmer than the stage itself, blurred and fading the farther what is mirrored stands from the floor, and bent a
  * little by a slow ripple of the surface, so it reads as polished stone and not as a mirror. The ripple tilts the
  * floor's own surface for its light as well, so the eye sees the unevenness that bends the reflection; how much of it
- * there is: [ripple] ([RippleLook], the key b).
+ * there is: [ripple] ([RippleLook], the key b). How blurred the reflection is: [blur] ([BlurLook], the key c); a small
+ * blur stays at every level, and near the floor the reflection is crisp. The stone, plain or marble with a few soft
+ * veins: [stone] ([StoneLook], the key k).
  *
  * How: each frame, just before the floor is drawn (three.js's `onBeforeRender`, as its own `Reflector` does it), a
  * second camera, the frame's camera mirrored in the floor, draws [scene] into a picture of a quarter of the screen's
@@ -113,8 +115,14 @@ class MirrorFloor(
     private val under: Uniform<Double> = uniform(0.0)
 
     /** How much the stone's broad and its finer ripple bend the image and tilt the floor ([ripple]). */
-    private val broadRipple: Uniform<Double> = uniform(RippleLook.Gentle.broad)
-    private val fineRipple: Uniform<Double> = uniform(RippleLook.Gentle.fine)
+    private val broadRipple: Uniform<Double> = uniform(RippleLook.Faint.broad)
+    private val fineRipple: Uniform<Double> = uniform(RippleLook.Faint.fine)
+
+    /** How wide the blur grows with the gap behind the floor ([blur], [BlurLook.cone]). */
+    private val cone: Uniform<Double> = uniform(BlurLook.Soft.cone)
+
+    /** How much the floor is marble, 0 (plain) or 1 ([stone]). */
+    private val marble: Uniform<Double> = uniform(0.0)
 
     /** Whether the mirror is on the floor now ([use]). */
     private var worn = false
@@ -155,6 +163,8 @@ class MirrorFloor(
             shader.uniforms["uMirrorUnder"] = under
             shader.uniforms["uRippleBroad"] = broadRipple
             shader.uniforms["uRippleFine"] = fineRipple
+            shader.uniforms["uMirrorCone"] = cone
+            shader.uniforms["uMarble"] = marble
             shader.vertexShader = shader.vertexShader
                 .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vFloorWorld;")
                 .replaceFirst(
@@ -163,6 +173,15 @@ class MirrorFloor(
                 )
             shader.fragmentShader = shader.fragmentShader
                 .replaceFirst("#include <common>", "#include <common>\n$MIRRORED")
+                // the marble, worked out once here, in the stone's colour and in its sheen
+                .replaceFirst(
+                    "#include <color_fragment>",
+                    "#include <color_fragment>\nmarbleAt(vFloorWorld);\ndiffuseColor.rgb = marbled(diffuseColor.rgb);",
+                )
+                .replaceFirst(
+                    "#include <roughnessmap_fragment>",
+                    "#include <roughnessmap_fragment>\nroughnessFactor = marbleRough(roughnessFactor);",
+                )
                 // the stone's own surface as uneven as the ripple that bends its mirror image
                 .replaceFirst("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\nnormal = floorTilted(vFloorWorld);")
                 .replaceFirst(
@@ -205,6 +224,16 @@ class MirrorFloor(
     fun ripple(to: RippleLook) {
         broadRipple.value = to.broad
         fineRipple.value = to.fine
+    }
+
+    /** The reflection blurred as [to]: how wide the blur grows with the gap behind the floor. */
+    fun blur(to: BlurLook) {
+        cone.value = to.cone
+    }
+
+    /** The floor's stone turned to [to]: plain, or marble with a few soft veins. */
+    fun stone(to: StoneLook) {
+        marble.value = if (to == StoneLook.Marble) 1.0 else 0.0
     }
 
     /** How far the mirror shows the underworld this frame: [share] from 0 (the stage as it is) to 1. */
@@ -361,10 +390,10 @@ void main() {
 
         /**
          * The widths' picture: for each of its pixels, of the 2 by 2 of the mirror's picture under it, the mean of the
-         * blur's width (`0.03` of the gap over the distance, at most 0.1; written as tenths of that most, so it fits
-         * bytes too) and of the fade (`exp(-gap / 3)`, 1 at the floor). The gap is the distance along the view from
-         * the floor to what the depth there shows; where the view meets the floor, from the mirrored camera's place
-         * and turn in the world, so no place of the floor is needed.
+         * gap over the distance (0 to 1, so it fits bytes too; the floor's shader makes the blur's width of it with the
+         * cone of [BlurLook]) and of the fade (`exp(-gap / 3)`, 1 at the floor). The gap is the distance along the view
+         * from the floor to what the depth there shows; where the view meets the floor, from the mirrored camera's
+         * place and turn in the world, so no place of the floor is needed.
          */
         val WIDTHS = """
 uniform sampler2D uMirrorDepth;
@@ -382,7 +411,7 @@ vec2 blurAt(ivec2 p, vec2 size) {
   float near = rise > 1e-5 ? -uMirrorWorld[3].y / rise : hit;
   float gap = max(hit - near, 0.0);
 
-  return vec2(min(0.03 * gap / max(hit, 0.1), 0.1) * 10.0, exp(-gap / 3.0));
+  return vec2(min(gap / max(hit, 0.1), 1.0), exp(-gap / 3.0));
 }
 void main() {
   ivec2 size = textureSize(uMirrorDepth, 0);
@@ -402,15 +431,24 @@ void main() {
          * it into zigzags that shimmered as the camera moved, "the unevenness of the floor is too much"). The same
          * ripple tilts the floor's own surface for its light (`floorTilted`: 200 times the broad ripple's bend, some
          * 9 degrees at most by default, 60 times the finer one's), so the bent reflection reads as caused by the
-         * stone; how far behind the floor the image lies
-         * there (the gap, in metres along the view) sets the blur and the fade, both read from the widths' picture
-         * ([WIDTHS]) at a coarse copy, so they change gradually. The farther, the wider the image is blurred (a
-         * spread of about 0.03 of the gap, seen from the camera, read from the picture's smaller copies so a thin
-         * string does not break into dots) and the more it fades (to 0.7, over some 3 m). The blur's five reads each
+         * stone; how far behind the floor the image lies there (the gap, in metres along the view) sets the blur and
+         * the fade, both read from the widths' picture ([WIDTHS]) at a coarse copy, so they change gradually; near the
+         * floor (a gap of a few centimetres per metre of distance) the gap is read at the widths' picture's own pixels
+         * instead, so what stands on the floor meets its reflection crisply. The farther, the wider the image is
+         * blurred (a cone of [BlurLook.cone] of the gap, seen from the camera, read from the picture's smaller copies
+         * so a thin string does not break into dots), never less than 2 of the picture's pixels (`MIRROR_LEAST`:
+         * the least at which the half-size picture shows thin things, the trumpet, the strings, the stands, no more
+         * crawling than a full-size picture would), and the more it fades (to 0.7, over some 3 m). The blur's five reads each
          * count by their brightness, less the brighter (after Karis), so a small glint or an eye does not swell and
          * pulse as one of them catches it and the next frame not. Then the stone's own
          * share: 0.6 looking down on it, more at a glancing angle (after Schlick's Fresnel); none far out
          * among the audience. The floor's own light (the lamps' pools) is turned down to 0.3 under it.
+         *
+         * The marble ([StoneLook.Marble], `marbleAt`): the level lines of a warped noise, some metres long, thinned out
+         * by a slow noise, are the veins; a little lighter than the stone (`marbled`), a little rougher, and standing a
+         * hair proud of it, so their flanks tilt the surface and kink a reflection that crosses them, as the ripple
+         * does; over a faint cloudy variation. Filtered by the pixel's footprint (`fwidth`): far off a vein grows no
+         * thinner than a pixel and fades instead, so it does not shimmer as the camera moves.
          *
          * The underworld, as far as `uMirrorUnder` goes: the ripple a quarter as strong (stiller), and the image's
          * light turned to moonlight: its brightness kept, its colour a cold blue silver, at 0.75 of it (darker), over a
@@ -421,9 +459,17 @@ void main() {
 uniform sampler2D uMirror, uMirrorWidths;
 uniform mat4 uMirrorPicture;
 uniform vec2 uMirrorLens;
-uniform float uMirrorUnder, uRippleBroad, uRippleFine;
+uniform float uMirrorUnder, uRippleBroad, uRippleFine, uMirrorCone, uMarble;
 varying vec3 vFloorWorld;
 const float BROAD_TILT = 200.0, FINE_TILT = 60.0;
+// the least blur, in the picture's pixels, at every level and also at the floor: the half-size picture's pixels do not
+// show on thin things (the trumpet, the strings, the stands, the fence's wires), nor crawl as they move
+const float MIRROR_LEAST = 2.0;
+// the marble's veins: how wide in the field (some 3 cm on the floor), how far they stand proud (tilting their flanks by
+// a degree or two), how much that bends the mirror image (a kink of about half a pixel of the picture where a
+// reflection crosses a vein), and the colour they lighten the stone toward (linear; the stone itself is near 0.002)
+const float MARBLE_VEIN = 0.012, MARBLE_RAISE = 0.0004, MARBLE_BEND = 0.05;
+const vec3 MARBLE_LIGHT = vec3(0.010, 0.010, 0.012);
 const vec2 MIRROR_TAPS[4] = vec2[4](vec2(0.7, 0.2), vec2(-0.2, 0.7), vec2(-0.7, -0.2), vec2(0.2, -0.7));
 float mirrorNoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
@@ -435,6 +481,50 @@ float mirrorNoise(vec2 p) {
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 // the floor's own light (the lamps' pools) in the underworld: colder and darker as well
+// the marble at this place of the floor, worked out once (marbleAt) for its colour, its sheen, its surface and the
+// mirror: how much of a vein lies here (0 to 1), the faint cloudy variation (-1 to 1), and how the veins, standing a
+// hair proud of the stone, tilt the surface here (along x and z)
+float marbleVein = 0.0;
+float marbleCloud = 0.0;
+vec2 marbleSlope = vec2(0.0);
+// a warped noise, three layers, its place pushed by another noise, so that its level lines run long and meander
+float marbleField(vec2 p) {
+  vec2 q = p + 1.7 * vec2(mirrorNoise(p * 0.21 + 3.1), mirrorNoise(p * 0.21 + 9.7));
+  return 0.55 * mirrorNoise(q * 0.32) + 0.3 * mirrorNoise(q * 0.71 + 5.3) + 0.15 * mirrorNoise(q * 1.6 + 11.0);
+}
+void marbleAt(vec3 world) {
+  if (uMarble <= 0.0) {
+    return;
+  }
+  vec2 p = world.xz;
+  float f = marbleField(p);
+  // a vein where the field passes 0.5, some centimetres wide; never thinner than the field changes over a pixel, and
+  // as much fainter as it is wider then, so far off, where a pixel covers much floor, it fades instead of shimmering
+  float wide = max(MARBLE_VEIN, 1.5 * fwidth(f));
+  float x = abs(f - 0.5);
+  float line = 1.0 - smoothstep(0.0, wide, x);
+  // only some stretches of the level line are veins: a slow noise thins them out
+  float share = smoothstep(0.45, 0.75, mirrorNoise(p * 0.18 + 31.0)) * (MARBLE_VEIN / wide) * uMarble;
+  marbleVein = line * share;
+  marbleCloud = (2.0 * mirrorNoise(p * 0.6 + 47.0) - 1.0) * uMarble;
+  // the field's slope on the floor, from how it and the place change from pixel to pixel (no second noise needed)
+  vec2 dx = dFdx(p), dy = dFdy(p);
+  float det = dx.x * dy.y - dx.y * dy.x;
+  vec2 df = vec2(dFdx(f), dFdy(f));
+  // (a pixel that sees no floor across it has no slope: no division by nought)
+  vec2 grad = abs(det) > 1e-12 ? vec2(df.x * dy.y - dx.y * df.y, dx.x * df.y - df.x * dy.x) / det : vec2(0.0);
+  // the vein's height falls off to both sides (as the smoothstep does), so its flanks tilt the surface
+  float fall = x < wide ? 6.0 * x * (wide - x) / (wide * wide * wide) : 0.0;
+  marbleSlope = -MARBLE_RAISE * fall * sign(f - 0.5) * grad * share;
+}
+// the stone's sheen with the marble: a little rougher along a vein, a little smoother or rougher with the clouds
+float marbleRough(float r) {
+  return clamp(r + 0.12 * marbleVein - 0.04 * marbleCloud, 0.04, 1.0);
+}
+// the stone's own colour with the marble: the veins a little lighter, the stone a little cloudy; still near black
+vec3 marbled(vec3 c) {
+  return mix(c * (1.0 + 0.25 * marbleCloud), MARBLE_LIGHT, 0.5 * marbleVein);
+}
 vec3 underFloor(vec3 c) {
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
   return mix(c, lum * vec3(0.6, 0.8, 1.3), 0.7 * uMirrorUnder) * (1.0 - 0.35 * uMirrorUnder);
@@ -453,13 +543,14 @@ vec2 mirrorRipple(vec3 world, float broad, float fine) {
 }
 // how far the ripple bends the image (as a share of the picture)
 vec2 mirrorBend(vec3 world) {
-  return mirrorRipple(world, uRippleBroad, uRippleFine);
+  return mirrorRipple(world, uRippleBroad, uRippleFine) + marbleSlope * MARBLE_BEND * (1.0 - 0.75 * uMirrorUnder);
 }
 // the floor's own surface (its normal, as the view sees it) tilted by the same ripple, so the lamps' pools and the
 // sheen show the unevenness that bends the reflection; the broad ripple tilts it more for its bend than the finer one,
 // or its slow swell would not show at all
 vec3 floorTilted(vec3 world) {
   vec2 tilt = mirrorRipple(world, uRippleBroad * BROAD_TILT, uRippleFine * FINE_TILT);
+  tilt += marbleSlope * (1.0 - 0.75 * uMirrorUnder);
   return normalize((viewMatrix * vec4(normalize(vec3(tilt.x, 1.0, tilt.y)), 0.0)).xyz);
 }
 // how much one of the blur's reads counts: its share, less the brighter it is
@@ -470,13 +561,19 @@ vec3 mirrored(vec3 world) {
   vec4 at = uMirrorPicture * vec4(world, 1.0);
   vec2 uv = at.xy / at.w;
   uv += mirrorBend(world);
-  // the blur's width (in tenths of the most, 0.1) and the fade, from the widths' picture's copy of 4 to 8 of its
-  // pixels (8 to 16 of the picture's): they change gradually across an edge
+  // the gap over the distance and the fade, from the widths' picture's copy of 4 to 8 of its pixels (8 to 16 of the
+  // picture's): they change gradually across an edge
   vec2 blurs = textureLod(uMirrorWidths, uv, 2.5).xy;
-  // the blur: as wide as a cone of about 0.03 from the floor reaches at the gap, seen from the camera; read from the
-  // picture's smaller copy of about that size, and four times round the middle, each read counting less the brighter
-  vec2 spread = 0.5 * uMirrorLens * 0.1 * blurs.x;
+  // near the floor (the gap small over 2 by 2 of the widths' picture's pixels, 4 by 4 of the picture's) the gap as it
+  // is there, so what stands on the floor meets its reflection crisply; farther from it the gradual one, and between
+  // the two a soft passage (read finer, the passage showed as a small sharp block under a foot)
+  float here = textureLod(uMirrorWidths, uv, 1.0).x;
+  float gap = mix(here, blurs.x, smoothstep(0.02, 0.1, here));
+  // the blur: as wide as the cone ([BlurLook]) from the floor reaches at the gap, seen from the camera, and never less
+  // than the least; read from the picture's smaller copy of about that size, and four times round the middle, each
+  // read counting less the brighter
   vec2 size = vec2(textureSize(uMirror, 0));
+  vec2 spread = max(0.5 * uMirrorLens * min(uMirrorCone * gap, 0.1), vec2(MIRROR_LEAST) / size);
   float lod = log2(max(max(spread.x * size.x, spread.y * size.y), 1.0));
   vec3 c = textureLod(uMirror, uv, lod).rgb;
   float w = mirrorWeight(c, 0.4);

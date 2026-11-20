@@ -12,14 +12,15 @@ import io.peekandpoke.klang.viz.liveact.Switches
  * The variants of the band's look chosen while the show plays (KLANG-00478): what stands behind the band ([stage]),
  * the floor ([floor]), the haze behind the fence ([haze]), where Sirene's eyes glow under the front lamp ([eyes]),
  * what the band's bodies are made of ([skin]), the two worlds' time of day ([world]), the other world in the mirror
- * floor ([underworld]) and how uneven the mirror floor's stone is ([ripple]). A later variant joins them here, with its
- * key and its line.
+ * floor ([underworld]), how uneven the mirror floor's stone is ([ripple]), how blurred its reflection is ([blur]) and
+ * what stone it is ([stone]). A later variant joins them here, with its key and its line.
  *
  * They start as the address asks ([of]); a key turns one of them over ([nextStage], the key m; [nextFloor], the key
  * p; [nextHaze], the key h; [nextEyes], the key i; [nextSkin], the key l; [nextWorld], the key n; [nextUnderworld],
- * the key v; [nextRipple], the key b), and the line at the top says the new one in a few words for a moment
- * ([stageLine], [floorLine], [hazeLine], [eyesLine], [skinLine], [worldLine], [underworldLine], [rippleLine]). The key
- * x flips all of them at once between the look as made and the new look ([NEW], [LookFlip]).
+ * the key v; [nextRipple], the key b; [nextBlur], the key c; [nextStone], the key k), and the line at the top says the
+ * new one in a few words for a moment ([stageLine], [floorLine], [hazeLine], [eyesLine], [skinLine], [worldLine],
+ * [underworldLine], [rippleLine], [blurLine], [stoneLine]). The key x flips all of them at once between the look as
+ * made and the new look ([NEW], [LookFlip]).
  */
 data class LookVariants(
     val stage: StageLook = StageLook.Wall,
@@ -29,7 +30,9 @@ data class LookVariants(
     val skin: SkinLook = SkinLook.Suit,
     val world: WorldLook = WorldLook.Off,
     val underworld: UnderworldLook = UnderworldLook.Off,
-    val ripple: RippleLook = RippleLook.Gentle,
+    val ripple: RippleLook = RippleLook.Faint,
+    val blur: BlurLook = BlurLook.Soft,
+    val stone: StoneLook = StoneLook.Plain,
 ) {
     /** The next of the stage's looks, after the last the first again. */
     fun nextStage(): LookVariants = copy(stage = StageLook.entries[(stage.ordinal + 1) % StageLook.entries.size])
@@ -55,6 +58,12 @@ data class LookVariants(
 
     /** The next of the stone's unevennesses (none, faint, gentle, strong), after the last none again. */
     fun nextRipple(): LookVariants = copy(ripple = RippleLook.entries[(ripple.ordinal + 1) % RippleLook.entries.size])
+
+    /** The next of the reflection's blurs (crisp, soft, stone), after the last crisp again. */
+    fun nextBlur(): LookVariants = copy(blur = BlurLook.entries[(blur.ordinal + 1) % BlurLook.entries.size])
+
+    /** The other of the mirror floor's stones: plain, or marble. */
+    fun nextStone(): LookVariants = copy(stone = StoneLook.entries[(stone.ordinal + 1) % StoneLook.entries.size])
 
     /**
      * Whether the haze gives way to the band's shadows: where it is chosen and the fence stands (only the fence has the
@@ -149,14 +158,25 @@ data class LookVariants(
      * and where the mirror is not drawn, why: on the plain floor (`floor: faint ripple (with the mirror floor only)`),
      * or at that fog (`floor: faint ripple (no mirror at fog low)`).
      */
-    fun rippleLine(fog: FogQuality): String {
-        val held = when {
-            floor != FloorLook.Mirror -> " (with the mirror floor only)"
-            !mirrors(fog) -> " (no mirror at fog ${fog.word})"
-            else -> ""
-        }
+    fun rippleLine(fog: FogQuality): String = "floor: ${ripple.word} ripple${mirrorHeld(fog)}"
 
-        return "floor: ${ripple.word} ripple$held"
+    /**
+     * The line shown for a moment when the reflection's blur is stepped, with the fog at [fog]: `floor: crisp
+     * reflection`, and where the mirror is not drawn, why, as [rippleLine] says it.
+     */
+    fun blurLine(fog: FogQuality): String = "floor: ${blur.word} reflection${mirrorHeld(fog)}"
+
+    /**
+     * The line shown for a moment when the stone is turned over, with the fog at [fog]: `floor: marble`, and where the
+     * mirror is not drawn, why, as [rippleLine] says it.
+     */
+    fun stoneLine(fog: FogQuality): String = "floor: ${stone.word}${mirrorHeld(fog)}"
+
+    /** Why a chosen look of the mirror does not show with the fog at [fog]: no mirror floor, or none drawn at that fog. */
+    private fun mirrorHeld(fog: FogQuality): String = when {
+        floor != FloorLook.Mirror -> " (with the mirror floor only)"
+        !mirrors(fog) -> " (no mirror at fog ${fog.word})"
+        else -> ""
     }
 
     companion object {
@@ -164,7 +184,7 @@ data class LookVariants(
          * The band's new look as a whole (KLANG-00478; `?look=new`, the key x): the fence, the mirror floor, the haze
          * giving way to the shadows, Sirene's eyes in her shadow, the lacquer, and the time of day drifting from day
          * to night and back. The underworld stays off: it is a moment of a show, called by its own key. The stone
-         * gently uneven, as without the new look.
+         * faintly uneven, the reflection soft and the stone plain, as without the new look.
          */
         val NEW = LookVariants(
             stage = StageLook.Mesh,
@@ -174,7 +194,9 @@ data class LookVariants(
             skin = SkinLook.Lacquer,
             world = WorldLook.Drift,
             underworld = UnderworldLook.Off,
-            ripple = RippleLook.Gentle,
+            ripple = RippleLook.Faint,
+            blur = BlurLook.Soft,
+            stone = StoneLook.Plain,
         )
 
         /** Whether the address asks for the new look as a whole: `?look=new`. */
@@ -182,9 +204,10 @@ data class LookVariants(
 
         /**
          * The variants the address asks for (`?stage=mesh`, `?floor=mirror`, `?haze=parts`, `?eyes=shadow`,
-         * `?skin=lacquer`, `?world=night`, `?underworld=on`, `?ripple=faint`), each over the look as made, or with `?look=new` over
-         * [NEW] (`?look=new&world=night`: the new look at night). A variant's switch counts where it is given at all,
-         * also empty or with another word (`?look=new&stage` is the wall).
+         * `?skin=lacquer`, `?world=night`, `?underworld=on`, `?ripple=faint`, `?blur=crisp`, `?stone=marble`), each
+         * over the look as made, or with `?look=new` over [NEW] (`?look=new&world=night`: the new look at night). A
+         * variant's switch counts where it is given at all, also empty or with another word (`?look=new&stage` is the
+         * wall).
          */
         fun of(switches: Switches): LookVariants {
             val base = if (asksNew(switches)) NEW else LookVariants()
@@ -198,6 +221,8 @@ data class LookVariants(
                 world = if (switches.has(Switch.World)) WorldLook.of(switches) else base.world,
                 underworld = if (switches.has(Switch.Underworld)) UnderworldLook.of(switches) else base.underworld,
                 ripple = if (switches.has(Switch.Ripple)) RippleLook.of(switches) else base.ripple,
+                blur = if (switches.has(Switch.Blur)) BlurLook.of(switches) else base.blur,
+                stone = if (switches.has(Switch.Stone)) StoneLook.of(switches) else base.stone,
             )
         }
     }
