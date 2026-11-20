@@ -17,8 +17,9 @@ import io.peekandpoke.klang.viz.liveact.Switches
  * 2026-11-20: "i think we need the blur otherwise the reflection of f.e. the trumpet is pixelated ... i would reduce
  * the blur on the ground if possible"). [word] is its name in the address and in the line at the top. Only the mirror
  * floor has it ([FloorLook.Mirror]).
- * - [Crisp]: a narrow cone: polished stone, nearly a mirror.
- * - [Soft]: the default.
+ * - [Crisp]: the default (the maintainer, 2026-11-20: "i think i like the 'gentle' ripple in combination with the
+ *   crisp reflections"): a narrow cone: polished stone, nearly a mirror.
+ * - [Soft]: between the two.
  * - [Stone]: the cone the floor was first made with: rough stone.
  */
 enum class BlurLook(val word: String, val cone: Double) {
@@ -27,7 +28,7 @@ enum class BlurLook(val word: String, val cone: Double) {
     Stone(word = "stone", cone = 0.03);
 
     companion object {
-        /** The blur the address asks for: crisp, soft or stone; any other value, or none, [Soft]. */
-        fun of(switches: Switches): BlurLook = entries.firstOrNull { it.word == switches[Switch.Blur] } ?: Soft
+        /** The blur the address asks for: crisp, soft or stone; any other value, or none, [Crisp]. */
+        fun of(switches: Switches): BlurLook = entries.firstOrNull { it.word == switches[Switch.Blur] } ?: Crisp
     }
 }

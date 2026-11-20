@@ -115,11 +115,11 @@ class MirrorFloor(
     private val under: Uniform<Double> = uniform(0.0)
 
     /** How much the stone's broad and its finer ripple bend the image and tilt the floor ([ripple]). */
-    private val broadRipple: Uniform<Double> = uniform(RippleLook.Faint.broad)
-    private val fineRipple: Uniform<Double> = uniform(RippleLook.Faint.fine)
+    private val broadRipple: Uniform<Double> = uniform(RippleLook.Gentle.broad)
+    private val fineRipple: Uniform<Double> = uniform(RippleLook.Gentle.fine)
 
     /** How wide the blur grows with the gap behind the floor ([blur], [BlurLook.cone]). */
-    private val cone: Uniform<Double> = uniform(BlurLook.Soft.cone)
+    private val cone: Uniform<Double> = uniform(BlurLook.Crisp.cone)
 
     /** How much the floor is marble, 0 (plain) or 1 ([stone]). */
     private val marble: Uniform<Double> = uniform(0.0)

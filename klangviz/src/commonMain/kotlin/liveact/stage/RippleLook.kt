@@ -20,8 +20,9 @@ import io.peekandpoke.klang.viz.liveact.Switches
  * bend by the ripple as it was first made, a larger and a finer one (some 0.8 m and 0.25 m), which bent a fence post's
  * reflection into zigzags that shimmered as the camera moved.
  * - [None]: the stone flat, the reflection unbent.
- * - [Faint]: the default (the maintainer, 2026-11-20: "Let's go for the faint ripple"); half the gentle one.
- * - [Gentle]: a fence post's reflection stays a straight line that sways gently.
+ * - [Faint]: half the gentle one.
+ * - [Gentle]: the default (the maintainer, 2026-11-20, after trying faint: "i think i like the 'gentle' ripple in
+ *   combination with the crisp reflections"): a fence post's reflection stays a straight line that sways gently.
  * - [Strong]: the ripple as it was first made.
  */
 enum class RippleLook(val word: String, val broad: Double, val fine: Double) {
@@ -31,7 +32,7 @@ enum class RippleLook(val word: String, val broad: Double, val fine: Double) {
     Strong(word = "strong", broad = 0.0, fine = 0.006);
 
     companion object {
-        /** The ripple the address asks for: none, faint, gentle or strong; any other value, or none, [Faint]. */
-        fun of(switches: Switches): RippleLook = entries.firstOrNull { it.word == switches[Switch.Ripple] } ?: Faint
+        /** The ripple the address asks for: none, faint, gentle or strong; any other value, or none, [Gentle]. */
+        fun of(switches: Switches): RippleLook = entries.firstOrNull { it.word == switches[Switch.Ripple] } ?: Gentle
     }
 }

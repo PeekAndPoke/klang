@@ -30,8 +30,8 @@ data class LookVariants(
     val skin: SkinLook = SkinLook.Suit,
     val world: WorldLook = WorldLook.Off,
     val underworld: UnderworldLook = UnderworldLook.Off,
-    val ripple: RippleLook = RippleLook.Faint,
-    val blur: BlurLook = BlurLook.Soft,
+    val ripple: RippleLook = RippleLook.Gentle,
+    val blur: BlurLook = BlurLook.Crisp,
     val stone: StoneLook = StoneLook.Plain,
 ) {
     /** The next of the stage's looks, after the last the first again. */
@@ -194,8 +194,8 @@ data class LookVariants(
             skin = SkinLook.Lacquer,
             world = WorldLook.Drift,
             underworld = UnderworldLook.Off,
-            ripple = RippleLook.Faint,
-            blur = BlurLook.Soft,
+            ripple = RippleLook.Gentle,
+            blur = BlurLook.Crisp,
             stone = StoneLook.Plain,
         )
 

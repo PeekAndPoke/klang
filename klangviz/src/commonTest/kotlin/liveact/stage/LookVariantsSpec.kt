@@ -164,15 +164,15 @@ class LookVariantsSpec : StringSpec({
         under.copy(floor = FloorLook.Plain).underworldLine(FogQuality.High) shouldBe "underworld: on (with the mirror floor only)"
     }
 
-    "?ripple= is how uneven the stone is: none, faint, gentle or strong; no switch, an empty one or another word faint" {
+    "?ripple= is how uneven the stone is: none, faint, gentle or strong; no switch, an empty one or another word gentle" {
         RippleLook.of(Switches.parse("?ripple=none")) shouldBe RippleLook.None
         RippleLook.of(Switches.parse("?ripple=faint")) shouldBe RippleLook.Faint
         RippleLook.of(Switches.parse("?ripple=gentle")) shouldBe RippleLook.Gentle
         RippleLook.of(Switches.parse("?ripple=strong")) shouldBe RippleLook.Strong
-        RippleLook.of(Switches.parse("?ripple")) shouldBe RippleLook.Faint
-        RippleLook.of(Switches.parse("?ripple=wild")) shouldBe RippleLook.Faint
-        LookVariants().ripple shouldBe RippleLook.Faint
-        LookVariants.NEW.ripple shouldBe RippleLook.Faint
+        RippleLook.of(Switches.parse("?ripple")) shouldBe RippleLook.Gentle
+        RippleLook.of(Switches.parse("?ripple=wild")) shouldBe RippleLook.Gentle
+        LookVariants().ripple shouldBe RippleLook.Gentle
+        LookVariants.NEW.ripple shouldBe RippleLook.Gentle
         LookVariants.of(Switches.parse("?look=new&ripple=none")) shouldBe LookVariants.NEW.copy(ripple = RippleLook.None)
     }
 
@@ -189,22 +189,22 @@ class LookVariantsSpec : StringSpec({
         val start = LookVariants.NEW
         val seen = generateSequence(start) { it.nextRipple() }.take(5).map { it.ripple }.toList()
 
-        seen shouldBe listOf(RippleLook.Faint, RippleLook.Gentle, RippleLook.Strong, RippleLook.None, RippleLook.Faint)
-        start.nextRipple() shouldBe start.copy(ripple = RippleLook.Gentle)
-        start.copy(ripple = RippleLook.Gentle).rippleLine(FogQuality.High) shouldBe "floor: gentle ripple"
-        start.rippleLine(FogQuality.Medium) shouldBe "floor: faint ripple"
-        start.rippleLine(FogQuality.Low) shouldBe "floor: faint ripple (no mirror at fog low)"
-        LookVariants().rippleLine(FogQuality.High) shouldBe "floor: faint ripple (with the mirror floor only)"
+        seen shouldBe listOf(RippleLook.Gentle, RippleLook.Strong, RippleLook.None, RippleLook.Faint, RippleLook.Gentle)
+        start.nextRipple() shouldBe start.copy(ripple = RippleLook.Strong)
+        start.copy(ripple = RippleLook.Faint).rippleLine(FogQuality.High) shouldBe "floor: faint ripple"
+        start.rippleLine(FogQuality.Medium) shouldBe "floor: gentle ripple"
+        start.rippleLine(FogQuality.Low) shouldBe "floor: gentle ripple (no mirror at fog low)"
+        LookVariants().rippleLine(FogQuality.High) shouldBe "floor: gentle ripple (with the mirror floor only)"
     }
 
-    "?blur= is how blurred the reflection is: crisp, soft or stone; no switch, an empty one or another word soft" {
+    "?blur= is how blurred the reflection is: crisp, soft or stone; no switch, an empty one or another word crisp" {
         BlurLook.of(Switches.parse("?blur=crisp")) shouldBe BlurLook.Crisp
         BlurLook.of(Switches.parse("?blur=soft")) shouldBe BlurLook.Soft
         BlurLook.of(Switches.parse("?blur=stone")) shouldBe BlurLook.Stone
-        BlurLook.of(Switches.parse("?blur")) shouldBe BlurLook.Soft
-        BlurLook.of(Switches.parse("?blur=sharp")) shouldBe BlurLook.Soft
-        LookVariants().blur shouldBe BlurLook.Soft
-        LookVariants.NEW.blur shouldBe BlurLook.Soft
+        BlurLook.of(Switches.parse("?blur")) shouldBe BlurLook.Crisp
+        BlurLook.of(Switches.parse("?blur=sharp")) shouldBe BlurLook.Crisp
+        LookVariants().blur shouldBe BlurLook.Crisp
+        LookVariants.NEW.blur shouldBe BlurLook.Crisp
         LookVariants.of(Switches.parse("?look=new&blur=crisp")) shouldBe LookVariants.NEW.copy(blur = BlurLook.Crisp)
     }
 
@@ -238,12 +238,12 @@ class LookVariantsSpec : StringSpec({
         val start = LookVariants.NEW
         val seen = generateSequence(start) { it.nextBlur() }.take(4).map { it.blur }.toList()
 
-        seen shouldBe listOf(BlurLook.Soft, BlurLook.Stone, BlurLook.Crisp, BlurLook.Soft)
-        start.nextBlur() shouldBe start.copy(blur = BlurLook.Stone)
-        start.copy(blur = BlurLook.Crisp).blurLine(FogQuality.High) shouldBe "floor: crisp reflection"
-        start.blurLine(FogQuality.Medium) shouldBe "floor: soft reflection"
-        start.blurLine(FogQuality.Low) shouldBe "floor: soft reflection (no mirror at fog low)"
-        LookVariants().blurLine(FogQuality.High) shouldBe "floor: soft reflection (with the mirror floor only)"
+        seen shouldBe listOf(BlurLook.Crisp, BlurLook.Soft, BlurLook.Stone, BlurLook.Crisp)
+        start.nextBlur() shouldBe start.copy(blur = BlurLook.Soft)
+        start.copy(blur = BlurLook.Soft).blurLine(FogQuality.High) shouldBe "floor: soft reflection"
+        start.blurLine(FogQuality.Medium) shouldBe "floor: crisp reflection"
+        start.blurLine(FogQuality.Low) shouldBe "floor: crisp reflection (no mirror at fog low)"
+        LookVariants().blurLine(FogQuality.High) shouldBe "floor: crisp reflection (with the mirror floor only)"
     }
 
     "the new look is the fence, the mirror, the parting haze, the eyes in the shadow, the lacquer and the drift; no underworld" {
@@ -255,8 +255,8 @@ class LookVariantsSpec : StringSpec({
             skin = SkinLook.Lacquer,
             world = WorldLook.Drift,
             underworld = UnderworldLook.Off,
-            ripple = RippleLook.Faint,
-            blur = BlurLook.Soft,
+            ripple = RippleLook.Gentle,
+            blur = BlurLook.Crisp,
             stone = StoneLook.Plain,
         )
     }
