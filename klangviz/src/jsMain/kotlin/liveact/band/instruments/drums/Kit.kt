@@ -51,7 +51,7 @@ import kotlin.math.sin
  * The kit's materials, made together and in this order the first time a kit is built (three.js numbers its
  * materials as they are made, and draws in that order where nothing else decides).
  */
-private object KitMaterials {
+internal object KitMaterials {
     val shell: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
         color = 0x08080b
         roughness = 0.3

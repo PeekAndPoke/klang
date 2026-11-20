@@ -39,7 +39,8 @@ private val FINGERS: List<List<Int>> = listOf(
 class Trumpet(private val rig: Rig) {
     private val s: Double = rig.s
 
-    private val brass: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(
+    /** The trumpet's brass; the lacquer look (`?skin=lacquer`) polishes it while the band wears it. */
+    internal val brass: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(
         jsObject<MaterialParameters> {
             color = 0x3a2c12
             roughness = 0.28

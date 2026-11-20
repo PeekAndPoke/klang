@@ -13,6 +13,7 @@ import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.dress.DressedBody
 import io.peekandpoke.klang.viz.liveact.band.dress.HairPart
 import io.peekandpoke.klang.viz.liveact.band.dress.ShadowHair
 import io.peekandpoke.klang.viz.liveact.band.dress.pattern
@@ -68,6 +69,8 @@ class Notstrom private constructor(
     private val show: Show,
     /** Every player's rig, in the players' order. */
     val rigs: Map<Player, Rig>,
+    /** The figures' dressed parts (the dark skin, the hair), each with its pattern: what the lacquer look re-dresses. */
+    val bodies: List<DressedBody>,
     private val viewer: Vector3,
 ) {
     companion object {
@@ -121,6 +124,7 @@ class Notstrom private constructor(
             }
 
             val rigs = linkedMapOf<Player, Rig>()
+            val bodies = mutableListOf<DressedBody>()
 
             Player.entries.forEachIndexed { index, player ->
                 val place = StagePlot.PLACES.getValue(player)
@@ -135,29 +139,35 @@ class Notstrom private constructor(
                 rigs[player] = rig
 
                 figure.traverse { o ->
-                    o.asSkinnedMesh?.materials?.forEach { m ->
+                    val mesh = o.asSkinnedMesh ?: return@traverse
+
+                    mesh.materials.forEach { m ->
                         // a pattern goes into a standard material's shader: every material of the figures is one
                         val material = m.asMeshStandardMaterial ?: return@forEach
 
                         if (m.name.endsWith("_hair")) {
                             pattern(material = material, kind = ClothPattern.Strands, gloss = 0.07, matt = 0.62, hair = null, glitter = 0.05)
+                            bodies.add(DressedBody(mesh = mesh, material = material, cloth = ClothPattern.Strands, hair = null))
                         }
 
                         if (m.name.endsWith("_dark")) {
+                            val hair = if (dress.combedBack) hairOf(rig) else null
+
                             pattern(
                                 material = material,
                                 kind = dress.cloth,
                                 gloss = 0.12,
                                 matt = 0.85,
-                                hair = if (dress.combedBack) hairOf(rig) else null,
+                                hair = hair,
                                 glitter = dress.glitter,
                             )
+                            bodies.add(DressedBody(mesh = mesh, material = material, cloth = dress.cloth, hair = hair))
                         }
                     }
                 }
             }
 
-            return Notstrom(show = show, rigs = rigs, viewer = viewer)
+            return Notstrom(show = show, rigs = rigs, bodies = bodies, viewer = viewer)
         }
     }
 

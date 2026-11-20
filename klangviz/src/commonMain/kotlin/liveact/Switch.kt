@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
+import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
 
 /**
@@ -123,6 +124,14 @@ enum class Switch(val key: String) {
      * it over while the show plays ([LookVariants]).
      */
     Eyes("eyes"),
+
+    /**
+     * `?skin=lacquer`: what the band's bodies are made of ([SkinLook]): lacquer, deep black lacquer with each member's
+     * pattern as thin gold that only catches the light, and the instruments lacquered and polished; any other value,
+     * or none, the dark suit with its glitter as it was made. The key l turns it over while the show plays
+     * ([LookVariants]).
+     */
+    Skin("skin"),
 
     // The lights
 

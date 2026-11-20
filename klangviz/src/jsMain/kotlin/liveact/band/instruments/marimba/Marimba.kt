@@ -36,7 +36,7 @@ import kotlin.math.sin
  * The marimba's materials, made together and in this order the first time a marimba is built (three.js numbers its
  * materials as they are made, and draws in that order where nothing else decides).
  */
-private object MarimbaMaterials {
+internal object MarimbaMaterials {
     val wood: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
         color = 0x241710
         roughness = 0.5

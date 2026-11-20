@@ -29,7 +29,7 @@ import kotlin.math.PI
  * The instruments' surfaces, shared by every string player: made together when the first instrument is built
  * (three.js must be loaded by then).
  */
-private object StringMaterials {
+internal object StringMaterials {
     val lacquer: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(
         jsObject<MaterialParameters> {
             color = 0x0a0a0d

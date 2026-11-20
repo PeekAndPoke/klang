@@ -16,6 +16,34 @@ class LookVariantsSpec : StringSpec({
         LookVariants() shouldBe LookVariants.of(Switches.parse(""))
         LookVariants().haze shouldBe HazeLook.Whole
         LookVariants().eyes shouldBe EyesLook.Face
+        LookVariants().skin shouldBe SkinLook.Suit
+    }
+
+    "?skin=lacquer is the lacquer; no switch, an empty one or another word the suit as made" {
+        SkinLook.of(Switches.parse("?skin=lacquer")) shouldBe SkinLook.Lacquer
+        SkinLook.of(Switches.parse("?skin")) shouldBe SkinLook.Suit
+        SkinLook.of(Switches.parse("?skin=suit")) shouldBe SkinLook.Suit
+        SkinLook.of(Switches.parse("?skin=gold")) shouldBe SkinLook.Suit
+        LookVariants.of(Switches.parse("?skin=lacquer")) shouldBe LookVariants(skin = SkinLook.Lacquer)
+        LookVariants.of(Switches.parse("?stage=mesh&floor=mirror&haze=parts&eyes=shadow&skin=lacquer")) shouldBe
+            LookVariants(
+                stage = StageLook.Mesh,
+                floor = FloorLook.Mirror,
+                haze = HazeLook.Parts,
+                eyes = EyesLook.Shadow,
+                skin = SkinLook.Lacquer,
+            )
+    }
+
+    "the key l turns the skin over and leaves the rest; twice is back where it was; its line says it" {
+        val start = LookVariants(stage = StageLook.Mesh, floor = FloorLook.Mirror, eyes = EyesLook.Shadow)
+
+        start.nextSkin() shouldBe start.copy(skin = SkinLook.Lacquer)
+        start.nextSkin().nextSkin() shouldBe start
+        start.nextStage().skin shouldBe SkinLook.Suit
+        start.nextSkin().nextEyes() shouldBe start.copy(skin = SkinLook.Lacquer, eyes = EyesLook.Face)
+        LookVariants().skinLine() shouldBe "skin: suit"
+        LookVariants(skin = SkinLook.Lacquer).skinLine() shouldBe "skin: lacquer"
     }
 
     "?haze=parts and ?eyes=shadow are the new variants; no switch, an empty one or another word the look as made" {

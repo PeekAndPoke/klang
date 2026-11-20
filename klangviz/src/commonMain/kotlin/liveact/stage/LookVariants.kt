@@ -9,18 +9,19 @@ import io.peekandpoke.klang.viz.liveact.Switches
 
 /**
  * The variants of the band's look chosen while the show plays (KLANG-00478): what stands behind the band ([stage]),
- * the floor ([floor]), the haze behind the fence ([haze]) and where Sirene's eyes glow under the front lamp
- * ([eyes]). A later variant joins them here, with its key and its line.
+ * the floor ([floor]), the haze behind the fence ([haze]), where Sirene's eyes glow under the front lamp ([eyes])
+ * and what the band's bodies are made of ([skin]). A later variant joins them here, with its key and its line.
  *
  * They start as the address asks ([of]); a key turns one of them over ([nextStage], the key m; [nextFloor], the key
- * p; [nextHaze], the key h; [nextEyes], the key i), and the line at the top says the new one in a few words for a
- * moment ([stageLine], [floorLine], [hazeLine], [eyesLine]).
+ * p; [nextHaze], the key h; [nextEyes], the key i; [nextSkin], the key l), and the line at the top says the new one
+ * in a few words for a moment ([stageLine], [floorLine], [hazeLine], [eyesLine], [skinLine]).
  */
 data class LookVariants(
     val stage: StageLook = StageLook.Wall,
     val floor: FloorLook = FloorLook.Plain,
     val haze: HazeLook = HazeLook.Whole,
     val eyes: EyesLook = EyesLook.Face,
+    val skin: SkinLook = SkinLook.Suit,
 ) {
     /** The next of the stage's looks, after the last the first again. */
     fun nextStage(): LookVariants = copy(stage = StageLook.entries[(stage.ordinal + 1) % StageLook.entries.size])
@@ -33,6 +34,9 @@ data class LookVariants(
 
     /** The other place for Sirene's eyes. */
     fun nextEyes(): LookVariants = copy(eyes = EyesLook.entries[(eyes.ordinal + 1) % EyesLook.entries.size])
+
+    /** The other of the bodies' skins. */
+    fun nextSkin(): LookVariants = copy(skin = SkinLook.entries[(skin.ordinal + 1) % SkinLook.entries.size])
 
     /**
      * Whether the haze gives way to the band's shadows: where it is chosen and the fence stands (only the fence has the
@@ -87,16 +91,20 @@ data class LookVariants(
     /** The line shown for a moment when Sirene's eyes are turned over: `eyes: shadow`. */
     fun eyesLine(): String = "eyes: ${eyes.word}"
 
+    /** The line shown for a moment when the bodies' skin is turned over: `skin: lacquer`. */
+    fun skinLine(): String = "skin: ${skin.word}"
+
     companion object {
         /**
-         * The variants the address asks for (`?stage=mesh`, `?floor=mirror`, `?haze=parts`, `?eyes=shadow`); without
-         * them the look as it was made.
+         * The variants the address asks for (`?stage=mesh`, `?floor=mirror`, `?haze=parts`, `?eyes=shadow`,
+         * `?skin=lacquer`); without them the look as it was made.
          */
         fun of(switches: Switches): LookVariants = LookVariants(
             stage = StageLook.of(switches),
             floor = FloorLook.of(switches),
             haze = HazeLook.of(switches),
             eyes = EyesLook.of(switches),
+            skin = SkinLook.of(switches),
         )
     }
 }
