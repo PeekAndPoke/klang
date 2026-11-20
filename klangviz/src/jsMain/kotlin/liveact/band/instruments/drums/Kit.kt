@@ -17,6 +17,7 @@ import io.peekandpoke.klang.workshop.threejs.clone
 import io.peekandpoke.klang.workshop.threejs.colorSpace
 import io.peekandpoke.klang.workshop.threejs.createCircleGeometry
 import io.peekandpoke.klang.workshop.threejs.createConeGeometry
+import io.peekandpoke.klang.workshop.threejs.createCylinderGeometry
 import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.isMesh
@@ -88,11 +89,18 @@ internal object KitMaterials {
  */
 private class DrumGlow(val color: Int, val peak: Double, val fade: Double)
 
-// The kick's front head and the snare (head and shell: from the audience the head is hardly seen) light up when
-// hit and fade as the sound does. The kick's head is a big face, so a little is a lot; the eye reads light steeply,
-// so the falls are short.
-private val KICK_GLOW = DrumGlow(color = 0xffa050, peak = 0.03, fade = 0.09)
-private val SNARE_GLOW = DrumGlow(color = 0xffe8c8, peak = 0.04, fade = 0.07)
+// The kick and the snare light up when hit and fade as the sound does; the eye reads light steeply, so the falls are
+// short. Not the whole drum (the maintainer, 2026-11-20: "It looks 'cheap' when the whole thing lights up"): on the
+// kick's front head only the ring and the band's name (the head's glow is read through a picture of just those), on
+// the snare only its two hoops, the head and the shell stay dark. Thin lines carry little light, so their peaks are
+// high where the whole face's was 0.03; the snare's hoops are pale and catch the eye sooner, so theirs is below the kick's
+// (the maintainer, 2026-11-20: "Kick highlight is good as is. Snare highlight is a bit too bright compared to the kick").
+private val KICK_GLOW = DrumGlow(color = 0xffa050, peak = 1.2, fade = 0.09)
+private val SNARE_GLOW = DrumGlow(color = 0xffe8c8, peak = 0.9, fade = 0.07)
+
+/** A snare hoop's height, as a share of the figure's scale; and how far it stands out from the shell. */
+private const val HOOP_HEIGHT = 0.014
+private const val HOOP_OUT = 1.035
 
 /** A copy of [material] that can glow as [glow] says, dark for now. */
 private fun lit(material: MeshStandardMaterial, glow: DrumGlow): MeshStandardMaterial {
@@ -112,9 +120,10 @@ private const val NAME_MOST = 0.2
 
 /**
  * A drum head with [name] written across it: the head's own dark grey, a thin ring near its rim, the name in
- * pale capitals. A picture for the head's material.
+ * pale capitals. A picture for the head's material. [glowing]: the picture of what lights up when the drum is hit:
+ * the ring and the name alone, white on black.
  */
-private fun named(name: String): Texture {
+private fun named(name: String, glowing: Boolean = false): Texture {
     val size = 512
     val canvas = document.createElement("canvas") as HTMLCanvasElement
 
@@ -123,14 +132,14 @@ private fun named(name: String): Texture {
 
     val g = canvas.getContext("2d") as CanvasRenderingContext2D
 
-    g.fillStyle = "#1a1a20"
+    g.fillStyle = if (glowing) "#000000" else "#1a1a20"
     g.fillRect(0.0, 0.0, size.toDouble(), size.toDouble())
-    g.strokeStyle = "#8f93a3"
+    g.strokeStyle = if (glowing) "#ffffff" else "#8f93a3"
     g.lineWidth = 5.0
     g.beginPath()
     g.arc(size / 2.0, size / 2.0, size * 0.43, 0.0, 2 * PI)
     g.stroke()
-    g.fillStyle = "#c9ccd8"
+    g.fillStyle = if (glowing) "#ffffff" else "#c9ccd8"
     g.textAlign = CanvasTextAlign.LEFT
     g.textBaseline = CanvasTextBaseline.MIDDLE
 
@@ -276,6 +285,8 @@ class Kit(rig: Rig, name: String) {
         // the band's name on it; the head's own colour is in the picture, so the material's is white
         frontMaterial.color.setHex(0xffffff)
         frontMaterial.map = named(name)
+        // only the ring and the name light up when it is hit
+        frontMaterial.asDynamic().emissiveMap = named(name = name, glowing = true)
         group.add(kick)
         group.add(front)
 
@@ -320,7 +331,7 @@ class Kit(rig: Rig, name: String) {
         piece.rotation.x = -tilt
 
         val snare = name == Drum.Snare
-        val bodyMaterial = if (snare) lit(KitMaterials.shell, SNARE_GLOW) else KitMaterials.shell
+        val bodyMaterial = KitMaterials.shell
         val body = Three.addon.createMesh(
             cylinder(
                 radiusTop = radius * s, radiusBottom = radius * s, height = height * s, segments = 28,
@@ -329,7 +340,7 @@ class Kit(rig: Rig, name: String) {
         )
         body.position.y = -height * s / 2
 
-        val headMaterial = if (snare) lit(KitMaterials.skin, SNARE_GLOW) else KitMaterials.skin
+        val headMaterial = KitMaterials.skin
         val head = Three.addon.createMesh(
             Three.addon.createCircleGeometry(radius = radius * s * 0.94, segments = 28),
             headMaterial,
@@ -338,6 +349,24 @@ class Kit(rig: Rig, name: String) {
         head.position.y = 0.002
         piece.add(body)
         piece.add(head)
+
+        // the snare's two hoops, at the head's rim and at the shell's foot: they are what lights up when it is hit
+        val hoopMaterial = if (snare) lit(KitMaterials.steel, SNARE_GLOW).also { it.side = MaterialSide.DoubleSide } else null
+
+        if (hoopMaterial != null) {
+            for (y in listOf(-HOOP_HEIGHT * s / 2, -height * s + HOOP_HEIGHT * s / 2)) {
+                val hoop = Three.addon.createMesh(
+                    Three.addon.createCylinderGeometry(
+                        radiusTop = radius * s * HOOP_OUT, radiusBottom = radius * s * HOOP_OUT, height = HOOP_HEIGHT * s,
+                        radialSegments = 28, heightSegments = 1, openEnded = true, thetaStart = 0.0, thetaLength = 2 * PI,
+                    ),
+                    hoopMaterial,
+                )
+
+                hoop.position.y = y
+                piece.add(hoop)
+            }
+        }
 
         if (name != Drum.Floor) {
             val stand = Three.addon.createMesh(
@@ -354,7 +383,7 @@ class Kit(rig: Rig, name: String) {
             mesh = piece,
             at = vec(at.x * s, at.y * s, at.z * s),
             answer = KitAnswer.Still,
-            lights = if (snare) DrumLights(materials = listOf(headMaterial, bodyMaterial), glow = SNARE_GLOW) else null,
+            lights = hoopMaterial?.let { DrumLights(materials = listOf(it), glow = SNARE_GLOW) },
         )
     }
 
