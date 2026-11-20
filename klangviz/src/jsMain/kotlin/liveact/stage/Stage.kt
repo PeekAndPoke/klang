@@ -20,6 +20,7 @@ import io.peekandpoke.klang.viz.liveact.theatre.Crowd
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.theatre.NightSky
 import io.peekandpoke.klang.viz.liveact.vec
+import io.peekandpoke.klang.workshop.threejs.CompiledShader
 import io.peekandpoke.klang.workshop.threejs.ToneMapping
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.createFog
@@ -28,8 +29,11 @@ import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.getPixelRatio
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.map
+import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
 import io.peekandpoke.klang.workshop.threejs.toneMapping
+import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.kraft.addons.threejs.js.CanvasTexture
+import io.peekandpoke.kraft.addons.threejs.js.Material
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.PerspectiveCamera
@@ -83,6 +87,9 @@ class Stage(
 
     /** The floor, plain or (with [mirror]) polished. */
     private val floor: Mesh
+
+    /** Whether the stage's outline is drawn on the floor, 0 or 1 ([outline]): read by the plain floor and the mirror. */
+    private val outlined = uniform(if (variants.outline == OutlineLook.On) 1.0 else 0.0)
 
     /** The wall behind the band, once the look was the wall; hidden while the [fence] stands. */
     private var wall: BackWall? = null
@@ -197,6 +204,10 @@ class Stage(
         )
         floor.rotation.x = -PI / 2
         floor.receiveShadow = true
+        // the stage's outline (a working aid) on the plain floor as well
+        floor.material.unsafeCast<Material>().onBeforeCompile("floor-plain") { shader: CompiledShader ->
+            outlineOn(shader = shader, outline = outlined, placed = false)
+        }
         scene.add(floor)
 
         buildBack()
@@ -275,8 +286,8 @@ class Stage(
 
     /**
      * The whole look turned to [to] at once (the key x): what stands behind the band, the floor, the haze, the time of
-     * day, the underworld, the stone's unevenness, the reflection's blur and the stone. Sirene's eyes and the band's skin are the
-     * band's: the live act sets them.
+     * day, the underworld, the stone's unevenness, the reflection's blur, the stone and the stage's outline. Sirene's
+     * eyes and the band's skin are the band's: the live act sets them.
      */
     fun turn(to: LookVariants) {
         look(to.stage)
@@ -287,6 +298,7 @@ class Stage(
         ripple(to.ripple)
         blur(to.blur)
         stone(to.stone)
+        outline(to.outline)
     }
 
     /**
@@ -350,6 +362,12 @@ class Stage(
         mirror?.stone(to)
     }
 
+    /** The stage's outline (a working aid, [OutlineLook]) drawn on the floor or not, at once. Nothing to make or free. */
+    fun outline(to: OutlineLook) {
+        variants = variants.copy(outline = to)
+        outlined.value = if (to == OutlineLook.On) 1.0 else 0.0
+    }
+
     /** Where the front lamp stands, in the world. */
     val frontLamp: Vector3
         get() = lights.front.light.position
@@ -376,7 +394,7 @@ class Stage(
         if (wanted && now == null) {
             // the fog on the floor lies on the mirror: it is not mirrored as well; nor is the sky, whose stars would
             // glitter in it like noise
-            mirror = MirrorFloor(floor = floor, scene = scene, renderer = renderer) { hidden ->
+            mirror = MirrorFloor(floor = floor, scene = scene, renderer = renderer, outline = outlined) { hidden ->
                 sky?.hide(hidden)
 
                 if (variants.stage == StageLook.Wall) {
@@ -490,6 +508,9 @@ class Stage(
         if (fence != null) {
             groundFog?.clearings(front = lights.front, share = parting)
         }
+
+        // the clearings and the windows read the front lamp's shadow until they have closed, also after it went dark
+        lights.keepFrontShadow(read = fence != null && (parting > 0.0 || beyond > 0.0))
 
         groundFog?.update(t, lights.lamps, camera)
 

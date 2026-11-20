@@ -199,6 +199,20 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
         }
     }
 
+    /**
+     * Keeps the front lamp's shadow drawn this frame where it is still [read] after the lamp went dark: the haze's
+     * clearings and the windows into the cold world behind the fence read its shadow while they fade out after it
+     * (some 1.6 s), and without it they would hold the lamp's last shadow while the band moves on (the maintainer,
+     * 2026-11-20: "the shadows stop updating while they are fading out"). Call it after [shine], each frame; where
+     * nothing reads it any more, the lamp's shadow is drawn as [shine] says (not while it is dark). three.js draws a dark
+     * lamp's shadow as any other's: it skips none for its intensity.
+     */
+    fun keepFrontShadow(read: Boolean) {
+        if (read) {
+            front.light.shadow.autoUpdate = true
+        }
+    }
+
     /** How much the front lamp is on at [t], and whether it strobes; [waiting]: before the click. */
     fun frontAt(t: Double, waiting: Boolean): FrontLight = plan.frontAt(t, waiting = waiting, trying = tried >= 0)
 

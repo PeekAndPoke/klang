@@ -233,6 +233,19 @@ class LookVariantsSpec : StringSpec({
         LookVariants(stone = StoneLook.Marble).stoneLine(FogQuality.High) shouldBe "floor: marble (with the mirror floor only)"
     }
 
+    "?edge=on is the stage's outline; no switch, an empty one or another word off; the key j turns it over" {
+        OutlineLook.of(Switches.parse("?edge=on")) shouldBe OutlineLook.On
+        OutlineLook.of(Switches.parse("?edge")) shouldBe OutlineLook.Off
+        OutlineLook.of(Switches.parse("?edge=yes")) shouldBe OutlineLook.Off
+        LookVariants().outline shouldBe OutlineLook.Off
+        LookVariants.NEW.outline shouldBe OutlineLook.Off
+        LookVariants.of(Switches.parse("?look=new&edge=on")) shouldBe LookVariants.NEW.copy(outline = OutlineLook.On)
+        LookVariants.NEW.nextOutline() shouldBe LookVariants.NEW.copy(outline = OutlineLook.On)
+        LookVariants.NEW.nextOutline().nextOutline() shouldBe LookVariants.NEW
+        LookVariants.NEW.nextOutline().outlineLine() shouldBe "stage outline: on"
+        LookVariants().outlineLine() shouldBe "stage outline: off"
+    }
+
     "the key c steps through crisp, soft and stone, and back to crisp; it leaves the rest; its line says it" {
         val start = LookVariants.NEW
         val seen = generateSequence(start) { it.nextBlur() }.take(4).map { it.blur }.toList()
@@ -257,6 +270,7 @@ class LookVariantsSpec : StringSpec({
             ripple = RippleLook.Gentle,
             blur = BlurLook.Crisp,
             stone = StoneLook.Plain,
+            outline = OutlineLook.Off,
         )
     }
 

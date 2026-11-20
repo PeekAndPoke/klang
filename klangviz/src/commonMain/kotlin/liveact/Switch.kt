@@ -13,6 +13,7 @@ import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
+import io.peekandpoke.klang.viz.liveact.stage.OutlineLook
 import io.peekandpoke.klang.viz.liveact.stage.RippleLook
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
@@ -237,6 +238,13 @@ enum class Switch(val key: String) {
      * turns it over while the show plays ([LookVariants]).
      */
     Stone("stone"),
+
+    /**
+     * `?edge=on`: a working aid, a thin bright line on the floor along the stage's edge, where the mirror ends
+     * ([OutlineLook]); any other value, or none, off. (Not `?outline`: that is the head's bare shape, [Outline].) The
+     * key j turns it over while the show plays ([LookVariants]).
+     */
+    Edge("edge"),
 
     // The look as a whole
 

@@ -51,9 +51,7 @@ object CrowdPlaces {
         fun place(x: Double, z: Double) {
             // nobody on the open ground before the stage: an oval, [FRONT] m ahead and to the sides just short of
             // the first row, which so stays where the stage's sides are and gives way only before it
-            val side = FIRST - ROWS / 2
-
-            if ((x / side) * (x / side) + (z / FRONT) * (z / FRONT) < 1.0) {
+            if ((x / OPEN_SIDE) * (x / OPEN_SIDE) + (z / FRONT) * (z / FRONT) < 1.0) {
                 return
             }
 
@@ -105,6 +103,12 @@ object CrowdPlaces {
 
     /** The rows are this far apart, in metres. */
     private const val ROWS = 0.69
+
+    /**
+     * How far the open ground before the stage reaches to the sides (half its width at the stage's middle): just
+     * short of the first row there. Straight before the stage it reaches [FRONT]; between, its edge is an oval.
+     */
+    const val OPEN_SIDE = FIRST - ROWS / 2
 }
 
 /**

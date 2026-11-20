@@ -36,7 +36,12 @@ import io.peekandpoke.kraft.addons.threejs.js.TextureFilter
 import io.peekandpoke.kraft.addons.threejs.js.Vector2
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /**
  * The floor as polished dark stone (`?floor=mirror`, [FloorLook.Mirror]): [floor] takes a material of its own, darker
@@ -48,9 +53,18 @@ import kotlin.math.max
  * blur stays at every level, and near the floor the reflection is crisp. The stone, plain or marble with a few soft
  * veins: [stone] ([StoneLook], the key k).
  *
+ * Only the stage mirrors ([StageEdge]: from the fence to an arc a few metres before the audience, fading out over the
+ * last half metre); the floor among the audience is plain (the maintainer, 2026-11-20: "The reflection are drawn far
+ * into the audience ... reduce the size of what reflects by 1/4 on the whole area but increase the quality by 4x
+ * instead").
+ *
  * How: each frame, just before the floor is drawn (three.js's `onBeforeRender`, as its own `Reflector` does it), a
- * second camera, the frame's camera mirrored in the floor, draws [scene] into a picture of a quarter of the screen's
- * pixels (half each way), with its depth. The floor reads the picture where each of its points sees its mirror image;
+ * second camera, the frame's camera mirrored in the floor, draws [scene] into a picture of the screen's own pixels
+ * (no more than the page's at a pixel ratio of 2, so not more with the oversampling, and at most [MOST_PIXELS]), with
+ * its depth; but only within the box the stage's floor fills on the screen ([areaBox]) and round it as far as the blur
+ * reaches, and nothing at all where the camera sees none of the stage. Where that box is large (the camera close over
+ * the floor), the mirror draws a smaller share of the picture ([scale], down to half each way), so it never draws
+ * more than [BUDGET] of its pixels in a frame. The floor reads the picture where each of its points sees its mirror image;
  * the depth says how far behind the floor that image lies, which sets the blur and the fade. The lamps' shadows are
  * the ones the frame drew just before; the mirror draws none of its own. Nothing stands below the floor, so the
  * camera needs no clipping at the floor.
@@ -60,11 +74,13 @@ import kotlin.math.max
  * there by a hard, stepped edge that jumped as the players swayed (the maintainer, 2026-11-20: the reflections of the
  * highlights "flicker", which "reads as cheap"). So a small second drawing right after the mirror's turns its depth
  * into a picture of blur widths and fades, half the picture's size each way ([widths], [WIDTHS]), and the floor reads
- * it from its coarse copies: the width changes gradually over some 8 to 16 of the picture's pixels instead.
+ * it from its coarse copies: the width changes gradually over some 16 to 32 of the picture's pixels instead.
  *
  * Not mirrored: the floor itself, and what [hide] hides while the mirror draws (`hide(true)`, then `hide(false)`):
- * the stage hides the fog that lies on the floor there. The rest is mirrored: the band, the riser, the instruments,
- * the wall or the fence, the haze behind it and the sun, the crowd.
+ * the stage hides the night sky and the fog that lies on the floor there. The rest is mirrored: the band, the riser,
+ * the instruments, the wall or the fence, the haze behind it and the sun, and the crowd (from a camera low at the
+ * stage's front looking out, the far, high rows' lights can land in the stage's mirror; they cost little, and
+ * outside the box they are not drawn).
  *
  * The underworld (`?underworld=on`, [UnderworldLook]): [underworld] turns the mirror image, as far as its share goes,
  * into the other world: cold blue silver, darker, the ripple stiller, and what is brightest in it (the sun behind the
@@ -79,6 +95,7 @@ class MirrorFloor(
     private val floor: Mesh,
     private val scene: Scene,
     private val renderer: WebGLRenderer,
+    private val outline: Uniform<Double>,
     private val hide: (Boolean) -> Unit,
 ) {
     /** The floor's own material, given back by [dispose]. */
@@ -110,6 +127,24 @@ class MirrorFloor(
     private val toWorld: Uniform<Matrix4> = uniform(mirrored.matrixWorld)
     private val range: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 0.1, y = 100.0))
     private val lens: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 1.0, y = 1.0))
+
+    // How much of the picture is drawn this frame ([scale]): the share of it across and up the floor reads, and those
+    // pixels, which the widths' drawing reads the depth of
+    private val drawnShare: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 1.0, y = 1.0))
+    private val drawnPixels: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 1.0, y = 1.0))
+
+    /**
+     * How much of the picture is drawn each way, 0.5 to 1: less where the mirroring area fills much of the screen, so
+     * the mirror never draws more than [BUDGET] of the picture's pixels; it follows over some frames, never at once.
+     */
+    private var scale = 1.0
+
+    /** The mirroring area's box on the screen this frame, -1 to 1 each way ([areaBox]): left, bottom, right, top. */
+    private val box = DoubleArray(4)
+
+    /** The area's corners, and as far as they lie before the camera, in the camera's view ([areaBox]). */
+    private val corners = DoubleArray(12)
+    private val clipped = DoubleArray(24)
 
     /** How far the mirror shows the underworld, 0 (the stage) to 1 ([underworld]). */
     private val under: Uniform<Double> = uniform(0.0)
@@ -143,6 +178,7 @@ class MirrorFloor(
                 "uMirrorWorld" to toWorld,
                 "uMirrorRange" to range,
                 "uMirrorLens" to lens,
+                "uMirrorDrawn" to drawnPixels,
             )
             vertexShader = WIDTHS_VERTEX
             fragmentShader = WIDTHS
@@ -160,6 +196,7 @@ class MirrorFloor(
             shader.uniforms["uMirrorWidths"] = blurs
             shader.uniforms["uMirrorPicture"] = toPicture
             shader.uniforms["uMirrorLens"] = lens
+            shader.uniforms["uMirrorScale"] = drawnShare
             shader.uniforms["uMirrorUnder"] = under
             shader.uniforms["uRippleBroad"] = broadRipple
             shader.uniforms["uRippleFine"] = fineRipple
@@ -189,6 +226,8 @@ class MirrorFloor(
                     // the lamps' pools softer, the mirror image over them
                     "outgoingLight = underFloor(outgoingLight * 0.3) + mirrored(vFloorWorld);\n#include <opaque_fragment>",
                 )
+            // the stage's edge (the mirror's reach) and its outline, over the mirror's image
+            outlineOn(shader = shader, outline = outline, placed = true)
         }
 
         use(true)
@@ -251,7 +290,12 @@ class MirrorFloor(
             return
         }
 
-        val target = pictureFor(width = renderer.domElement.width, height = renderer.domElement.height)
+        // where nothing of the mirroring area is seen, nothing is mirrored
+        if (!areaBox(camera)) {
+            return
+        }
+
+        val target = pictureFor(screen = renderer.domElement)
         val blurTarget = widths ?: return
 
         // the camera mirrored in the floor (y = 0): its place, where it looks and which way is up, each upside down
@@ -278,6 +322,7 @@ class MirrorFloor(
         toPicture.value.multiply(projection).multiply(inverse)
         range.value.set(lensOf.near, lensOf.far)
         lens.value.set(projection.elements[0], projection.elements[5])
+        drawOnly(target = target, blurTarget = blurTarget)
 
         val drawnTo = renderer.getRenderTarget()
         val shadows: dynamic = renderer.shadowMap
@@ -310,12 +355,157 @@ class MirrorFloor(
     }
 
     /**
-     * The picture for a screen [width] by [height] pixels: half each way; made anew where that changed, and the
-     * widths' picture with it.
+     * Draws only what the floor can read this frame: the mirroring area's box ([box]) and round it as far as the blur
+     * and the ripple reach, in [target] and (half each way) in [blurTarget]; and of the picture as much as [scale]
+     * says, which falls toward 0.5 where the box is large.
      */
-    private fun pictureFor(width: Int, height: Int): WebGLRenderTarget {
-        val wide = max(1, width / 2)
-        val tall = max(1, height / 2)
+    private fun drawOnly(target: WebGLRenderTarget, blurTarget: WebGLRenderTarget) {
+        // round the box: as far as the blur reaches at its widest (its cone at a gap as deep as the distance, its five
+        // reads and the picture's smaller copy they read), and the ripple (from -1..1, twice the picture's share)
+        val reach = 2.0 * min(cone.value, 0.1) + 2.0 * BEND_REACH
+        val left = (box[0] - reach * lens.value.x).coerceIn(-1.0, 1.0)
+        val bottom = (box[1] - reach * lens.value.y).coerceIn(-1.0, 1.0)
+        val right = (box[2] + reach * lens.value.x).coerceIn(-1.0, 1.0)
+        val top = (box[3] + reach * lens.value.y).coerceIn(-1.0, 1.0)
+        // the share of the picture the box covers, and so how much of the picture can be drawn at most
+        val share = max((right - left) * (top - bottom) / 4.0, 1e-6)
+
+        scale += (sqrt(BUDGET / share).coerceIn(0.5, 1.0) - scale) * FOLLOW
+
+        val wide = max(1, (target.width * scale).roundToInt())
+        val tall = max(1, (target.height * scale).roundToInt())
+
+        drawnShare.value.set(wide.toDouble() / target.width, tall.toDouble() / target.height)
+        drawnPixels.value.set(wide.toDouble(), tall.toDouble())
+        box[0] = left
+        box[1] = bottom
+        box[2] = right
+        box[3] = top
+        area(target = target, wide = wide, tall = tall, margin = PIXEL_MARGIN)
+        area(target = blurTarget, wide = (wide + 1) / 2, tall = (tall + 1) / 2, margin = PIXEL_MARGIN / 2)
+    }
+
+    /**
+     * Sets [target] to draw into its [wide] by [tall] pixels at the bottom left, and only within [box] there, [margin]
+     * pixels round it (for the widths' coarse copies, the least blur and the picture's smaller copies).
+     */
+    private fun area(target: WebGLRenderTarget, wide: Int, tall: Int, margin: Int) {
+        val x0 = max(0, floor((box[0] * 0.5 + 0.5) * wide).toInt() - margin)
+        val y0 = max(0, floor((box[1] * 0.5 + 0.5) * tall).toInt() - margin)
+        val x1 = min(wide, ceil((box[2] * 0.5 + 0.5) * wide).toInt() + margin)
+        val y1 = min(tall, ceil((box[3] * 0.5 + 0.5) * tall).toInt() + margin)
+        val t: dynamic = target
+
+        t.viewport.set(0, 0, wide, tall)
+        t.scissor.set(x0, y0, max(1, x1 - x0), max(1, y1 - y0))
+        t.scissorTest = true
+    }
+
+    /**
+     * The mirroring area's box on the screen of [camera] ([box], -1 to 1 each way), from its bounds on the floor: as
+     * far as they lie before the camera (cut at its near plane); false where none of it does or the box lies off the
+     * screen.
+     */
+    private fun areaBox(camera: Camera): Boolean {
+        val view = camera.asDynamic().matrixWorldInverse.elements
+        val lensOf = camera.asDynamic().projectionMatrix.elements
+        val near = -camera.unsafeCast<PerspectiveCamera>().near
+
+        // the four corners in the camera's view (x, y, z each)
+        for (i in 0 until 4) {
+            val x = if (i == 1 || i == 2) StageEdge.HALF_X else -StageEdge.HALF_X
+            val z = if (i >= 2) StageEdge.HALF_Z else StageEdge.BACK
+
+            for (k in 0 until 3) {
+                corners[i * 3 + k] = view[k] * x + view[8 + k] * z + view[12 + k]
+            }
+        }
+
+        // the outline cut at the near plane: what lies before it, and where an edge crosses it
+        var n = 0
+
+        for (i in 0 until 4) {
+            val a = i * 3
+            val b = ((i + 1) % 4) * 3
+            val za = corners[a + 2]
+            val zb = corners[b + 2]
+
+            if (za < near) {
+                clipped[n * 3] = corners[a]
+                clipped[n * 3 + 1] = corners[a + 1]
+                clipped[n * 3 + 2] = za
+                n++
+            }
+
+            if ((za < near) != (zb < near)) {
+                val t = (near - za) / (zb - za)
+
+                for (k in 0 until 3) {
+                    clipped[n * 3 + k] = corners[a + k] + t * (corners[b + k] - corners[a + k])
+                }
+
+                n++
+            }
+        }
+
+        if (n == 0) {
+            return false
+        }
+
+        box[0] = 1.0
+        box[1] = 1.0
+        box[2] = -1.0
+        box[3] = -1.0
+
+        for (i in 0 until n) {
+            val x = clipped[i * 3]
+            val y = clipped[i * 3 + 1]
+            val z = clipped[i * 3 + 2]
+            val w = lensOf[3] * x + lensOf[7] * y + lensOf[11] * z + lensOf[15]
+            val sx = (lensOf[0] * x + lensOf[4] * y + lensOf[8] * z + lensOf[12]) / w
+            val sy = (lensOf[1] * x + lensOf[5] * y + lensOf[9] * z + lensOf[13]) / w
+
+            box[0] = min(box[0], sx)
+            box[1] = min(box[1], sy)
+            box[2] = max(box[2], sx)
+            box[3] = max(box[3], sy)
+        }
+
+        box[0] = box[0].coerceAtLeast(-1.0)
+        box[1] = box[1].coerceAtLeast(-1.0)
+        box[2] = box[2].coerceAtMost(1.0)
+        box[3] = box[3].coerceAtMost(1.0)
+
+        return box[0] < box[2] && box[1] < box[3]
+    }
+
+    /**
+     * The picture for [screen]: its own pixels, but no more than the page's at a pixel ratio of at most 2 (so it does
+     * not grow with the oversampling) nor than [MOST_PIXELS]; made anew where that changed, and the widths' picture
+     * (half each way) with it.
+     */
+    private fun pictureFor(screen: dynamic): WebGLRenderTarget {
+        val shown: dynamic = screen
+        var wide = max(1, shown.width.unsafeCast<Int>())
+        var tall = max(1, shown.height.unsafeCast<Int>())
+        val page = (shown.clientWidth ?: 0).unsafeCast<Double>()
+        val ratio = (kotlinx.browser.window.devicePixelRatio).coerceIn(1.0, 2.0)
+
+        // (a canvas laid out nowhere, as in a test, has no page size: its own pixels then)
+        if (page > 0.0 && page * ratio < wide) {
+            val k = page * ratio / wide
+
+            wide = max(1, (wide * k).roundToInt())
+            tall = max(1, (tall * k).roundToInt())
+        }
+
+        if (wide.toDouble() * tall > MOST_PIXELS) {
+            val k = sqrt(MOST_PIXELS / (wide.toDouble() * tall))
+
+            wide = max(1, (wide * k).toInt())
+            tall = max(1, (tall * k).toInt())
+        }
+
         val now = picture
 
         if (now != null && now.width == wide && now.height == tall) {
@@ -351,7 +541,7 @@ class MirrorFloor(
         widthsOptions.asDynamic().generateMipmaps = true
         widthsOptions.asDynamic().minFilter = TextureFilter.LinearMipmapLinearFilter
 
-        val blur = Three.addon.createWebGLRenderTarget(width = max(1, wide / 2), height = max(1, tall / 2), options = widthsOptions)
+        val blur = Three.addon.createWebGLRenderTarget(width = (wide + 1) / 2, height = (tall + 1) / 2, options = widthsOptions)
 
         widths = blur
         blurs.value = blur.texture
@@ -382,6 +572,23 @@ class MirrorFloor(
     }
 
     private companion object {
+        /** The most pixels the picture holds (its memory): a 1920 by 1200 screen's. */
+        const val MOST_PIXELS = 1920.0 * 1200.0
+
+        /** The share of the picture's pixels the mirror draws at most in a frame ([scale]), and how fast it follows. */
+        const val BUDGET = 0.5
+        const val FOLLOW = 0.1
+
+        /** How far the ripple and the marble bend the image at most, as a share of the picture. */
+        const val BEND_REACH = 0.006
+
+        /** The pixels drawn round the box ([area]): the widths' coarse copy, the least blur, the smaller copies. */
+        const val PIXEL_MARGIN = 32
+
+        /** The widths' picture's copies the floor reads the gap from: the gradual one, and the one near the floor. */
+        const val WIDE_LOD = 3.5
+        const val HERE_LOD = 2.0
+
         /** The widths' shape over the whole picture, whatever the camera. */
         val WIDTHS_VERTEX = """
 void main() {
@@ -398,7 +605,7 @@ void main() {
         val WIDTHS = """
 uniform sampler2D uMirrorDepth;
 uniform mat4 uMirrorWorld;
-uniform vec2 uMirrorRange, uMirrorLens;
+uniform vec2 uMirrorRange, uMirrorLens, uMirrorDrawn;
 vec2 blurAt(ivec2 p, vec2 size) {
   float n = uMirrorRange.x, f = uMirrorRange.y;
   float hit = n * f / (f - (f - n) * texelFetch(uMirrorDepth, p, 0).x);
@@ -414,7 +621,8 @@ vec2 blurAt(ivec2 p, vec2 size) {
   return vec2(min(gap / max(hit, 0.1), 1.0), exp(-gap / 3.0));
 }
 void main() {
-  ivec2 size = textureSize(uMirrorDepth, 0);
+  // the pixels of the depth drawn this frame (as much of the picture as its scale says)
+  ivec2 size = ivec2(uMirrorDrawn);
   ivec2 last = size - 1;
   ivec2 at = ivec2(gl_FragCoord.xy) * 2;
   vec2 s = vec2(size);
@@ -436,9 +644,10 @@ void main() {
          * floor (a gap of a few centimetres per metre of distance) the gap is read at the widths' picture's own pixels
          * instead, so what stands on the floor meets its reflection crisply. The farther, the wider the image is
          * blurred (a cone of [BlurLook.cone] of the gap, seen from the camera, read from the picture's smaller copies
-         * so a thin string does not break into dots), never less than 2 of the picture's pixels (`MIRROR_LEAST`:
-         * the least at which the half-size picture shows thin things, the trumpet, the strings, the stands, no more
-         * crawling than a full-size picture would), and the more it fades (to 0.7, over some 3 m). The blur's five reads each
+         * so a thin string does not break into dots), never less than 3 of the picture's pixels (`MIRROR_LEAST`:
+         * at the screen's own pixels the least at which thin things, the trumpet, the strings, the stands, crawl no
+         * more for their detail than they did in the half-size picture before, and show some 30 % more of it),
+         * and the more it fades (to 0.7, over some 3 m). The blur's five reads each
          * count by their brightness, less the brighter (after Karis), so a small glint or an eye does not swell and
          * pulse as one of them catches it and the next frame not. Then the stone's own
          * share: 0.45 looking down on it, up to 0.8 at a glancing angle (after Schlick's Fresnel; it was 0.6 to 1, the
@@ -459,13 +668,15 @@ void main() {
         val MIRRORED = """
 uniform sampler2D uMirror, uMirrorWidths;
 uniform mat4 uMirrorPicture;
-uniform vec2 uMirrorLens;
+uniform vec2 uMirrorLens, uMirrorScale;
 uniform float uMirrorUnder, uRippleBroad, uRippleFine, uMirrorCone, uMarble;
 varying vec3 vFloorWorld;
+const float WIDE_LOD = ${glsl(WIDE_LOD)}, HERE_LOD = ${glsl(HERE_LOD)}, STAGE_FADE = ${glsl(StageEdge.FADE)};
 const float BROAD_TILT = 200.0, FINE_TILT = 60.0;
-// the least blur, in the picture's pixels, at every level and also at the floor: the half-size picture's pixels do not
-// show on thin things (the trumpet, the strings, the stands, the fence's wires), nor crawl as they move
-const float MIRROR_LEAST = 2.0;
+// the least blur, in the picture's pixels, at every level and also at the floor: the picture's pixels do not show on
+// thin things (the trumpet, the strings, the stands, the fence's wires), nor crawl as they move (measured 2026-11-20:
+// 1 to 2 pixels crawled more for their detail than the half-size picture did before; 3 no more)
+const float MIRROR_LEAST = 3.0;
 // the marble's veins: how wide in the field (some 3 cm on the floor), how far they stand proud (tilting their flanks by
 // a degree or two), how much that bends the mirror image (a kink of about half a pixel of the picture where a
 // reflection crosses a vein), and the colour they lighten the stone toward (linear; the stone itself is near 0.002)
@@ -558,30 +769,41 @@ vec3 floorTilted(vec3 world) {
 float mirrorWeight(vec3 c, float share) {
   return share / (1.0 + dot(c, vec3(0.2126, 0.7152, 0.0722)));
 }
+// how much of the mirror the floor shows at a place: all of it on the stage (StageEdge), fading out over the last
+// half metre to its edge, and none beyond (so a place there reads nothing of the picture, which is drawn there no more)
+float mirrorArea(vec3 world) {
+  return smoothstep(0.0, STAGE_FADE, stageEdge(world.xz));
+}
 vec3 mirrored(vec3 world) {
+  float reach = mirrorArea(world);
+  if (reach <= 0.0) {
+    return vec3(0.0);
+  }
   vec4 at = uMirrorPicture * vec4(world, 1.0);
   vec2 uv = at.xy / at.w;
   uv += mirrorBend(world);
-  // the gap over the distance and the fade, from the widths' picture's copy of 4 to 8 of its pixels (8 to 16 of the
+  // the picture is drawn in its bottom left share (uMirrorScale) this frame: where the screen's place lies on it
+  vec2 pic = uv * uMirrorScale;
+  // the gap over the distance and the fade, from the widths' picture's coarse copy (some 11 of its pixels, 22 of the
   // picture's): they change gradually across an edge
-  vec2 blurs = textureLod(uMirrorWidths, uv, 2.5).xy;
-  // near the floor (the gap small over 2 by 2 of the widths' picture's pixels, 4 by 4 of the picture's) the gap as it
+  vec2 blurs = textureLod(uMirrorWidths, pic, WIDE_LOD).xy;
+  // near the floor (the gap small over 4 by 4 of the widths' picture's pixels, 8 by 8 of the picture's) the gap as it
   // is there, so what stands on the floor meets its reflection crisply; farther from it the gradual one, and between
   // the two a soft passage (read finer, the passage showed as a small sharp block under a foot)
-  float here = textureLod(uMirrorWidths, uv, 1.0).x;
+  float here = textureLod(uMirrorWidths, pic, HERE_LOD).x;
   float gap = mix(here, blurs.x, smoothstep(0.02, 0.1, here));
   // the blur: as wide as the cone ([BlurLook]) from the floor reaches at the gap, seen from the camera, and never less
   // than the least; read from the picture's smaller copy of about that size, and four times round the middle, each
   // read counting less the brighter
-  vec2 size = vec2(textureSize(uMirror, 0));
+  vec2 size = vec2(textureSize(uMirror, 0)) * uMirrorScale;
   vec2 spread = max(0.5 * uMirrorLens * min(uMirrorCone * gap, 0.1), vec2(MIRROR_LEAST) / size);
   float lod = log2(max(max(spread.x * size.x, spread.y * size.y), 1.0));
-  vec3 c = textureLod(uMirror, uv, lod).rgb;
+  vec3 c = textureLod(uMirror, pic, lod).rgb;
   float w = mirrorWeight(c, 0.4);
   vec3 seen = c * w;
   float weights = w;
   for (int i = 0; i < 4; i++) {
-    c = textureLod(uMirror, uv + MIRROR_TAPS[i] * spread, lod).rgb;
+    c = textureLod(uMirror, (uv + MIRROR_TAPS[i] * spread) * uMirrorScale, lod).rgb;
     w = mirrorWeight(c, 0.15);
     seen += c * w;
     weights += w;
@@ -597,7 +819,6 @@ vec3 mirrored(vec3 world) {
   float keep = mix(0.7, 1.0, blurs.y);
   vec3 toEye = normalize(cameraPosition - world);
   float fresnel = 0.45 + 0.35 * pow(1.0 - clamp(toEye.y, 0.0, 1.0), 5.0);
-  float reach = 1.0 - smoothstep(14.0, 30.0, length(world.xz));
   return seen * fresnel * keep * reach;
 }"""
     }

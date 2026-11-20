@@ -19,6 +19,7 @@ import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.Stage
+import io.peekandpoke.klang.viz.liveact.stage.StageEdge
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
 import io.peekandpoke.klang.viz.liveact.stage.UnderworldLook
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
@@ -584,7 +585,8 @@ class StageSpec : StringSpec({
                 val whole: dynamic = seen[5]
 
                 (picture !== "the screen") shouldBe true
-                (picture.width.unsafeCast<Int>() to picture.height.unsafeCast<Int>()) shouldBe (640 to 400)
+                // the screen's own pixels (a canvas laid out nowhere has no page size to cap them by)
+                (picture.width.unsafeCast<Int>() to picture.height.unsafeCast<Int>()) shouldBe (1280 to 800)
                 (picture.depthTexture != null) shouldBe true
                 // the camera mirrored in the floor, the floor and the fog on it hidden, no shadows drawn anew
                 height.unsafeCast<Double>() shouldBe (-2.5 plusOrMinus 1e-9)
@@ -607,6 +609,64 @@ class StageSpec : StringSpec({
                 (drawn[2].unsafeCast<List<dynamic>>()[0] === picture) shouldBe true
                 stage.dispose()
                 freed shouldBe 1
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the stage's edge stands where the fence and the wall stand" {
+        Fence.MESH_Z shouldBe StageEdge.BACK
+        BackWall.Z shouldBe StageEdge.BACK
+    }
+
+    "the mirror draws only the box of the stage's floor the camera sees, and nothing where it sees none of it" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val renderer = standInRenderer()
+            val r: dynamic = renderer
+            var target: dynamic = "the screen"
+            val drawn = mutableListOf<dynamic>()
+            val scene = three.createScene()
+
+            r.domElement = js("({ width: 1280, height: 800 })")
+            r.autoClear = true
+            r.state = js("({ buffers: { depth: { setMask: function () {} } } })")
+            r.getRenderTarget = { target }
+            r.setRenderTarget = { to: dynamic -> target = to }
+            r.render = { _: dynamic, _: dynamic -> drawn.add(target) }
+
+            val show = Show(seed = 1, switches = Switches.parse("?floor=mirror"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+            val floor: dynamic = scene.children.first()
+
+            fun frame(lookAt: Triple<Double, Double, Double>) {
+                drawn.clear()
+                camera.position.set(0.0, 2.5, 12.0)
+                camera.lookAt(lookAt.first, lookAt.second, lookAt.third)
+                camera.asDynamic().updateMatrixWorld()
+                floor.onBeforeRender(renderer, scene, camera)
+            }
+
+            try {
+                // the stage before the camera, below the horizon: the mirror and the widths drawn, each only within
+                // the box the stage's floor fills on the screen, which leaves out the sky above it
+                frame(Triple(0.0, 1.0, 0.0))
+                drawn.size shouldBe 2
+
+                val picture: dynamic = drawn[0]
+                val cut: dynamic = picture.scissor
+
+                (picture.scissorTest == true) shouldBe true
+                (drawn[1].scissorTest == true) shouldBe true
+                (cut.y.unsafeCast<Double>() >= 0.0) shouldBe true
+                (cut.y.unsafeCast<Double>() + cut.w.unsafeCast<Double>() < 800.0) shouldBe true
+
+                // the camera turned to the audience, the stage behind it: nothing of it seen, nothing drawn
+                frame(Triple(0.0, 2.5, 40.0))
+                drawn.size shouldBe 0
             } finally {
                 stage.dispose()
             }
@@ -659,7 +719,7 @@ class StageSpec : StringSpec({
                 (drawn[0].second === scene) shouldBe true
                 (pass !== scene) shouldBe true
                 (widths !== picture) shouldBe true
-                (widths.width.unsafeCast<Int>() to widths.height.unsafeCast<Int>()) shouldBe (320 to 200)
+                (widths.width.unsafeCast<Int>() to widths.height.unsafeCast<Int>()) shouldBe (640 to 400)
                 (widths.depthTexture == null) shouldBe true
                 (shape.material.uniforms.uMirrorDepth.value === picture.depthTexture) shouldBe true
                 (target === "the screen") shouldBe true
@@ -766,6 +826,45 @@ class StageSpec : StringSpec({
 
                 closing shouldBeGreaterThan 0.0
                 (closing < opened) shouldBe true
+            } finally {
+                front.shadow.map = null
+                stage.dispose()
+            }
+        }
+    }
+
+    "the front lamp's shadow keeps being drawn while the haze's clearing fades after the lamp went dark, and stops after" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val scene = three.createScene()
+            val show = Show(seed = 1, switches = Switches.parse("?stage=mesh&haze=parts&front=1"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
+
+            /** Whether three.js would draw the front lamp's shadow this frame. */
+            fun drawn(): Boolean = front.shadow.autoUpdate == true
+
+            try {
+                // the lamp on, its shadow made: drawn, and the haze opens
+                front.shadow.map = js("({ depthTexture: {} })")
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+                delay(200)
+                stage.light(t = 62.2, house = 1.0, waiting = false)
+                drawn() shouldBe true
+
+                // the lamp dark (waiting: the lamp is off): the clearing still fades and reads its shadow, so it is drawn
+                stage.light(t = 62.3, house = 1.0, waiting = true)
+                (front.intensity.unsafeCast<Double>() == 0.0) shouldBe true
+                drawn() shouldBe true
+
+                // the clearing closed (some 1.6 s): a dark lamp's shadow is not drawn any more
+                repeat(12) {
+                    delay(200)
+                    stage.light(t = 62.4, house = 1.0, waiting = true)
+                }
+                drawn() shouldBe false
             } finally {
                 front.shadow.map = null
                 stage.dispose()

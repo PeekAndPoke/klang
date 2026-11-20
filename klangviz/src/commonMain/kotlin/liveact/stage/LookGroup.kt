@@ -57,6 +57,9 @@ data class LookGroup(val label: String, val key: String, val options: List<Optio
                 of(label = "Stone", key = "k", entries = StoneLook.entries, chosen = v.stone, word = { it.word }, held = mirror) {
                     v.copy(stone = it)
                 },
+                of(label = "Outline", key = "j", entries = OutlineLook.entries, chosen = v.outline, word = { it.word }) {
+                    v.copy(outline = it)
+                },
             )
         }
 

@@ -23,7 +23,7 @@ class LookGroupSpec : StringSpec({
     "every variant with its key, the whole look first, then as the keys turn them over" {
         LookGroup.all(look = TODAY, fog = FogQuality.High).map { "${it.label} (${it.key})" } shouldBe listOf(
             "Look (x)", "Stage (m)", "Floor (p)", "Haze (h)", "Eyes (i)", "Skin (l)", "World (n)", "Underworld (v)",
-            "Ripple (b)", "Reflection (c)", "Stone (k)",
+            "Ripple (b)", "Reflection (c)", "Stone (k)", "Outline (j)",
         )
     }
 
@@ -40,6 +40,7 @@ class LookGroupSpec : StringSpec({
             listOf("None", "Faint", "Gentle", "Strong"),
             listOf("Crisp", "Soft", "Stone"),
             listOf("Plain", "Marble"),
+            listOf("Off", "On"),
         )
     }
 
@@ -50,11 +51,11 @@ class LookGroupSpec : StringSpec({
 
         marked(TODAY) shouldBe listOf(
             listOf("Today"), listOf("Wall"), listOf("Plain"), listOf("Whole"), listOf("Face"), listOf("Suit"), listOf("Off"),
-            listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"),
+            listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
         )
         marked(NEW) shouldBe listOf(
             listOf("New"), listOf("Fence"), listOf("Mirror"), listOf("Parts"), listOf("Shadow"), listOf("Lacquer"),
-            listOf("Drift"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"),
+            listOf("Drift"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
         )
         marked(NEW.tune(NEW.shown.copy(world = WorldLook.Night, stone = StoneLook.Marble))).let {
             it[6] shouldBe listOf("Night")
@@ -104,6 +105,7 @@ class LookGroupSpec : StringSpec({
             "Ripple" to "with the mirror floor only",
             "Reflection" to "with the mirror floor only",
             "Stone" to "with the mirror floor only",
+            "Outline" to null,
         )
     }
 
