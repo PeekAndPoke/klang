@@ -52,7 +52,8 @@ we need the real figures... And their characters..."):
   with the same rework.
   Her seat and legs, in the same rework (the maintainer, 2026-11-20): "Sirene now has to much 'butt', not a lot
   but a little too much. ... I would like to keep the high calf muscles and maybe we can slight accentuate the thigh
-  muscles".
+  muscles". And, the same day: "what i mean now, is that Sirenes 'butt' and the hipps are a little too much... as
+  said not much just a little."
 - **Klaue:** could be the band's "manager". The maintainer, 2026-11-19, on a Shadow Play restyle whose wall
   showed a boy with tousled hair behind him: "Klaue could be very styled hair (manager hair) but in reality he is
   still a child with 'wild' hair somehow." So: on the figure, sculpted, lacquered manager hair (faceless head
