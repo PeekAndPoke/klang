@@ -413,12 +413,12 @@ MUSCLES = {
 }
 
 
-def shape_muscles(body, P, H, only=None):
+def shape_muscles(body, P, H, only=None, gain=None):
     """
     A little more of a body under the skin (the maintainer, 2026-11-16: "a little butt", "a little more emphasis on
     the musculature everywhere, but not too much"): the buttocks, the calves, the thighs' fronts, the shoulders,
-    the upper arms, the shoulder blades and the chest (see MUSCLES; [only]: just these of them), the small of the
-    back drawn in above the buttocks, and a shallow groove down the spine.
+    the upper arms, the shoulder blades and the chest (see MUSCLES; [only]: just these of them; [gain]: a muscle's
+    height times this, by name), the small of the back drawn in above the buttocks, and a shallow groove down the spine.
     """
     for name, (point, offset, direction, height, size, half) in MUSCLES.items():
         if only is not None and name not in only:
@@ -427,7 +427,7 @@ def shape_muscles(body, P, H, only=None):
             at = P[point + side] if point + side in P else P[point]
             R = at.radius
             centre = at.pos + Vector((sx * offset[0], offset[1], offset[2])) * R
-            rise = Vector((sx * direction[0], direction[1], direction[2])).normalized() * (height * R)
+            rise = Vector((sx * direction[0], direction[1], direction[2])).normalized() * (height * R * (gain or {}).get(name, 1.0))
             for v in body.data.vertices:
                 d = v.co - centre
                 q = (d.x / (size[0] * R)) ** 2 + (d.y / (size[1] * R)) ** 2 + (d.z / (size[2] * R)) ** 2
