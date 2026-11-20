@@ -401,24 +401,31 @@ export bass = n(bass_pat).struct(
     [x!4]!4 [[x x] x] [[x x] x] [[x x] x] [x!4]                                [x!2 x@2] [x!2] [x!2 x@2] x [x x] [x [x x]] [x [x x]] [x@3 x]>`
 ).fast(2).apply(bass_shape).tag("bass")
 
-// Trumpet  ------------------------------------------------------------------------------------------------------------------------------------------
-let trumpet = (() => {
+// Trumpet 2: a blown trumpet (chest, late blare, breath, growl), next to the first one for comparing by ear
+let trumpet2 = (() => {
   let pAnalog = Ign.slot.analog.add(60)
-  
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(-1.0, x => x.adsr(0.005, 0.030, 0, 0)).adsr(0.010, 0.75, 0.5, 0.4).mul(1.00)
-  // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
-  // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Ign.sine(x => x.harmonics(15, 0.8).analog(pAnalog).analogSpread(0.2))
-    .pitchEnvelope(-1, x => x.adsr(0.005, 0.030, 0, 0)).adsr(0.010, 0.75, 0.5, 0.4).mul(1.5)
- 
-  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.015, 0.20, 0.2, 0.20).mul(0.45)
-  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.015, 0.16, 0.2, 0.10).mul(0.35)
-  // breath
-  let beater = Ign.whitenoise().adsr(0.010, 0.80, 0.5, 0.015).lowpass(2500).mul(1.0)    
- 
-  return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .oversampleAtLeast(2, y => y.distort(0.20, "diode"))
-    .mul(0.15)
+
+  // the chest: the note itself and its first harmonics, there from the start
+  let low = Ign.sine(x => x.harmonics(3, 0.9).analog(pAnalog).analogSpread(0.2))
+    .adsr(0.030, 0.30, 0.80, 0.12)
+
+  // the blare: harmonics 5f .. 12f, arriving later than the chest
+  let high = Ign.sine(x => x.fundamental(0)
+      .partial(5, 0.28).partial(6, 0.24).partial(7, 0.21).partial(8, 0.19)
+      .partial(9, 0.17).partial(10, 0.16).partial(11, 0.15).partial(12, 0.14)
+      .analog(pAnalog).analogSpread(0.2))
+    .adsr(0.070, 0.40, 0.65, 0.08).mul(1.4)
+
+  // the breath: a burst of air at the onset, then quiet under the note
+  let breath = Ign.whitenoise().bandpass(1800, 0.8).adsr(0.005, 0.060, 0.12, 0.05).mul(0.5)
+
+  return low.plus(high)
+    .pitchEnvelope(-0.5, x => x.adsr(0.005, 0.040, 0, 0))   // the scoop into the note
+    .tremolo(30, 0.40)                                       // the growl from the throat
+    .oversampleAtLeast(4, y => y.distort(0.45, "asym"))      // the lips: one-sided, before the bell
+    .plus(breath)
+    .eq(e => e.band(1200, 1.2, 4.0).band(2800, 1.5, 3.0))    // the bell's two peaks
+    .mul(0.10)
     .shape("soft")
     .classic()
 })()
@@ -435,11 +442,20 @@ export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
     x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
   )
 
+export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
+  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "steel", wet = 0.10)
+  .vibrato(rate = 5.5, semitones = 0.12)
+  .hpf(250).lpf("5500".add(perlin(-300, 300).fast(4))).clip(0.85)
+  .apply(
+    x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
+  )
+
 export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
   .scale("e5:minor").gain(0.20)
-  .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
+  // .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
-export trumpet = n(trumpet_pat).apply(trumpet_shape).tag("trommel")
+export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
 
 // Metal kick  ------------------------------------------------------------------------------------------------------------------------------------------------
 // Thump and crack, and nothing in between. The "bd" sample rings a partial at 115 Hz, 11 dB under its 68 Hz body, for
