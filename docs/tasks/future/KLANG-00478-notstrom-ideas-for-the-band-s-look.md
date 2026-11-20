@@ -133,6 +133,21 @@ drummer): "The idea of heading the fog behind the wire mesh is also nice. And th
 - **The sun behind the drummer:** a big low glow behind the drum riser, as in the day restyle.
 - These moods stand on their own: a show can run whole stretches with no alter-ego shadows at all.
 
+### The ghosts: a dark stage, the light behind the fence
+
+The maintainer, 2026-11-20: "And on the scenery ... what could also have a mode, where the stage and the musician are
+almost fully dark (different light colors possible) but behind the fence we see the 'ghosts'".
+
+- The stage lights are almost off: the band, the instruments and the floor are near-black shapes with a thin rim of
+  colour, their eyes the only bright points on them.
+- All the light is behind the fence: the haze glows in one colour, and the pale figures in it (the shadows the haze
+  gives way to) are the brightest thing in the picture, seen through the mesh as a black grid.
+- The mirror floor carries only that glow, and the band's dark shapes cut out of it.
+- Different light colours are possible. Painted by Gemini from a night still in three: a cold moonlit blue, a deep
+  red, a sea green (`prototypes/band/ignored/previews/ghosts/ghost-mode-*.jpg`).
+- A way to build it (not decided): one more world beside day, night and ember, with its colour as a second choice;
+  later the show could go there by the music, in a quiet stretch.
+
 ## Built so far (2026-11-20, all behind switches and keys; the show's default look is unchanged)
 
 The maintainer asked to build as many of the ideas as possible, with a key for each variant, judged by eye, without
@@ -152,3 +167,4 @@ Not built: the bodies and the true-self shadows (they need modelling and the cha
 - 2026-11-19: the fog behind the mesh that gives way to the shadows; the sun behind the drummer.
 - 2026-11-19: the hands stay mittens; Sirene's head as a sea shell, its outline kept.
 - 2026-11-20: steps 1 to 6 of the new look built behind keys (e17a1ffa3 to e52c06039).
+- 2026-11-20: the ghosts: a dark stage with the light behind the fence, in several colours.
