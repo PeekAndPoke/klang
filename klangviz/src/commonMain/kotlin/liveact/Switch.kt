@@ -13,6 +13,7 @@ import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
+import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 
 /**
  * Every switch a page's address can give the live act ([Switches]), with what it does. [key] is its name in the
@@ -190,4 +191,15 @@ enum class Switch(val key: String) {
      * ([Stage]). The key h turns it over while the show plays ([LookVariants]).
      */
     Haze("haze"),
+
+    /**
+     * `?world=night`: the two worlds' time of day ([WorldLook]): day, night, ember or drift (from day to night and
+     * back on its own, a round in about four minutes); it drives the sun behind the drummer, the haze, the lamps, the
+     * lacquer and, behind the fence, a cold world seen through the band's shadows. Any other value, or none, off: the
+     * stage as it was made. The key n steps through them while the show plays ([LookVariants]).
+     */
+    World("world"),
+
+    /** `?drift=30`: with [World] at drift, one round from day to night and back in that many seconds (240 without it). */
+    Drift("drift"),
 }

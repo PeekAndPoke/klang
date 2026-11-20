@@ -1,0 +1,69 @@
+/*
+ * Copyright (C) 2025-2026 The Klangmotor Authors (see AUTHORS.MD)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+package io.peekandpoke.klang.viz.liveact.lights
+
+import kotlin.math.max
+import kotlin.math.min
+
+/**
+ * The time of day of the two worlds (KLANG-00478, [io.peekandpoke.klang.viz.liveact.stage.WorldLook]), three shares
+ * from 0 to 1: how much the time of day counts at all ([on]; 0 is the stage as it was made, whatever the other two
+ * say), from day to night ([night]), and how far the night has turned to ember, its red side ([ember]). What each
+ * share does to the light: [WorldLight].
+ */
+data class WorldTime(val on: Double, val night: Double, val ember: Double) {
+    companion object {
+        /** No time of day: the stage as it was made. */
+        val OFF = WorldTime(on = 0.0, night = 0.0, ember = 0.0)
+    }
+}
+
+/**
+ * The time of day as the stage shows it: it follows the time asked for ([follow]) at a pace of its own, so a key that
+ * turns day into night does not jump: [on] comes and goes in [ON_SECONDS], day turns to night (and night to ember) in
+ * [TURN_SECONDS], at an even pace. It starts at [start], at once (a show that starts at night is night from its
+ * first frame).
+ *
+ * It goes by the time between the frames, as [FrontFade] does: a frozen or paused show still comes to the time asked.
+ */
+class WorldFade(start: WorldTime) {
+
+    /** Where it stands now. */
+    var now: WorldTime = start
+        private set
+
+    /**
+     * Takes it toward [target] by what [dt] seconds allow, each share at its pace and never past it; gives where it
+     * stands then. A [dt] below 0 or no number moves nothing; a share of [target] that is no number counts as 0.
+     */
+    fun follow(target: WorldTime, dt: Double): WorldTime {
+        // NaN-guard: a time of no number is no time
+        val step = if (dt != dt) 0.0 else max(0.0, dt)
+
+        now = WorldTime(
+            on = toward(from = now.on, to = target.on, by = step / ON_SECONDS),
+            night = toward(from = now.night, to = target.night, by = step / TURN_SECONDS),
+            ember = toward(from = now.ember, to = target.ember, by = step / TURN_SECONDS),
+        )
+
+        return now
+    }
+
+    private fun toward(from: Double, to: Double, by: Double): Double {
+        // NaN-guard: a share of no number is 0
+        val goal = if (to != to) 0.0 else to.coerceIn(0.0, 1.0)
+
+        return if (goal > from) min(goal, from + by) else max(goal, from - by)
+    }
+
+    companion object {
+        /** How long the time of day takes to come or go as a whole, in seconds. */
+        const val ON_SECONDS = 1.5
+
+        /** How long day takes to turn into night (or night into ember), in seconds. */
+        const val TURN_SECONDS = 3.0
+    }
+}

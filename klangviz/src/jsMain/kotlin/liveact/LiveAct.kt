@@ -96,15 +96,17 @@ fun Tag.LiveAct(
  * order: the sound's energy first (the nod reads it); then everyone's place and pose; then what is laid over the
  * poses (eye contact, the eyes' glow, what goes with a head, breath; breath last because it widens bones); then the
  * lights; then (with `?eyes=shadow`) Sirene's eyes in her shadow, which follow the front lamp and her eyes' glow;
- * then (with `?skin=lacquer`) how bright the lacquer mirrors its room, with the house; then the camera, which follows
+ * then (with `?skin=lacquer`) how bright the lacquer mirrors its room, with the house, and how it looks at the stage's
+ * time of day (`?world=night`); then the camera, which follows
  * the figures; and the viewer's place for the next frame's looks.
  *
  * The keys: space plays and pauses, the arrows skip ([ShowClock]); q, 0 (or escape), 1 to 6, a, s, d, e, r, t, y (or
  * z), w and u move the camera by hand ([View]); f tries the front lamp's colours ([Lights]); o steps through the
  * oversampling, g through the fog; m turns over what stands behind the band (wall or fence), p the floor (plain or
  * mirror), h the haze behind the fence (whole, or giving way to the band's shadows), i Sirene's eyes under the
- * front lamp (in her face, or in her shadow) and l the band's skin (the suit, or black lacquer with gold)
- * ([LookVariants]). A key that turns a variant over says the new one for two seconds below the line at the top.
+ * front lamp (in her face, or in her shadow), l the band's skin (the suit, or black lacquer with gold) and n the two
+ * worlds' time of day (off, day, night, ember, or a drift from day to night and back) ([LookVariants]). A key that
+ * turns a variant over says the new one for two seconds below the line at the top.
  *
  * Two limits, as the prototype it was ported from has them. It takes the page for its own: its keys (space, the
  * arrows, single letters and digits) and a click anywhere are the show's, except while the user types in a field;
@@ -234,7 +236,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     /**
      * The look's variants ([LookVariants]): what stands behind the band (`?stage=mesh`, the key m), the floor
      * (`?floor=mirror`, the key p), the haze (`?haze=parts`, the key h), Sirene's eyes (`?eyes=shadow`, the key
-     * i) and the band's skin (`?skin=lacquer`, the key l), as chosen now.
+     * i), the band's skin (`?skin=lacquer`, the key l) and the time of day (`?world=night`, the key n), as chosen
+     * now.
      */
     private var variants: LookVariants = LookVariants.of(props.show.switches)
 
@@ -292,6 +295,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             variants = variants.nextSkin()
             skinAsChosen()
             flash(variants.skinLine())
+        }
+
+        if (plain && key == "n") {
+            variants = variants.nextWorld()
+            stage?.world(variants.world)
+            flash(variants.worldLine())
         }
     }
 
@@ -484,7 +493,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         breathing(show = show, rigs = now.band.rigs, t = t, slow = energy.slow)
         now.stage.light(t = t, house = now.clock.houseAt(), waiting = now.clock.waiting())
         shadowEyes?.update(front = now.stage.front, lamp = now.stage.frontLamp, planeZ = now.stage.shadowsAt)
-        lacquer?.light(now.clock.houseAt())
+        lacquer?.light(house = now.clock.houseAt(), world = now.stage.world)
         now.view.look(t)
         now.stage.follow()
         camera?.let { viewer.copy(it.position) }
@@ -544,6 +553,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 "${variants.hazeLine(fog)} (key h)",
                 "${variants.eyesLine()} (key i)",
                 "${variants.skinLine()} (key l)",
+                "${variants.worldLine()} (key n)",
                 "${fps.toFixed(0)} fps",
                 "slowest frame $worstShown ms",
                 "pixels ${sharpness.ratio.toFixed(2)}x",

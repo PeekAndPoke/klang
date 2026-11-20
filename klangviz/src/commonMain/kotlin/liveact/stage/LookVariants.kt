@@ -9,12 +9,14 @@ import io.peekandpoke.klang.viz.liveact.Switches
 
 /**
  * The variants of the band's look chosen while the show plays (KLANG-00478): what stands behind the band ([stage]),
- * the floor ([floor]), the haze behind the fence ([haze]), where Sirene's eyes glow under the front lamp ([eyes])
- * and what the band's bodies are made of ([skin]). A later variant joins them here, with its key and its line.
+ * the floor ([floor]), the haze behind the fence ([haze]), where Sirene's eyes glow under the front lamp ([eyes]),
+ * what the band's bodies are made of ([skin]) and the two worlds' time of day ([world]). A later variant joins them
+ * here, with its key and its line.
  *
  * They start as the address asks ([of]); a key turns one of them over ([nextStage], the key m; [nextFloor], the key
- * p; [nextHaze], the key h; [nextEyes], the key i; [nextSkin], the key l), and the line at the top says the new one
- * in a few words for a moment ([stageLine], [floorLine], [hazeLine], [eyesLine], [skinLine]).
+ * p; [nextHaze], the key h; [nextEyes], the key i; [nextSkin], the key l; [nextWorld], the key n), and the line at
+ * the top says the new one in a few words for a moment ([stageLine], [floorLine], [hazeLine], [eyesLine], [skinLine],
+ * [worldLine]).
  */
 data class LookVariants(
     val stage: StageLook = StageLook.Wall,
@@ -22,6 +24,7 @@ data class LookVariants(
     val haze: HazeLook = HazeLook.Whole,
     val eyes: EyesLook = EyesLook.Face,
     val skin: SkinLook = SkinLook.Suit,
+    val world: WorldLook = WorldLook.Off,
 ) {
     /** The next of the stage's looks, after the last the first again. */
     fun nextStage(): LookVariants = copy(stage = StageLook.entries[(stage.ordinal + 1) % StageLook.entries.size])
@@ -37,6 +40,9 @@ data class LookVariants(
 
     /** The other of the bodies' skins. */
     fun nextSkin(): LookVariants = copy(skin = SkinLook.entries[(skin.ordinal + 1) % SkinLook.entries.size])
+
+    /** The next time of day (off, day, night, ember, drift), after the last off again. */
+    fun nextWorld(): LookVariants = copy(world = WorldLook.entries[(world.ordinal + 1) % WorldLook.entries.size])
 
     /**
      * Whether the haze gives way to the band's shadows: where it is chosen and the fence stands (only the fence has the
@@ -94,10 +100,20 @@ data class LookVariants(
     /** The line shown for a moment when the bodies' skin is turned over: `skin: lacquer`. */
     fun skinLine(): String = "skin: ${skin.word}"
 
+    /**
+     * The line shown for a moment when the time of day is turned over: `world: night`, and before the wall, what of it
+     * only the fence shows (`world: night (sun, haze, cold world with the fence only)`).
+     */
+    fun worldLine(): String {
+        val held = if (world != WorldLook.Off && stage != StageLook.Mesh) " (sun, haze, cold world with the fence only)" else ""
+
+        return "world: ${world.word}$held"
+    }
+
     companion object {
         /**
          * The variants the address asks for (`?stage=mesh`, `?floor=mirror`, `?haze=parts`, `?eyes=shadow`,
-         * `?skin=lacquer`); without them the look as it was made.
+         * `?skin=lacquer`, `?world=night`); without them the look as it was made.
          */
         fun of(switches: Switches): LookVariants = LookVariants(
             stage = StageLook.of(switches),
@@ -105,6 +121,7 @@ data class LookVariants(
             haze = HazeLook.of(switches),
             eyes = EyesLook.of(switches),
             skin = SkinLook.of(switches),
+            world = WorldLook.of(switches),
         )
     }
 }

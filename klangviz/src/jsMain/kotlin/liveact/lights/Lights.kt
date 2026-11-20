@@ -10,8 +10,10 @@ import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.autoUpdate
+import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.lerp
+import io.peekandpoke.klang.workshop.threejs.setTo
 import io.peekandpoke.klang.workshop.threejs.tuneShadow
 import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Scene
@@ -79,6 +81,15 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
 
     private val hue = Three.addon.createColor(0xffffff)
     private val shift = vec()
+
+    /** The colour of the time of day the lamps lean toward this frame ([WorldLight.lampTint]). */
+    private val tint = Three.addon.createColor(0xffffff)
+
+    /**
+     * Each lamp's colour as built, in the order of [lamps]: the lamps that no mood sets (the one between the two main
+     * ones behind, the fill) get it back each frame before the time of day leans them ([shine]).
+     */
+    private val built: List<Color>
 
     init {
         scene.add(Three.addon.createAmbientLight(color = 0x8090ff, intensity = 0.05))
@@ -153,6 +164,7 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
         castsAtHigh.add(all.last())
 
         lamps = all
+        built = all.map { it.light.color.copied() }
         front = all.last()
         casters = castsAtHigh
         behind = all.mapNotNull { lamp -> lamp.place?.let { place -> place to lamp.base } }
@@ -192,26 +204,51 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
 
     /**
      * Sets every lamp's light for [t]: [house] 0 dark to 1, [front] the front lamp's state (from [frontAt]). The
-     * front lamp takes its colour; each lamp flickers on its own.
+     * front lamp takes its colour; each lamp flickers on its own. The time of day [world] ([WorldLight]; off: the lamps
+     * as made) leans the lamps behind and the fill toward its colour and scales them, and makes the front lamp weaker,
+     * warmer and its shadows softer by day; its colours and moods stay the show's (and the key f's).
      */
-    fun shine(t: Double, house: Double, front: FrontLight) {
+    fun shine(t: Double, house: Double, front: FrontLight, world: WorldTime = WorldTime.OFF) {
         val rig = plan.rigAt(t)
 
-        for (lamp in lamps) {
+        tint.setHex(WorldLight.lampTint(world))
+
+        lamps.forEachIndexed { index, lamp ->
+            val light = lamp.light
+            val scale = when (lamp.group) {
+                LampGroup.FRONT -> WorldLight.frontScale(world)
+                LampGroup.BACK -> WorldLight.backScale(world)
+                LampGroup.FILL -> WorldLight.fillScale(world)
+            }
+
             if (lamp.group == LampGroup.FRONT) {
-                lamp.light.color.setHex(if (front.strobing) FrontColors.BLUE else plan.frontColor(t, tried))
+                val made = if (front.strobing) FrontColors.BLUE else plan.frontColor(t, tried)
+
+                light.color.setHex(WorldLight.frontColor(world, made = made))
+                light.shadow.asDynamic().radius = WorldLight.frontSoftness(world)
+            } else {
+                // the two main lamps behind took their mood's colour this frame (mood); the others start from theirs
+                if (mains.none { it.lamp === lamp }) {
+                    light.color.setTo(built[index])
+                }
+
+                val lean = if (lamp.group == LampGroup.BACK) WorldLight.backLean(world) else WorldLight.fillLean(world)
+
+                if (lean > 0.0) {
+                    light.color.lerp(tint, lean)
+                }
             }
 
             val own = plan.own(lamp.seed)
             val place = lamp.place
             val lit = if (place != null) rig.share(place) else 1.0
 
-            lamp.light.intensity = lamp.base * lampFlicker(t, own) * house * lamp.group.share(front.level, front.strobing) * lit
+            light.intensity = lamp.base * lampFlicker(t, own) * house * lamp.group.share(front.level, front.strobing) * lit * scale
             // the front lamp is dark most of the show, and so is a lamp behind that its rig leaves out: a dark lamp's
             // shadow is not drawn (see shadowDrawn)
             val shadow = lamp.light.shadow
 
-            shadow.autoUpdate = shadowDrawn(intensity = lamp.light.intensity, made = shadow.map != null)
+            shadow.autoUpdate = shadowDrawn(intensity = light.intensity, made = shadow.map != null)
         }
     }
 
@@ -219,16 +256,19 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
      * The sun behind the drummer at [t] (`?stage=mesh`, [Sun]): sets [into] to its colour in the mood and under the
      * front lamp's state [front] (from [frontAt]), and gives how bright it is, from 0: [house] 0 dark to 1, dimmed
      * under the front lamp, following how brightly the lamps behind light the stage ([Sun.follow]), and flickering
-     * like the lamps.
+     * like the lamps. The time of day [world] gives it its own colour and strength ([WorldLight.sunColor],
+     * [WorldLight.sunStrength]); by day the front lamp dims it less ([WorldLight.sunDimming]).
      */
-    fun sun(t: Double, house: Double, front: FrontLight, into: Color): Double {
+    fun sun(t: Double, house: Double, front: FrontLight, into: Color, world: WorldTime = WorldTime.OFF): Double {
         val lamp = if (front.strobing) FrontColors.BLUE else plan.frontColor(t, tried)
         val lit = Sun.lit(rig = plan.rigAt(t), lamps = behind)
+        val made = Sun.color(mood = plan.moodAt(t), front = lamp, frontLevel = front.level)
 
-        into.setHex(Sun.color(mood = plan.moodAt(t), front = lamp, frontLevel = front.level))
+        into.setHex(WorldLight.sunColor(world, made = made, front = lamp, frontLevel = front.level))
 
-        return lampFlicker(t, plan.own(SUN_SEED)) * house * Sun.share(front = front.level, strobing = front.strobing) *
-            Sun.follow(lit)
+        val dimmed = Sun.share(front = front.level * WorldLight.sunDimming(world), strobing = front.strobing)
+
+        return lampFlicker(t, plan.own(SUN_SEED)) * house * dimmed * Sun.follow(lit) * WorldLight.sunStrength(world)
     }
 
     /**

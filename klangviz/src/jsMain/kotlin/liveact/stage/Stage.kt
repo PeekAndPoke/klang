@@ -13,6 +13,9 @@ import io.peekandpoke.klang.viz.liveact.lights.FrontFade
 import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.lights.Lights
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.lights.WorldFade
+import io.peekandpoke.klang.viz.liveact.lights.WorldLight
+import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 import io.peekandpoke.klang.viz.liveact.theatre.Crowd
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.theatre.NightSky
@@ -48,14 +51,16 @@ import kotlin.math.min
  * lights, the night sky and the fog on the floor; with `?stage=mesh` ([StageLook.Mesh]) a wire-mesh [Fence] in place
  * of the wall, with the sun behind the drummer, and the fog as a haze behind the mesh; with `?floor=mirror`
  * ([FloorLook.Mirror]) the floor as polished stone that mirrors the stage ([MirrorFloor]); with `?haze=parts`
- * ([HazeLook.Parts]) the haze behind the fence gives way to the band's shadows. The look as [variants] says
+ * ([HazeLook.Parts]) the haze behind the fence gives way to the band's shadows; with `?world=night` ([WorldLook]) the
+ * time of day of the two worlds drives the lamps, the sun, the haze and, behind the fence, the cold world seen through
+ * the band's shadows ([WorldLight]). The look as [variants] says
  * (the address's, without them), the fog at [fog]'s quality, the lamps' shadows at [shadows]'. Sets on [renderer],
  * [scene] and [camera] what the show needs of them: the shadows, the tone mapping, the dark and the distance fog, the
  * camera's lens.
  *
  * Each frame: [light], and [follow] once the camera is placed. Once the band stands: [shade]. The fog at another
  * quality, while the show plays: [fog]; the shadows: [shadows]; the look behind the band: [look]; the floor: [floor];
- * the haze: [haze]. What the band needs of the front lamp's shadows ([front], [frontLamp], [shadowsAt]): after
+ * the haze: [haze]; the time of day: [world]. What the band needs of the front lamp's shadows ([front], [frontLamp], [shadowsAt]): after
  * [light]. When the stage goes: [dispose].
  */
 class Stage(
@@ -96,6 +101,22 @@ class Stage(
      * second, and closes again over 1.6 s after the lamp went off (the key f turns the lamp off in one frame).
      */
     private val clearing = FrontFade(rise = 1.0, fall = 1.6)
+
+    /**
+     * How far the cold world shows through the band's shadows, by the front lamp (with [WorldLight.beyond] of the time
+     * of day): it opens with the lamp, in a second, and closes over 1.6 s after it went off, as the haze's clearings.
+     */
+    private val opening = FrontFade(rise = 1.0, fall = 1.6)
+
+    /** How long a round of the drift takes (`?drift=30`), in seconds. */
+    private val driftPeriod = WorldLook.period(show.switches)
+
+    /** The time of day as the stage shows it: it follows the one chosen at its own pace ([WorldFade]). */
+    private val worldFade = WorldFade(start = variants.world.target(t = 0.0, period = driftPeriod))
+
+    /** The time of day of the two worlds as the last [light] set it ([WorldTime.OFF]: the stage as made). */
+    var world: WorldTime = worldFade.now
+        private set
 
     /** When the last [light] ran, in milliseconds of the page; none before the first. */
     private var lightAt = Double.NaN
@@ -213,6 +234,14 @@ class Stage(
         variants = variants.copy(haze = to)
     }
 
+    /**
+     * The time of day of the two worlds turned to [to] ([WorldLook]): the stage goes there at its own pace, in a second
+     * or three ([WorldFade]). Nothing to make or free.
+     */
+    fun world(to: WorldLook) {
+        variants = variants.copy(world = to)
+    }
+
     /** Where the front lamp stands, in the world. */
     val frontLamp: Vector3
         get() = lights.front.light.position
@@ -299,8 +328,9 @@ class Stage(
     }
 
     /**
-     * Sets every lamp for this frame at [t]: [house] 0 dark to 1; [waiting]: before the click. Then the fence and its
-     * sun, where it stands, the fog, which the lamps (and the sun) light, and the crowd.
+     * Sets every lamp for this frame at [t]: [house] 0 dark to 1; [waiting]: before the click; all at the time of day
+     * ([world]). Then the fence and its sun, where it stands, the fog, which the lamps (and the sun) light, and the
+     * crowd.
      */
     fun light(t: Double, house: Double, waiting: Boolean) {
         val nowMs = window.performance.now()
@@ -312,19 +342,27 @@ class Stage(
         lights.mood(t)
 
         val front = lights.frontAt(t, waiting)
+        val world = worldFade.follow(target = variants.world.target(t = t, period = driftPeriod), dt = dt)
 
         this.front = front
+        this.world = world
         wall?.light(front.level)
         dressLevel = min(1.0, front.level)
-        lights.shine(t, house, front)
+        lights.shine(t = t, house = house, front = front, world = world)
 
         val fence = fence
+        // the cold world through the shadows opens with the front lamp, as far as the time of day lets it
+        val beyond = opening.follow(target = FrontFade.level(front), dt = dt) * WorldLight.beyond(world)
 
         if (fence != null) {
-            val sun = lights.sun(t = t, house = house, front = front, into = sunColor)
+            val sun = lights.sun(t = t, house = house, front = front, into = sunColor, world = world)
+            val size = WorldLight.sunSize(world)
+            val height = WorldLight.sunHeight(world)
 
-            fence.light(front = front.level, sun = sunColor, level = sun)
-            groundFog?.sun(color = sunColor, level = sun)
+            fence.light(front = front.level, sun = sunColor, level = sun, size = size, height = height)
+            fence.beyond(front = lights.front, share = beyond)
+            groundFog?.sun(color = sunColor, level = sun, size = size, height = height)
+            groundFog?.world(world)
         }
 
         // the haze draws back from the band's shadows as much as the lamp is on, where it parts and the fence stands

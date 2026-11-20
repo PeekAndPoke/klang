@@ -6,8 +6,11 @@
 package io.peekandpoke.klang.viz.liveact.stage
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.Switches
+import io.peekandpoke.klang.viz.liveact.lights.WorldLight
+import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 
 class LookVariantsSpec : StringSpec({
 
@@ -57,6 +60,49 @@ class LookVariantsSpec : StringSpec({
         EyesLook.of(Switches.parse("?eyes=wall")) shouldBe EyesLook.Face
         LookVariants.of(Switches.parse("?stage=mesh&haze=parts&eyes=shadow")) shouldBe
             LookVariants(stage = StageLook.Mesh, floor = FloorLook.Plain, haze = HazeLook.Parts, eyes = EyesLook.Shadow)
+    }
+
+    "?world= is the time of day: day, night, ember or drift; no switch, an empty one or another word off" {
+        WorldLook.of(Switches.parse("?world=day")) shouldBe WorldLook.Day
+        WorldLook.of(Switches.parse("?world=night")) shouldBe WorldLook.Night
+        WorldLook.of(Switches.parse("?world=ember")) shouldBe WorldLook.Ember
+        WorldLook.of(Switches.parse("?world=drift")) shouldBe WorldLook.Drift
+        WorldLook.of(Switches.parse("?world")) shouldBe WorldLook.Off
+        WorldLook.of(Switches.parse("?world=dusk")) shouldBe WorldLook.Off
+        LookVariants().world shouldBe WorldLook.Off
+        LookVariants.of(Switches.parse("?stage=mesh&world=ember")) shouldBe LookVariants(stage = StageLook.Mesh, world = WorldLook.Ember)
+    }
+
+    "the key n steps through off, day, night, ember and drift, and back to off; it leaves the rest; its line says it" {
+        val start = LookVariants(stage = StageLook.Mesh, skin = SkinLook.Lacquer)
+        val seen = generateSequence(start) { it.nextWorld() }.take(6).map { it.world }.toList()
+
+        seen shouldBe listOf(WorldLook.Off, WorldLook.Day, WorldLook.Night, WorldLook.Ember, WorldLook.Drift, WorldLook.Off)
+        start.nextWorld() shouldBe start.copy(world = WorldLook.Day)
+        start.nextWorld().worldLine() shouldBe "world: day"
+        start.copy(world = WorldLook.Drift).worldLine() shouldBe "world: drift"
+        LookVariants().worldLine() shouldBe "world: off"
+        LookVariants(world = WorldLook.Night).worldLine() shouldBe "world: night (sun, haze, cold world with the fence only)"
+    }
+
+    "what time of day each look asks for: off none, day, night, ember, and the drift by the show's time" {
+        WorldLook.Off.target(t = 10.0) shouldBe WorldTime.OFF
+        WorldLook.Day.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 0.0, ember = 0.0)
+        WorldLook.Night.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 1.0, ember = 0.0)
+        WorldLook.Ember.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 1.0, ember = 1.0)
+        WorldLook.Drift.target(t = 0.0) shouldBe WorldTime(on = 1.0, night = 0.0, ember = 0.0)
+        WorldLook.Drift.target(t = 15.0, period = 30.0).night shouldBe (1.0 plusOrMinus 1e-12)
+        WorldLook.Drift.target(t = 60.0).night shouldBe WorldLight.drift(t = 60.0, period = WorldLight.DRIFT_PERIOD)
+    }
+
+    "?drift=30 sets the drift's round; without it, or with no number above 1 s, four minutes" {
+        WorldLook.period(Switches.parse("?drift=30")) shouldBe 30.0
+        WorldLook.period(Switches.parse("")) shouldBe WorldLight.DRIFT_PERIOD
+        WorldLook.period(Switches.parse("?drift")) shouldBe WorldLight.DRIFT_PERIOD
+        WorldLook.period(Switches.parse("?drift=0.5")) shouldBe WorldLight.DRIFT_PERIOD
+        WorldLook.period(Switches.parse("?drift=NaN")) shouldBe WorldLight.DRIFT_PERIOD
+        WorldLook.period(Switches.parse("?drift=Infinity")) shouldBe WorldLight.DRIFT_PERIOD
+        WorldLight.DRIFT_PERIOD shouldBe 240.0
     }
 
     "the keys h and i turn the haze and the eyes over and leave the rest; twice is back where it was" {

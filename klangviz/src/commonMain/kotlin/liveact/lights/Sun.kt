@@ -91,8 +91,8 @@ object Sun {
     /** One of a colour's channels: red at [shift] 16, green at 8, blue at 0. */
     private fun channel(color: Int, shift: Int): Int = (color shr shift) and 0xFF
 
-    /** The colour [share] of the way from [from] to [to], channel by channel. */
-    private fun mix(from: Int, to: Int, share: Double): Int {
+    /** The colour [share] of the way from [from] to [to], channel by channel (the time of day's too, [WorldLight]). */
+    internal fun mix(from: Int, to: Int, share: Double): Int {
         var out = 0
 
         for (shift in intArrayOf(16, 8, 0)) {

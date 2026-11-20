@@ -7,11 +7,13 @@ package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.disposeTree
+import io.peekandpoke.klang.viz.liveact.lights.Lamp
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.CompiledShader
+import io.peekandpoke.klang.workshop.threejs.Uniform
 import io.peekandpoke.klang.workshop.threejs.createCylinderGeometry
 import io.peekandpoke.klang.workshop.threejs.createInstancedMesh
 import io.peekandpoke.klang.workshop.threejs.fog
@@ -36,6 +38,11 @@ import kotlin.math.PI
  * surface, seen through the gaps, as a large dark shape (the alter egos), and on the wires in front of it, a little
  * smaller. The surface is black unless the front lamp is on, as the wall is.
  *
+ * The two worlds (`?world=night`, [WorldLook]): the sun's size and height follow the time of day ([light]), and by
+ * night and at ember the band's shadows on the surface behind become windows into a cold, moonlit world beyond it
+ * ([beyond]): inside each shadow the surface shows a far land of hills under a night sky, seen with depth (it moves
+ * against the surface as the camera moves); outside the shadows the surface stays as it is.
+ *
  * Everything it makes is in the scene and is freed with it, or with [dispose] where the fence goes before the scene
  * does (the look turned over to the wall while the show plays).
  */
@@ -49,8 +56,20 @@ class Fence(private val scene: Scene) {
     /** The sun's glow as the surface and the wires take it: its colour times its brightness. */
     private val glow = vec()
 
+    /** Where the sun's middle is on the surface behind (x, y), and how large its glow is against the size as made. */
+    private val sunAt = Three.addon.createVector2(x = SUN_X, y = SUN_Y)
+    private val sunSize = uniform(1.0)
+
+    // The cold world through the band's shadows (see beyond): the front lamp's map of what it lights, where a place of
+    // the world lands on it, where the lamp stands, and how much of the cold world shows (0: none, the surface as made)
+    private val frontShadow: Uniform<dynamic> = uniform(null)
+    private val frontShadowMatrix: Uniform<dynamic> = uniform(mat4())
+    private val frontLamp = vec()
+    private val beyondShare = uniform(0.0)
+
     init {
         val glowUniform = uniform(glow)
+        val sunAtUniform = uniform(sunAt)
 
         // the wire mesh: one plane, the wires worked out on it, the gaps between them see-through
         val meshMaterial = Three.addon.createMeshStandardMaterial(jsObject {
@@ -62,9 +81,11 @@ class Fence(private val scene: Scene) {
         meshMaterial.fog = false
         meshMaterial.onBeforeCompile("fence-chain-link") { shader: CompiledShader ->
             shader.uniforms["uSunGlow"] = glowUniform
+            shader.uniforms["uSunAt"] = sunAtUniform
+            shader.uniforms["uSunSize"] = sunSize
             shader.vertexShader = shader.vertexShader.withWorld()
             shader.fragmentShader = shader.fragmentShader
-                .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\nuniform vec3 uSunGlow;\n$SUN_GLOW\n$CHAIN_LINK")
+                .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\n$SUN_GLOW\n$CHAIN_LINK")
                 .replaceFirst(
                     "#include <color_fragment>",
                     "#include <color_fragment>\nfloat wCover, wRim, wShade; vec3 wNormal;\n" +
@@ -126,18 +147,25 @@ class Fence(private val scene: Scene) {
             roughness = 0.9
         })
         backMaterial.fog = false
-        backMaterial.onBeforeCompile("fence-back-stains-sun") { shader: CompiledShader ->
+        backMaterial.onBeforeCompile("fence-back-stains-sun-beyond") { shader: CompiledShader ->
             shader.uniforms["uSunGlow"] = glowUniform
+            shader.uniforms["uSunAt"] = sunAtUniform
+            shader.uniforms["uSunSize"] = sunSize
+            shader.uniforms["uFrontShadow"] = frontShadow
+            shader.uniforms["uFrontShadowMatrix"] = frontShadowMatrix
+            shader.uniforms["uFrontLamp"] = uniform(frontLamp)
+            shader.uniforms["uBeyond"] = beyondShare
             shader.vertexShader = shader.vertexShader.withWorld()
             shader.fragmentShader = shader.fragmentShader
-                .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\nuniform vec3 uSunGlow;\n$SUN_GLOW\n$STAINS")
+                .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\n$SUN_GLOW\n$STAINS\n$BEYOND")
                 .replaceFirst(
                     "#include <color_fragment>",
                     "#include <color_fragment>\nfloat stain = stains(vWorld.xy);\ndiffuseColor.rgb *= 0.55 + 0.6 * stain;",
                 )
                 .replaceFirst(
                     "#include <emissivemap_fragment>",
-                    "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uSunGlow * sunGlow(vWorld.xy) * (0.8 + 0.4 * stain);",
+                    "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uSunGlow * sunGlow(vWorld.xy) * (0.8 + 0.4 * stain);\n" +
+                        "if (uBeyond > 0.0) { totalEmissiveRadiance += uBeyond * windowAt(vWorld) * beyond(vWorld); }",
                 )
         }
         val back = Three.addon.createMesh(Three.addon.createPlaneGeometry(WIDE, HIGH + 2.0), backMaterial)
@@ -164,11 +192,38 @@ class Fence(private val scene: Scene) {
 
     /**
      * Sets the fence for this frame: the front lamp at [front] (0 to 1) lights the surface behind, and the sun glows
-     * in [sun] at [level] (from 0).
+     * in [sun] at [level] (from 0), [size] times as large as made, its middle [height] metres up the surface.
      */
-    fun light(front: Double, sun: Color, level: Double) {
+    fun light(front: Double, sun: Color, level: Double, size: Double = 1.0, height: Double = SUN_Y) {
         backMaterial.color.setHex(0x8a8f9c).scale(front)
         glow.set(sun.r, sun.g, sun.b).multiplyScalar(level * GLOW)
+        sunSize.value = size
+        sunAt.set(SUN_X, height)
+    }
+
+    /**
+     * How much of the cold world shows through the band's shadows this frame: [share] from 0 (none, the surface as
+     * made) to 1, where the front lamp [front] throws them, by its shadow map as the frame before drew it. None where
+     * the lamp has no map yet (it is made at the first frame it casts).
+     */
+    fun beyond(front: Lamp, share: Double) {
+        val shadow: dynamic = front.light.asDynamic().shadow
+        val depth: dynamic = shadow?.map?.depthTexture
+
+        if (depth == null) {
+            // as the haze does (GroundFog.clearings): no freed map is kept, and the cold world waits for the new one
+            frontShadow.value = null
+            beyondShare.value = 0.0
+
+            return
+        }
+
+        // the lamp's map is handed on whether the cold world shows or not: an empty shadow sampler disturbed the
+        // lamp's own map in the haze (GroundFog.clearings), so it is empty for a frame at most here too
+        frontShadow.value = depth
+        frontShadowMatrix.value = shadow.matrix
+        frontLamp.copy(front.light.position)
+        beyondShare.value = if (share > 0.0) share else 0.0
     }
 
     companion object {
@@ -186,6 +241,15 @@ class Fence(private val scene: Scene) {
         /** How bright the sun glows on the surface at its middle, at its full brightness. */
         private const val GLOW = 0.5
 
+        /**
+         * How far toward the front lamp a place of the surface behind is tested for the band's shadow, in metres: past
+         * the fence's posts (some 2.5 m before the surface), short of the riser's back and the band (7 m and more).
+         */
+        private const val BAND_GAP = 4.0
+
+        /** How far around that place the band's shadow is read as well, in metres: the window's soft edge. */
+        private const val WINDOW_EDGE = 0.05
+
         /** The mesh and the surface: as wide as the wall was, and as high. */
         private const val WIDE = 60.0
         private const val HIGH = 16.0
@@ -202,11 +266,14 @@ class Fence(private val scene: Scene) {
 
         /**
          * The sun on the surface at a place (x, y): a close glow, a wider one and a faint wide one, a little flatter
-         * than round, its middle at about 1 at its brightest.
+         * than round, its middle at about 1 at its brightest; its middle at `uSunAt`, `uSunSize` times as large as made.
          */
         private val SUN_GLOW = """
+uniform vec3 uSunGlow;
+uniform vec2 uSunAt;
+uniform float uSunSize;
 float sunGlow(vec2 p) {
-  vec2 d = (p - vec2(${SUN_X.toFixed(2)}, ${SUN_Y.toFixed(2)})) * vec2(1.0, 1.1);
+  vec2 d = (p - uSunAt) * vec2(1.0, 1.1) / uSunSize;
   float r2 = dot(d, d);
   return 0.75 * exp(-r2 / 1.0) + 0.22 * exp(-r2 / 5.0) + 0.04 * exp(-r2 / 30.0);
 }"""
@@ -247,6 +314,77 @@ void chainLink(vec2 p, out float cover, out vec3 n, out float rim, out float sha
   rim = s * s;
   // each diamond a little dirtier or cleaner than the next
   shade = 0.7 + 0.6 * fract(sin(dot(floor(vec2(u, v)), vec2(12.9898, 78.233))) * 43758.5453);
+}"""
+
+        /**
+         * The cold world beyond the surface, for a place of it (in the world): `windowAt` is how much the place lies in
+         * the band's shadow from the front lamp, 0 to 1, read from the lamp's map [BAND_GAP] m toward the lamp (so the
+         * fence's posts open no window) and [WINDOW_EDGE] m around (a soft edge of a few millimetres on the surface);
+         * six readings of the map, only where the cold world shows at all. `beyond` is what the window shows, the
+         * light it sends: a night sky, silver blue at the horizon and deep blue higher up, with the glow of a moon high
+         * to the left; far hills, 60 m behind the surface, dark blue, their ridges caught by the moon, mist lying in
+         * the valley before them; nearer hills with a few bare trees, 18 m behind, nearly black. Where the ray from the camera through the place
+         * meets each layer gives the depth: the land moves against the surface as the camera moves.
+         */
+        private val BEYOND = """
+uniform highp sampler2DShadow uFrontShadow;
+uniform mat4 uFrontShadowMatrix;
+uniform vec3 uFrontLamp;
+uniform float uBeyond;
+
+float lampHeldBack(vec3 at) {
+  vec4 c = uFrontShadowMatrix * vec4(at, 1.0);
+  if (c.w <= 0.0) return 0.0;
+  c.xyz /= c.w;
+  if (c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0 || c.z > 1.0) return 0.0;
+  return 1.0 - texture(uFrontShadow, c.xyz);
+}
+
+float windowAt(vec3 world) {
+  vec3 toLamp = normalize(uFrontLamp - world);
+  vec3 near = world + toLamp * ${BAND_GAP.toFixed(3)};
+  vec3 across = normalize(cross(toLamp, vec3(0.0, 1.0, 0.0))) * ${WINDOW_EDGE.toFixed(3)};
+  vec3 up = normalize(cross(across, toLamp)) * ${WINDOW_EDGE.toFixed(3)};
+  float held = 2.0 * lampHeldBack(near) + lampHeldBack(near + across) + lampHeldBack(near - across) +
+    lampHeldBack(near + up) + lampHeldBack(near - up);
+  return smoothstep(0.15, 0.85, held / 6.0);
+}
+
+// a ridge of hills along x: its height at x, in metres
+float ridgeAt(float x, float seed) {
+  return 1.8 * sin(x * 0.09 + seed) + 1.0 * sin(x * 0.27 + 2.0 * seed) + 0.35 * sin(x * 0.83 + 3.0 * seed);
+}
+
+// how much of a layer of land, [dist] metres behind the surface, covers the ray, with how far above its ridge the ray is
+float landAt(vec3 world, vec3 dir, float dist, float base, float seed, float trees, out float above) {
+  vec2 at = world.xy + dir.xy * (dist / -dir.z);
+  float ridge = base + ridgeAt(at.x, seed);
+  // a few bare trees on the ridge: thin spikes
+  ridge += trees * pow(max(0.0, sin(at.x * 5.3 + seed) * sin(at.x * 1.7 + 4.0 * seed)), 14.0);
+  above = at.y - ridge;
+  float edge = fwidth(above) + 1e-4;
+  return clamp(0.5 - above / edge, 0.0, 1.0);
+}
+
+vec3 beyond(vec3 world) {
+  vec3 dir = normalize(world - cameraPosition);
+  dir.z = min(dir.z, -0.05);
+  // the sky: silver blue at the horizon, where the moonlit mist lies, deep blue higher up
+  float rise = dir.y / -dir.z;
+  vec3 light = mix(vec3(0.13, 0.16, 0.22), vec3(0.005, 0.009, 0.026), smoothstep(-0.02, 0.16, rise));
+  // the moon's glow, high to the left
+  float m = max(dot(normalize(dir), normalize(vec3(-0.5, 0.3, -1.0))), 0.0);
+  light += vec3(0.55, 0.62, 0.8) * (0.3 * pow(m, 300.0) + 0.06 * pow(m, 24.0));
+  float above;
+  // the far hills, dark blue in the mist, their ridges caught by the moon
+  float far = landAt(world, dir, 60.0, 4.2, 1.3, 0.0, above);
+  light = mix(light, vec3(0.01, 0.015, 0.03) + vec3(0.08, 0.09, 0.11) * exp(min(above, 0.0) * 6.0), far);
+  // mist lying in the valley before them
+  light += vec3(0.04, 0.05, 0.07) * exp(-abs(above + 1.6) * 1.2) * far;
+  // the near hills, nearly black, with trees, their ridges caught faintly
+  float near = landAt(world, dir, 18.0, 1.3, 4.1, 1.4, above);
+  light = mix(light, vec3(0.002, 0.003, 0.007) + vec3(0.04, 0.05, 0.07) * exp(min(above, 0.0) * 10.0), near);
+  return 1.3 * light;
 }"""
 
         /**

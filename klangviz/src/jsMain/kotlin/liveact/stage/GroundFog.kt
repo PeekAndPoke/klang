@@ -8,6 +8,8 @@ package io.peekandpoke.klang.viz.liveact.stage
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.lights.Lamp
+import io.peekandpoke.klang.viz.liveact.lights.WorldLight
+import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.viz.liveact.vec
@@ -128,6 +130,17 @@ class GroundFog(
     private val sunLight = vec()
     private val sunUniform = uniform(sunLight)
 
+    /** Where the sun's middle is (x, y on the surface behind the mesh), and how large its glow is against as made. */
+    private val sunAt = Three.addon.createVector2(x = Fence.SUN_X, y = Fence.SUN_Y)
+    private val sunAtUniform = uniform(sunAt)
+    private val sunSize = uniform(1.0)
+
+    // The time of day of the two worlds (WorldLight), as the haze behind the mesh takes it: what its light is
+    // multiplied by, how thick it is, and its light where no lamp reaches; as made white, 1, and a breath of grey blue
+    private val hazeTint = vec(1.0, 1.0, 1.0)
+    private val hazeThick = uniform(1.0)
+    private val hazeBase = vec(0.006, 0.006, 0.009)
+
     /** The random numbers the noise is read from (see the top of the file). */
     private val noise: Data3DTexture = noiseBlock()
 
@@ -218,6 +231,11 @@ class GroundFog(
         uniforms["uCol"] = colorsUniform
         uniforms["uCos"] = cosinesUniform
         uniforms["uSun"] = sunUniform
+        uniforms["uSunAt"] = sunAtUniform
+        uniforms["uSunSize"] = sunSize
+        uniforms["uHazeTint"] = uniform(hazeTint)
+        uniforms["uHazeThick"] = hazeThick
+        uniforms["uHazeBase"] = uniform(hazeBase)
         uniforms["uFrontShadow"] = frontShadow
         uniforms["uFrontShadowMatrix"] = frontShadowMatrix
         uniforms["uFrontLamp"] = frontLampUniform
@@ -253,11 +271,26 @@ class GroundFog(
     }
 
     /**
-     * The sun behind the drummer for this frame, in [color] at [level] (from 0): the haze behind the mesh glows with
-     * it. The fog on the floor does not take it.
+     * The sun behind the drummer for this frame, in [color] at [level] (from 0), [size] times as large as made, its
+     * middle [height] metres up: the haze behind the mesh glows with it. The fog on the floor does not take it.
      */
-    fun sun(color: Color, level: Double) {
+    fun sun(color: Color, level: Double, size: Double = 1.0, height: Double = Fence.SUN_Y) {
         sunLight.set(color.r, color.g, color.b).multiplyScalar(level)
+        sunSize.value = size
+        sunAt.set(Fence.SUN_X, height)
+    }
+
+    /**
+     * The haze behind the mesh at the time of day [world] ([WorldLight]): its tint, its thickness and its light where no
+     * lamp reaches; with the time off, as made. The fog on the floor does not take it.
+     */
+    fun world(world: WorldTime) {
+        val (r, g, b) = WorldLight.hazeTint(world)
+        val (br, bg, bb) = WorldLight.hazeBase(world)
+
+        hazeTint.set(r, g, b)
+        hazeThick.value = WorldLight.hazeThickness(world)
+        hazeBase.set(br, bg, bb)
     }
 
     /** Sets the fog for [t], lit by the first of [lamps], seen by [camera]; and works out its maps. */
@@ -507,6 +540,11 @@ class GroundFog(
   uniform mat4 uFrontShadowMatrix;
   uniform vec3 uFrontLamp;
   uniform float uParts;
+  uniform vec2 uSunAt;
+  uniform float uSunSize;
+  uniform vec3 uHazeTint;
+  uniform float uHazeThick;
+  uniform vec3 uHazeBase;
 
   // 1 where the front lamp's light is held back on its way to this place, 0 where it gets there (or the place is
   // outside what the lamp's map sees)
@@ -543,11 +581,13 @@ class GroundFog(
     if (uParts > 0.0) {
       density *= 1.0 - uParts * 0.94 * bandShadow(world);
     }
-    // the sun behind the drummer: a close glow and a wide one
-    vec3 fromSun = world - vec3(${Fence.SUN_X.glsl()}, ${Fence.SUN_Y.glsl()}, ${Fence.BACK_Z.glsl()});
-    float sun2 = dot(fromSun, fromSun);
-    vec3 light = vec3(0.006, 0.006, 0.009) + lampsAt(world) + uSun * (7.0 / (1.0 + sun2 / 2.5) + 1.2 / (1.0 + sun2 / 40.0));
-    return vec4(0.08 * light * density, 0.30 * density);
+    // the time of day (WorldLight): thicker or thinner
+    density = min(1.0, density * uHazeThick);
+    // the sun behind the drummer: a close glow and a wide one, as large as the time of day makes it
+    vec3 fromSun = world - vec3(uSunAt, ${Fence.BACK_Z.glsl()});
+    float sun2 = dot(fromSun, fromSun) / (uSunSize * uSunSize);
+    vec3 light = uHazeBase + lampsAt(world) + uSun * (7.0 / (1.0 + sun2 / 2.5) + 1.2 / (1.0 + sun2 / 40.0));
+    return vec4(0.08 * light * uHazeTint * density, 0.30 * density);
   }"""
 
         // A sheet that works the fog out for each of its pixels

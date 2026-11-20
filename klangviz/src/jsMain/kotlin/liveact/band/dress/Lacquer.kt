@@ -10,23 +10,31 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.drums.KitMaterials
 import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaMaterials
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringMaterials
 import io.peekandpoke.klang.viz.liveact.disposeTree
+import io.peekandpoke.klang.viz.liveact.lights.WorldLight
+import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 import io.peekandpoke.klang.viz.liveact.toFixed
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.CompiledShader
 import io.peekandpoke.klang.workshop.threejs.SkinnedMesh
+import io.peekandpoke.klang.workshop.threejs.Uniform
 import io.peekandpoke.klang.workshop.threejs.WebGLRenderTarget
 import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.name
 import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
+import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.setTo
+import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.MaterialSide
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Texture
+import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
+import kotlinx.browser.window
+import kotlin.math.abs
 
 /**
  * A part of a figure that wears a pattern ([pattern]): its [mesh], the [material] it was dressed in, the pattern
@@ -53,6 +61,10 @@ class DressedBody(val mesh: SkinnedMesh, val material: MeshStandardMaterial, val
  *   every roughness (a PMREM, 128 pixels a side, some 1.6 MB on the graphics card). Only the lacquered materials see
  *   it: the rest of the stage looks as it did. It dims with the house ([light]), so the band is dark where the
  *   stage is.
+ * - **The two worlds** (`?world=night`, [WorldLight]): the time of day makes the clear coat duller by night, the gold
+ *   pale and cold by night and red at ember, and the room's warm strip follows the sun (by night a faint cold moon).
+ *   Where the strip changes, the room is drawn and filtered anew, at most some eight times a second and only while
+ *   the time moves; with the time off it is never drawn again.
  * - **The instruments:** the drums' shells and the string instruments' bodies lacquered (black, smooth, mirroring the
  *   room), the cymbals' and the trumpet's brass polished brighter, the steel mirroring the room; their colours and
  *   finishes as they were when it is turned off. The marimba's bars and every light stay as they are.
@@ -62,23 +74,41 @@ class DressedBody(val mesh: SkinnedMesh, val material: MeshStandardMaterial, val
 class Lacquer private constructor(
     private val bodies: List<DressedBody>,
     private val polished: List<Polish>,
-    private val room: WebGLRenderTarget,
+    private val room: Room,
 ) {
+    /** The gold's colour, one for every body: it follows the time of day ([light]). */
+    private val gold: Uniform<Vector3> = goldUniform()
+
     /** What each body wears now, in the order of [bodies]. */
     private val lacquered: List<MeshStandardMaterial> = bodies.map {
-        lacquerFor(name = it.material.name, cloth = it.cloth, hair = it.hair, room = room.texture)
+        lacquerFor(name = it.material.name, cloth = it.cloth, hair = it.hair, room = room.texture, gold = gold)
     }
 
     init {
         bodies.forEachIndexed { i, body -> body.mesh.material = lacquered[i] }
-        polished.forEach { it.on(room) }
+        polished.forEach { it.on(room.texture) }
     }
 
-    /** How bright the room is mirrored, by [house] (0 dark to 1, as the stage's lamps are dimmed). */
-    fun light(house: Double) {
+    /**
+     * How bright the room is mirrored, by [house] (0 dark to 1, as the stage's lamps are dimmed), and the lacquer, the
+     * gold and the room's sun at the time of day [world] ([WorldLight]; off: as made).
+     */
+    fun light(house: Double, world: WorldTime = WorldTime.OFF) {
         val level = ROOM * house.coerceIn(0.0, 1.0)
+        val coat = WorldLight.coatRoughness(world)
+        val (r, g, b) = WorldLight.gold(world)
 
-        lacquered.forEach { it.asDynamic().envMapIntensity = level }
+        gold.value.set(r, g, b)
+
+        if (room.sun(WorldLight.roomSun(world))) {
+            lacquered.forEach { it.asDynamic().envMap = room.texture }
+            polished.forEach { it.room(room.texture) }
+        }
+
+        lacquered.forEach {
+            it.asDynamic().envMapIntensity = level
+            it.asDynamic().clearcoatRoughness = coat
+        }
         polished.forEach { it.light(level) }
     }
 
@@ -88,6 +118,110 @@ class Lacquer private constructor(
         polished.forEach { it.off() }
         lacquered.forEach { it.dispose() }
         room.dispose()
+    }
+
+    /**
+     * The room the lacquer mirrors (see [Lacquer]): a small scene made once, drawn by [renderer] and filtered by
+     * three.js's PMREM generator into [texture]. Its warm strip follows the sun ([sun]); where it changes, the room is
+     * drawn anew into a new picture and the old one freed. [dispose] frees the scene, the generator and the picture.
+     */
+    private class Room(renderer: WebGLRenderer) {
+        private val scene = Three.addon.createScene()
+        private val generator: dynamic = Three.addon.create<Any>("PMREMGenerator", renderer)
+
+        /** The warm strip's own colour: the sun's. */
+        private val sunStrip: Color
+
+        /** The sun's strip as the room was last drawn with it, linear red, green and blue. */
+        private var shown: Triple<Double, Double, Double> = ROOM_SUN
+
+        /** When the room was last drawn, in milliseconds of the page. */
+        private var drawnAt = window.performance.now()
+
+        var texture: Texture
+            private set
+
+        private var target: WebGLRenderTarget
+
+        init {
+            val dark = Three.addon.createColor(0)
+
+            dark.setRGB(0.002, 0.0025, 0.004)
+            scene.background = dark
+
+            /** A strip of light, [width] by [height] metres, at x, y, z, facing the band, in the linear colour r, g, b. */
+            fun strip(width: Double, height: Double, at: Triple<Double, Double, Double>, rgb: Triple<Double, Double, Double>): Color {
+                val material = Three.addon.createMeshBasicMaterial(jsObject {
+                    side = MaterialSide.DoubleSide
+                })
+
+                material.color.setRGB(rgb.first, rgb.second, rgb.third)
+
+                val mesh = Three.addon.createMesh(Three.addon.createPlaneGeometry(width, height), material)
+
+                mesh.position.set(at.first, at.second, at.third)
+                mesh.lookAt(0.0, EYE, 0.0)
+                scene.add(mesh)
+
+                return material.color
+            }
+
+            // the sun behind the drummer: warm, low, wide
+            sunStrip = strip(width = 9.0, height = 1.6, at = Triple(0.0, 1.4, -7.0), rgb = ROOM_SUN)
+            // two cool soft strips high up, over the stage's sides, running from the back to the front
+            strip(width = 0.8, height = 9.0, at = Triple(-2.6, 6.0, 0.0), rgb = Triple(0.5, 0.58, 0.8))
+            strip(width = 0.8, height = 9.0, at = Triple(2.6, 6.0, 0.0), rgb = Triple(0.5, 0.58, 0.8))
+            // two faint tall ones at the front sides: the long lines down the bodies seen from the hall
+            strip(width = 0.7, height = 6.0, at = Triple(-5.0, 2.0, 5.0), rgb = Triple(0.22, 0.24, 0.3))
+            strip(width = 0.7, height = 6.0, at = Triple(5.0, 2.0, 5.0), rgb = Triple(0.22, 0.24, 0.3))
+
+            target = draw()
+            texture = target.texture
+        }
+
+        /**
+         * The sun's strip in [rgb] (linear): where it differs from the room as drawn, by more than [ROOM_STEP] or for
+         * longer than half a second, and the last drawing is more than [ROOM_EVERY_MS] old, the room is drawn anew;
+         * gives whether it was (the materials then take the new [texture]).
+         */
+        fun sun(rgb: Triple<Double, Double, Double>): Boolean {
+            val off = maxOf(abs(rgb.first - shown.first), abs(rgb.second - shown.second), abs(rgb.third - shown.third))
+            val nowMs = window.performance.now()
+            val since = nowMs - drawnAt
+
+            // NaN-guard: a colour of no number is never drawn (off is then NaN, and every comparison false)
+            if (!(off > 0.0) || since < ROOM_EVERY_MS || (off < ROOM_STEP && since < ROOM_SETTLE_MS)) {
+                return false
+            }
+
+            shown = rgb
+            drawnAt = nowMs
+            sunStrip.setRGB(rgb.first, rgb.second, rgb.third)
+
+            val old = target
+
+            target = draw()
+            texture = target.texture
+            old.dispose()
+
+            return true
+        }
+
+        fun dispose() {
+            target.dispose()
+            generator.dispose()
+            scene.disposeTree()
+        }
+
+        /** Draws the room and filters it into a new picture, 128 pixels a side: the room is soft strips, a finer one shows nothing more. */
+        private fun draw(): WebGLRenderTarget {
+            val options: dynamic = js("({})")
+
+            options.size = 128
+            options.position = vec(0.0, EYE, 0.0)
+
+            return generator.fromScene(scene, 0.0, 0.1, 100.0, options).unsafeCast<WebGLRenderTarget>()
+        }
     }
 
     /**
@@ -104,14 +238,19 @@ class Lacquer private constructor(
         private val wasRoughness: Double = material.roughness
         private val wasMetalness: Double = material.metalness
 
-        fun on(room: WebGLRenderTarget) {
+        fun on(room: Texture) {
             color?.let { (r, g, b) -> material.color.setRGB(r, g, b) }
             roughness?.let { material.roughness = it }
             metalness?.let { material.metalness = it }
-            material.asDynamic().envMap = room.texture
+            material.asDynamic().envMap = room
             material.asDynamic().envMapIntensity = ROOM
             // the room is a new part of the material's program
             material.needsUpdate = true
+        }
+
+        /** The room drawn anew ([Room.sun]): the same kind of picture, the program stays. */
+        fun room(room: Texture) {
+            material.asDynamic().envMap = room
         }
 
         fun light(level: Double) {
@@ -144,8 +283,26 @@ class Lacquer private constructor(
         /** The clear coat's roughness: almost a mirror. */
         private const val COAT = 0.05
 
-        /** The gold's colour, linear: a little below what polished gold reflects, so it stays gold under a strong lamp. */
-        private const val GOLD = "vec3(0.9, 0.64, 0.26)"
+        /**
+         * The gold's colour, linear, as made: a little below what polished gold reflects, so it stays gold under a
+         * strong lamp. A uniform of the shader (`uKlGold`): the time of day changes it ([WorldLight.gold]).
+         */
+        private val GOLD = WorldLight.gold(WorldTime.OFF)
+
+        /** The room's warm strip where the sun stands, linear, as made ([WorldLight.roomSun]). */
+        private val ROOM_SUN = WorldLight.roomSun(WorldTime.OFF)
+
+        /** The room is drawn anew where its sun moved by more than this (linear, in any channel) ... */
+        private const val ROOM_STEP = 0.04
+
+        /** ... or by less, for longer than this, in milliseconds: so it comes to rest exactly where the sun does. */
+        private const val ROOM_SETTLE_MS = 500.0
+
+        /** Never more often than this, in milliseconds. */
+        private const val ROOM_EVERY_MS = 120.0
+
+        /** A uniform of the gold's colour as made. */
+        internal fun goldUniform(): Uniform<Vector3> = uniform(vec(GOLD.first, GOLD.second, GOLD.third))
 
         /** The gold's roughness: polished, a little softer than the coat, so a thin line catches light over more angles. */
         private const val GOLD_ROUGH = 0.18
@@ -175,14 +332,20 @@ class Lacquer private constructor(
                 Polish(material = MarimbaMaterials.steel),
             ) + brass.map { Polish(material = it, color = BRASS, roughness = BRASS_ROUGH, metalness = 1.0) }
 
-            return Lacquer(bodies = bodies, polished = polished, room = room(renderer))
+            return Lacquer(bodies = bodies, polished = polished, room = Room(renderer))
         }
 
         /**
-         * The lacquer a body wears whose suit was [name] (`sirene_dark`): its pattern [cloth] as gold, its hair combed
-         * back where [hair] says, mirroring [room] (none: nothing is mirrored).
+         * The lacquer a body wears whose suit was [name] (`sirene_dark`): its pattern [cloth] as gold in the colour
+         * [gold] holds, its hair combed back where [hair] says, mirroring [room] (none: nothing is mirrored).
          */
-        internal fun lacquerFor(name: String, cloth: ClothPattern, hair: HairPart?, room: Texture?): MeshStandardMaterial {
+        internal fun lacquerFor(
+            name: String,
+            cloth: ClothPattern,
+            hair: HairPart?,
+            room: Texture?,
+            gold: Uniform<Vector3> = goldUniform(),
+        ): MeshStandardMaterial {
             val material = Three.addon.create<MeshStandardMaterial>(
                 "MeshPhysicalMaterial",
                 jsObject<MaterialParameters> {
@@ -206,16 +369,17 @@ class Lacquer private constructor(
             val cacheKey = "lacquer-" + kind.key + (if (hair != null) "-hair" else "")
 
             material.onBeforeCompile(cacheKey) { shader: CompiledShader ->
+                shader.uniforms["uKlGold"] = gold
                 shader.vertexShader = shader.vertexShader
                     .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;")
                     .replaceFirst("#include <begin_vertex>", "#include <begin_vertex>\nvRest = position;")
 
                 shader.fragmentShader = shader.fragmentShader
-                    .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;\n$INLAY_GLSL")
+                    .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;\nuniform vec3 uKlGold;\n$INLAY_GLSL")
                     .replaceFirst(
                         "#include <color_fragment>",
                         "#include <color_fragment>\nfloat klGold; { vec3 p = vRest; ${kind.before} klGold = clamp(${kind.inlay}, 0.0, 1.0); }\n" +
-                            "diffuseColor.rgb = mix(diffuseColor.rgb, $GOLD, klGold);",
+                            "diffuseColor.rgb = mix(diffuseColor.rgb, uKlGold, klGold);",
                     )
                     .replaceFirst(
                         "#include <roughnessmap_fragment>",
@@ -232,56 +396,6 @@ class Lacquer private constructor(
             }
 
             return material
-        }
-
-        /**
-         * The room the lacquer mirrors (see [Lacquer]), drawn once and filtered by three.js's PMREM generator; what
-         * drew it is freed at once.
-         */
-        private fun room(renderer: WebGLRenderer): WebGLRenderTarget {
-            val scene = Three.addon.createScene()
-            val dark = Three.addon.createColor(0)
-
-            dark.setRGB(0.002, 0.0025, 0.004)
-            scene.background = dark
-
-            /** A strip of light, [width] by [height] metres, at x, y, z, facing the band, in the linear colour r, g, b. */
-            fun strip(width: Double, height: Double, at: Triple<Double, Double, Double>, rgb: Triple<Double, Double, Double>) {
-                val material = Three.addon.createMeshBasicMaterial(jsObject {
-                    side = MaterialSide.DoubleSide
-                })
-
-                material.color.setRGB(rgb.first, rgb.second, rgb.third)
-
-                val mesh = Three.addon.createMesh(Three.addon.createPlaneGeometry(width, height), material)
-
-                mesh.position.set(at.first, at.second, at.third)
-                mesh.lookAt(0.0, EYE, 0.0)
-                scene.add(mesh)
-            }
-
-            // the sun behind the drummer: warm, low, wide
-            strip(width = 9.0, height = 1.6, at = Triple(0.0, 1.4, -7.0), rgb = Triple(1.6, 0.62, 0.2))
-            // two cool soft strips high up, over the stage's sides, running from the back to the front
-            strip(width = 0.8, height = 9.0, at = Triple(-2.6, 6.0, 0.0), rgb = Triple(0.5, 0.58, 0.8))
-            strip(width = 0.8, height = 9.0, at = Triple(2.6, 6.0, 0.0), rgb = Triple(0.5, 0.58, 0.8))
-            // two faint tall ones at the front sides: the long lines down the bodies seen from the hall
-            strip(width = 0.7, height = 6.0, at = Triple(-5.0, 2.0, 5.0), rgb = Triple(0.22, 0.24, 0.3))
-            strip(width = 0.7, height = 6.0, at = Triple(5.0, 2.0, 5.0), rgb = Triple(0.22, 0.24, 0.3))
-
-            val generator: dynamic = Three.addon.create<Any>("PMREMGenerator", renderer)
-            // 128 pixels a side: the room is soft strips, a finer picture shows nothing more
-            val options: dynamic = js("({})")
-
-            options.size = 128
-            options.position = vec(0.0, EYE, 0.0)
-
-            val target = generator.fromScene(scene, 0.0, 0.1, 100.0, options).unsafeCast<WebGLRenderTarget>()
-
-            generator.dispose()
-            scene.disposeTree()
-
-            return target
         }
 
         /** The height the room is seen from: a figure's chest. */

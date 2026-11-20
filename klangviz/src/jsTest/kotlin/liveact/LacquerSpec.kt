@@ -85,7 +85,8 @@ class LacquerSpec : StringSpec({
                 vertex shouldContain "vRest = position;"
                 fragment shouldContain INLAY_GLSL
                 fragment shouldContain "klGold = clamp(${cloth.inlay}, 0.0, 1.0);"
-                fragment shouldContain "diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.64, 0.26), klGold);"
+                fragment shouldContain "uniform vec3 uKlGold;"
+                fragment shouldContain "diffuseColor.rgb = mix(diffuseColor.rgb, uKlGold, klGold);"
                 fragment shouldContain "roughnessFactor = mix(roughnessFactor, 0.180, klGold);"
                 fragment shouldContain "metalnessFactor = mix(metalnessFactor, 1.0, klGold);"
                 fragment shouldContain "material.clearcoat *= mix(1.0, 0.250, klGold);"
@@ -107,6 +108,34 @@ class LacquerSpec : StringSpec({
             listOf(emissive.r, emissive.g, emissive.b).map { it.unsafeCast<Double>() } shouldBe listOf(0.0, 0.0, 0.0)
             added.filter { it.contains("klGold") }.size shouldBe 5
             added.filter { it.contains("missive", ignoreCase = true) } shouldBe emptyList()
+        }
+    }
+
+    "the gold's colour is the shader's uniform: as made (0.9, 0.64, 0.26), or the one handed in, shared" {
+        withThree { three ->
+            Three.addon = three
+
+            val made = Lacquer.lacquerFor(name = "sirene_dark", cloth = ClothPattern.Spiral, hair = null, room = null)
+            val shared = Lacquer.goldUniform()
+            val first = Lacquer.lacquerFor(name = "rune_dark", cloth = ClothPattern.Diamonds, hair = null, room = null, gold = shared)
+            val second = Lacquer.lacquerFor(name = "beben_dark", cloth = ClothPattern.Spiral, hair = null, room = null, gold = shared)
+
+            fun goldOf(material: Material): dynamic {
+                val shader: dynamic = js("({})")
+
+                shader.vertexShader = three.raw.ShaderLib.physical.vertexShader
+                shader.fragmentShader = three.raw.ShaderLib.physical.fragmentShader
+                shader.uniforms = js("({})")
+                material.asDynamic().onBeforeCompile(shader)
+
+                return shader.uniforms.uKlGold
+            }
+
+            val gold = goldOf(made).value
+
+            listOf(gold.x, gold.y, gold.z).map { it.unsafeCast<Double>() } shouldBe listOf(0.9, 0.64, 0.26)
+            (goldOf(first) === shared) shouldBe true
+            (goldOf(second) === shared) shouldBe true
         }
     }
 
