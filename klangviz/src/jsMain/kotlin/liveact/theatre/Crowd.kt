@@ -43,6 +43,7 @@ class Crowd(scene: Scene) {
     private val energy = uniform(0.0)
     private val low = uniform(0.0)
     private val beat = uniform(0.0)
+    private val level = uniform(1.0)
 
     init {
         val lights = CrowdPlaces.all
@@ -54,7 +55,7 @@ class Crowd(scene: Scene) {
         geometry.setAttribute("seed", Three.addon.createFloat32Attribute(lights.map { it.seed }.toTypedArray(), 1))
         geometry.setAttribute("group", Three.addon.createFloat32Attribute(lights.map { it.group }.toTypedArray(), 1))
 
-        val uniforms = uniformsOf("uTime" to time, "uSize" to size, "uEnergy" to energy, "uLow" to low, "uBeat" to beat)
+        val uniforms = uniformsOf("uTime" to time, "uSize" to size, "uEnergy" to energy, "uLow" to low, "uBeat" to beat, "uLevel" to level)
 
         val material = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
             this.uniforms = uniforms
@@ -104,10 +105,12 @@ class Crowd(scene: Scene) {
 
     /**
      * Sets the lights for [t]: [height] is the picture's, in pixels; [energy] how loud the music is (0 to 1) and
-     * [low] its low end; [beat] the time in beats.
+     * [low] its low end; [beat] the time in beats; [level] how bright they are (0 to 1: the stage's light coming up
+     * in a show that opens, from pitch black; 1 otherwise).
      */
-    fun update(t: Double, height: Double, energy: Double, low: Double, beat: Double) {
+    fun update(t: Double, height: Double, energy: Double, low: Double, beat: Double, level: Double = 1.0) {
         time.value = t
+        this.level.value = level
         this.energy.value = energy
         this.low.value = low
         this.beat.value = beat
@@ -162,12 +165,13 @@ class Crowd(scene: Scene) {
   }"""
 
         val FRAGMENT = """
+  uniform float uLevel;
   varying float vGlow;
   varying vec3 vTint;
   void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
     float a = (1.0 - smoothstep(0.0, 1.0, d)) * vGlow;
-    gl_FragColor = vec4(vTint * a * 1.6, 1.0);
+    gl_FragColor = vec4(vTint * a * 1.6 * uLevel, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""

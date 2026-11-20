@@ -48,6 +48,7 @@ class NightSky(scene: Scene) {
     private val time = uniform(0.0)
     private val size = uniform(2.0)
     private val glow = uniform(0.0)
+    private val level = uniform(1.0)
     private val streak: Mesh
 
     init {
@@ -65,7 +66,11 @@ class NightSky(scene: Scene) {
 
         val points = Three.addon.createPoints(
             geometry,
-            material(vertex = STAR_VERTEX, fragment = STAR_FRAGMENT, uniforms = uniformsOf("uTime" to time, "uSize" to size)),
+            material(
+                vertex = STAR_VERTEX,
+                fragment = STAR_FRAGMENT,
+                uniforms = uniformsOf("uTime" to time, "uSize" to size, "uLevel" to level),
+            ),
         )
 
         points.frustumCulled = false
@@ -75,7 +80,7 @@ class NightSky(scene: Scene) {
         val patch = 2 * FAR * tan(PATCH)
         val moon = Three.addon.createMesh(
             Three.addon.createPlaneGeometry(patch, patch),
-            material(vertex = PATCH_VERTEX, fragment = MOON_FRAGMENT, uniforms = uniformsOf("uTime" to time)),
+            material(vertex = PATCH_VERTEX, fragment = MOON_FRAGMENT, uniforms = uniformsOf("uTime" to time, "uLevel" to level)),
         )
 
         moon.position.set(Sky.MOON.x * FAR, Sky.MOON.y * FAR, Sky.MOON.z * FAR)
@@ -85,7 +90,7 @@ class NightSky(scene: Scene) {
         // the shooting star: a thin streak, set where it is whenever one falls
         streak = Three.addon.createMesh(
             Three.addon.createPlaneGeometry(1.0, 1.0),
-            material(vertex = PATCH_VERTEX, fragment = STREAK_FRAGMENT, uniforms = uniformsOf("uGlow" to glow)),
+            material(vertex = PATCH_VERTEX, fragment = STREAK_FRAGMENT, uniforms = uniformsOf("uGlow" to glow, "uLevel" to level)),
         )
         streak.visible = false
         sky.add(streak)
@@ -107,9 +112,13 @@ class NightSky(scene: Scene) {
         sky.visible = !hidden
     }
 
-    /** The sky at [t] (seconds); [ratio]: how many of the screen's points make one of the page's. */
-    fun update(t: Double, ratio: Double) {
+    /**
+     * The sky at [t] (seconds); [ratio]: how many of the screen's points make one of the page's; [level]: how bright it
+     * shines (0 to 1: the stage's light coming up in a show that opens, from pitch black; 1 otherwise).
+     */
+    fun update(t: Double, ratio: Double, level: Double = 1.0) {
         time.value = t
+        this.level.value = level
         // a star is a point, not a disc: a good point of the page wide, whatever the picture's size (sized by the
         // picture's height they were circles on a large screen: the maintainer, 2026-11-17)
         size.value = ratio * 1.25
@@ -182,13 +191,14 @@ class NightSky(scene: Scene) {
   }"""
 
         val STAR_FRAGMENT = """
+  uniform float uLevel;
   varying float vGlow;
   varying vec3 vTint;
   void main() {
     // a sharp middle that falls off at once: a point of light, not a disc
     float d = length(gl_PointCoord - 0.5) * 2.0;
     float a = 1.0 - smoothstep(0.0, 1.0, d);
-    gl_FragColor = vec4(vTint * a * a * vGlow * 2.4, 1.0);
+    gl_FragColor = vec4(vTint * a * a * vGlow * 2.4 * uLevel, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""
@@ -204,7 +214,7 @@ class NightSky(scene: Scene) {
         // patch, two layers of soft noise; where one passes the moon it dims the disc and takes its light. All of it
         // fades out to the patch's edge, so the patch itself is never seen.
         val MOON_FRAGMENT = """
-  uniform float uTime;
+  uniform float uTime, uLevel;
   varying vec2 vAt;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float soft(vec2 p) {
@@ -224,19 +234,19 @@ class NightSky(scene: Scene) {
     float edge = 1.0 - smoothstep(0.30, 0.95, r);
     vec3 moon = vec3(0.92, 0.94, 1.0) * (disc * seas * 0.52 * (1.0 - 0.75 * cloud) + halo * (1.0 - 0.45 * cloud));
     vec3 lit = vec3(0.62, 0.68, 0.85) * cloud * (0.035 + 0.30 * exp(-r * 3.2));
-    gl_FragColor = vec4((moon + lit) * edge, 1.0);
+    gl_FragColor = vec4((moon + lit) * edge * uLevel, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""
 
         val STREAK_FRAGMENT = """
-  uniform float uGlow;
+  uniform float uGlow, uLevel;
   varying vec2 vAt;
   void main() {
     // bright at its head (the patch's far end along its way), fading down its tail; thin, soft at its sides
     float along = vAt.x * 0.5 + 0.5;
     float a = along * along * (1.0 - smoothstep(0.0, 1.0, abs(vAt.y))) * uGlow;
-    gl_FragColor = vec4(vec3(0.95, 0.97, 1.0) * a * 0.9, 1.0);
+    gl_FragColor = vec4(vec3(0.95, 0.97, 1.0) * a * 0.9 * uLevel, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.lights
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 
 class WorldCourseSpec : StringSpec({
@@ -105,5 +106,14 @@ class WorldCourseSpec : StringSpec({
         val course = WorldCourse(opening = WorldLook.Night)
 
         course.follow(t = -3.0, look = WorldLook.Day, dt = 0.0) shouldBe night
+    }
+
+    "the ghosts' colour goes with the stage, in the opening and after it" {
+        val course = WorldCourse(opening = WorldLook.Ghosts)
+
+        course.follow(t = -3.0, look = WorldLook.Day, dt = 0.0, ghost = GhostLight.Red) shouldBe
+            WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghosts = 1.0, ghostLight = GhostLight.Red)
+        course.follow(t = 9.0, look = WorldLook.Day, dt = 9.0, ghost = GhostLight.Red) shouldBe day.copy(ghostLight = GhostLight.Red)
+        course.opens shouldBe false
     }
 })

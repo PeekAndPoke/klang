@@ -20,29 +20,43 @@ import io.peekandpoke.klang.viz.liveact.lights.WorldTime
  * - [Day]: a big, low, warm sun, a warm lit haze, the band's shadows soft and faint.
  * - [Night]: a small, cold moon, a thinner cold haze, the shadows large and hard, each a window into the cold world.
  * - [Ember]: the night's other side, good and evil: a deep red furnace in place of the moon, red smoke.
- * - [Drift]: the time moves on its own, from day to night and back ([WorldLight.drift]), a round in about four minutes.
+ * - [Ghosts]: the stage and the band almost fully dark, a thin rim of colour on their edges, their eyes the bright
+ *   points they are; all the light behind the fence, the haze glowing in one colour ([GhostLight], `?ghosts=red`)
+ *   and the band's shadows pale figures in it, there all the time, not only while the front lamp is on (the
+ *   maintainer, 2026-11-20: "the stage and the musician are almost fully dark (different light colors possible) but
+ *   behind the fence we see the 'ghosts'"). The figures need the fence and the haze giving way to the shadows
+ *   ([HazeLook.Parts]); with the haze whole they stand veiled behind it, and before the wall the world is only the
+ *   dark stage.
+ * - [Drift]: the time moves on its own, from day to night and back ([WorldLight.drift]), a round in about four
+ *   minutes; it does not pass through the ghosts.
  */
 enum class WorldLook(val word: String) {
     Off("off"),
     Day("day"),
     Night("night"),
     Ember("ember"),
+    Ghosts("ghosts"),
     Drift("drift");
 
     /**
-     * The time of day this look asks for at the show's time [t] (seconds), the drift taking [period] seconds a round:
+     * The time of day this look asks for at the show's time [t] (seconds), the drift taking [period] seconds a round,
+     * the ghosts in [ghost] (carried by every look, so the colour stays while the stage turns to or from the ghosts):
      * the stage follows it at its own pace ([io.peekandpoke.klang.viz.liveact.lights.WorldFade]).
      */
-    fun target(t: Double, period: Double = WorldLight.DRIFT_PERIOD): WorldTime = when (this) {
-        Off -> WorldTime.OFF
-        Day -> WorldTime(on = 1.0, night = 0.0, ember = 0.0)
-        Night -> WorldTime(on = 1.0, night = 1.0, ember = 0.0)
-        Ember -> WorldTime(on = 1.0, night = 1.0, ember = 1.0)
-        Drift -> WorldTime(on = 1.0, night = WorldLight.drift(t = t, period = period), ember = 0.0)
+    fun target(t: Double, period: Double = WorldLight.DRIFT_PERIOD, ghost: GhostLight = GhostLight.Cold): WorldTime = when (this) {
+        Off -> WorldTime.OFF.copy(ghostLight = ghost)
+        Day -> WorldTime(on = 1.0, night = 0.0, ember = 0.0, ghostLight = ghost)
+        Night -> WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghostLight = ghost)
+        Ember -> WorldTime(on = 1.0, night = 1.0, ember = 1.0, ghostLight = ghost)
+        Ghosts -> WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghosts = 1.0, ghostLight = ghost)
+        Drift -> WorldTime(on = 1.0, night = WorldLight.drift(t = t, period = period), ember = 0.0, ghostLight = ghost)
     }
 
     companion object {
-        /** The look the address asks for: `?world=day`, `night`, `ember` or `drift`; any other value, or none, [Off]. */
+        /**
+         * The look the address asks for: `?world=day`, `night`, `ember`, `ghosts` or `drift`; any other value, or
+         * none, [Off].
+         */
         fun of(switches: Switches): WorldLook = entries.firstOrNull { it.word == switches[Switch.World] } ?: Off
 
         /**
@@ -50,6 +64,12 @@ enum class WorldLook(val word: String) {
          * any other value, or none, [Off]: no opening ([WorldCourse]).
          */
         fun opening(switches: Switches): WorldLook = entries.firstOrNull { it.word == switches[Switch.Opening] } ?: Off
+
+        /**
+         * Whether the show opens ([opening] names a world): then its light comes up from pitch black as the band walks
+         * in ([io.peekandpoke.klang.viz.liveact.lights.LightsUp]), whatever the look's world is.
+         */
+        fun opens(switches: Switches): Boolean = opening(switches) != Off
 
         /**
          * How long one round of the drift takes, in seconds, as the address asks (`?drift=30`, to watch it quickly or

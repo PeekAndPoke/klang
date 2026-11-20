@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.song.RecordedEvent
 import io.peekandpoke.klang.viz.liveact.song.Recording
@@ -244,5 +245,48 @@ class ShowClockSpec : StringSpec({
         ShowClock(show = Show(seed = 1, music = music), notice = null, intro = 15.0).dispose()
 
         music.listeners shouldBe 2
+    }
+
+    "a show that opens: pitch black until the walk-in begins, then the light comes up from nothing, without a flash" {
+        val notice = document.createElement("div").unsafeCast<HTMLElement>()
+        val show = Show(seed = 1, music = Counted(Asked()), switches = Switches.parse("opening=ember"))
+        val clock = ShowClock(show = show, notice = notice, intro = 15.0, begun = true, opens = true)
+
+        try {
+            clock.houseAt() shouldBe 0.0
+
+            clock.start()
+
+            // the walk-in has just begun: hardly any light yet, and no flash of lamps switched on
+            (clock.houseAt() < 0.01) shouldBe true
+        } finally {
+            clock.dispose()
+        }
+    }
+
+    "a frozen show that opens stands at the light of its time: pitch black at the walk-in's start, up ten seconds on" {
+        fun frozenAt(t: Double): Double {
+            val show = Show(seed = 1, music = Counted(Asked()), switches = Switches.parse("t=$t&opening=ember"))
+            val clock = ShowClock(show = show, notice = null, intro = 15.0, opens = true)
+
+            return clock.houseAt().also { clock.dispose() }
+        }
+
+        frozenAt(-15.0) shouldBe 0.0
+        frozenAt(-10.0) shouldBe (0.5 plusOrMinus 1e-12)
+        frozenAt(-5.0) shouldBe 1.0
+        frozenAt(62.1) shouldBe 1.0
+    }
+
+    "a show that opens but follows music it does not move has no walk-in: its light is up at once" {
+        val show = Show(seed = 1, music = Counted(Asked(own = false)), switches = Switches.parse("opening=ember"))
+        val clock = ShowClock(show = show, notice = null, intro = 15.0, opens = true)
+
+        try {
+            clock.start()
+            clock.houseAt() shouldBe 1.0
+        } finally {
+            clock.dispose()
+        }
     }
 })

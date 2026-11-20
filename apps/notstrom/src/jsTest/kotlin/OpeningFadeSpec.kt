@@ -30,11 +30,11 @@ class OpeningFadeSpec : StringSpec({
         OpeningFade.layers(step = Step.Click, since = 600.0) shouldBe Layers(screen = 0.0, line = 1.0, black = 1.0)
     }
 
-    "once the band stands the stage comes up from the black in 4 s, eased; no screen, no words" {
+    "once the band stands the black goes in a moment, 0.3 s, eased (the stage is pitch black by itself); no screen, no words" {
         OpeningFade.layers(step = Step.Standing, since = 0.0) shouldBe Layers(screen = 0.0, line = 0.0, black = 1.0)
-        OpeningFade.layers(step = Step.Standing, since = 1.0).black shouldBe (1.0 - 0.15625 plusOrMinus 1e-12)
-        OpeningFade.layers(step = Step.Standing, since = 2.0).black shouldBe (0.5 plusOrMinus 1e-12)
-        OpeningFade.layers(step = Step.Standing, since = 4.0) shouldBe Layers(screen = 0.0, line = 0.0, black = 0.0)
+        OpeningFade.layers(step = Step.Standing, since = 0.075).black shouldBe (1.0 - 0.15625 plusOrMinus 1e-12)
+        OpeningFade.layers(step = Step.Standing, since = 0.15).black shouldBe (0.5 plusOrMinus 1e-12)
+        OpeningFade.layers(step = Step.Standing, since = 0.3) shouldBe Layers(screen = 0.0, line = 0.0, black = 0.0)
         OpeningFade.layers(step = Step.Standing, since = 60.0) shouldBe Layers(screen = 0.0, line = 0.0, black = 0.0)
     }
 
@@ -54,7 +54,7 @@ class OpeningFadeSpec : StringSpec({
 
     "each step settles when its last layer has arrived, and nothing changes after" {
         OpeningFade.settles(Step.Click) shouldBe 1.8
-        OpeningFade.settles(Step.Standing) shouldBe 4.0
+        OpeningFade.settles(Step.Standing) shouldBe 0.3
 
         Step.entries.forEach { step ->
             OpeningFade.layers(step = step, since = OpeningFade.settles(step)) shouldBe

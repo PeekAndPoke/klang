@@ -29,6 +29,7 @@ import io.peekandpoke.klang.workshop.threejs.depthWrite
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.getPixelRatio
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
+import io.peekandpoke.klang.workshop.threejs.scale
 import io.peekandpoke.klang.workshop.threejs.map
 import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
 import io.peekandpoke.klang.workshop.threejs.toneMapping
@@ -47,6 +48,7 @@ import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import kotlin.math.PI
+import kotlin.math.max
 import kotlin.math.min
 
 // The stage: floor, the wall behind it, the lamps, the drummer's riser. Nothing here knows the band.
@@ -93,8 +95,25 @@ class Stage(
     /** The floor, plain or (with [mirror]) polished. */
     private val floor: Mesh
 
-    /** Whether the stage's outline is drawn on the floor, 0 or 1 ([outline]): read by the plain floor and the mirror. */
+    /**
+     * How bright the stage's outline is drawn on the floor, 0 to 1 ([outline], [light]): read by the plain floor and the
+     * mirror.
+     */
     private val outlined = uniform(if (variants.outline == OutlineLook.On) 1.0 else 0.0)
+
+    /**
+     * Whether the show opens (`?opening=ember`, [WorldLook.opens]): its light comes up from pitch black, and what gives
+     * light of its own here (the background, the distance's dark, the fog's own light, the faint light everywhere, the
+     * wall's glow, the cold world and the ghosts behind the fence, the crowd's lights, the sky, the outline) comes up
+     * with the house level ([light]). The band's eyes are not under it: they stay lit, the first thing seen as the
+     * band walks in out of the dark (the band's, not the stage's: to make them dark too, their glow would take the
+     * same level).
+     */
+    private val opens: Boolean = WorldLook.opens(show.switches)
+
+    /** The dark behind everything, and the distance's dark: in a show that opens they come up with the house ([light]). */
+    private val dark = Three.addon.createColor(DARK)
+    private val distance = Three.addon.createFog(color = DARK, near = 9.0, far = 22.0)
 
     /** The wall behind the band, once the look was the wall; hidden while the [fence] stands. */
     private var wall: BackWall? = null
@@ -157,6 +176,12 @@ class Stage(
     val worldOpens: Boolean
         get() = worldCourse.opens
 
+    /**
+     * How bright what gives light of its own is this frame, 0 to 1: the house level in a show that opens, else 1
+     * ([opens], [light]).
+     */
+    private var glow = 1.0
+
     /** When the last [light] ran, in milliseconds of the page; none before the first. */
     private var lightAt = Double.NaN
 
@@ -199,8 +224,8 @@ class Stage(
         renderer.shadowMap.type = PCF_SOFT_SHADOW_MAP
         renderer.toneMapping = ToneMapping.ACESFilmicToneMapping
 
-        scene.background = Three.addon.createColor(0x020308)
-        scene.fog = Three.addon.createFog(color = 0x020308, near = 9.0, far = 22.0)
+        scene.background = dark
+        scene.fog = distance
         // The lens and its limits; the aspect is the picture's, as the component that makes the camera sets it
         camera.fov = 35.0
         camera.near = 0.1
@@ -307,6 +332,7 @@ class Stage(
         floor(to.floor)
         haze(to.haze)
         world(to.world)
+        ghosts(to.ghosts)
         underworld(to.underworld)
         ripple(to.ripple)
         blur(to.blur)
@@ -343,6 +369,14 @@ class Stage(
         }
 
         variants = variants.copy(world = to)
+    }
+
+    /**
+     * The ghosts' colour turned to [to] ([GhostLight]): it shows at once where the world is the ghosts. Nothing to make
+     * or free, and the show's opening goes on.
+     */
+    fun ghosts(to: GhostLight) {
+        variants = variants.copy(ghosts = to)
     }
 
     /**
@@ -383,7 +417,7 @@ class Stage(
     /** The stage's outline (a working aid, [OutlineLook]) drawn on the floor or not, at once. Nothing to make or free. */
     fun outline(to: OutlineLook) {
         variants = variants.copy(outline = to)
-        outlined.value = if (to == OutlineLook.On) 1.0 else 0.0
+        outlined.value = if (to == OutlineLook.On) glow else 0.0
     }
 
     /** Where the front lamp stands, in the world. */
@@ -501,7 +535,18 @@ class Stage(
         lights.mood(t)
 
         val front = lights.frontAt(t, waiting)
-        val world = worldCourse.follow(t = t, look = variants.world, dt = dt)
+
+        // in a show that opens, what gives light of its own comes up with the house, from pitch black (see opens)
+        glow = if (opens) house.coerceIn(0.0, 1.0) else 1.0
+        lights.ambient(glow)
+        outlined.value = if (variants.outline == OutlineLook.On) glow else 0.0
+
+        if (opens) {
+            dark.setHex(DARK).scale(glow)
+            distance.color.setHex(DARK).scale(glow)
+        }
+
+        val world = worldCourse.follow(t = t, look = variants.world, dt = dt, ghost = variants.ghosts)
 
         this.front = front
         this.world = world
@@ -510,14 +555,16 @@ class Stage(
         val wall = if (variants.stage == StageLook.Wall) wall else null
         val fence = if (variants.stage == StageLook.Mesh) fence else null
 
-        wall?.light(front.level)
+        wall?.light(front = front.level, level = glow)
         wall?.world(world)
-        fence?.world(world)
+        fence?.world(world = world, level = glow)
         dressLevel = min(1.0, front.level)
         lights.shine(t = t, house = house, front = front, world = world)
 
-        // the cold world through the shadows opens with the front lamp, as far as the time of day lets it
-        val beyond = opening.follow(target = FrontFade.level(front), dt = dt) * WorldLight.beyond(world)
+        // the cold world through the shadows opens with the front lamp, as far as the time of day lets it; in the ghosts
+        // the shadows stay open whatever the lamp does (its shadow is drawn while they are read, its light gives nothing)
+        val held = max(FrontFade.level(front), WorldLight.ghostShare(world))
+        val beyond = opening.follow(target = held, dt = dt) * WorldLight.beyond(world) * glow
 
         if (fence != null) {
             val sun = lights.sun(t = t, house = house, front = front, into = sunColor, world = world)
@@ -530,8 +577,10 @@ class Stage(
             groundFog?.world(world)
         }
 
+        groundFog?.house(glow)
+
         // the haze draws back from the band's shadows as much as the lamp is on, where it parts and the fence stands
-        val parting = clearing.follow(target = if (variants.partsHaze) FrontFade.level(front) else 0.0, dt = dt)
+        val parting = clearing.follow(target = if (variants.partsHaze) held else 0.0, dt = dt)
 
         if (fence != null) {
             groundFog?.clearings(front = lights.front, share = parting)
@@ -547,7 +596,7 @@ class Stage(
 
         mirror?.underworld(under)
 
-        sky?.update(t = t, ratio = renderer.getPixelRatio())
+        sky?.update(t = t, ratio = renderer.getPixelRatio(), level = glow)
 
         // the crowd moves with the music: still while it waits, and by how loud it is once it plays
         val sound = if (waiting || t < 0) null else show.energyAt(t)
@@ -557,6 +606,7 @@ class Stage(
             energy = if (sound != null) min(1.0, sound.slow) else 0.0,
             low = if (sound != null) min(1.0, sound.low) else 0.0,
             beat = t * show.bpm / 60,
+            level = glow,
         )
     }
 
@@ -628,6 +678,9 @@ class Stage(
     }
 
     companion object {
+        /** The dark behind everything and in the distance, as made: a breath of blue in the black. */
+        private const val DARK = 0x020308
+
         /** The drummer sits on a riser at the back, so the front of the stage is free and he is seen over the others. */
         const val RISER = 0.40
 

@@ -38,6 +38,8 @@ private const val BRAID_WALL = "1.0 - smoothstep(0.06, 0.16, min(min(abs(sin(p.x
  * - under the front lamp (front 0 to 1, set every frame through the returned function): a wire mesh, the braid
  *   laid flat (the maintainer: "like perfect like wire mesh"), dark on the lit wall. The ornament's glow goes as the
  *   lamp comes.
+ * The returned function also takes the stage's level (0 to 1): the glow goes with it while a show's light comes up
+ * from pitch black ([io.peekandpoke.klang.viz.liveact.lights.LightsUp]).
  *
  * [amount]: how bright the ornament's own glow is; [width]: how far it reaches to the sides before it fades, in
  * metres; [color]: its colour, as red, green and blue; [lean]: the lamps' light on it at the time of day, where it
@@ -49,8 +51,9 @@ fun wall(
     width: Double = 5.5,
     color: Triple<Double, Double, Double> = Triple(0.55, 0.62, 1.0),
     lean: WallLean? = null,
-): (front: Double) -> Unit {
+): (front: Double, level: Double) -> Unit {
     val uFront = uniform(0.0)
+    val uLevel = uniform(1.0)
     val ornament = """
     float u = p.x * 2.4, v = p.y * 2.4;
     float field = cos(u) * cos(v);
@@ -68,6 +71,7 @@ fun wall(
 
     material.onBeforeCompile("wall-two-faces-braid-glow") { shader: CompiledShader ->
         shader.uniforms["uFront"] = uFront
+        shader.uniforms["uLevel"] = uLevel
         lean?.into(shader)
 
         shader.vertexShader = shader.vertexShader
@@ -75,7 +79,7 @@ fun wall(
             .replaceFirst("#include <begin_vertex>", "#include <begin_vertex>\nvRest = position;")
 
         shader.fragmentShader = shader.fragmentShader
-            .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;\nuniform float uFront;")
+            .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;\nuniform float uFront;\nuniform float uLevel;")
             .replaceFirst(
                 "#include <color_fragment>",
                 "#include <color_fragment>\n{ vec3 p = vRest; $mesh diffuseColor.rgb *= 1.0 - 0.55 * mesh; }",
@@ -84,11 +88,14 @@ fun wall(
                 "#include <emissivemap_fragment>",
                 "#include <emissivemap_fragment>\n{ vec3 p = vRest; $ornament totalEmissiveRadiance += vec3($rgb) * " +
                     "${amount.toFixed(4)} * (0.28 + 1.5 * ornament + 0.75 * halo) * " +
-                    "exp(-(p.x * p.x) / ${(width * width).toFixed(2)}) * (1.0 - uFront); }",
+                    "exp(-(p.x * p.x) / ${(width * width).toFixed(2)}) * (1.0 - uFront) * uLevel; }",
             )
     }
 
-    return { front -> uFront.value = front }
+    return { front, level ->
+        uFront.value = front
+        uLevel.value = level
+    }
 }
 
 /**
@@ -115,7 +122,7 @@ class BackWall(private val scene: Scene) {
     private val lean = WallLean()
 
     /** Sets the wall's face: the ornament under the back light, the wire mesh under the front lamp (0 to 1). */
-    private val face: (Double) -> Unit
+    private val face: (Double, Double) -> Unit
 
     init {
         material.fog = false
@@ -126,10 +133,13 @@ class BackWall(private val scene: Scene) {
         scene.add(mesh)
     }
 
-    /** The wall for this frame, the front lamp at [front] (0 to 1; as the address gives it, also beyond). */
-    fun light(front: Double) {
+    /**
+     * The wall for this frame, the front lamp at [front] (0 to 1; as the address gives it, also beyond); its own glow
+     * at [level] (0 to 1: the stage's light coming up in a show that opens; 1 otherwise).
+     */
+    fun light(front: Double, level: Double = 1.0) {
         material.color.setHex(0x8a8f9c).scale(front)
-        face(min(1.0, front))
+        face(min(1.0, front), level)
     }
 
     /** The lamps' light on the wall at the time of day [world] ([WallLean]): by night cold and dimmer. */

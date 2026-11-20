@@ -7,11 +7,12 @@ package io.peekandpoke.klang.viz.liveact.stage
 
 /**
  * One of the look's variants as an app's controls show it (notstrom's drawer with `?dev`): its [label] (`Stage`), the
- * [key] that turns it over while the show plays (`m`), its [options] in the order the key steps through them, and
- * where the variant does nothing right now, why ([held], in the words its line at the top uses: `with the fence
- * only`); null where it shows. A held variant can still be chosen: it shows once what holds it back is gone.
+ * [key] that turns it over while the show plays (`m`; null where it has none, as the ghosts' colour), its [options] in
+ * the order the key steps through them, and where the variant does nothing right now, why ([held], in the words its
+ * line at the top uses: `with the fence only`); null where it shows. A held variant can still be chosen: it shows
+ * once what holds it back is gone.
  */
-data class LookGroup(val label: String, val key: String, val options: List<Option>, val held: String?) {
+data class LookGroup(val label: String, val key: String?, val options: List<Option>, val held: String?) {
 
     /**
      * One choice of a variant: its [label] (`Fence`), whether it is the one in use ([marked]), and what choosing it
@@ -46,6 +47,10 @@ data class LookGroup(val label: String, val key: String, val options: List<Optio
                 of(label = "Eyes", key = "i", entries = EyesLook.entries, chosen = v.eyes, word = { it.word }) { v.copy(eyes = it) },
                 of(label = "Skin", key = "l", entries = SkinLook.entries, chosen = v.skin, word = { it.word }) { v.copy(skin = it) },
                 of(label = "World", key = "n", entries = WorldLook.entries, chosen = v.world, word = { it.word }) { v.copy(world = it) },
+                of(
+                    label = "Ghosts", key = null, entries = GhostLight.entries, chosen = v.ghosts, word = { it.word },
+                    held = v.ghostsHeld(),
+                ) { v.copy(ghosts = it) },
                 of(
                     label = "Underworld", key = "v", entries = UnderworldLook.entries, chosen = v.underworld, word = { it.word },
                     held = mirror,
@@ -87,7 +92,7 @@ data class LookGroup(val label: String, val key: String, val options: List<Optio
          */
         private fun <T> of(
             label: String,
-            key: String,
+            key: String?,
             entries: List<T>,
             chosen: T,
             word: (T) -> String,

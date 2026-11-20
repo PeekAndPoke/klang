@@ -5,16 +5,24 @@
 
 package io.peekandpoke.klang.viz.liveact.lights
 
+import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * The time of day of the two worlds (KLANG-00478, [io.peekandpoke.klang.viz.liveact.stage.WorldLook]), three shares
- * from 0 to 1: how much the time of day counts at all ([on]; 0 is the stage as it was made, whatever the other two
- * say), from day to night ([night]), and how far the night has turned to ember, its red side ([ember]). What each
- * share does to the light: [WorldLight].
+ * The time of day of the two worlds (KLANG-00478, [io.peekandpoke.klang.viz.liveact.stage.WorldLook]), four shares
+ * from 0 to 1: how much the time of day counts at all ([on]; 0 is the stage as it was made, whatever the others say),
+ * from day to night ([night]), how far the night has turned to ember, its red side ([ember]), and how far the time
+ * has gone over to the ghosts ([ghosts]: the stage dark, all the light behind the fence), in the colour [ghostLight].
+ * What each share does to the light: [WorldLight].
  */
-data class WorldTime(val on: Double, val night: Double, val ember: Double) {
+data class WorldTime(
+    val on: Double,
+    val night: Double,
+    val ember: Double,
+    val ghosts: Double = 0.0,
+    val ghostLight: GhostLight = GhostLight.Cold,
+) {
     companion object {
         /** No time of day: the stage as it was made. */
         val OFF = WorldTime(on = 0.0, night = 0.0, ember = 0.0)
@@ -23,9 +31,9 @@ data class WorldTime(val on: Double, val night: Double, val ember: Double) {
 
 /**
  * The time of day as the stage shows it: it follows the time asked for ([follow]) at a pace of its own, so a key that
- * turns day into night does not jump: [on] comes and goes in [ON_SECONDS], day turns to night (and night to ember) in
- * [TURN_SECONDS], at an even pace. It starts at [start], at once (a show that starts at night is night from its
- * first frame).
+ * turns day into night does not jump: [on] comes and goes in [ON_SECONDS], day turns to night (and night to ember, and
+ * any of them to the ghosts) in [TURN_SECONDS], at an even pace. The ghosts' colour is taken at once. It starts at
+ * [start], at once (a show that starts at night is night from its first frame).
  *
  * It goes by the time between the frames, as [FrontFade] does: a frozen or paused show still comes to the time asked.
  */
@@ -51,6 +59,8 @@ class WorldFade(start: WorldTime) {
             on = toward(from = now.on, to = target.on, by = step / ON_SECONDS),
             night = toward(from = now.night, to = target.night, by = step / turn),
             ember = toward(from = now.ember, to = target.ember, by = step / turn),
+            ghosts = toward(from = now.ghosts, to = target.ghosts, by = step / turn),
+            ghostLight = target.ghostLight,
         )
 
         return now

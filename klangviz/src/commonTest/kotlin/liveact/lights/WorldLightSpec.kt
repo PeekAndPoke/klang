@@ -10,12 +10,21 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 
 private fun near(x: Double) = x plusOrMinus 1e-9
+
+/** Each of three colour shares near the other's. */
+private infix fun Triple<Double, Double, Double>.shouldBeNear(other: Triple<Double, Double, Double>) {
+    first shouldBe near(other.first)
+    second shouldBe near(other.second)
+    third shouldBe near(other.third)
+}
 
 private val DAY = WorldTime(on = 1.0, night = 0.0, ember = 0.0)
 private val NIGHT = WorldTime(on = 1.0, night = 1.0, ember = 0.0)
 private val EMBER = WorldTime(on = 1.0, night = 1.0, ember = 1.0)
+private val GHOSTS = WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghosts = 1.0)
 
 class WorldLightSpec : StringSpec({
 
@@ -122,10 +131,68 @@ class WorldLightSpec : StringSpec({
         WorldLight.beyond(WorldTime(on = 0.5, night = 1.0, ember = 0.0)) shouldBe near(0.5)
     }
 
+    "the ghosts: the front lamp and the fill give no light, the lamps behind a little, all in the colour's rim; no sun" {
+        WorldLight.frontScale(GHOSTS) shouldBe 0.0
+        WorldLight.fillScale(GHOSTS) shouldBe 0.0
+        WorldLight.backScale(GHOSTS) shouldBe near(0.12)
+        WorldLight.backLean(GHOSTS) shouldBe 1.0
+        WorldLight.fillLean(GHOSTS) shouldBe 1.0
+        WorldLight.lampTint(GHOSTS) shouldBe GhostLight.Cold.rim
+        WorldLight.lampTint(GHOSTS.copy(ghostLight = GhostLight.Red)) shouldBe GhostLight.Red.rim
+        WorldLight.sunStrength(GHOSTS) shouldBe 0.0
+        WorldLight.wallLight(GHOSTS) shouldBe near(0.2)
+        WorldLight.frontSoftness(GHOSTS) shouldBe 1.0
+    }
+
+    "the ghosts: the haze glows in the colour, the figures in its pale, the surface in its deep; the band mirrors little" {
+        val red = GHOSTS.copy(ghostLight = GhostLight.Red)
+        val (r, g, b) = GhostLight.Red.glow
+
+        WorldLight.hazeBase(red) shouldBeNear Triple(WorldLight.GHOST_GLOW * r, WorldLight.GHOST_GLOW * g, WorldLight.GHOST_GLOW * b)
+        WorldLight.hazeTint(red) shouldBe Triple(1.0, 1.0, 1.0)
+        WorldLight.ghostPale(red) shouldBe GhostLight.Red.pale.let { (pr, pg, pb) ->
+            Triple(WorldLight.GHOST_PALE * pr, WorldLight.GHOST_PALE * pg, WorldLight.GHOST_PALE * pb)
+        }
+        WorldLight.ghostDepth(red) shouldBe GhostLight.Red.depth
+        WorldLight.roomLight(red) shouldBe near(0.15)
+        WorldLight.roomSun(red) shouldBeNear Triple(WorldLight.GHOST_ROOM * r, WorldLight.GHOST_ROOM * g, WorldLight.GHOST_ROOM * b)
+        WorldLight.roomLight(NIGHT) shouldBe 1.0
+        WorldLight.roomLight(WorldTime.OFF) shouldBe 1.0
+    }
+
+    "the ghosts' figures are there all the time and as far as the time has gone over; none outside the ghosts" {
+        WorldLight.ghostShare(GHOSTS) shouldBe 1.0
+        WorldLight.ghostShare(GHOSTS.copy(ghosts = 0.25)) shouldBe 0.25
+        WorldLight.ghostShare(GHOSTS.copy(on = 0.5)) shouldBe 0.5
+        WorldLight.ghostShare(NIGHT) shouldBe 0.0
+        WorldLight.ghostDepth(NIGHT) shouldBe Triple(0.0, 0.0, 0.0)
+        // the windows open fully in the ghosts, also from the day, where the night opens none
+        WorldLight.beyond(GHOSTS) shouldBe 1.0
+        WorldLight.beyond(DAY.copy(ghosts = 1.0)) shouldBe 1.0
+        WorldLight.beyond(DAY.copy(ghosts = 0.5)) shouldBe near(0.5)
+        WorldLight.beyond(DAY) shouldBe 0.0
+    }
+
+    "the turn into the ghosts is even: halfway, every value halfway between the night's and the ghosts'" {
+        val half = NIGHT.copy(ghosts = 0.5)
+
+        WorldLight.backScale(half) shouldBe near((0.8 + 0.12) / 2)
+        WorldLight.sunStrength(half) shouldBe near(0.9 / 2)
+        WorldLight.hazeThickness(half) shouldBe near((0.6 + 1.1) / 2)
+        // night 1 to ghosts 5 halfway; ember 3 to ghosts 5 a quarter of the way
+        WorldLight.blend(half, made = 9.0, day = 0.0, night = 1.0, ember = 3.0, ghosts = 5.0) shouldBe near(3.0)
+        WorldLight.blend(EMBER.copy(ghosts = 0.25), made = 9.0, day = 0.0, night = 1.0, ember = 3.0, ghosts = 5.0) shouldBe
+            near(3.5)
+    }
+
     "values blend evenly from the day to the night to the ember, and from the stage as made by on" {
-        WorldLight.blend(WorldTime(on = 1.0, night = 0.5, ember = 0.0), made = 9.0, day = 0.0, night = 1.0, ember = 3.0) shouldBe near(0.5)
-        WorldLight.blend(WorldTime(on = 1.0, night = 1.0, ember = 0.5), made = 9.0, day = 0.0, night = 1.0, ember = 3.0) shouldBe near(2.0)
-        WorldLight.blend(WorldTime(on = 0.5, night = 0.0, ember = 0.0), made = 4.0, day = 0.0, night = 1.0, ember = 3.0) shouldBe near(2.0)
+        val ends = { world: WorldTime, made: Double ->
+            WorldLight.blend(world, made = made, day = 0.0, night = 1.0, ember = 3.0, ghosts = 5.0)
+        }
+
+        ends(WorldTime(on = 1.0, night = 0.5, ember = 0.0), 9.0) shouldBe near(0.5)
+        ends(WorldTime(on = 1.0, night = 1.0, ember = 0.5), 9.0) shouldBe near(2.0)
+        ends(WorldTime(on = 0.5, night = 0.0, ember = 0.0), 4.0) shouldBe near(2.0)
     }
 
     "the drift: day at 0 s, night at half the round, day again at its end; it rests at each end" {

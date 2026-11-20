@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.stage.BlurLook
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
@@ -207,12 +208,20 @@ enum class Switch(val key: String) {
     Haze("haze"),
 
     /**
-     * `?world=night`: the two worlds' time of day ([WorldLook]): day, night, ember or drift (from day to night and
-     * back on its own, a round in about four minutes); it drives the sun behind the drummer, the haze, the lamps, the
-     * lacquer and, behind the fence, a cold world seen through the band's shadows. Any other value, or none, off: the
+     * `?world=night`: the two worlds' time of day ([WorldLook]): day, night, ember, ghosts (the stage dark, all the
+     * light in the haze behind the fence, the band's shadows pale figures in it; its colour: [Ghosts]) or drift (from
+     * day to night and back on its own, a round in about four minutes); it drives the sun behind the drummer, the
+     * haze, the lamps, the lacquer and, behind the fence, a cold world seen through the band's shadows. Any other value, or none, off: the
      * stage as it was made. The key n steps through them while the show plays ([LookVariants]).
      */
     World("world"),
+
+    /**
+     * `?ghosts=red`: with [World] at ghosts, its colour ([GhostLight]): cold (a moonlit blue white), red (a deep red,
+     * the figures pale rose) or green (a sea green with a violet depth); any other value, or none, cold. No key: an
+     * app's controls choose it ([LookVariants]).
+     */
+    Ghosts("ghosts"),
 
     /** `?drift=30`: with [World] at drift, one round from day to night and back in that many seconds (240 without it). */
     Drift("drift"),

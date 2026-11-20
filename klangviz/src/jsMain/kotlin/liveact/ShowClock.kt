@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.viz.liveact
 
+import io.peekandpoke.klang.viz.liveact.lights.LightsUp
 import io.peekandpoke.klang.viz.liveact.sound.Transport
 import io.peekandpoke.klang.viz.liveact.sound.TransportControls
+import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
@@ -31,12 +33,16 @@ import kotlin.math.min
  * [begun]: the walk-in begins at [start], without waiting for a click, and no notice asks for one. For an app whose
  * own start screen took the click already (notstrom's, KLANG-00465: its click unlocked the sound, and the show was
  * made after it). Clicks and keys after it do what they do once the walk-in runs.
+ *
+ * [opens]: the show opens (`?opening=ember`, [WorldLook.opens]): its light comes up from pitch black as the band walks
+ * in ([houseAt], [LightsUp]).
  */
 class ShowClock(
     private val show: Show,
     private val notice: HTMLElement?,
     private val intro: Double,
     private val begun: Boolean = false,
+    private val opens: Boolean = false,
 ) {
     /**
      * What plays the music, listened to from here until [dispose]: the stage's time is its time once it runs. A
@@ -59,6 +65,12 @@ class ShowClock(
 
     /** When the frames began (the page's own clock, where there is no music to listen to). */
     private var started: Double = 0.0
+
+    /** In a show that opens: the seconds since the walk-in began, counted frame by frame ([LightsUp.advance]). */
+    private var risen: Double = 0.0
+
+    /** In a show that opens: the page's clock at the last [houseAt] since the walk-in began; null before it. */
+    private var risenAt: Double? = null
 
     private val clickListener: ((Event) -> Unit)? = controls?.let { { _: Event -> toggle() } }
     private val keyListener: ((Event) -> Unit)? = controls?.let { { event: Event -> onKey(event) } }
@@ -125,9 +137,16 @@ class ShowClock(
 
     /**
      * The house lights, 0 to 1: nearly dark while waiting for the click; from the click up within a second, a flash
-     * first, like lamps switched on.
+     * first, like lamps switched on. In a show that opens ([opens]): pitch black while waiting, and from the walk-in's
+     * start up over [LightsUp.SECONDS], eased, without the flash; also when the song begins before it is up. A frozen
+     * show there stands at the level of its time ([Show.frozen]: at `?t=-15`, the walk-in's start, pitch black). Call
+     * it each frame: it counts the frames.
      */
     fun houseAt(): Double {
+        if (opens) {
+            return risingHouse()
+        }
+
         if (!waiting()) {
             return 1.0
         }
@@ -135,6 +154,28 @@ class ShowClock(
         val since = introAt?.let { (now() - it) / 1000 } ?: -1.0
 
         return if (since < 0) 0.07 else min(1.0, 0.07 + 0.93 * since / 0.9) + 0.5 * exp(-since / 0.12)
+    }
+
+    /**
+     * The house level in a show that opens ([houseAt]): frozen, the level of its time since the walk-in's start; where
+     * the clock runs no walk-in (no music of its own to move), up at once, as without an opening; else 0 until the
+     * walk-in begins, then rising by the frames counted since.
+     */
+    private fun risingHouse(): Double {
+        show.frozen?.let { return LightsUp.level(since = it + intro) }
+
+        if (controls == null) {
+            return 1.0
+        }
+
+        val began = introAt ?: return 0.0
+        val nowMs = now()
+        val last = risenAt ?: began
+
+        risen = LightsUp.advance(since = risen, frame = (nowMs - last) / 1000)
+        risenAt = nowMs
+
+        return LightsUp.level(since = risen)
     }
 
     /** Stops listening to the click and the keys, and says it is done with the music. Call it once. */

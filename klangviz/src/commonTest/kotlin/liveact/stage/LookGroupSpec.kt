@@ -26,8 +26,8 @@ class LookGroupSpec : StringSpec({
 
     "every variant with its key, the whole look first, then as the keys turn them over" {
         startsWith(TODAY).map { "${it.label} (${it.key})" } shouldBe listOf(
-            "Look (x)", "Stage (m)", "Floor (p)", "Haze (h)", "Eyes (i)", "Skin (l)", "World (n)", "Underworld (v)",
-            "Ripple (b)", "Blur (c)", "Stone (k)", "Outline (j)",
+            "Look (x)", "Stage (m)", "Floor (p)", "Haze (h)", "Eyes (i)", "Skin (l)", "World (n)", "Ghosts (null)",
+            "Underworld (v)", "Ripple (b)", "Blur (c)", "Stone (k)", "Outline (j)",
         )
     }
 
@@ -39,7 +39,8 @@ class LookGroupSpec : StringSpec({
             listOf("Whole", "Parts"),
             listOf("Face", "Shadow"),
             listOf("Suit", "Lacquer"),
-            listOf("Off", "Day", "Night", "Ember", "Drift"),
+            listOf("Off", "Day", "Night", "Ember", "Ghosts", "Drift"),
+            listOf("Cold", "Red", "Green"),
             listOf("Off", "On"),
             listOf("None", "Faint", "Gentle", "Strong"),
             listOf("Crisp", "Soft", "Stone"),
@@ -55,15 +56,16 @@ class LookGroupSpec : StringSpec({
 
         marked(TODAY) shouldBe listOf(
             listOf("Today"), listOf("Wall"), listOf("Plain"), listOf("Whole"), listOf("Face"), listOf("Suit"), listOf("Off"),
-            listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
+            listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
         )
         marked(NEW) shouldBe listOf(
             listOf("New"), listOf("Fence"), listOf("Mirror"), listOf("Parts"), listOf("Shadow"), listOf("Lacquer"),
-            listOf("Drift"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
+            listOf("Drift"), listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
         )
-        marked(NEW.tune(NEW.shown.copy(world = WorldLook.Night, stone = StoneLook.Marble))).let {
+        marked(NEW.tune(NEW.shown.copy(world = WorldLook.Night, ghosts = GhostLight.Red, stone = StoneLook.Marble))).let {
             it[6] shouldBe listOf("Night")
-            it[10] shouldBe listOf("Marble")
+            it[7] shouldBe listOf("Red")
+            it[11] shouldBe listOf("Marble")
         }
     }
 
@@ -105,6 +107,7 @@ class LookGroupSpec : StringSpec({
             "Eyes" to null,
             "Skin" to null,
             "World" to null,
+            "Ghosts" to "in the ghosts world only",
             "Underworld" to "with the mirror floor only",
             "Ripple" to "with the mirror floor only",
             "Blur" to "with the mirror floor only",
@@ -113,18 +116,28 @@ class LookGroupSpec : StringSpec({
         )
     }
 
-    "the new look with the reflections on: everything shows, at every fog but the haze at fog off" {
+    "the new look with the reflections on: everything shows but the ghosts' colour, at every fog but the haze at fog off" {
         for (fog in FogQuality.entries) {
             val held = LookGroup.all(look = NEW, fog = fog, reflections = ReflectionQuality.On).mapNotNull { it.held }
+            val ghosts = "in the ghosts world only"
 
-            held shouldBe if (fog == FogQuality.Off) listOf("no haze at fog off") else emptyList()
+            held shouldBe if (fog == FogQuality.Off) listOf("no haze at fog off", ghosts) else listOf(ghosts)
         }
+    }
+
+    "the ghosts' colour has no key, shows only in the ghosts world, and its options choose the colour" {
+        val ghosts = startsWith(NEW.tune(NEW.shown.copy(world = WorldLook.Ghosts))).named("Ghosts")
+
+        ghosts.key shouldBe null
+        ghosts.held shouldBe null
+        ghosts.options.single { it.label == "Green" }.to shouldBe LookVariants.NEW.copy(world = WorldLook.Ghosts, ghosts = GhostLight.Green)
     }
 
     "the new look with the reflections off: the floor and the mirror's looks say so; the haze still parts" {
         val held = LookGroup.all(look = NEW, fog = FogQuality.High, reflections = ReflectionQuality.Off).associate { it.label to it.held }
 
         held.filterValues { it != null } shouldBe mapOf(
+            "Ghosts" to "in the ghosts world only",
             "Floor" to "reflections off",
             "Underworld" to "reflections off",
             "Ripple" to "reflections off",

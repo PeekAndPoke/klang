@@ -73,16 +73,51 @@ class LookVariantsSpec : StringSpec({
         LookVariants.of(Switches.parse("?stage=mesh&world=ember")) shouldBe LookVariants(stage = StageLook.Mesh, world = WorldLook.Ember)
     }
 
-    "the key n steps through off, day, night, ember and drift, and back to off; it leaves the rest; its line says it" {
+    "the key n steps through off, day, night, ember, ghosts and drift, and back to off; it leaves the rest; its line says it" {
         val start = LookVariants(stage = StageLook.Mesh, skin = SkinLook.Lacquer)
-        val seen = generateSequence(start) { it.nextWorld() }.take(6).map { it.world }.toList()
+        val seen = generateSequence(start) { it.nextWorld() }.take(7).map { it.world }.toList()
 
-        seen shouldBe listOf(WorldLook.Off, WorldLook.Day, WorldLook.Night, WorldLook.Ember, WorldLook.Drift, WorldLook.Off)
+        seen shouldBe listOf(
+            WorldLook.Off, WorldLook.Day, WorldLook.Night, WorldLook.Ember, WorldLook.Ghosts, WorldLook.Drift, WorldLook.Off,
+        )
         start.nextWorld() shouldBe start.copy(world = WorldLook.Day)
         start.nextWorld().worldLine() shouldBe "world: day"
         start.copy(world = WorldLook.Drift).worldLine() shouldBe "world: drift"
         LookVariants().worldLine() shouldBe "world: off"
         LookVariants(world = WorldLook.Night).worldLine() shouldBe "world: night (sun, haze, cold world with the fence only)"
+        LookVariants(world = WorldLook.Ghosts).worldLine() shouldBe "world: ghosts (glow and figures with the fence only)"
+        start.copy(world = WorldLook.Ghosts).worldLine() shouldBe "world: ghosts"
+    }
+
+    "?ghosts= is the ghosts' colour: cold, red or green; no switch, an empty one or another word cold; the new look's cold" {
+        GhostLight.of(Switches.parse("?ghosts=red")) shouldBe GhostLight.Red
+        GhostLight.of(Switches.parse("?ghosts=green")) shouldBe GhostLight.Green
+        GhostLight.of(Switches.parse("?ghosts=cold")) shouldBe GhostLight.Cold
+        GhostLight.of(Switches.parse("?ghosts")) shouldBe GhostLight.Cold
+        GhostLight.of(Switches.parse("?ghosts=blue")) shouldBe GhostLight.Cold
+        LookVariants().ghosts shouldBe GhostLight.Cold
+        LookVariants.of(Switches.parse("?look=new&world=ghosts&ghosts=red")) shouldBe
+            LookVariants.NEW.copy(world = WorldLook.Ghosts, ghosts = GhostLight.Red)
+        LookVariants.of(Switches.parse("?ghosts=green")).ghosts shouldBe GhostLight.Green
+        WorldLook.of(Switches.parse("?world=ghosts")) shouldBe WorldLook.Ghosts
+    }
+
+    "the ghosts' colour has its line, and outside the ghosts world says it does nothing" {
+        LookVariants(world = WorldLook.Ghosts, ghosts = GhostLight.Red).ghostsLine() shouldBe "ghosts: red"
+        LookVariants(world = WorldLook.Night, ghosts = GhostLight.Green).ghostsLine() shouldBe "ghosts: green (in the ghosts world only)"
+        LookVariants().ghostsHeld() shouldBe "in the ghosts world only"
+        LookVariants(world = WorldLook.Ghosts).ghostsHeld() shouldBe null
+    }
+
+    "the ghosts ask for the night gone over to the ghosts; every look carries the ghosts' colour it is given" {
+        WorldLook.Ghosts.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghosts = 1.0)
+        WorldLook.Ghosts.target(t = 10.0, ghost = GhostLight.Red).ghostLight shouldBe GhostLight.Red
+        WorldLook.entries.forEach { look ->
+            look.target(t = 30.0, ghost = GhostLight.Green).ghostLight shouldBe GhostLight.Green
+        }
+        WorldLook.entries.filter { it != WorldLook.Ghosts }.forEach { look ->
+            look.target(t = 120.0).ghosts shouldBe 0.0
+        }
     }
 
     "what time of day each look asks for: off none, day, night, ember, and the drift by the show's time" {
@@ -102,6 +137,9 @@ class LookVariantsSpec : StringSpec({
         WorldLook.opening(Switches.parse("?opening")) shouldBe WorldLook.Off
         WorldLook.opening(Switches.parse("?opening=dusk")) shouldBe WorldLook.Off
         WorldLook.opening(Switches.parse("?world=ember")) shouldBe WorldLook.Off
+        WorldLook.opens(Switches.parse("?opening=ember")) shouldBe true
+        WorldLook.opens(Switches.parse("?opening=off")) shouldBe false
+        WorldLook.opens(Switches.parse("?world=ember")) shouldBe false
     }
 
     "?drift=30 sets the drift's round; without it, or with no number above 1 s, four minutes" {

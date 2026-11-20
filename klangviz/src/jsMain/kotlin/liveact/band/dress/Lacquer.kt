@@ -64,6 +64,8 @@ class DressedBody(val mesh: SkinnedMesh, val material: MeshStandardMaterial, val
  *   stage is.
  * - **The two worlds** (`?world=night`, [WorldLight]): the time of day makes the clear coat duller by night, the gold
  *   pale and cold by night and red at ember, and the room's warm strip follows the sun (by night a faint cold moon).
+ *   In the ghosts the room is mirrored dimly and its strip is the ghosts' glow, so the band stays dark with a
+ *   rim of the colour ([WorldLight.roomLight]).
  *   Where the strip changes, the room is drawn and filtered anew, at most some eight times a second and only while
  *   the time moves; with the time off it is never drawn again.
  * - **The instruments:** the drums' shells and the string instruments' bodies lacquered (black, smooth, mirroring the
@@ -118,7 +120,7 @@ class Lacquer private constructor(
      * gold and the room's sun at the time of day [world] ([WorldLight]; off: as made).
      */
     fun light(house: Double, world: WorldTime = WorldTime.OFF) {
-        val level = ROOM * house.coerceIn(0.0, 1.0)
+        val level = ROOM * house.coerceIn(0.0, 1.0) * WorldLight.roomLight(world)
         val coat = WorldLight.coatRoughness(world)
         val (r, g, b) = WorldLight.gold(world)
 

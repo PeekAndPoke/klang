@@ -11,7 +11,8 @@ import io.peekandpoke.klang.viz.liveact.Switches
 /**
  * The variants of the band's look chosen while the show plays (KLANG-00478): what stands behind the band ([stage]),
  * the floor ([floor]), the haze behind the fence ([haze]), where Sirene's eyes glow under the front lamp ([eyes]),
- * what the band's bodies are made of ([skin]), the two worlds' time of day ([world]), the other world in the mirror
+ * what the band's bodies are made of ([skin]), the two worlds' time of day ([world]) and the ghosts' colour
+ * ([ghosts]; no key, it shows in the ghosts world only), the other world in the mirror
  * floor ([underworld]), how uneven the mirror floor's stone is ([ripple]), how blurred its reflection is ([blur]) and
  * what stone it is ([stone]); and a working aid, the stage's outline ([outline]). A later variant joins them here, with
  * its key and its line.
@@ -30,6 +31,7 @@ data class LookVariants(
     val eyes: EyesLook = EyesLook.Face,
     val skin: SkinLook = SkinLook.Suit,
     val world: WorldLook = WorldLook.Off,
+    val ghosts: GhostLight = GhostLight.Cold,
     val underworld: UnderworldLook = UnderworldLook.Off,
     val ripple: RippleLook = RippleLook.Gentle,
     val blur: BlurLook = BlurLook.Crisp,
@@ -51,7 +53,7 @@ data class LookVariants(
     /** The other of the bodies' skins. */
     fun nextSkin(): LookVariants = copy(skin = SkinLook.entries[(skin.ordinal + 1) % SkinLook.entries.size])
 
-    /** The next time of day (off, day, night, ember, drift), after the last off again. */
+    /** The next time of day (off, day, night, ember, ghosts, drift), after the last off again. */
     fun nextWorld(): LookVariants = copy(world = WorldLook.entries[(world.ordinal + 1) % WorldLook.entries.size])
 
     /** The other of the mirror's worlds: the stage, or the underworld. */
@@ -141,10 +143,23 @@ data class LookVariants(
      * only the fence shows (`world: night (sun, haze, cold world with the fence only)`).
      */
     fun worldLine(): String {
-        val held = if (world != WorldLook.Off && stage != StageLook.Mesh) " (sun, haze, cold world with the fence only)" else ""
+        val held = when {
+            world == WorldLook.Off || stage == StageLook.Mesh -> ""
+            world == WorldLook.Ghosts -> " (glow and figures with the fence only)"
+            else -> " (sun, haze, cold world with the fence only)"
+        }
 
         return "world: ${world.word}$held"
     }
+
+    /**
+     * The line shown for a moment when the ghosts' colour is chosen: `ghosts: red`, and outside the ghosts world, why
+     * it does nothing ([ghostsHeld]: `ghosts: red (in the ghosts world only)`).
+     */
+    fun ghostsLine(): String = "ghosts: ${ghosts.word}${ghostsHeld().inBrackets()}"
+
+    /** Why the ghosts' colour does nothing: the world is not the ghosts (`in the ghosts world only`); null where it shows. */
+    fun ghostsHeld(): String? = if (world == WorldLook.Ghosts) null else "in the ghosts world only"
 
     /**
      * The line shown for a moment when the underworld is turned over, with the reflections at [reflections]:
@@ -209,6 +224,7 @@ data class LookVariants(
             eyes = EyesLook.Shadow,
             skin = SkinLook.Lacquer,
             world = WorldLook.Drift,
+            ghosts = GhostLight.Cold,
             underworld = UnderworldLook.Off,
             ripple = RippleLook.Gentle,
             blur = BlurLook.Crisp,
@@ -221,10 +237,10 @@ data class LookVariants(
 
         /**
          * The variants the address asks for (`?stage=mesh`, `?floor=mirror`, `?haze=parts`, `?eyes=shadow`,
-         * `?skin=lacquer`, `?world=night`, `?underworld=on`, `?ripple=faint`, `?blur=crisp`, `?stone=marble`, `?edge=on`), each
-         * over the look as made, or with `?look=new` over [NEW] (`?look=new&world=night`: the new look at night). A
-         * variant's switch counts where it is given at all, also empty or with another word (`?look=new&stage` is the
-         * wall).
+         * `?skin=lacquer`, `?world=night`, `?ghosts=red`, `?underworld=on`, `?ripple=faint`, `?blur=crisp`,
+         * `?stone=marble`, `?edge=on`), each over the look as made, or with `?look=new` over [NEW]
+         * (`?look=new&world=night`: the new look at night). A variant's switch counts where it is given at all, also
+         * empty or with another word (`?look=new&stage` is the wall).
          */
         fun of(switches: Switches): LookVariants {
             val base = if (asksNew(switches)) NEW else LookVariants()
@@ -236,6 +252,7 @@ data class LookVariants(
                 eyes = if (switches.has(Switch.Eyes)) EyesLook.of(switches) else base.eyes,
                 skin = if (switches.has(Switch.Skin)) SkinLook.of(switches) else base.skin,
                 world = if (switches.has(Switch.World)) WorldLook.of(switches) else base.world,
+                ghosts = if (switches.has(Switch.Ghosts)) GhostLight.of(switches) else base.ghosts,
                 underworld = if (switches.has(Switch.Underworld)) UnderworldLook.of(switches) else base.underworld,
                 ripple = if (switches.has(Switch.Ripple)) RippleLook.of(switches) else base.ripple,
                 blur = if (switches.has(Switch.Blur)) BlurLook.of(switches) else base.blur,

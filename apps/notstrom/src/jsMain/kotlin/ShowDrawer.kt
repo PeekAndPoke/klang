@@ -469,11 +469,14 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
         }
     }
 
-    /** A control's [label], and with `?dev` the [key] that does the same while the show plays, small beside it. */
-    private fun FlowContent.keyed(label: String, key: String) {
+    /**
+     * A control's [label], and with `?dev` the [key] that does the same while the show plays, small beside it (none
+     * where it has no key).
+     */
+    private fun FlowContent.keyed(label: String, key: String?) {
         +label
 
-        if (props.dev) {
+        if (props.dev && key != null) {
             span {
                 css {
                     put("color", "#6b7385")

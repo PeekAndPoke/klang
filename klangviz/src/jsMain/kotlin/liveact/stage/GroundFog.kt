@@ -141,6 +141,12 @@ class GroundFog(
     private val hazeThick = uniform(1.0)
     private val hazeBase = vec(0.006, 0.006, 0.009)
 
+    /**
+     * How bright the fog's own light is where no lamp reaches, 0 to 1 ([house]): the stage's light coming up in a show
+     * that opens, from pitch black; 1 otherwise.
+     */
+    private val house = uniform(1.0)
+
     /** The random numbers the noise is read from (see the top of the file). */
     private val noise: Data3DTexture = noiseBlock()
 
@@ -236,6 +242,7 @@ class GroundFog(
         uniforms["uHazeTint"] = uniform(hazeTint)
         uniforms["uHazeThick"] = hazeThick
         uniforms["uHazeBase"] = uniform(hazeBase)
+        uniforms["uHouse"] = house
         uniforms["uFrontShadow"] = frontShadow
         uniforms["uFrontShadowMatrix"] = frontShadowMatrix
         uniforms["uFrontLamp"] = frontLampUniform
@@ -291,6 +298,14 @@ class GroundFog(
         hazeTint.set(r, g, b)
         hazeThick.value = WorldLight.hazeThickness(world)
         hazeBase.set(br, bg, bb)
+    }
+
+    /**
+     * The fog's own light where no lamp reaches at [level], 0 to 1: the stage's light coming up in a show that opens,
+     * from pitch black (the lamps and the sun that light the fog come up by themselves); 1 otherwise.
+     */
+    fun house(level: Double) {
+        house.value = level
     }
 
     /** Sets the fog for [t], lit by the first of [lamps], seen by [camera]; and works out its maps. */
@@ -474,6 +489,7 @@ class GroundFog(
   uniform vec3 uPos[${LAMPS}], uDir[${LAMPS}], uCol[${LAMPS}];
   uniform float uCos[${LAMPS}];
   uniform vec3 uSun;
+  uniform float uHouse;
   uniform highp sampler3D uNoise;
 
   // a random number at every whole point, blended smoothly between them: the card blends, between the points' middles
@@ -520,7 +536,7 @@ class GroundFog(
     // it settles: at the floor nearly everywhere, higher up only where it billows
     float density = smoothstep(0.36 + 0.42 * height, 0.74 + 0.16 * height, d + 0.40 * amount);
     density *= 1.0 - smoothstep(8.0, 11.0, length(at * vec2(0.8, 1.0)));
-    vec3 light = vec3(0.004, 0.005, 0.008) + lampsAt(world);
+    vec3 light = vec3(0.004, 0.005, 0.008) * uHouse + lampsAt(world);
     return vec4(0.035 * light * density, 0.5 * density);     // it glows where lit, and veils a little what is behind
   }"""
 
@@ -586,7 +602,7 @@ class GroundFog(
     // the sun behind the drummer: a close glow and a wide one, as large as the time of day makes it
     vec3 fromSun = world - vec3(uSunAt, ${Fence.BACK_Z.glsl()});
     float sun2 = dot(fromSun, fromSun) / (uSunSize * uSunSize);
-    vec3 light = uHazeBase + lampsAt(world) + uSun * (7.0 / (1.0 + sun2 / 2.5) + 1.2 / (1.0 + sun2 / 40.0));
+    vec3 light = uHazeBase * uHouse + lampsAt(world) + uSun * (7.0 / (1.0 + sun2 / 2.5) + 1.2 / (1.0 + sun2 / 40.0));
     return vec4(0.08 * light * uHazeTint * density, 0.30 * density);
   }"""
 

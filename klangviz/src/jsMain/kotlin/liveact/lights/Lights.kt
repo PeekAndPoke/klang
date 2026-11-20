@@ -82,6 +82,9 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
     private val hue = Three.addon.createColor(0xffffff)
     private val shift = vec()
 
+    /** The faint light everywhere, a breath of blue ([ambient]). */
+    private val ambient = Three.addon.createAmbientLight(color = 0x8090ff, intensity = AMBIENT)
+
     /** The colour of the time of day the lamps lean toward this frame ([WorldLight.lampTint]). */
     private val tint = Three.addon.createColor(0xffffff)
 
@@ -92,7 +95,7 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
     private val built: List<Color>
 
     init {
-        scene.add(Three.addon.createAmbientLight(color = 0x8090ff, intensity = 0.05))
+        scene.add(ambient)
 
         val all = mutableListOf<Lamp>()
         val castsAtHigh = mutableListOf<Lamp>()
@@ -313,12 +316,23 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
         }
     }
 
+    /**
+     * The faint light everywhere at [level], 0 to 1: the stage's light coming up in a show that opens, from pitch black
+     * (the lamps and the sun take the house level by themselves, [shine], [sun]); 1 otherwise.
+     */
+    fun ambient(level: Double) {
+        ambient.intensity = AMBIENT * level
+    }
+
     /** Stops listening for the key f on the window. */
     fun dispose() {
         window.removeEventListener("keydown", onKey)
     }
 
     private companion object {
+        /** How bright the faint light everywhere is. */
+        const val AMBIENT = 0.05
+
         /** The sun's own number for its flicker, as a lamp's seed: none of the lamps has it. */
         const val SUN_SEED = 43.9
     }

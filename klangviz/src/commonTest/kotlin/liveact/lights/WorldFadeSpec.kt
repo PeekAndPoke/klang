@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.lights
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 
 class WorldFadeSpec : StringSpec({
 
@@ -47,6 +48,15 @@ class WorldFadeSpec : StringSpec({
             WorldFade(start = ember).follow(target = day, dt = 1.5, turnSeconds = pace) shouldBe
                 WorldTime(on = 1.0, night = 0.5, ember = 0.5)
         }
+    }
+
+    "the turn to the ghosts goes at the turn's pace; their colour is taken at once" {
+        val fade = WorldFade(start = WorldTime(on = 1.0, night = 1.0, ember = 0.0))
+        val ghosts = WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghosts = 1.0, ghostLight = GhostLight.Green)
+
+        fade.follow(target = ghosts, dt = 1.5) shouldBe ghosts.copy(ghosts = 0.5)
+        fade.follow(target = ghosts, dt = 2.0, turnSeconds = 8.0).ghosts shouldBe 0.75
+        fade.follow(target = WorldTime(on = 1.0, night = 1.0, ember = 0.0), dt = 0.75).ghosts shouldBe 0.5
     }
 
     "no time, or a time below 0, moves nothing; a target of no number is 0" {

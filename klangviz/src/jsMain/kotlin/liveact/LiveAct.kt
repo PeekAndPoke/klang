@@ -29,6 +29,7 @@ import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.Stage
+import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
 import io.peekandpoke.klang.workshop.threejs.info
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -503,7 +504,13 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             )
             // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
             // fail before it is kept (and with it given up on unmount)
-            val clock = ShowClock(show = show, notice = element(NOTICE_ID), intro = StagePlot.INTRO, begun = props.walkInAtOnce)
+            val clock = ShowClock(
+                show = show,
+                notice = element(NOTICE_ID),
+                intro = StagePlot.INTRO,
+                begun = props.walkInAtOnce,
+                opens = WorldLook.opens(show.switches),
+            )
 
             clock.start()
 
@@ -543,12 +550,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         // widens bones and would blur how the head is read
         now.band.afterPose(t)
         breathing(show = show, rigs = now.band.rigs, t = t, slow = energy.slow)
-        now.stage.light(t = t, house = now.clock.houseAt(), waiting = now.clock.waiting())
+        val house = now.clock.houseAt()
+
+        now.stage.light(t = t, house = house, waiting = now.clock.waiting())
         if (variants.eyes == EyesLook.Shadow) {
             shadowEyes?.update(front = now.stage.front, lamp = now.stage.frontLamp, planeZ = now.stage.shadowsAt)
         }
 
-        lacquer?.takeIf { it.worn }?.light(house = now.clock.houseAt(), world = now.stage.world)
+        lacquer?.takeIf { it.worn }?.light(house = house, world = now.stage.world)
         now.view.look(t)
         now.stage.follow()
         camera?.let { viewer.copy(it.position) }
@@ -627,6 +636,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     "${variants.eyesLine()} (key i)",
                     "${variants.skinLine()} (key l)",
                     "${variants.worldLine()}${if (now.stage.worldOpens) " (opening)" else ""} (key n)",
+                    variants.ghostsLine(),
                     "${variants.underworldLine(reflections)} (key v)",
                 ),
                 listOf(
@@ -686,6 +696,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             to.eyesLine().takeIf { to.eyes != was.eyes },
             to.skinLine().takeIf { to.skin != was.skin },
             to.worldLine().takeIf { to.world != was.world },
+            to.ghostsLine().takeIf { to.ghosts != was.ghosts },
             to.underworldLine(reflections).takeIf { to.underworld != was.underworld },
             to.rippleLine(reflections).takeIf { to.ripple != was.ripple },
             to.blurLine(reflections).takeIf { to.blur != was.blur },

@@ -11,8 +11,10 @@ package io.peekandpoke.klang.notstrom
  * - [Step.Click]: the click that starts the show. The screen it came from (the start screen, or the tests' result)
  *   fades out to black in [SCREEN_OUT]; the show gets ready on the black. Where that takes longer than [LINE_AFTER],
  *   the readying screen's words come up on the black, at the screen's pace, so a slow connection does not look stuck.
- * - [Step.Standing]: the band stands and the walk-in begins. The black over the stage fades out in [STAGE_IN]: the
- *   band walks in out of the darkness.
+ * - [Step.Standing]: the band stands and the walk-in begins. The black over the stage goes in a moment ([UNVEIL]):
+ *   the stage is pitch black itself then, and its own light comes up as the band walks in (the live act's opening,
+ *   `opening=ember`, [io.peekandpoke.klang.viz.liveact.lights.LightsUp]; the maintainer, 2026-11-20: "I would only do
+ *   the lights and start from pitch black"). Where the address turns the opening off, the stage is there at once.
  *
  * Each layer's share ([Layers]) is a function of the seconds since its step began, eased at both ends. Those seconds
  * are counted frame by frame ([advance]), each frame at most [LONGEST_FRAME]: a frame that holds the page (the
@@ -46,8 +48,11 @@ object OpeningFade {
      */
     const val LINE_AFTER = 1.0
 
-    /** How long the stage takes to come up from the black once the band stands, in seconds. */
-    const val STAGE_IN = 4.0
+    /**
+     * How long the black over the stage takes to go once the band stands, in seconds: a moment, as the stage itself is
+     * pitch black then and comes up by its own light.
+     */
+    const val UNVEIL = 0.3
 
     /**
      * The most one frame counts for the fade, in seconds, as the stage's own fades count it: a longer frame (a hitch,
@@ -74,13 +79,13 @@ object OpeningFade {
             black = 1.0,
         )
 
-        Step.Standing -> Layers(screen = 0.0, line = 0.0, black = 1.0 - eased(since / STAGE_IN))
+        Step.Standing -> Layers(screen = 0.0, line = 0.0, black = 1.0 - eased(since / UNVEIL))
     }
 
     /** From how many seconds after [step] began its layers no longer change. */
     fun settles(step: Step): Double = when (step) {
         Step.Click -> LINE_AFTER + SCREEN_OUT
-        Step.Standing -> STAGE_IN
+        Step.Standing -> UNVEIL
     }
 
     /** How far a fade is along its way, [x] from 0 to 1, eased at both ends (smoothstep); outside them held there. */

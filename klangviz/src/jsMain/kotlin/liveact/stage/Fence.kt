@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.stage
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.lights.Lamp
+import io.peekandpoke.klang.viz.liveact.lights.WorldLight
 import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
@@ -43,7 +44,8 @@ import kotlin.math.PI
  * night and at ember the band's shadows on the surface behind become windows into a cold, moonlit world beyond it
  * ([beyond]): inside each shadow the surface shows a far land of hills under a night sky, seen with depth (it moves
  * against the surface as the camera moves); outside the shadows the surface stays as it is, and by night the lamps'
- * light on it, and half as much on the wires, leans cold and dims ([world], [WallLean]).
+ * light on it, and half as much on the wires, leans cold and dims ([world], [WallLean]). In the ghosts the windows are
+ * pale figures in the ghosts' colour, there all the time, and the surface around them glows in its deep ([world]).
  *
  * Hidden and shown again with [show] (the look turned over to the wall and back while the show plays: kept, so the
  * turn back costs no new materials). Everything it makes is in the scene and is freed with it, or with [dispose] where
@@ -69,6 +71,14 @@ class Fence(private val scene: Scene) {
     private val frontShadowMatrix: Uniform<dynamic> = uniform(mat4())
     private val frontLamp = vec()
     private val beyondShare = uniform(0.0)
+
+    /**
+     * The ghosts ([world], [WorldLight.ghostShare]): how far the windows show the ghosts' pale light in place of the
+     * cold world, that light, and the deep the surface behind sends of its own.
+     */
+    private val ghostShare = uniform(0.0)
+    private val ghostPale = vec()
+    private val ghostDepth = vec()
 
     /** The lamps' light on the surface behind and on the wires at the time of day ([world]). */
     private val backLean = WallLean()
@@ -163,6 +173,9 @@ class Fence(private val scene: Scene) {
             shader.uniforms["uFrontShadowMatrix"] = frontShadowMatrix
             shader.uniforms["uFrontLamp"] = uniform(frontLamp)
             shader.uniforms["uBeyond"] = beyondShare
+            shader.uniforms["uGhost"] = ghostShare
+            shader.uniforms["uGhostPale"] = uniform(ghostPale)
+            shader.uniforms["uGhostDepth"] = uniform(ghostDepth)
             shader.vertexShader = shader.vertexShader.withWorld()
             backLean.into(shader)
             shader.fragmentShader = shader.fragmentShader
@@ -174,7 +187,10 @@ class Fence(private val scene: Scene) {
                 .replaceFirst(
                     "#include <emissivemap_fragment>",
                     "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uSunGlow * sunGlow(vWorld.xy) * (0.8 + 0.4 * stain);\n" +
-                        "if (uBeyond > 0.0) { totalEmissiveRadiance += uBeyond * windowAt(vWorld) * beyond(vWorld); }",
+                        "totalEmissiveRadiance += uGhostDepth * (0.7 + 0.6 * stain);\n" +
+                        "if (uBeyond > 0.0) {\n" +
+                        "  totalEmissiveRadiance += uBeyond * windowAt(vWorld) * mix(beyond(vWorld), uGhostPale, uGhost);\n" +
+                        "}",
                 )
         }
         val back = Three.addon.createMesh(Three.addon.createPlaneGeometry(WIDE, HIGH + 2.0), backMaterial)
@@ -194,11 +210,21 @@ class Fence(private val scene: Scene) {
 
     /**
      * The lamps' light on the surface behind at the time of day [world] ([WallLean]): by night cold and dimmer; on
-     * the wires half as much.
+     * the wires half as much. In the ghosts ([WorldLight.ghostShare]) the windows show the ghosts' pale light in place
+     * of the cold world, and the surface around them glows faintly in the colour's deep, at [level] (0 to 1: the
+     * stage's light coming up in a show that opens, from pitch black; 1 otherwise; the windows take it with their share,
+     * [beyond]).
      */
-    fun world(world: WorldTime) {
+    fun world(world: WorldTime, level: Double = 1.0) {
         backLean.world(world)
         wireLean.world(world = world, share = WIRE_LEAN)
+        ghostShare.value = WorldLight.ghostShare(world)
+
+        val (pr, pg, pb) = WorldLight.ghostPale(world)
+        val (dr, dg, db) = WorldLight.ghostDepth(world)
+
+        ghostPale.set(pr, pg, pb)
+        ghostDepth.set(dr * level, dg * level, db * level)
     }
 
     /**
@@ -359,6 +385,9 @@ uniform highp sampler2DShadow uFrontShadow;
 uniform mat4 uFrontShadowMatrix;
 uniform vec3 uFrontLamp;
 uniform float uBeyond;
+uniform float uGhost;
+uniform vec3 uGhostPale;
+uniform vec3 uGhostDepth;
 
 float lampHeldBack(vec3 at) {
   vec4 c = uFrontShadowMatrix * vec4(at, 1.0);

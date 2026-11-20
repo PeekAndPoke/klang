@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.lights
 
 import io.peekandpoke.klang.viz.liveact.Switch
+import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 
 /**
@@ -51,19 +52,20 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
 
     /**
      * Takes the stage on by [dt] seconds, at the show's time [t] (seconds), toward what [look] asks for or, while the
-     * show opens, its opening's world; gives where it stands then. The first call starts it where it begins, at once.
+     * show opens, its opening's world, the ghosts in [ghost]; gives where it stands then. The first call starts it
+     * where it begins, at once.
      */
-    fun follow(t: Double, look: WorldLook, dt: Double): WorldTime {
-        val fade = fade ?: begin(t = t, look = look)
+    fun follow(t: Double, look: WorldLook, dt: Double, ghost: GhostLight = GhostLight.Cold): WorldTime {
+        val fade = fade ?: begin(t = t, look = look, ghost = ghost)
 
         if (part == Part.Before && t >= 0.0) {
             part = Part.Turning
         }
 
         val target = if (part == Part.Before) {
-            opening.target(t = t, period = period)
+            opening.target(t = t, period = period, ghost = ghost)
         } else {
-            look.target(t = t, period = period)
+            look.target(t = t, period = period, ghost = ghost)
         }
         val turn = if (part == Part.Turning) TURN_SECONDS else WorldFade.TURN_SECONDS
         val now = fade.follow(target = target, dt = dt, turnSeconds = turn)
@@ -84,13 +86,13 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
      * The fade, made at the show's first time [t] with the look's [look]: in the opening's world where the show opens
      * (seen before its song, with a look whose world is on), else where the look asks at the song's start.
      */
-    private fun begin(t: Double, look: WorldLook): WorldFade {
+    private fun begin(t: Double, look: WorldLook, ghost: GhostLight): WorldFade {
         part = if (part == Part.Unseen && t < 0.0 && look != WorldLook.Off) Part.Before else Part.Over
 
         val start = if (part == Part.Before) {
-            opening.target(t = t, period = period)
+            opening.target(t = t, period = period, ghost = ghost)
         } else {
-            look.target(t = 0.0, period = period)
+            look.target(t = 0.0, period = period, ghost = ghost)
         }
 
         return WorldFade(start = start).also { fade = it }
