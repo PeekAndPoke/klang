@@ -407,7 +407,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
             div {
                 id = FLASH_ID
-                style = "position: fixed; left: 12px; top: 28px; font: 15px monospace; color: #d4dbea; " +
+                // below the top line's five lines
+                style = "position: fixed; left: 12px; top: 96px; font: 15px monospace; color: #d4dbea; " +
                     "pointer-events: none; white-space: pre;" + (if (props.show.switches.has(Switch.NoHud)) " display: none;" else "")
             }
         }
@@ -577,28 +578,39 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             val line = hud ?: element(HUD_ID).also { hud = it }
             val drawn = renderer?.info?.render
 
-            line?.textContent = listOfNotNull(
-                "music: ${show.music.source}",
-                "camera: ${now.view.what()}",
-                "seed ${show.seed}",
-                "${look.line()} (key x)",
-                "oversampling ${Oversampling.label(samples)} (key o)",
-                "fog ${fog.word} (key g)",
-                "shadows ${shadows.word}",
-                "${variants.stageLine()} (key m)",
-                "${variants.floorLine(fog)} (key p)",
-                "${variants.hazeLine(fog)} (key h)",
-                "${variants.eyesLine()} (key i)",
-                "${variants.skinLine()} (key l)",
-                "${variants.worldLine()} (key n)",
-                "${variants.underworldLine(fog)} (key v)",
-                "${fps.toFixed(0)} fps",
-                "slowest frame $worstShown ms",
-                "pixels ${sharpness.ratio.toFixed(2)}x",
-                "${drawn?.calls ?: "-"} draws, ${drawn?.triangles ?: "-"} triangles",
-                "t ${t.toFixed(2)} s",
-                "beat ${(t * show.bpm / 60).toFixed(2)}",
-            ).joinToString("  |  ")
+            // in lines of a few items each, so it stays within a window's width (the `white-space: pre` keeps the breaks)
+            line?.textContent = listOf(
+                listOf(
+                    "music: ${show.music.source}",
+                    "camera: ${now.view.what()}",
+                    "seed ${show.seed}",
+                    "t ${t.toFixed(2)} s",
+                    "beat ${(t * show.bpm / 60).toFixed(2)}",
+                ),
+                listOf(
+                    "${fps.toFixed(0)} fps",
+                    "slowest frame $worstShown ms",
+                    "pixels ${sharpness.ratio.toFixed(2)}x",
+                    "${drawn?.calls ?: "-"} draws, ${drawn?.triangles ?: "-"} triangles",
+                ),
+                listOf(
+                    "oversampling ${Oversampling.label(samples)} (key o)",
+                    "fog ${fog.word} (key g)",
+                    "shadows ${shadows.word}",
+                ),
+                listOf(
+                    "${look.line()} (key x)",
+                    "${variants.stageLine()} (key m)",
+                    "${variants.floorLine(fog)} (key p)",
+                    "${variants.hazeLine(fog)} (key h)",
+                ),
+                listOf(
+                    "${variants.eyesLine()} (key i)",
+                    "${variants.skinLine()} (key l)",
+                    "${variants.worldLine()} (key n)",
+                    "${variants.underworldLine(fog)} (key v)",
+                ),
+            ).joinToString("\n") { items -> items.joinToString("  |  ") }
         }
 
         // what the next drawing counts is this frame's alone (see build())
