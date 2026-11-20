@@ -65,6 +65,22 @@ Below the neck all six share one body today (mitten hands, flipper feet, tube le
 hands, shorter feet and a posture. Gemini gave Wucht and Klaue faces, which loses the uncanny: keep the heads
 faceless.
 
+## How the figures are built (decided 2026-11-20)
+
+The figures come from Blender scripts (`klangviz/figures/`): a skeleton that Blender wraps in a skin. A head with a
+face, a skull that flows into a tail and a neck that flows into the jaw cannot come out of that, so the head is built
+as a surface of its own from a character's outlines. Asked under "complexity is the enemy", the maintainer,
+2026-11-20: "yes a shared head builder seems to be the right move. We will end up with shared builder for the hands
+as well i assume. And other parts maybe as well. ... In the end we might be even able to generate all meshes on the
+clients, then we do not need to ship any assets. ... Keep the builders in python and blender for [now], we are
+currently trying to find the right shapes, so use any tools that are easy to use for this task."
+
+- One shared head builder beside `figure.py`; a figure's own file holds only its outlines and numbers. Rune is the
+  first to use it.
+- A shared hands builder and other parts may follow the same way.
+- The builders stay Python and Blender while the shapes are being found; generating the meshes in the browser is a
+  possible later step, not a goal now.
+
 ## The ideas
 
 ### The eyes: inside the skull, with a slight glow
@@ -190,3 +206,4 @@ Not built: the bodies and the true-self shadows (they need modelling and the cha
 - 2026-11-20: the ghosts: a dark stage with the light behind the fence, in several colours.
 - 2026-11-20: Sirene's feet become comfortable ones, the heels are Rune's; Rune's target chosen.
 - 2026-11-20: the belt of Sirene's dress; the eyes inside the skull with a slight glow.
+- 2026-11-20: a shared head builder for the figures (the maintainer's yes).
