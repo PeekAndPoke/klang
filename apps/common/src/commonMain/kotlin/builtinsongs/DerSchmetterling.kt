@@ -408,7 +408,7 @@ let trumpet = (() => {
   let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(-1.0, x => x.adsr(0.005, 0.030, 0, 0)).adsr(0.010, 0.75, 0.5, 0.4).mul(1.00)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
-  let harms = Ign.sine(x => x.harmonics(15, 0.8).fundamental(0).analog(pAnalog).analogSpread(0.2))
+  let harms = Ign.sine(x => x.harmonics(15, 0.8).analog(pAnalog).analogSpread(0.2))
     .pitchEnvelope(-1, x => x.adsr(0.005, 0.030, 0, 0)).adsr(0.010, 0.75, 0.5, 0.4).mul(1.5)
  
   let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.015, 0.20, 0.2, 0.20).mul(0.45)
@@ -417,8 +417,8 @@ let trumpet = (() => {
   let beater = Ign.whitenoise().adsr(0.010, 0.80, 0.5, 0.015).lowpass(2500).mul(1.0)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .oversampleAtLeast(2, y => y.distort(0.50, "diode"))
-    .mul(0.2)
+    .oversampleAtLeast(2, y => y.distort(0.20, "diode"))
+    .mul(0.15)
     .shape("soft")
     .classic()
 })()
@@ -426,17 +426,17 @@ let trumpet = (() => {
 export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3@2 -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2@2 1 0]>`
 
 export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
-  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.3)
-  .tremolo(rate = beatRate(0.25), depth = 0.2)
+  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "brass", wet = 0.3)
+  .tremolo(rate = 25, depth = 0.3)
   .vibrato(rate = beatRate(0.25), semitones = 0.1)
-  .hpf(650).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.35) 
+  .hpf(250).lpf("5500".add(perlin(-100, 100).fast(4))).clip(0.7) 
   .apply(
     x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
     x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
   )
 
-export trumpet_arrange = x => x.cylinder(5) //  .solo(0.99)
-  .scale("e5:minor").gain(0.24)
+export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
+  .scale("e5:minor").gain(0.20)
   .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
 export trumpet = n(trumpet_pat).apply(trumpet_shape).tag("trommel")
