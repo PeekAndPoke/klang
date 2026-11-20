@@ -71,8 +71,10 @@ class StoredTestSpec : StringSpec({
 
     "when it was measured, in plain words, in this machine's own time" {
         // noon in the local time, so the day is the same wherever the test runs (months count from 0)
-        measuredLine(localNoon(year = 2026, month = 10, day = 19)) shouldBe "Measured on this machine on 19 Nov 2026."
-        measuredLine(localNoon(year = 2027, month = 0, day = 2)) shouldBe "Measured on this machine on 2 Jan 2027."
+        measuredLine(localNoon(year = 2026, month = 10, day = 19)) shouldBe "Measured on this machine on 19 Nov 2026 at 12:00."
+        measuredLine(localNoon(year = 2027, month = 0, day = 2)) shouldBe "Measured on this machine on 2 Jan 2027 at 12:00."
+        // minutes with two digits
+        measuredLine(localNoon(year = 2027, month = 0, day = 2) + 5 * 60_000.0) shouldBe "Measured on this machine on 2 Jan 2027 at 12:05."
     }
 
     "a kept result must hold what the test may choose: a fog of low, medium or high, and 1x or 2x" {

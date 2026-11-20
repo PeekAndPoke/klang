@@ -86,6 +86,10 @@ class ShowHelpersSpec : StringSpec({
         keepsTest("?nosky") shouldBe false
         keepsTest("?seed=3") shouldBe false
         keepsTest("?t=5&nohud") shouldBe true
+        // the look notstrom shows anyway changes nothing; another look does
+        keepsTest("?look=new&hud") shouldBe true
+        keepsTest("?look=today") shouldBe false
+        keepsTest("?look=new&world=night") shouldBe false
     }
 
     "keys that name no live-act switch (a shared link's) do not stop a result from being kept" {

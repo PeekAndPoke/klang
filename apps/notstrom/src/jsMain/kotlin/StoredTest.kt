@@ -76,12 +76,16 @@ data class StoredTest(
     }
 }
 
-/** When [at] (milliseconds since 1970) was, in plain words on the result screen: "Measured on this machine on 19 Nov 2026." */
+/**
+ * When [at] (milliseconds since 1970) was, in plain words on the result screen: "Measured on this machine on 19 Nov
+ * 2026 at 12:05." With the time of day: a test run again on the same day shows as a new one.
+ */
 fun measuredLine(at: Double): String {
     val date = Date(at)
     val month = MONTHS[date.getMonth().coerceIn(0, MONTHS.size - 1)]
+    val minutes = date.getMinutes().toString().padStart(length = 2, padChar = '0')
 
-    return "Measured on this machine on ${date.getDate()} $month ${date.getFullYear()}."
+    return "Measured on this machine on ${date.getDate()} $month ${date.getFullYear()} at ${date.getHours()}:$minutes."
 }
 
 private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")

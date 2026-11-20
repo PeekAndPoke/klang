@@ -64,11 +64,19 @@ val APP_SWITCHES: Set<String> = setOf(Switch.NoStrobe.key, Switch.NoHud.key, Swi
  * Whether the machine test's result under the address of [query] may be kept for the next visit ([StoredTest]): only
  * where the address carries no live-act switch ([Switch]) but the app's own ([APP_SWITCHES]). Any other (`?nofog`,
  * `?fog=low`, `?shadows=low`, `?nosky`, `?seed=3`, ...) may make the picture lighter or heavier than the show's own,
- * and a result measured so would later be taken as the full picture's: it is shown, not kept. Keys that name no
- * switch (`?fbclid=...`, `?utm_source=...`, from a shared link) cannot change the picture and do not count.
+ * and a result measured so would later be taken as the full picture's: it is shown, not kept ([NOT_KEPT] says so on
+ * the result screen). Keys that name no switch (`?fbclid=...`, `?utm_source=...`, from a shared link) cannot change
+ * the picture and do not count; nor does `?look=new`, which only names the look notstrom shows anyway ([NEW_LOOK]).
  */
 fun keepsTest(query: String): Boolean =
-    query.keys().none { key -> key !in APP_SWITCHES && Switch.entries.any { it.key == key } }
+    query.removePrefix("?").split("&").filter { it.isNotEmpty() }.none { part ->
+        val key = part.substringBefore("=")
+
+        key !in APP_SWITCHES && part != "${Switch.Look.key}=$NEW_LOOK" && Switch.entries.any { it.key == key }
+    }
+
+/** Said on the result screen where a result just measured is not kept for the next visit ([keepsTest]). */
+const val NOT_KEPT = "Not kept for the next visit: the address changes the picture."
 
 /** The address's switch that shows the line of text at the top, which notstrom hides by default (`?hud`). */
 const val HUD = "hud"

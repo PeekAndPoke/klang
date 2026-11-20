@@ -135,7 +135,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
     /**
      * What the tests found, and the oversampling and the fog the picture test chose; [keptAt]: when it was measured,
-     * where it is a kept result ([StoredTest]), null for one just measured.
+     * where it is a kept result ([StoredTest]), null for one just measured; [notKept]: one just measured that is not
+     * kept for the next visit, as the address changes the picture ([keepsTest]).
      */
     private class Tested(
         val voices: Int,
@@ -144,6 +145,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val oversample: Int,
         val fog: FogQuality,
         val keptAt: Double? = null,
+        val notKept: Boolean = false,
     )
 
     private val scope = MainScope()
@@ -469,6 +471,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             score = MachineScore.of(safeVoices = voices, fps = frames.fps),
             oversample = PictureQuality.oversampleFor(fps1x = frames.fps, fps2x = twice, density = density),
             fog = StoredTest.FOG_CHOICES.firstOrNull { it.layers == layers } ?: StoredTest.FOG_CHOICES.first(),
+            notKept = !keepsTest(props.query),
         )
 
         tested = result
@@ -763,7 +766,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                             frames = it.frames,
                             score = it.score,
                             quality = qualityLine(query = props.query, oversample = it.oversample, fog = it.fog),
-                            measured = it.keptAt?.let { at -> measuredLine(at) },
+                            measured = it.keptAt?.let { at -> measuredLine(at) } ?: NOT_KEPT.takeIf { _ -> it.notKept },
                             options = { options() },
                             onStart = { go(test = false) },
                             // a kept result can be measured anew: both tests, as after Start
