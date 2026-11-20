@@ -259,25 +259,25 @@ class LookVariantsSpec : StringSpec({
         BlurLook.entries.map { it.cone } shouldBe listOf(0.004, 0.012, 0.03)
     }
 
-    "?stone=marble is the marble; no switch, an empty one or another word the plain stone" {
+    "?stone=plain is the plain stone; no switch, an empty one or another word the marble" {
         StoneLook.of(Switches.parse("?stone=marble")) shouldBe StoneLook.Marble
-        StoneLook.of(Switches.parse("?stone")) shouldBe StoneLook.Plain
+        StoneLook.of(Switches.parse("?stone")) shouldBe StoneLook.Marble
         StoneLook.of(Switches.parse("?stone=plain")) shouldBe StoneLook.Plain
-        StoneLook.of(Switches.parse("?stone=granite")) shouldBe StoneLook.Plain
-        LookVariants().stone shouldBe StoneLook.Plain
-        LookVariants.NEW.stone shouldBe StoneLook.Plain
-        LookVariants.of(Switches.parse("?look=new&blur=crisp&stone=marble")) shouldBe
-            LookVariants.NEW.copy(blur = BlurLook.Crisp, stone = StoneLook.Marble)
+        StoneLook.of(Switches.parse("?stone=granite")) shouldBe StoneLook.Marble
+        LookVariants().stone shouldBe StoneLook.Marble
+        LookVariants.NEW.stone shouldBe StoneLook.Marble
+        LookVariants.of(Switches.parse("?look=new&blur=soft&stone=plain")) shouldBe
+            LookVariants.NEW.copy(blur = BlurLook.Soft, stone = StoneLook.Plain)
     }
 
     "the key k turns the stone over and leaves the rest; twice is back where it was; its line says it" {
         val start = LookVariants.NEW
 
-        start.nextStone() shouldBe start.copy(stone = StoneLook.Marble)
+        start.nextStone() shouldBe start.copy(stone = StoneLook.Plain)
         start.nextStone().nextStone() shouldBe start
-        start.nextStone().stoneLine(ReflectionQuality.On) shouldBe "floor: marble"
-        start.stoneLine(ReflectionQuality.On) shouldBe "floor: plain"
-        start.nextStone().stoneLine(ReflectionQuality.Off) shouldBe "floor: marble (reflections off)"
+        start.stoneLine(ReflectionQuality.On) shouldBe "floor: marble"
+        start.nextStone().stoneLine(ReflectionQuality.On) shouldBe "floor: plain"
+        start.stoneLine(ReflectionQuality.Off) shouldBe "floor: marble (reflections off)"
         LookVariants(stone = StoneLook.Marble).stoneLine(ReflectionQuality.On) shouldBe "floor: marble (with the mirror floor only)"
     }
 
@@ -316,7 +316,7 @@ class LookVariantsSpec : StringSpec({
             underworld = UnderworldLook.Off,
             ripple = RippleLook.Gentle,
             blur = BlurLook.Crisp,
-            stone = StoneLook.Plain,
+            stone = StoneLook.Marble,
             outline = OutlineLook.Off,
         )
     }

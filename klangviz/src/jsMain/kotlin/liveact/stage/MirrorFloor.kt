@@ -655,9 +655,15 @@ void main() {
          * among the audience. The floor's own light (the lamps' pools) is turned down to 0.3 under it.
          *
          * The marble ([StoneLook.Marble], `marbleAt`): the level lines of a warped noise, some metres long, thinned out
-         * by a slow noise, are the veins; a little lighter than the stone (`marbled`), a little rougher, and standing a
-         * hair proud of it, so their flanks tilt the surface and kink a reflection that crosses them, as the ripple
-         * does; over a faint cloudy variation. Filtered by the pixel's footprint (`fwidth`): far off a vein grows no
+         * by a slow noise, are the veins; lighter than the stone (`marbled`), rougher, and standing a hair proud of
+         * it, so their flanks tilt the surface and kink a reflection that crosses them, as the ripple does; over a
+         * cloudy variation. Made stronger 2026-11-21 (the maintainer: "enable marble by default and make it
+         * stronger"): what the floor shows is mostly its mirror image and the lamps' sheen, hardly its own near black
+         * colour, so veins that were only a little lighter than the stone did not show. Now they are a pale grey
+         * (`MARBLE_LIGHT`), a third wider and more of them, each in a soft, wider band of the same grey
+         * (`MARBLE_HALO`), with a second family of finer veins between them; they mirror less than the polished
+         * stone (`MARBLE_DULL`, so they also show as duller lines across a bright reflection), and the clouds
+         * lighten the stone (`MARBLE_CLOUD`). Filtered by the pixel's footprint (`fwidth`): far off a vein grows no
          * thinner than a pixel and fades instead, so it does not shimmer as the camera moves.
          *
          * The underworld, as far as `uMirrorUnder` goes: the ripple a quarter as strong (stiller), and the image's
@@ -677,11 +683,13 @@ const float BROAD_TILT = 200.0, FINE_TILT = 60.0;
 // thin things (the trumpet, the strings, the stands, the fence's wires), nor crawl as they move (measured 2026-11-20:
 // 1 to 2 pixels crawled more for their detail than the half-size picture did before; 3 no more)
 const float MIRROR_LEAST = 3.0;
-// the marble's veins: how wide in the field (some 3 cm on the floor), how far they stand proud (tilting their flanks by
+// the marble's veins: how wide in the field (some 4 cm on the floor), how far they stand proud (tilting their flanks by
 // a degree or two), how much that bends the mirror image (a kink of about half a pixel of the picture where a
-// reflection crosses a vein), and the colour they lighten the stone toward (linear; the stone itself is near 0.002)
-const float MARBLE_VEIN = 0.012, MARBLE_RAISE = 0.0004, MARBLE_BEND = 0.05;
-const vec3 MARBLE_LIGHT = vec3(0.010, 0.010, 0.012);
+// reflection crosses a vein), the colour they lighten the stone toward (linear; the stone itself is near 0.002), how
+// much less a vein mirrors than the polished stone, how many times wider than the vein the soft band around it is,
+// and the colour the clouds add where they are light
+const float MARBLE_VEIN = 0.016, MARBLE_RAISE = 0.0005, MARBLE_BEND = 0.05, MARBLE_DULL = 0.6, MARBLE_HALO = 6.0;
+const vec3 MARBLE_LIGHT = vec3(0.30, 0.29, 0.32), MARBLE_CLOUD = vec3(0.012, 0.012, 0.015);
 const vec2 MIRROR_TAPS[4] = vec2[4](vec2(0.7, 0.2), vec2(-0.2, 0.7), vec2(-0.7, -0.2), vec2(0.2, -0.7));
 float mirrorNoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
@@ -694,9 +702,10 @@ float mirrorNoise(vec2 p) {
 }
 // the floor's own light (the lamps' pools) in the underworld: colder and darker as well
 // the marble at this place of the floor, worked out once (marbleAt) for its colour, its sheen, its surface and the
-// mirror: how much of a vein lies here (0 to 1), the faint cloudy variation (-1 to 1), and how the veins, standing a
-// hair proud of the stone, tilt the surface here (along x and z)
+// mirror: how much of a vein lies here (0 to 1), how much of the soft band around one (0 to 1), the cloudy variation
+// (-1 to 1), and how the veins, standing a hair proud of the stone, tilt the surface here (along x and z)
 float marbleVein = 0.0;
+float marbleHalo = 0.0;
 float marbleCloud = 0.0;
 vec2 marbleSlope = vec2(0.0);
 // a warped noise, three layers, its place pushed by another noise, so that its level lines run long and meander
@@ -716,8 +725,15 @@ void marbleAt(vec3 world) {
   float x = abs(f - 0.5);
   float line = 1.0 - smoothstep(0.0, wide, x);
   // only some stretches of the level line are veins: a slow noise thins them out
-  float share = smoothstep(0.45, 0.75, mirrorNoise(p * 0.18 + 31.0)) * (MARBLE_VEIN / wide) * uMarble;
-  marbleVein = line * share;
+  float share = smoothstep(0.25, 0.55, mirrorNoise(p * 0.18 + 31.0)) * (MARBLE_VEIN / wide) * uMarble;
+  // a second family, finer and fainter, from the same field read elsewhere and closer, more along x than along z,
+  // so they run across the stage, and thinned out more, so they are strokes and no closed rings
+  float g = marbleField(p * vec2(1.1, 2.6) + 71.0);
+  float thin = max(0.5 * MARBLE_VEIN, 1.5 * fwidth(g));
+  float fine = (1.0 - smoothstep(0.0, thin, abs(g - 0.5))) * (0.5 * MARBLE_VEIN / thin);
+  fine *= smoothstep(0.42, 0.7, mirrorNoise(p * 0.27 + 83.0)) * uMarble;
+  marbleVein = max(line * share, 0.5 * fine);
+  marbleHalo = (1.0 - smoothstep(0.0, MARBLE_HALO * wide, x)) * share;
   marbleCloud = (2.0 * mirrorNoise(p * 0.6 + 47.0) - 1.0) * uMarble;
   // the field's slope on the floor, from how it and the place change from pixel to pixel (no second noise needed)
   vec2 dx = dFdx(p), dy = dFdy(p);
@@ -729,13 +745,14 @@ void marbleAt(vec3 world) {
   float fall = x < wide ? 6.0 * x * (wide - x) / (wide * wide * wide) : 0.0;
   marbleSlope = -MARBLE_RAISE * fall * sign(f - 0.5) * grad * share;
 }
-// the stone's sheen with the marble: a little rougher along a vein, a little smoother or rougher with the clouds
+// the stone's sheen with the marble: rougher along a vein, a little smoother or rougher with the clouds
 float marbleRough(float r) {
-  return clamp(r + 0.12 * marbleVein - 0.04 * marbleCloud, 0.04, 1.0);
+  return clamp(r + 0.18 * marbleVein - 0.06 * marbleCloud, 0.04, 1.0);
 }
-// the stone's own colour with the marble: the veins a little lighter, the stone a little cloudy; still near black
+// the stone's own colour with the marble: the veins a pale grey, the stone cloudy; still dark
 vec3 marbled(vec3 c) {
-  return mix(c * (1.0 + 0.25 * marbleCloud), MARBLE_LIGHT, 0.5 * marbleVein);
+  vec3 stone = c * (1.0 + 0.5 * marbleCloud) + MARBLE_CLOUD * max(marbleCloud, 0.0);
+  return mix(stone, MARBLE_LIGHT, min(0.85 * marbleVein + 0.2 * marbleHalo, 1.0));
 }
 vec3 underFloor(vec3 c) {
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -819,7 +836,8 @@ vec3 mirrored(vec3 world) {
   float keep = mix(0.7, 1.0, blurs.y);
   vec3 toEye = normalize(cameraPosition - world);
   float fresnel = 0.45 + 0.35 * pow(1.0 - clamp(toEye.y, 0.0, 1.0), 5.0);
-  return seen * fresnel * keep * reach;
+  // a vein mirrors less than the polished stone around it
+  return seen * fresnel * keep * reach * (1.0 - MARBLE_DULL * marbleVein - 0.15 * marbleHalo);
 }"""
     }
 }

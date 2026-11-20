@@ -35,7 +35,7 @@ data class LookVariants(
     val underworld: UnderworldLook = UnderworldLook.Off,
     val ripple: RippleLook = RippleLook.Gentle,
     val blur: BlurLook = BlurLook.Crisp,
-    val stone: StoneLook = StoneLook.Plain,
+    val stone: StoneLook = StoneLook.Marble,
     val outline: OutlineLook = OutlineLook.Off,
 ) {
     /** The next of the stage's looks, after the last the first again. */
@@ -215,7 +215,7 @@ data class LookVariants(
          * The band's new look as a whole (KLANG-00478; `?look=new`, the key x): the fence, the mirror floor, the haze
          * giving way to the shadows, Sirene's eyes in her shadow, the lacquer, and the time of day drifting from day
          * to night and back. The underworld stays off: it is a moment of a show, called by its own key. The stone
-         * faintly uneven, the reflection soft and the stone plain, as without the new look.
+         * gently uneven, the reflection crisp and the stone marble, as without the new look.
          */
         val NEW = LookVariants(
             stage = StageLook.Mesh,
@@ -228,7 +228,7 @@ data class LookVariants(
             underworld = UnderworldLook.Off,
             ripple = RippleLook.Gentle,
             blur = BlurLook.Crisp,
-            stone = StoneLook.Plain,
+            stone = StoneLook.Marble,
             outline = OutlineLook.Off,
         )
 
@@ -238,7 +238,7 @@ data class LookVariants(
         /**
          * The variants the address asks for (`?stage=mesh`, `?floor=mirror`, `?haze=parts`, `?eyes=shadow`,
          * `?skin=lacquer`, `?world=night`, `?ghosts=red`, `?underworld=on`, `?ripple=faint`, `?blur=crisp`,
-         * `?stone=marble`, `?edge=on`), each over the look as made, or with `?look=new` over [NEW]
+         * `?stone=plain`, `?edge=on`), each over the look as made, or with `?look=new` over [NEW]
          * (`?look=new&world=night`: the new look at night). A variant's switch counts where it is given at all, also
          * empty or with another word (`?look=new&stage` is the wall).
          */

@@ -56,16 +56,16 @@ class LookGroupSpec : StringSpec({
 
         marked(TODAY) shouldBe listOf(
             listOf("Today"), listOf("Wall"), listOf("Plain"), listOf("Whole"), listOf("Face"), listOf("Suit"), listOf("Off"),
-            listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
+            listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Marble"), listOf("Off"),
         )
         marked(NEW) shouldBe listOf(
             listOf("New"), listOf("Fence"), listOf("Mirror"), listOf("Parts"), listOf("Shadow"), listOf("Lacquer"),
-            listOf("Drift"), listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Plain"), listOf("Off"),
+            listOf("Drift"), listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Marble"), listOf("Off"),
         )
-        marked(NEW.tune(NEW.shown.copy(world = WorldLook.Night, ghosts = GhostLight.Red, stone = StoneLook.Marble))).let {
+        marked(NEW.tune(NEW.shown.copy(world = WorldLook.Night, ghosts = GhostLight.Red, stone = StoneLook.Plain))).let {
             it[6] shouldBe listOf("Night")
             it[7] shouldBe listOf("Red")
-            it[11] shouldBe listOf("Marble")
+            it[11] shouldBe listOf("Plain")
         }
     }
 

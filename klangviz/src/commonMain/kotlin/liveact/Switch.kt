@@ -259,9 +259,9 @@ enum class Switch(val key: String) {
     Blur("blur"),
 
     /**
-     * `?stone=marble`: the mirror floor's stone ([StoneLook]): marble, dark polished marble with a few soft veins; any
-     * other value, or none, plain, the stone as it was made. Only where the mirror floor is drawn ([Floor]). The key k
-     * turns it over while the show plays ([LookVariants]).
+     * `?stone=plain`: the mirror floor's stone ([StoneLook]): plain, the stone as it was made, all one; any other
+     * value, or none, marble, dark polished marble with soft veins. Only where the mirror floor is drawn ([Floor]).
+     * The key k turns it over while the show plays ([LookVariants]).
      */
     Stone("stone"),
 
