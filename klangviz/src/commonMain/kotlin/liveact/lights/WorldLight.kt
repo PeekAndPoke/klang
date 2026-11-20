@@ -32,11 +32,12 @@ import kotlin.math.cos
  * - **The cold world** behind the fence, seen through the band's shadows: none by day, all of it by night and at
  *   ember ([beyond]).
  * - **The ghosts** ([GhostLight] gives the colour): the stage dark. The front lamp and the fill give no light (the
- *   front lamp's shadow is still drawn: the figures are made of it), the lamps behind a little, all in the colour's
- *   rim, so the band's edges just show; the sun gone; the lacquer mirrors little and only the glow behind. All the
- *   light is in the haze behind the fence, which glows in the colour where no lamp reaches ([hazeBase]); the band's
- *   shadows stay open in it all the time, pale figures, the brightest of the picture ([ghostShare], [ghostPale]),
- *   before the colour's deep ([ghostDepth]); the light on the surfaces behind is dimmed.
+ *   front lamp's shadow is still drawn: the figures are made of it), the lamps behind a trace, in the colour's rim, so
+ *   the band's edges just show and the floor carries no pools of their light; the sun gone; the lacquer mirrors little
+ *   and only the glow behind. All the light is in the haze behind the fence, which glows in the colour where no lamp
+ *   reaches ([hazeBase]); the band's shadows stay open in it all the time, pale figures, the brightest of the picture
+ *   ([ghostShare], [ghostPale]), seen through a veil of the haze ([ghostClearing]), before the colour's deep
+ *   ([ghostDepth]); the light on the surfaces behind is dimmed.
  */
 object WorldLight {
     /** How long a round of the drift takes, in seconds: day to night and back in about four minutes. */
@@ -57,8 +58,11 @@ object WorldLight {
      */
     const val GHOST_GLOW = 2.4
 
+    /** How far the haze parts before the figures in the ghosts ([ghostClearing]): a veil stays. */
+    const val GHOST_CLEARING = 0.6
+
     /** How bright the figures in the ghosts' haze are, as a share of the colour's pale ([GhostLight.pale]). */
-    const val GHOST_PALE = 1.6
+    const val GHOST_PALE = 0.95
 
     /** How strongly the lacquer mirrors the ghosts' glow behind the band, as a share of the colour's glow ([roomSun]). */
     const val GHOST_ROOM = 0.9
@@ -166,7 +170,7 @@ object WorldLight {
     fun backLean(world: WorldTime): Double = blend(world, made = 0.0, day = 0.35, night = 0.4, ember = 0.55, ghosts = 1.0)
 
     /** How strongly the lamps behind shine against the stage as made: by day 1, by night 0.8, at ember 0.9. */
-    fun backScale(world: WorldTime): Double = blend(world, made = 1.0, day = 1.0, night = 0.8, ember = 0.9, ghosts = 0.12)
+    fun backScale(world: WorldTime): Double = blend(world, made = 1.0, day = 1.0, night = 0.8, ember = 0.9, ghosts = 0.03)
 
     /** How far the fill from the front leans toward [lampTint]: as made 0, by day 0.4, by night 0.5, at ember 0.4. */
     fun fillLean(world: WorldTime): Double = blend(world, made = 0.0, day = 0.4, night = 0.5, ember = 0.4, ghosts = 1.0)
@@ -230,9 +234,9 @@ object WorldLight {
 
     /**
      * How bright the lacquer mirrors its room against the stage as made (with the house): as made, by day, by night and
-     * at ember 1; in the ghosts 0.15, so the band stays dark, its edges only catching the glow behind ([roomSun]).
+     * at ember 1; in the ghosts 0.35, so the band stays dark, its edges only catching the glow behind ([roomSun]).
      */
-    fun roomLight(world: WorldTime): Double = blend(world, made = 1.0, day = 1.0, night = 1.0, ember = 1.0, ghosts = 0.15)
+    fun roomLight(world: WorldTime): Double = blend(world, made = 1.0, day = 1.0, night = 1.0, ember = 1.0, ghosts = 0.35)
 
     /**
      * How much of the cold world shows through the band's shadows on the surface behind the fence, 0 to 1: none by
@@ -252,6 +256,13 @@ object WorldLight {
      * ghosts' pale light ([ghostPale]) in place of the cold world, the surface around them its deep ([ghostDepth]).
      */
     fun ghostShare(world: WorldTime): Double = world.on * world.ghosts
+
+    /**
+     * How far the haze stays parted before the band's shadows in the ghosts, whatever the front lamp does, 0 to 1: a
+     * share of [ghostShare] ([GHOST_CLEARING]), so a veil of the glowing haze stays before the figures and they glow
+     * through it.
+     */
+    fun ghostClearing(world: WorldTime): Double = ghostShare(world) * GHOST_CLEARING
 
     /**
      * The light the figures in the haze send in the ghosts, linear: the colour's pale ([GhostLight.pale]) at

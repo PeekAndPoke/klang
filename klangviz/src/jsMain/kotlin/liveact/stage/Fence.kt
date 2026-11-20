@@ -77,6 +77,9 @@ class Fence(private val scene: Scene) {
      * cold world, that light, and the deep the surface behind sends of its own.
      */
     private val ghostShare = uniform(0.0)
+
+    /** How far around a place the band's shadow is read for its window, in metres: wider in the ghosts ([world]). */
+    private val windowEdge = uniform(WINDOW_EDGE)
     private val ghostPale = vec()
     private val ghostDepth = vec()
 
@@ -176,6 +179,7 @@ class Fence(private val scene: Scene) {
             shader.uniforms["uGhost"] = ghostShare
             shader.uniforms["uGhostPale"] = uniform(ghostPale)
             shader.uniforms["uGhostDepth"] = uniform(ghostDepth)
+            shader.uniforms["uWindowEdge"] = windowEdge
             shader.vertexShader = shader.vertexShader.withWorld()
             backLean.into(shader)
             shader.fragmentShader = shader.fragmentShader
@@ -189,7 +193,8 @@ class Fence(private val scene: Scene) {
                     "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uSunGlow * sunGlow(vWorld.xy) * (0.8 + 0.4 * stain);\n" +
                         "totalEmissiveRadiance += uGhostDepth * (0.7 + 0.6 * stain);\n" +
                         "if (uBeyond > 0.0) {\n" +
-                        "  totalEmissiveRadiance += uBeyond * windowAt(vWorld) * mix(beyond(vWorld), uGhostPale, uGhost);\n" +
+                        "  vec3 ghost = uGhostPale * (0.55 + 0.7 * stain);\n" +
+                        "  totalEmissiveRadiance += uBeyond * windowAt(vWorld) * mix(beyond(vWorld), ghost, uGhost);\n" +
                         "}",
                 )
         }
@@ -219,6 +224,7 @@ class Fence(private val scene: Scene) {
         backLean.world(world)
         wireLean.world(world = world, share = WIRE_LEAN)
         ghostShare.value = WorldLight.ghostShare(world)
+        windowEdge.value = WINDOW_EDGE + (GHOST_EDGE - WINDOW_EDGE) * WorldLight.ghostShare(world)
 
         val (pr, pg, pb) = WorldLight.ghostPale(world)
         val (dr, dg, db) = WorldLight.ghostDepth(world)
@@ -304,6 +310,12 @@ class Fence(private val scene: Scene) {
         /** How far around that place the band's shadow is read as well, in metres: the window's soft edge. */
         private const val WINDOW_EDGE = 0.05
 
+        /**
+         * In the ghosts, how far around the band's shadow is read instead, in metres: the figures' edges soft, so they
+         * glow rather than stand as cut-outs.
+         */
+        private const val GHOST_EDGE = 0.14
+
         /** The mesh and the surface: as wide as the wall was, and as high. */
         private const val WIDE = 60.0
         private const val HIGH = 16.0
@@ -373,7 +385,8 @@ void chainLink(vec2 p, out float cover, out vec3 n, out float rim, out float sha
         /**
          * The cold world beyond the surface, for a place of it (in the world): `windowAt` is how much the place lies in
          * the band's shadow from the front lamp, 0 to 1, read from the lamp's map [BAND_GAP] m toward the lamp (so the
-         * fence's posts open no window) and [WINDOW_EDGE] m around (a soft edge of a few millimetres on the surface);
+         * fence's posts open no window) and [WINDOW_EDGE] m around (a soft edge of a few millimetres on the surface; in
+         * the ghosts up to [GHOST_EDGE], softer);
          * six readings of the map, only where the cold world shows at all. `beyond` is what the window shows, the
          * light it sends: a night sky, silver blue at the horizon and deep blue higher up, with the glow of a moon high
          * to the left; far hills, 60 m behind the surface, dark blue, their ridges caught by the moon, mist lying in
@@ -388,6 +401,7 @@ uniform float uBeyond;
 uniform float uGhost;
 uniform vec3 uGhostPale;
 uniform vec3 uGhostDepth;
+uniform float uWindowEdge;
 
 float lampHeldBack(vec3 at) {
   vec4 c = uFrontShadowMatrix * vec4(at, 1.0);
@@ -400,8 +414,8 @@ float lampHeldBack(vec3 at) {
 float windowAt(vec3 world) {
   vec3 toLamp = normalize(uFrontLamp - world);
   vec3 near = world + toLamp * ${BAND_GAP.toFixed(3)};
-  vec3 across = normalize(cross(toLamp, vec3(0.0, 1.0, 0.0))) * ${WINDOW_EDGE.toFixed(3)};
-  vec3 up = normalize(cross(across, toLamp)) * ${WINDOW_EDGE.toFixed(3)};
+  vec3 across = normalize(cross(toLamp, vec3(0.0, 1.0, 0.0))) * uWindowEdge;
+  vec3 up = normalize(cross(across, toLamp)) * uWindowEdge;
   float held = 2.0 * lampHeldBack(near) + lampHeldBack(near + across) + lampHeldBack(near - across) +
     lampHeldBack(near + up) + lampHeldBack(near - up);
   return smoothstep(0.15, 0.85, held / 6.0);

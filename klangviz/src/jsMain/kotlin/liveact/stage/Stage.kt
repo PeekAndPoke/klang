@@ -579,8 +579,12 @@ class Stage(
 
         groundFog?.house(glow)
 
-        // the haze draws back from the band's shadows as much as the lamp is on, where it parts and the fence stands
-        val parting = clearing.follow(target = if (variants.partsHaze) held else 0.0, dt = dt)
+        // the haze draws back from the band's shadows as much as the lamp is on, where it parts and the fence stands; in
+        // the ghosts part of the way all the time, a veil of the glow before the figures
+        val parting = clearing.follow(
+            target = if (variants.partsHaze) max(FrontFade.level(front), WorldLight.ghostClearing(world)) else 0.0,
+            dt = dt,
+        )
 
         if (fence != null) {
             groundFog?.clearings(front = lights.front, share = parting)

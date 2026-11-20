@@ -33,22 +33,22 @@ enum class GhostLight(
 ) {
     Cold(
         word = "cold",
-        glow = Triple(0.30, 0.42, 0.78),
+        glow = Triple(0.30, 0.40, 0.64),
         depth = Triple(0.015, 0.025, 0.07),
         pale = Triple(0.78, 0.86, 1.0),
         rim = 0x8fb0ff,
     ),
     Red(
         word = "red",
-        glow = Triple(0.85, 0.05, 0.045),
-        depth = Triple(0.09, 0.004, 0.01),
+        glow = Triple(0.52, 0.045, 0.05),
+        depth = Triple(0.06, 0.004, 0.01),
         pale = Triple(1.0, 0.68, 0.70),
         rim = 0xff3a30,
     ),
     Green(
         word = "green",
-        glow = Triple(0.07, 0.58, 0.44),
-        depth = Triple(0.07, 0.015, 0.14),
+        glow = Triple(0.06, 0.48, 0.36),
+        depth = Triple(0.03, 0.008, 0.06),
         pale = Triple(0.70, 1.0, 0.90),
         rim = 0x40e0b8,
     );

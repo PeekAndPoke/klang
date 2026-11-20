@@ -134,7 +134,7 @@ class WorldLightSpec : StringSpec({
     "the ghosts: the front lamp and the fill give no light, the lamps behind a little, all in the colour's rim; no sun" {
         WorldLight.frontScale(GHOSTS) shouldBe 0.0
         WorldLight.fillScale(GHOSTS) shouldBe 0.0
-        WorldLight.backScale(GHOSTS) shouldBe near(0.12)
+        WorldLight.backScale(GHOSTS) shouldBe near(0.03)
         WorldLight.backLean(GHOSTS) shouldBe 1.0
         WorldLight.fillLean(GHOSTS) shouldBe 1.0
         WorldLight.lampTint(GHOSTS) shouldBe GhostLight.Cold.rim
@@ -154,7 +154,7 @@ class WorldLightSpec : StringSpec({
             Triple(WorldLight.GHOST_PALE * pr, WorldLight.GHOST_PALE * pg, WorldLight.GHOST_PALE * pb)
         }
         WorldLight.ghostDepth(red) shouldBe GhostLight.Red.depth
-        WorldLight.roomLight(red) shouldBe near(0.15)
+        WorldLight.roomLight(red) shouldBe near(0.35)
         WorldLight.roomSun(red) shouldBeNear Triple(WorldLight.GHOST_ROOM * r, WorldLight.GHOST_ROOM * g, WorldLight.GHOST_ROOM * b)
         WorldLight.roomLight(NIGHT) shouldBe 1.0
         WorldLight.roomLight(WorldTime.OFF) shouldBe 1.0
@@ -173,10 +173,18 @@ class WorldLightSpec : StringSpec({
         WorldLight.beyond(DAY) shouldBe 0.0
     }
 
+    "in the ghosts the haze stays parted before the figures, but only part of the way: a veil of the glow stays" {
+        WorldLight.ghostClearing(GHOSTS) shouldBe near(WorldLight.GHOST_CLEARING)
+        WorldLight.ghostClearing(GHOSTS.copy(ghosts = 0.5)) shouldBe near(WorldLight.GHOST_CLEARING / 2)
+        WorldLight.ghostClearing(NIGHT) shouldBe 0.0
+        (WorldLight.GHOST_CLEARING < 1.0) shouldBe true
+        (WorldLight.GHOST_CLEARING > 0.0) shouldBe true
+    }
+
     "the turn into the ghosts is even: halfway, every value halfway between the night's and the ghosts'" {
         val half = NIGHT.copy(ghosts = 0.5)
 
-        WorldLight.backScale(half) shouldBe near((0.8 + 0.12) / 2)
+        WorldLight.backScale(half) shouldBe near((0.8 + 0.03) / 2)
         WorldLight.sunStrength(half) shouldBe near(0.9 / 2)
         WorldLight.hazeThickness(half) shouldBe near((0.6 + 1.1) / 2)
         // night 1 to ghosts 5 halfway; ember 3 to ghosts 5 a quarter of the way
