@@ -6,21 +6,26 @@
 package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.Three
+import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.workshop.threejs.CompiledShader
 import io.peekandpoke.klang.workshop.threejs.Matrix4
 import io.peekandpoke.klang.workshop.threejs.RenderTargetOptions
+import io.peekandpoke.klang.workshop.threejs.ShaderMaterialParameters
 import io.peekandpoke.klang.workshop.threejs.TextureDataType
 import io.peekandpoke.klang.workshop.threejs.Uniform
 import io.peekandpoke.klang.workshop.threejs.WebGLRenderTarget
+import io.peekandpoke.klang.workshop.threejs.createShaderMaterial
 import io.peekandpoke.klang.workshop.threejs.createWebGLRenderTarget
 import io.peekandpoke.klang.workshop.threejs.extensions
+import io.peekandpoke.klang.workshop.threejs.frustumCulled
 import io.peekandpoke.klang.workshop.threejs.getRenderTarget
 import io.peekandpoke.klang.workshop.threejs.matrixWorld
 import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
 import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.setRenderTarget
 import io.peekandpoke.klang.workshop.threejs.uniform
+import io.peekandpoke.klang.workshop.threejs.uniformsOf
 import io.peekandpoke.kraft.addons.threejs.js.Camera
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
@@ -37,7 +42,9 @@ import kotlin.math.max
  * The floor as polished dark stone (`?floor=mirror`, [FloorLook.Mirror]): [floor] takes a material of its own, darker
  * and a little rougher than the plain floor's (the lamps' pools on it softer), that shows the stage mirrored in it,
  * dimmer than the stage itself, blurred and fading the farther what is mirrored stands from the floor, and bent a
- * little by a slow ripple of the surface, so it reads as polished stone and not as a mirror.
+ * little by a slow ripple of the surface, so it reads as polished stone and not as a mirror. The ripple tilts the
+ * floor's own surface for its light as well, so the eye sees the unevenness that bends the reflection; how much of it
+ * there is: [ripple] ([RippleLook], the key b).
  *
  * How: each frame, just before the floor is drawn (three.js's `onBeforeRender`, as its own `Reflector` does it), a
  * second camera, the frame's camera mirrored in the floor, draws [scene] into a picture of a quarter of the screen's
@@ -45,6 +52,13 @@ import kotlin.math.max
  * the depth says how far behind the floor that image lies, which sets the blur and the fade. The lamps' shadows are
  * the ones the frame drew just before; the mirror draws none of its own. Nothing stands below the floor, so the
  * camera needs no clipping at the floor.
+ *
+ * The blur's width and the fade are not read from the depth pixel by pixel: at the edge of a leg before the fence the
+ * gap behind the floor jumps from half a metre to several, the blur's width with it, and the mirror image was cut
+ * there by a hard, stepped edge that jumped as the players swayed (the maintainer, 2026-11-20: the reflections of the
+ * highlights "flicker", which "reads as cheap"). So a small second drawing right after the mirror's turns its depth
+ * into a picture of blur widths and fades, half the picture's size each way ([widths], [WIDTHS]), and the floor reads
+ * it from its coarse copies: the width changes gradually over some 8 to 16 of the picture's pixels instead.
  *
  * Not mirrored: the floor itself, and what [hide] hides while the mirror draws (`hide(true)`, then `hide(false)`):
  * the stage hides the fog that lies on the floor there. The rest is mirrored: the band, the riser, the instruments,
@@ -55,9 +69,9 @@ import kotlin.math.max
  * drummer) a cold white moon. A tint in the floor's own shader, no drawing of its own.
  *
  * [use] takes the mirror off the floor and puts it on again (the floor turned over while the show plays): off, the
- * floor has its own material back and the picture is freed, but the mirror's material is kept, so putting it on again
- * builds nothing. [dispose] gives the floor its own material back and frees the picture, its depth and the material;
- * the camera holds nothing on the graphics card.
+ * floor has its own material back and the two pictures are freed, but the mirror's material and the widths' drawing
+ * are kept, so putting it on again builds nothing. [dispose] gives the floor its own material back and frees the two
+ * pictures, the depth, the two materials and the widths' shape; the camera holds nothing on the graphics card.
  */
 class MirrorFloor(
     private val floor: Mesh,
@@ -81,17 +95,26 @@ class MirrorFloor(
     /** The picture the mirror is drawn into, made at the first frame and anew where the screen's size changes. */
     private var picture: WebGLRenderTarget? = null
 
-    // What the floor's material reads: the picture and its depth, where a place of the world lands on the picture,
-    // where it is seen from the mirrored camera, the camera's near and far, and its lens's scale across and up
+    /** The blur's widths and the fades ([WIDTHS]), half the picture's size each way: made and freed with [picture]. */
+    private var widths: WebGLRenderTarget? = null
+
+    // What the floor's material reads: the picture, the widths' picture, where a place of the world lands on the
+    // picture, and the lens's scale across and up. What the widths' drawing reads: the picture's depth, the mirrored
+    // camera's place and turn in the world, its near and far, and the lens
     private val image: Uniform<Texture?> = uniform(null)
+    private val blurs: Uniform<Texture?> = uniform(null)
     private val depth: Uniform<Texture?> = uniform(null)
     private val toPicture: Uniform<Matrix4> = uniform(mat4())
-    private val toCamera: Uniform<Matrix4> = uniform(mat4())
+    private val toWorld: Uniform<Matrix4> = uniform(mirrored.matrixWorld)
     private val range: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 0.1, y = 100.0))
     private val lens: Uniform<Vector2> = uniform(Three.addon.createVector2(x = 1.0, y = 1.0))
 
     /** How far the mirror shows the underworld, 0 (the stage) to 1 ([underworld]). */
     private val under: Uniform<Double> = uniform(0.0)
+
+    /** How much the stone's broad and its finer ripple bend the image and tilt the floor ([ripple]). */
+    private val broadRipple: Uniform<Double> = uniform(RippleLook.Gentle.broad)
+    private val fineRipple: Uniform<Double> = uniform(RippleLook.Gentle.fine)
 
     /** Whether the mirror is on the floor now ([use]). */
     private var worn = false
@@ -102,15 +125,36 @@ class MirrorFloor(
         metalness = 0.15
     })
 
+    /** The widths' drawing ([WIDTHS]): one shape over the whole picture, in a scene of its own. */
+    private val widthsScene: Scene = Three.addon.createScene()
+
     init {
+        val widthsMaterial = Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
+            uniforms = uniformsOf(
+                "uMirrorDepth" to depth,
+                "uMirrorWorld" to toWorld,
+                "uMirrorRange" to range,
+                "uMirrorLens" to lens,
+            )
+            vertexShader = WIDTHS_VERTEX
+            fragmentShader = WIDTHS
+            depthTest = false
+            depthWrite = false
+        })
+        val widthsShape = Three.addon.createMesh(Three.addon.createPlaneGeometry(2.0, 2.0), widthsMaterial)
+
+        // the shape is placed by its shader, over the whole picture, whatever the camera
+        widthsShape.frustumCulled = false
+        widthsScene.add(widthsShape)
+
         material.onBeforeCompile("floor-mirror") { shader: CompiledShader ->
             shader.uniforms["uMirror"] = image
-            shader.uniforms["uMirrorDepth"] = depth
+            shader.uniforms["uMirrorWidths"] = blurs
             shader.uniforms["uMirrorPicture"] = toPicture
-            shader.uniforms["uMirrorCamera"] = toCamera
-            shader.uniforms["uMirrorRange"] = range
             shader.uniforms["uMirrorLens"] = lens
             shader.uniforms["uMirrorUnder"] = under
+            shader.uniforms["uRippleBroad"] = broadRipple
+            shader.uniforms["uRippleFine"] = fineRipple
             shader.vertexShader = shader.vertexShader
                 .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vFloorWorld;")
                 .replaceFirst(
@@ -119,6 +163,8 @@ class MirrorFloor(
                 )
             shader.fragmentShader = shader.fragmentShader
                 .replaceFirst("#include <common>", "#include <common>\n$MIRRORED")
+                // the stone's own surface as uneven as the ripple that bends its mirror image
+                .replaceFirst("#include <normal_fragment_maps>", "#include <normal_fragment_maps>\nnormal = floorTilted(vFloorWorld);")
                 .replaceFirst(
                     "#include <opaque_fragment>",
                     // the lamps' pools softer, the mirror image over them
@@ -131,7 +177,7 @@ class MirrorFloor(
 
     /**
      * Puts the mirror on the floor ([on]) or takes it off: off, the floor wears its own material and draws nothing
-     * before itself, and the picture is freed; the mirror's material is kept for the next time.
+     * before itself, and the two pictures are freed; the two materials are kept for the next time.
      */
     fun use(on: Boolean) {
         if (on == worn) {
@@ -155,6 +201,12 @@ class MirrorFloor(
         free()
     }
 
+    /** The stone made as uneven as [to]: the mirror image bent and the floor's own surface tilted by its ripple. */
+    fun ripple(to: RippleLook) {
+        broadRipple.value = to.broad
+        fineRipple.value = to.fine
+    }
+
     /** How far the mirror shows the underworld this frame: [share] from 0 (the stage as it is) to 1. */
     fun underworld(share: Double) {
         under.value = share.coerceIn(0.0, 1.0)
@@ -171,6 +223,7 @@ class MirrorFloor(
         }
 
         val target = pictureFor(width = renderer.domElement.width, height = renderer.domElement.height)
+        val blurTarget = widths ?: return
 
         // the camera mirrored in the floor (y = 0): its place, where it looks and which way is up, each upside down
         mirrored.position.set(eye[12], -eye[13], eye[14])
@@ -194,7 +247,6 @@ class MirrorFloor(
             0.0, 0.0, 0.0, 1.0,
         )
         toPicture.value.multiply(projection).multiply(inverse)
-        toCamera.value.copy(inverse)
         range.value.set(lensOf.near, lensOf.far)
         lens.value.set(projection.elements[0], projection.elements[5])
 
@@ -217,6 +269,9 @@ class MirrorFloor(
             }
 
             renderer.render(scene, mirrored)
+            // the blur's widths from the depth just drawn (the shape covers the picture; nothing to clear)
+            renderer.setRenderTarget(blurTarget)
+            renderer.render(widthsScene, mirrored)
         } finally {
             renderer.setRenderTarget(drawnTo)
             shadows.autoUpdate = shadowsUpdate
@@ -225,7 +280,10 @@ class MirrorFloor(
         }
     }
 
-    /** The picture for a screen [width] by [height] pixels: half each way; made anew where that changed. */
+    /**
+     * The picture for a screen [width] by [height] pixels: half each way; made anew where that changed, and the
+     * widths' picture with it.
+     */
     private fun pictureFor(width: Int, height: Int): WebGLRenderTarget {
         val wide = max(1, width / 2)
         val tall = max(1, height / 2)
@@ -254,11 +312,30 @@ class MirrorFloor(
         image.value = made.texture
         depth.value = made.asDynamic().depthTexture.unsafeCast<Texture>()
 
+        val widthsOptions = jsObject<RenderTargetOptions> {
+            type = this@MirrorFloor.type
+            depthBuffer = false
+            stencilBuffer = false
+        }
+
+        // the floor reads the widths from their smaller copies, so they change gradually
+        widthsOptions.asDynamic().generateMipmaps = true
+        widthsOptions.asDynamic().minFilter = TextureFilter.LinearMipmapLinearFilter
+
+        val blur = Three.addon.createWebGLRenderTarget(width = max(1, wide / 2), height = max(1, tall / 2), options = widthsOptions)
+
+        widths = blur
+        blurs.value = blur.texture
+
         return made
     }
 
-    /** Frees the picture and its depth, where there is one. */
+    /** Frees the picture, its depth and the widths' picture, where there are. */
     private fun free() {
+        widths?.dispose()
+        widths = null
+        blurs.value = null
+
         val old = picture ?: return
 
         picture = null
@@ -272,15 +349,66 @@ class MirrorFloor(
     fun dispose() {
         use(false)
         material.dispose()
+        widthsScene.disposeTree()
     }
 
     private companion object {
+        /** The widths' shape over the whole picture, whatever the camera. */
+        val WIDTHS_VERTEX = """
+void main() {
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}"""
+
+        /**
+         * The widths' picture: for each of its pixels, of the 2 by 2 of the mirror's picture under it, the mean of the
+         * blur's width (`0.03` of the gap over the distance, at most 0.1; written as tenths of that most, so it fits
+         * bytes too) and of the fade (`exp(-gap / 3)`, 1 at the floor). The gap is the distance along the view from
+         * the floor to what the depth there shows; where the view meets the floor, from the mirrored camera's place
+         * and turn in the world, so no place of the floor is needed.
+         */
+        val WIDTHS = """
+uniform sampler2D uMirrorDepth;
+uniform mat4 uMirrorWorld;
+uniform vec2 uMirrorRange, uMirrorLens;
+vec2 blurAt(ivec2 p, vec2 size) {
+  float n = uMirrorRange.x, f = uMirrorRange.y;
+  float hit = n * f / (f - (f - n) * texelFetch(uMirrorDepth, p, 0).x);
+  // the view's ray through this pixel, at a distance of 1 along the view, and how fast it rises in the world
+  vec2 ndc = (vec2(p) + 0.5) / size * 2.0 - 1.0;
+  vec3 ray = vec3(ndc / uMirrorLens, -1.0);
+  float rise = dot(vec3(uMirrorWorld[0].y, uMirrorWorld[1].y, uMirrorWorld[2].y), ray);
+  // where it meets the floor (y = 0) from the camera below it; a ray that never rises to the floor is no part of the
+  // mirror image (and is no division by nought): no gap there
+  float near = rise > 1e-5 ? -uMirrorWorld[3].y / rise : hit;
+  float gap = max(hit - near, 0.0);
+
+  return vec2(min(0.03 * gap / max(hit, 0.1), 0.1) * 10.0, exp(-gap / 3.0));
+}
+void main() {
+  ivec2 size = textureSize(uMirrorDepth, 0);
+  ivec2 last = size - 1;
+  ivec2 at = ivec2(gl_FragCoord.xy) * 2;
+  vec2 s = vec2(size);
+  vec2 sum = blurAt(min(at, last), s) + blurAt(min(at + ivec2(1, 0), last), s)
+    + blurAt(min(at + ivec2(0, 1), last), s) + blurAt(min(at + ivec2(1, 1), last), s);
+  gl_FragColor = vec4(0.25 * sum, 0.0, 1.0);
+}"""
+
         /**
          * The mirror image at a place of the floor (`world`), as the floor adds it to its own light. The picture is
-         * read where the place lands on it, bent a little by a slow ripple; the depth there says how far behind the
-         * floor the image lies (`gap`, in metres along the view). The farther, the wider the image is blurred (a
+         * read where the place lands on it, bent a little by the stone's ripple ([RippleLook], `mirrorBend`; by default
+         * a broad one, some 2 m from crest to crest, a quarter of the strength the floor was first made with: a fence
+         * post's reflection stays a straight line that sways gently; the maintainer, 2026-11-20: the finer ripple bent
+         * it into zigzags that shimmered as the camera moved, "the unevenness of the floor is too much"). The same
+         * ripple tilts the floor's own surface for its light (`floorTilted`: 200 times the broad ripple's bend, some
+         * 9 degrees at most by default, 60 times the finer one's), so the bent reflection reads as caused by the
+         * stone; how far behind the floor the image lies
+         * there (the gap, in metres along the view) sets the blur and the fade, both read from the widths' picture
+         * ([WIDTHS]) at a coarse copy, so they change gradually. The farther, the wider the image is blurred (a
          * spread of about 0.03 of the gap, seen from the camera, read from the picture's smaller copies so a thin
-         * string does not break into dots) and the more it fades (to 0.7, over some 3 m). Then the stone's own
+         * string does not break into dots) and the more it fades (to 0.7, over some 3 m). The blur's five reads each
+         * count by their brightness, less the brighter (after Karis), so a small glint or an eye does not swell and
+         * pulse as one of them catches it and the next frame not. Then the stone's own
          * share: 0.6 looking down on it, more at a glancing angle (after Schlick's Fresnel); none far out
          * among the audience. The floor's own light (the lamps' pools) is turned down to 0.3 under it.
          *
@@ -290,11 +418,12 @@ class MirrorFloor(
          * drummer is a white moon in it. The floor's own light under it leans cold and darker too (`underFloor`).
          */
         val MIRRORED = """
-uniform sampler2D uMirror, uMirrorDepth;
-uniform mat4 uMirrorPicture, uMirrorCamera;
-uniform vec2 uMirrorRange, uMirrorLens;
-uniform float uMirrorUnder;
+uniform sampler2D uMirror, uMirrorWidths;
+uniform mat4 uMirrorPicture;
+uniform vec2 uMirrorLens;
+uniform float uMirrorUnder, uRippleBroad, uRippleFine;
 varying vec3 vFloorWorld;
+const float BROAD_TILT = 200.0, FINE_TILT = 60.0;
 const vec2 MIRROR_TAPS[4] = vec2[4](vec2(0.7, 0.2), vec2(-0.2, 0.7), vec2(-0.7, -0.2), vec2(0.2, -0.7));
 float mirrorNoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
@@ -310,34 +439,64 @@ vec3 underFloor(vec3 c) {
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
   return mix(c, lum * vec3(0.6, 0.8, 1.3), 0.7 * uMirrorUnder) * (1.0 - 0.35 * uMirrorUnder);
 }
+// the stone is not quite flat: its ripple at a place of the floor, weighed by [broad] and [fine] (each about -0.5 to
+// 0.5 times them), a broad ripple, some 2 m from crest to crest, and where asked the finer one the floor was first made
+// with; the underworld stills both
+vec2 mirrorRipple(vec3 world, float broad, float fine) {
+  vec2 r = (vec2(mirrorNoise(world.xz * 0.45), mirrorNoise(world.xz * 0.45 + 17.0)) - 0.5) * broad;
+  if (fine > 0.0) {
+    vec2 f = vec2(mirrorNoise(world.xz * 1.3), mirrorNoise(world.xz * 1.3 + 17.0)) - 0.5;
+    f += 0.5 * (vec2(mirrorNoise(world.xz * 4.1 + 5.0), mirrorNoise(world.xz * 4.1 + 23.0)) - 0.5);
+    r += f * fine;
+  }
+  return r * (1.0 - 0.75 * uMirrorUnder);
+}
+// how far the ripple bends the image (as a share of the picture)
+vec2 mirrorBend(vec3 world) {
+  return mirrorRipple(world, uRippleBroad, uRippleFine);
+}
+// the floor's own surface (its normal, as the view sees it) tilted by the same ripple, so the lamps' pools and the
+// sheen show the unevenness that bends the reflection; the broad ripple tilts it more for its bend than the finer one,
+// or its slow swell would not show at all
+vec3 floorTilted(vec3 world) {
+  vec2 tilt = mirrorRipple(world, uRippleBroad * BROAD_TILT, uRippleFine * FINE_TILT);
+  return normalize((viewMatrix * vec4(normalize(vec3(tilt.x, 1.0, tilt.y)), 0.0)).xyz);
+}
+// how much one of the blur's reads counts: its share, less the brighter it is
+float mirrorWeight(vec3 c, float share) {
+  return share / (1.0 + dot(c, vec3(0.2126, 0.7152, 0.0722)));
+}
 vec3 mirrored(vec3 world) {
-  float near = -(uMirrorCamera * vec4(world, 1.0)).z;
   vec4 at = uMirrorPicture * vec4(world, 1.0);
   vec2 uv = at.xy / at.w;
-  // the stone is not quite flat: a slow ripple, larger and finer, bends the image a little
-  vec2 ripple = vec2(mirrorNoise(world.xz * 1.3), mirrorNoise(world.xz * 1.3 + 17.0)) - 0.5;
-  ripple += 0.5 * (vec2(mirrorNoise(world.xz * 4.1 + 5.0), mirrorNoise(world.xz * 4.1 + 23.0)) - 0.5);
-  uv += ripple * 0.006 * (1.0 - 0.75 * uMirrorUnder);
-  float d = texture2D(uMirrorDepth, uv).x;
-  float n = uMirrorRange.x, f = uMirrorRange.y;
-  float hit = n * f / (f - (f - n) * d);
-  float gap = max(hit - near, 0.0);
+  uv += mirrorBend(world);
+  // the blur's width (in tenths of the most, 0.1) and the fade, from the widths' picture's copy of 4 to 8 of its
+  // pixels (8 to 16 of the picture's): they change gradually across an edge
+  vec2 blurs = textureLod(uMirrorWidths, uv, 2.5).xy;
   // the blur: as wide as a cone of about 0.03 from the floor reaches at the gap, seen from the camera; read from the
-  // picture's smaller copy of about that size, and four times round the middle
-  vec2 spread = 0.5 * uMirrorLens * min(0.03 * gap / max(hit, 0.1), 0.1);
+  // picture's smaller copy of about that size, and four times round the middle, each read counting less the brighter
+  vec2 spread = 0.5 * uMirrorLens * 0.1 * blurs.x;
   vec2 size = vec2(textureSize(uMirror, 0));
   float lod = log2(max(max(spread.x * size.x, spread.y * size.y), 1.0));
-  vec3 seen = textureLod(uMirror, uv, lod).rgb * 0.4;
+  vec3 c = textureLod(uMirror, uv, lod).rgb;
+  float w = mirrorWeight(c, 0.4);
+  vec3 seen = c * w;
+  float weights = w;
   for (int i = 0; i < 4; i++) {
-    seen += textureLod(uMirror, uv + MIRROR_TAPS[i] * spread, lod).rgb * 0.15;
+    c = textureLod(uMirror, uv + MIRROR_TAPS[i] * spread, lod).rgb;
+    w = mirrorWeight(c, 0.15);
+    seen += c * w;
+    weights += w;
   }
+  // never 0: each weight is above 0 for any light a half float holds (at most 65504)
+  seen /= weights;
   if (uMirrorUnder > 0.0) {
     float lum = dot(seen, vec3(0.2126, 0.7152, 0.0722));
     vec3 moonlit = lum * mix(vec3(0.7, 0.95, 1.6), vec3(0.95, 1.0, 1.12), smoothstep(0.08, 0.8, lum));
     // and where nothing is mirrored, the other world's night: a faint cold mist
     seen = mix(seen, 0.75 * moonlit + vec3(0.004, 0.008, 0.02), uMirrorUnder);
   }
-  float keep = mix(0.7, 1.0, exp(-gap / 3.0));
+  float keep = mix(0.7, 1.0, blurs.y);
   vec3 toEye = normalize(cameraPosition - world);
   float fresnel = 0.6 + 0.4 * pow(1.0 - clamp(toEye.y, 0.0, 1.0), 5.0);
   float reach = 1.0 - smoothstep(14.0, 30.0, length(world.xz));

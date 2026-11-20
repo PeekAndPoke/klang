@@ -164,6 +164,39 @@ class LookVariantsSpec : StringSpec({
         under.copy(floor = FloorLook.Plain).underworldLine(FogQuality.High) shouldBe "underworld: on (with the mirror floor only)"
     }
 
+    "?ripple= is how uneven the stone is: none, faint, gentle or strong; no switch, an empty one or another word gentle" {
+        RippleLook.of(Switches.parse("?ripple=none")) shouldBe RippleLook.None
+        RippleLook.of(Switches.parse("?ripple=faint")) shouldBe RippleLook.Faint
+        RippleLook.of(Switches.parse("?ripple=gentle")) shouldBe RippleLook.Gentle
+        RippleLook.of(Switches.parse("?ripple=strong")) shouldBe RippleLook.Strong
+        RippleLook.of(Switches.parse("?ripple")) shouldBe RippleLook.Gentle
+        RippleLook.of(Switches.parse("?ripple=wild")) shouldBe RippleLook.Gentle
+        LookVariants().ripple shouldBe RippleLook.Gentle
+        LookVariants.NEW.ripple shouldBe RippleLook.Gentle
+        LookVariants.of(Switches.parse("?look=new&ripple=none")) shouldBe LookVariants.NEW.copy(ripple = RippleLook.None)
+    }
+
+    "the levels: none flat, faint half the gentle broad ripple, strong the ripple as first made (both layers, 0.006)" {
+        (RippleLook.None.broad to RippleLook.None.fine) shouldBe (0.0 to 0.0)
+        RippleLook.Faint.fine shouldBe 0.0
+        RippleLook.Gentle.fine shouldBe 0.0
+        RippleLook.Faint.broad shouldBe (RippleLook.Gentle.broad / 2 plusOrMinus 1e-4)
+        RippleLook.Gentle.broad shouldBe (0.006 / 4 plusOrMinus 1e-12)
+        (RippleLook.Strong.broad to RippleLook.Strong.fine) shouldBe (0.0 to 0.006)
+    }
+
+    "the key b steps through none, faint, gentle and strong, and back to none; it leaves the rest; its line says it" {
+        val start = LookVariants.NEW
+        val seen = generateSequence(start) { it.nextRipple() }.take(5).map { it.ripple }.toList()
+
+        seen shouldBe listOf(RippleLook.Gentle, RippleLook.Strong, RippleLook.None, RippleLook.Faint, RippleLook.Gentle)
+        start.nextRipple() shouldBe start.copy(ripple = RippleLook.Strong)
+        start.copy(ripple = RippleLook.Faint).rippleLine(FogQuality.High) shouldBe "floor: faint ripple"
+        start.rippleLine(FogQuality.Medium) shouldBe "floor: gentle ripple"
+        start.rippleLine(FogQuality.Low) shouldBe "floor: gentle ripple (no mirror at fog low)"
+        LookVariants().rippleLine(FogQuality.High) shouldBe "floor: gentle ripple (with the mirror floor only)"
+    }
+
     "the new look is the fence, the mirror, the parting haze, the eyes in the shadow, the lacquer and the drift; no underworld" {
         LookVariants.NEW shouldBe LookVariants(
             stage = StageLook.Mesh,
@@ -173,6 +206,7 @@ class LookVariantsSpec : StringSpec({
             skin = SkinLook.Lacquer,
             world = WorldLook.Drift,
             underworld = UnderworldLook.Off,
+            ripple = RippleLook.Gentle,
         )
     }
 

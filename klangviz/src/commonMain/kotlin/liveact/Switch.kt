@@ -12,6 +12,7 @@ import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.HazeLook
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
 import io.peekandpoke.klang.viz.liveact.stage.LookVariants
+import io.peekandpoke.klang.viz.liveact.stage.RippleLook
 import io.peekandpoke.klang.viz.liveact.stage.SkinLook
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
 import io.peekandpoke.klang.viz.liveact.stage.UnderworldLook
@@ -212,6 +213,14 @@ enum class Switch(val key: String) {
      * over while the show plays, fading in over 2 s and out over 3 s ([LookVariants]).
      */
     Underworld("underworld"),
+
+    /**
+     * `?ripple=faint`: how uneven the mirror floor's stone is ([RippleLook]): none, faint, gentle or strong (the ripple
+     * as it was first made); it bends the reflection and tilts the floor's own shading alike. Any other value, or none,
+     * gentle. Only where the mirror floor is drawn ([Floor]). The key b steps through them while the show plays
+     * ([LookVariants]).
+     */
+    Ripple("ripple"),
 
     // The look as a whole
 

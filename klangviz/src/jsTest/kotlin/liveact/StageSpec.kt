@@ -572,9 +572,10 @@ class StageSpec : StringSpec({
                 camera.asDynamic().updateMatrixWorld()
                 floor.onBeforeRender(renderer, scene, camera)
 
-                drawn.size shouldBe 1
+                // the mirror, then the blur's widths from its depth (the next case)
+                drawn.size shouldBe 2
 
-                val seen: List<dynamic> = drawn.single().unsafeCast<List<dynamic>>()
+                val seen: List<dynamic> = drawn.first().unsafeCast<List<dynamic>>()
                 val picture: dynamic = seen[0]
                 val height: dynamic = seen[1]
                 val floorShown: dynamic = seen[2]
@@ -603,9 +604,99 @@ class StageSpec : StringSpec({
 
                 picture.addEventListener("dispose") { _: dynamic -> freed++ }
                 floor.onBeforeRender(renderer, scene, camera)
-                (drawn[1].unsafeCast<List<dynamic>>()[0] === picture) shouldBe true
+                (drawn[2].unsafeCast<List<dynamic>>()[0] === picture) shouldBe true
                 stage.dispose()
                 freed shouldBe 1
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the blur's widths are drawn from the mirror's depth into a picture of their own, freed with the mirror's" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val renderer = standInRenderer()
+            val r: dynamic = renderer
+            var target: dynamic = "the screen"
+            val drawn = mutableListOf<Pair<dynamic, dynamic>>()
+            val scene = three.createScene()
+
+            r.domElement = js("({ width: 1280, height: 800 })")
+            r.autoClear = true
+            r.state = js("({ buffers: { depth: { setMask: function () {} } } })")
+            r.getRenderTarget = { target }
+            r.setRenderTarget = { to: dynamic -> target = to }
+            // (a Pair made by hand: `to` on a dynamic would be looked for on the object)
+            r.render = { what: dynamic, _: dynamic -> drawn.add(Pair(target, what)) }
+
+            val show = Show(seed = 1, switches = Switches.parse("?floor=mirror"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+            val floor: dynamic = scene.children.first()
+
+            fun frame() {
+                drawn.clear()
+                floor.onBeforeRender(renderer, scene, camera)
+            }
+
+            try {
+                camera.position.set(0.0, 2.5, 12.0)
+                camera.lookAt(0.0, 1.0, 0.0)
+                camera.asDynamic().updateMatrixWorld()
+                frame()
+
+                // the mirror first, then the widths: into a picture half the mirror's size each way, without a depth
+                // of its own, from a scene of their own that reads the mirror's depth; the screen's again after it
+                drawn.size shouldBe 2
+
+                val picture: dynamic = drawn[0].first
+                val widths: dynamic = drawn[1].first
+                val pass: dynamic = drawn[1].second
+                val shape: dynamic = pass.children[0]
+
+                (drawn[0].second === scene) shouldBe true
+                (pass !== scene) shouldBe true
+                (widths !== picture) shouldBe true
+                (widths.width.unsafeCast<Int>() to widths.height.unsafeCast<Int>()) shouldBe (320 to 200)
+                (widths.depthTexture == null) shouldBe true
+                (shape.material.uniforms.uMirrorDepth.value === picture.depthTexture) shouldBe true
+                (target === "the screen") shouldBe true
+
+                // the same size again: the same widths' picture
+                frame()
+                (drawn[1].first === widths) shouldBe true
+
+                var widthsFreed = 0
+                var drawingFreed = 0
+                var shapeFreed = 0
+
+                widths.addEventListener("dispose") { _: dynamic -> widthsFreed++ }
+                shape.material.addEventListener("dispose") { _: dynamic -> drawingFreed++ }
+                shape.geometry.addEventListener("dispose") { _: dynamic -> shapeFreed++ }
+
+                // the fog at low takes the mirror off: the widths' picture goes with the mirror's, the drawing is kept
+                stage.fog(FogQuality.Low)
+                widthsFreed shouldBe 1
+                drawingFreed shouldBe 0
+                shapeFreed shouldBe 0
+
+                // on again: a new widths' picture, drawn by the same drawing
+                stage.fog(FogQuality.High)
+                frame()
+
+                val again: dynamic = drawn[1].first
+
+                (again !== widths) shouldBe true
+                (drawn[1].second === pass) shouldBe true
+                again.addEventListener("dispose") { _: dynamic -> widthsFreed++ }
+
+                // the stage given up: the picture, the drawing and its shape freed
+                stage.dispose()
+                widthsFreed shouldBe 2
+                drawingFreed shouldBe 1
+                shapeFreed shouldBe 1
             } finally {
                 stage.dispose()
             }

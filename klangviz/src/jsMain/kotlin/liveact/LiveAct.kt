@@ -106,11 +106,12 @@ fun Tag.LiveAct(
  * oversampling, g through the fog; m turns over what stands behind the band (wall or fence), p the floor (plain or
  * mirror), h the haze behind the fence (whole, or giving way to the band's shadows), i Sirene's eyes under the
  * front lamp (in her face, or in her shadow), l the band's skin (the suit, or black lacquer with gold), n the two
- * worlds' time of day (off, day, night, ember, or a drift from day to night and back) and v the underworld in the
- * mirror floor (off, or on: the other world, cold, for a moment of a show) ([LookVariants]); x flips the whole look
- * between today and the new look, each side as it was last tuned by the keys before ([LookFlip]). A key that turns a
- * variant over says the new one for two seconds below the line at the top. The first turn of x to the new look builds
- * what it needs (a hitch of the frames while the materials compile); from then on it flips at once both ways.
+ * worlds' time of day (off, day, night, ember, or a drift from day to night and back), v the underworld in the
+ * mirror floor (off, or on: the other world, cold, for a moment of a show) and b how uneven the mirror floor's stone is
+ * (none, faint, gentle or strong) ([LookVariants]); x flips the whole look between today and the new look, each side
+ * as it was last tuned by the keys before ([LookFlip]). A key that turns a variant over says the new one for two
+ * seconds below the line at the top. The first turn of x to the new look builds what it needs (a hitch of the frames
+ * while the materials compile); from then on it flips at once both ways.
  *
  * Two limits, as the prototype it was ported from has them. It takes the page for its own: its keys (space, the
  * arrows, single letters and digits) and a click anywhere are the show's, except while the user types in a field;
@@ -246,8 +247,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     /**
      * The look's variants shown now ([LookVariants]): what stands behind the band (`?stage=mesh`, the key m), the floor
      * (`?floor=mirror`, the key p), the haze (`?haze=parts`, the key h), Sirene's eyes (`?eyes=shadow`, the key
-     * i), the band's skin (`?skin=lacquer`, the key l), the time of day (`?world=night`, the key n) and the underworld
-     * in the mirror (`?underworld=on`, the key v).
+     * i), the band's skin (`?skin=lacquer`, the key l), the time of day (`?world=night`, the key n), the underworld
+     * in the mirror (`?underworld=on`, the key v) and the stone's unevenness (`?ripple=faint`, the key b).
      */
     private val variants: LookVariants
         get() = look.shown
@@ -324,6 +325,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             tune(variants.nextUnderworld())
             stage?.underworld(variants.underworld)
             flash(variants.underworldLine(fog))
+        }
+
+        if (plain && key == "b") {
+            tune(variants.nextRipple())
+            stage?.ripple(variants.ripple)
+            flash(variants.rippleLine(fog))
         }
 
         if (plain && key == "x") {
@@ -609,6 +616,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     "${variants.skinLine()} (key l)",
                     "${variants.worldLine()} (key n)",
                     "${variants.underworldLine(fog)} (key v)",
+                    "${variants.rippleLine(fog)} (key b)",
                 ),
             ).joinToString("\n") { items -> items.joinToString("  |  ") }
         }
