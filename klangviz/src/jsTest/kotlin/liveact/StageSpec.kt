@@ -6,12 +6,15 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.Stage
+import io.peekandpoke.klang.viz.liveact.stage.StageLook
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.isLight
@@ -395,6 +398,183 @@ class StageSpec : StringSpec({
                 stage.shadows(ShadowQuality.High)
                 freed shouldBe 7
                 casting() shouldBe listOf(2048, 2048, 2048, 2048)
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the look behind the band turns over while the show plays: the old one leaves with all it holds freed" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val scene = three.createScene()
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+
+            try {
+                val wall = scene.children.single { it.asDynamic().geometry?.parameters?.width == 60.0 }
+                val floorFog = sheetsOf(scene)
+                val freed = mutableListOf<String>()
+
+                wall.asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("wall") }
+                floorFog.first().asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("fog") }
+
+                // the same look again changes nothing
+                stage.look(StageLook.Wall)
+                freed shouldBe emptyList()
+
+                // the fence: the wall and the fog on the floor go, the mesh, the posts and the surface behind come,
+                // and the haze stands upright behind the mesh
+                stage.look(StageLook.Mesh)
+                freed shouldBe listOf("wall", "fog")
+                (wall in scene.children) shouldBe false
+                scene.children.size shouldBe 17 - 1 + 3 + 12
+                sheetsOf(scene).none { it in floorFog } shouldBe true
+                sheetsOf(scene).all { it.rotation.x == 0.0 } shouldBe true
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+
+                val fence = scene.children.filter { it.asDynamic().geometry?.parameters?.width == 60.0 }
+
+                fence.size shouldBe 2
+
+                for (part in fence) {
+                    part.asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("fence") }
+                }
+
+                // and back to the wall as it was made
+                stage.look(StageLook.Wall)
+                freed.count { it == "fence" } shouldBe 2
+                scene.children.size shouldBe 17 + 12
+                sheetsOf(scene).all { it.rotation.x != 0.0 } shouldBe true
+                stage.light(t = 62.1, house = 1.0, waiting = false)
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the mirror floor comes where it is chosen and the fog is medium or finer, and goes with all it holds" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val scene = three.createScene()
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+
+            try {
+                // the floor is the first thing on the stage
+                val floor: dynamic = scene.children.first()
+                val plain: dynamic = floor.material
+
+                (floor.geometry.parameters.width == 240.0) shouldBe true
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe false
+
+                stage.floor(FloorLook.Mirror)
+
+                val polished: dynamic = floor.material
+                var freed = 0
+
+                (polished !== plain) shouldBe true
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
+                scene.children.size shouldBe 17 + 12
+                polished.addEventListener("dispose") { _: dynamic -> freed++ }
+
+                // the fog at low takes the mirror with it, and gives the floor its own material back
+                stage.fog(FogQuality.Low)
+                freed shouldBe 1
+                (floor.material === plain) shouldBe true
+                (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe false
+
+                // the fog at high again brings it back; the plain floor chosen takes it away
+                stage.fog(FogQuality.High)
+                (floor.material !== plain) shouldBe true
+                stage.floor(FloorLook.Plain)
+                (floor.material === plain) shouldBe true
+            } finally {
+                stage.dispose()
+            }
+        }
+    }
+
+    "the mirror draws the scene from below the floor into a picture of its own, without the floor, the sky and the fog" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
+            val renderer = standInRenderer()
+            val r: dynamic = renderer
+            var target: dynamic = "the screen"
+            val drawn = mutableListOf<dynamic>()
+            val scene = three.createScene()
+
+            r.domElement = js("({ width: 1280, height: 800 })")
+            r.autoClear = true
+            r.state = js("({ buffers: { depth: { setMask: function () {} } } })")
+            r.shadowMap.autoUpdate = true
+            r.getRenderTarget = { target }
+            r.setRenderTarget = { to: dynamic -> target = to }
+            r.render = { what: dynamic, seenBy: dynamic ->
+                val floor: dynamic = scene.children.first()
+                val fog = sheetsOf(scene)
+
+                drawn.add(
+                    listOf(
+                        target,
+                        seenBy.position.y,
+                        floor.visible,
+                        fog.any { it.visible },
+                        r.shadowMap.autoUpdate,
+                        what === scene,
+                    )
+                )
+            }
+
+            val show = Show(seed = 1, switches = Switches.parse("?floor=mirror"))
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+
+            try {
+                val floor: dynamic = scene.children.first()
+
+                camera.position.set(0.0, 2.5, 12.0)
+                camera.lookAt(0.0, 1.0, 0.0)
+                camera.asDynamic().updateMatrixWorld()
+                floor.onBeforeRender(renderer, scene, camera)
+
+                drawn.size shouldBe 1
+
+                val seen: List<dynamic> = drawn.single().unsafeCast<List<dynamic>>()
+                val picture: dynamic = seen[0]
+                val height: dynamic = seen[1]
+                val floorShown: dynamic = seen[2]
+                val fogShown: dynamic = seen[3]
+                val shadowsDrawn: dynamic = seen[4]
+                val whole: dynamic = seen[5]
+
+                (picture !== "the screen") shouldBe true
+                (picture.width.unsafeCast<Int>() to picture.height.unsafeCast<Int>()) shouldBe (640 to 400)
+                (picture.depthTexture != null) shouldBe true
+                // the camera mirrored in the floor, the floor and the fog on it hidden, no shadows drawn anew
+                height.unsafeCast<Double>() shouldBe (-2.5 plusOrMinus 1e-9)
+                floorShown.unsafeCast<Boolean>() shouldBe false
+                fogShown.unsafeCast<Boolean>() shouldBe false
+                shadowsDrawn.unsafeCast<Boolean>() shouldBe false
+                whole.unsafeCast<Boolean>() shouldBe true
+
+                // everything as it was after it
+                (target === "the screen") shouldBe true
+                (floor.visible == true) shouldBe true
+                sheetsOf(scene).all { it.visible } shouldBe true
+                (r.shadowMap.autoUpdate == true) shouldBe true
+
+                // the same size again: the same picture; it is freed with the stage
+                var freed = 0
+
+                picture.addEventListener("dispose") { _: dynamic -> freed++ }
+                floor.onBeforeRender(renderer, scene, camera)
+                (drawn[1].unsafeCast<List<dynamic>>()[0] === picture) shouldBe true
+                stage.dispose()
+                freed shouldBe 1
             } finally {
                 stage.dispose()
             }

@@ -51,4 +51,28 @@ class SunSpec : StringSpec({
         Sun.share(front = 1.0, strobing = true) shouldBe Strobe.REST
         Sun.share(front = Double.NaN, strobing = false) shouldBe 1.0
     }
+
+    "the lamps behind light the stage fully with all three, about three quarters with the outer two, a third with the inner" {
+        val lamps = listOf(BackPlace.OUTER to 260.0, BackPlace.OUTER to 260.0, BackPlace.INNER to 180.0)
+
+        fun held(rig: BackRig) = BackRigMix(from = rig, to = rig, share = 0.0)
+
+        Sun.lit(rig = held(BackRig.ALL), lamps = lamps) shouldBe (1.0 plusOrMinus 1e-12)
+        Sun.lit(rig = held(BackRig.OUTER), lamps = lamps) shouldBe (520.0 / 700.0 plusOrMinus 1e-12)
+        Sun.lit(rig = held(BackRig.INNER), lamps = lamps) shouldBe (180.0 * BackRig.INNER_ALONE / 700.0 plusOrMinus 1e-12)
+        // half way from all three to the inner one alone
+        Sun.lit(rig = BackRigMix(from = BackRig.ALL, to = BackRig.INNER, share = 0.5), lamps = lamps) shouldBe
+            ((1.0 + 252.0 / 700.0) / 2 plusOrMinus 1e-12)
+        Sun.lit(rig = held(BackRig.ALL), lamps = emptyList()) shouldBe 0.0
+    }
+
+    "the sun follows the stage's light, squared: full with all lamps, low in the dark, none at no number" {
+        Sun.follow(1.0) shouldBe 1.0
+        Sun.follow(0.5) shouldBe (0.25 plusOrMinus 1e-12)
+        Sun.follow(0.36) shouldBe (0.1296 plusOrMinus 1e-12)
+        Sun.follow(0.0) shouldBe 0.0
+        Sun.follow(1.4) shouldBe 1.0
+        Sun.follow(-0.2) shouldBe 0.0
+        Sun.follow(Double.NaN) shouldBe 0.0
+    }
 })

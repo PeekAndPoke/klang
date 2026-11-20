@@ -6,7 +6,9 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.FloorLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.StageLook
 
 /**
@@ -153,7 +155,14 @@ enum class Switch(val key: String) {
     /**
      * `?stage=mesh`: what stands behind the band ([StageLook]): mesh, a wire-mesh fence with a dark surface behind
      * it, a haze between the two in place of the fog on the floor, and a low glow behind the drummer; any other
-     * value, or none, the wall as it was made.
+     * value, or none, the wall as it was made. The key m turns it over while the show plays ([LookVariants]).
      */
     Stage("stage"),
+
+    /**
+     * `?floor=mirror`: the floor ([FloorLook]): mirror, polished dark stone that mirrors the stage, drawn where the
+     * fog is drawn at medium or finer; any other value, or none, the floor as it was made. The key p turns it over
+     * while the show plays ([LookVariants]).
+     */
+    Floor("floor"),
 }

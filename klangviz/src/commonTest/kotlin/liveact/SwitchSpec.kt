@@ -27,7 +27,7 @@ class SwitchSpec : StringSpec({
             "still", "move", "view", "cam", "at", "head", "from", "down", "far", "outline",
             "warm", "snakes", "nosnakes", "straight",
             "rig", "fcolor", "front", "nostrobe",
-            "nosky", "nofog", "fog", "fullfog", "stage",
+            "nosky", "nofog", "fog", "fullfog", "stage", "floor",
         )
     }
 

@@ -11,7 +11,9 @@ import kotlin.math.roundToInt
  * The sun behind the drummer (`?stage=mesh`): a big, low glow behind the mesh that lights the haze from behind, so
  * the wires and the drummer stand dark against it. Its colour follows the mood of the lamps behind the band: an ember
  * in a warm mood, a cold steel blue only where the mood is clearly cold; under the front lamp it leans toward the
- * lamp's colour. It stays dim, as the lamps behind do, while the front lamp is up, so the band's shadows read.
+ * lamp's colour. It stays dim, as the lamps behind do, while the front lamp is up, so the band's shadows read. And it
+ * follows how brightly the lamps behind light the stage ([lit], [follow]): it sinks in the dark stretches, where
+ * only the lamp between the two main ones is on, and swells again when all of them come back.
  */
 object Sun {
     /** Its colour in a warm mood: a muted ember, darker and greyer than the front lamp's amber. */
@@ -51,6 +53,39 @@ object Sun {
         val level = if (front.isNaN()) 0.0 else front.coerceIn(0.0, 1.0)
 
         return 1.0 - 0.7 * level
+    }
+
+    /**
+     * How brightly the lamps behind the band light the stage in the rigs [rig], from 0 (all dark) to 1 (all of them
+     * on): each of [lamps] (where it hangs, and its light at full) at its share in the rigs, together, against all of
+     * them at full. With the lamps as they hang (the two main ones 260 each, the one between them 180): all 1, the
+     * outer two alone about 0.74, the inner one alone (turned up) 0.36. No lamps: 0.
+     */
+    fun lit(rig: BackRigMix, lamps: List<Pair<BackPlace, Double>>): Double {
+        val full = lamps.sumOf { (_, light) -> light }
+
+        if (full <= 0.0) {
+            return 0.0
+        }
+
+        return lamps.sumOf { (place, light) -> light * rig.share(place) } / full
+    }
+
+    /**
+     * The share of its light the sun gives on a stage lit [lit] ([Sun.lit], 0 to 1): the square of it, so it sinks
+     * further than the lamps do and the dark stays dark. All the lamps behind on: 1; the outer two alone about 0.55;
+     * the inner one alone about 0.13 (the dark look, `?front=0&rig=inner`, was lit by the sun alone before). Above 1
+     * (the inner lamp alone is turned up, but never brighter than all three) it holds at 1.
+     */
+    fun follow(lit: Double): Double {
+        // NaN-guard: a brightness that is no number gives no sun
+        if (lit != lit) {
+            return 0.0
+        }
+
+        val level = lit.coerceIn(0.0, 1.0)
+
+        return level * level
     }
 
     /** One of a colour's channels: red at [shift] 16, green at 8, blue at 0. */

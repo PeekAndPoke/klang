@@ -23,11 +23,9 @@ import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.getPixelRatio
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.map
-import io.peekandpoke.klang.workshop.threejs.scale
 import io.peekandpoke.klang.workshop.threejs.toneMapping
 import io.peekandpoke.kraft.addons.threejs.js.CanvasTexture
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
-import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.PerspectiveCamera
 import io.peekandpoke.kraft.addons.threejs.js.Scene
@@ -45,12 +43,15 @@ import kotlin.math.min
 /**
  * The stage, built into [scene]: floor, the wall behind, the lamps ([Lights]), the drummer's [riser], the crowd's
  * lights, the night sky and the fog on the floor; with `?stage=mesh` ([StageLook.Mesh]) a wire-mesh [Fence] in place
- * of the wall, with the sun behind the drummer, and the fog as a haze behind the mesh. The fog at [fog]'s quality, the lamps' shadows at [shadows]' (the
- * address's, without them). Sets on [renderer], [scene] and [camera] what the show needs of them: the shadows, the
- * tone mapping, the dark and the distance fog, the camera's lens.
+ * of the wall, with the sun behind the drummer, and the fog as a haze behind the mesh; with `?floor=mirror`
+ * ([FloorLook.Mirror]) the floor as polished stone that mirrors the stage ([MirrorFloor]). The look as [variants] says
+ * (the address's, without them), the fog at [fog]'s quality, the lamps' shadows at [shadows]'. Sets on [renderer],
+ * [scene] and [camera] what the show needs of them: the shadows, the tone mapping, the dark and the distance fog, the
+ * camera's lens.
  *
  * Each frame: [light], and [follow] once the camera is placed. Once the band stands: [shade]. The fog at another
- * quality, while the show plays: [fog]; the shadows: [shadows]. When the stage goes: [dispose].
+ * quality, while the show plays: [fog]; the shadows: [shadows]; the look behind the band: [look]; the floor: [floor].
+ * When the stage goes: [dispose].
  */
 class Stage(
     private val show: Show,
@@ -59,18 +60,22 @@ class Stage(
     private val renderer: WebGLRenderer,
     fog: FogQuality = FogQuality.of(show.switches),
     shadows: ShadowQuality = ShadowQuality.of(show.switches),
+    variants: LookVariants = LookVariants.of(show.switches),
 ) {
-    /** What stands behind the band: the wall, or the fence (`?stage=mesh`). */
-    private val look: StageLook = StageLook.of(show.switches)
+    /** What stands behind the band and the floor, as chosen now. */
+    private var variants: LookVariants = variants
 
-    /** The wall's material: black unless the front lamp is on; none where the [fence] stands. */
-    private val backMaterial: MeshStandardMaterial?
+    /** The floor, plain or (with [mirror]) polished. */
+    private val floor: Mesh
 
-    /** Sets the wall's face: the ornament under the back light, the wire mesh under the front lamp (0 to 1). */
-    private val wallFront: ((Double) -> Unit)?
+    /** The wall behind the band, where the look is the wall; none where the [fence] stands. */
+    private var wall: BackWall? = null
 
-    /** The wire-mesh fence in place of the wall, with `?stage=mesh`; none else. */
-    private val fence: Fence?
+    /** The wire-mesh fence in place of the wall, where the look is the fence; none else. */
+    private var fence: Fence? = null
+
+    /** The mirror in the floor, where it is chosen and the fog's quality lets it be drawn ([LookVariants.mirrors]). */
+    private var mirror: MirrorFloor? = null
 
     /** The sun's colour behind the fence, set each frame. */
     private val sunColor = Three.addon.createColor(0xffffff)
@@ -107,7 +112,7 @@ class Stage(
         camera.far = FAR
         camera.updateProjectionMatrix()
 
-        val floor = Three.addon.createMesh(
+        floor = Three.addon.createMesh(
             Three.addon.createPlaneGeometry(240.0, 240.0),
             Three.addon.createMeshStandardMaterial(jsObject {
                 color = 0x0b0c10
@@ -119,31 +124,7 @@ class Stage(
         floor.receiveShadow = true
         scene.add(floor)
 
-        fence = when (look) {
-            StageLook.Wall -> null
-            StageLook.Mesh -> Fence(scene)
-        }
-
-        if (fence == null) {
-            // A wall behind the stage, well clear of the riser: it takes the front lamp's light and the band's shadows.
-            // It has two faces (see wall()): an ornament in its own faint glow under the back light, a wire mesh under
-            // the front lamp. It takes no light from the other lamps (its colour is black unless the front lamp is on),
-            // and the fog does not dim it.
-            val material = Three.addon.createMeshStandardMaterial(jsObject {
-                color = 0x000000
-                roughness = 0.95
-            })
-            material.fog = false
-            val back = Three.addon.createMesh(Three.addon.createPlaneGeometry(60.0, 16.0), material)
-            back.position.set(0.0, 8.0, -8.0)
-            back.receiveShadow = true
-            backMaterial = material
-            wallFront = wall(material, amount = 0.014)
-            scene.add(back)
-        } else {
-            backMaterial = null
-            wallFront = null
-        }
+        buildBack()
 
         lights = Lights(show = show, scene = scene, shadows = shadows)
 
@@ -163,6 +144,72 @@ class Stage(
         crowd = Crowd(scene)
         sky = if (show.switches.has(Switch.NoSky)) null else NightSky(scene)
         groundFog = makeFog(fog)
+        mirrorAsChosen()
+    }
+
+    /** What stands behind the band as [variants] says: the wall ([BackWall]) or the fence ([Fence]). */
+    private fun buildBack() {
+        when (variants.stage) {
+            StageLook.Wall -> wall = BackWall(scene)
+            StageLook.Mesh -> fence = Fence(scene)
+        }
+    }
+
+    /**
+     * What stands behind the band turned to [to], at once, where it is another than now: the old wall or fence leaves
+     * the scene with all it holds freed, the new one is built, and the fog is made anew where it lies there (on the
+     * floor before the wall, behind the fence). The first frame with a look not drawn before builds its materials
+     * (a short hitch).
+     */
+    fun look(to: StageLook) {
+        if (to == variants.stage) {
+            return
+        }
+
+        variants = variants.copy(stage = to)
+        wall?.dispose()
+        wall = null
+        fence?.dispose()
+        fence = null
+        buildBack()
+        groundFog?.dispose()
+        groundFog = null
+        groundFog = makeFog(fogQuality)
+    }
+
+    /**
+     * The floor turned to [to], at once: the mirror is made where it is chosen and the fog's quality lets it be drawn,
+     * and freed where not ([mirrorAsChosen]).
+     */
+    fun floor(to: FloorLook) {
+        variants = variants.copy(floor = to)
+        mirrorAsChosen()
+    }
+
+    /**
+     * The mirror in the floor as [variants] and the fog's quality say ([LookVariants.mirrors]): made where it is wanted
+     * and there is none, freed where it is not wanted (its picture is freed with it, not kept hidden).
+     */
+    private fun mirrorAsChosen() {
+        val wanted = variants.mirrors(fogQuality)
+        val now = mirror
+
+        if (wanted && now == null) {
+            // the fog on the floor lies on the mirror: it is not mirrored as well; nor is the sky, whose stars would
+            // glitter in it like noise
+            mirror = MirrorFloor(floor = floor, scene = scene, renderer = renderer) { hidden ->
+                sky?.hide(hidden)
+
+                if (variants.stage == StageLook.Wall) {
+                    groundFog?.hide(hidden)
+                }
+            }
+        }
+
+        if (!wanted && now != null) {
+            now.dispose()
+            mirror = null
+        }
     }
 
     /**
@@ -179,6 +226,8 @@ class Stage(
         // where the new one cannot be made, no freed fog is left to draw
         groundFog = null
         groundFog = makeFog(quality)
+        // the mirror goes where the fog went down to low or off, and comes back with it
+        mirrorAsChosen()
     }
 
     /**
@@ -201,7 +250,7 @@ class Stage(
             renderer = renderer,
             quality = quality,
             mapped = !show.switches.has(Switch.FullFog),
-            bed = when (look) {
+            bed = when (variants.stage) {
                 StageLook.Wall -> FogBed.Floor
                 StageLook.Mesh -> FogBed.BehindMesh
             },
@@ -215,10 +264,11 @@ class Stage(
     fun light(t: Double, house: Double, waiting: Boolean) {
         lights.mood(t)
         val front = lights.frontAt(t, waiting)
-        backMaterial?.color?.setHex(0x8a8f9c)?.scale(front.level)
-        wallFront?.invoke(min(1.0, front.level))
+        wall?.light(front.level)
         dressLevel = min(1.0, front.level)
         lights.shine(t, house, front)
+
+        val fence = fence
 
         if (fence != null) {
             val sun = lights.sun(t = t, house = house, front = front, into = sunColor)
@@ -296,11 +346,16 @@ class Stage(
         scene.add(mesh)
     }
 
-    /** Stops what the stage listens for (the key f, which tries the front lamp's colours) and frees what the fog holds. */
+    /**
+     * Stops what the stage listens for (the key f, which tries the front lamp's colours) and frees what the fog and the
+     * mirror hold (the floor has its own material again). The rest is in the scene and is freed with it.
+     */
     fun dispose() {
         lights.dispose()
         groundFog?.dispose()
         groundFog = null
+        mirror?.dispose()
+        mirror = null
     }
 
     companion object {

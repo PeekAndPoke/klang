@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.Three
+import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.toFixed
@@ -20,6 +21,7 @@ import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
+import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.utils.jsObject
 import kotlin.math.PI
@@ -34,9 +36,13 @@ import kotlin.math.PI
  * surface, seen through the gaps, as a large dark shape (the alter egos), and on the wires in front of it, a little
  * smaller. The surface is black unless the front lamp is on, as the wall is.
  *
- * Everything it makes is in the scene and is freed with it.
+ * Everything it makes is in the scene and is freed with it, or with [dispose] where the fence goes before the scene
+ * does (the look turned over to the wall while the show plays).
  */
-class Fence(scene: Scene) {
+class Fence(private val scene: Scene) {
+    /** The wire mesh, the posts and the surface behind: what [dispose] takes out of the scene and frees. */
+    private val parts: List<Object3D>
+
     /** The surface behind the mesh: black unless the front lamp is on. */
     private val backMaterial: MeshStandardMaterial
 
@@ -138,6 +144,22 @@ class Fence(scene: Scene) {
         back.position.set(0.0, (HIGH + 2.0) / 2, BACK_Z)
         back.receiveShadow = true
         scene.add(back)
+
+        parts = listOf(mesh, posts, back)
+    }
+
+    /**
+     * Takes the mesh, the posts and the surface behind out of the scene and frees what they hold on the graphics card
+     * (their shapes, their materials, the posts' places). The fence is gone after it; call it once.
+     */
+    fun dispose() {
+        for (part in parts) {
+            scene.remove(part)
+        }
+
+        for (part in parts) {
+            part.disposeTree()
+        }
     }
 
     /**

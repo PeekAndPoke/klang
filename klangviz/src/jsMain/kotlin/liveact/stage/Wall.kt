@@ -12,7 +12,15 @@ import io.peekandpoke.klang.workshop.threejs.CompiledShader
 import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
 import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.uniform
+import io.peekandpoke.klang.viz.liveact.Three
+import io.peekandpoke.klang.viz.liveact.disposeTree
+import io.peekandpoke.klang.workshop.threejs.fog
+import io.peekandpoke.klang.workshop.threejs.scale
+import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
+import io.peekandpoke.kraft.addons.threejs.js.Scene
+import io.peekandpoke.kraft.utils.jsObject
+import kotlin.math.min
 
 /**
  * The braid laid flat, for a wall (x across, y up, in metres): the same woven lines between hoops, a pace wide. Not
@@ -77,4 +85,46 @@ fun wall(
     }
 
     return { front -> uFront.value = front }
+}
+
+/**
+ * The wall behind the stage as it was made ([StageLook.Wall]), built into [scene]: well clear of the riser, it takes
+ * the front lamp's light and the band's shadows. It has two faces ([wall]): an ornament in its own faint glow under
+ * the back light, a wire mesh under the front lamp. It takes no light from the other lamps (its colour is black
+ * unless the front lamp is on), and the fog does not dim it.
+ *
+ * Each frame: [light]. It is freed with the scene, or with [dispose] where it goes before the scene does (the look
+ * turned over to the fence while the show plays).
+ */
+class BackWall(private val scene: Scene) {
+    private val material: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject {
+        color = 0x000000
+        roughness = 0.95
+    })
+
+    private val mesh: Mesh
+
+    /** Sets the wall's face: the ornament under the back light, the wire mesh under the front lamp (0 to 1). */
+    private val face: (Double) -> Unit
+
+    init {
+        material.fog = false
+        mesh = Three.addon.createMesh(Three.addon.createPlaneGeometry(60.0, 16.0), material)
+        mesh.position.set(0.0, 8.0, -8.0)
+        mesh.receiveShadow = true
+        face = wall(material, amount = 0.014)
+        scene.add(mesh)
+    }
+
+    /** The wall for this frame, the front lamp at [front] (0 to 1; as the address gives it, also beyond). */
+    fun light(front: Double) {
+        material.color.setHex(0x8a8f9c).scale(front)
+        face(min(1.0, front))
+    }
+
+    /** Takes the wall out of the scene and frees its shape and its material. Call it once. */
+    fun dispose() {
+        scene.remove(mesh)
+        mesh.disposeTree()
+    }
 }

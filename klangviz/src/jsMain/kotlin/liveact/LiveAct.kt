@@ -20,8 +20,8 @@ import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.klang.viz.liveact.stage.Stage
-import io.peekandpoke.klang.viz.liveact.stage.StageLook
 import io.peekandpoke.klang.workshop.threejs.asPerspectiveCamera
 import io.peekandpoke.klang.workshop.threejs.info
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -91,6 +91,12 @@ fun Tag.LiveAct(
  * order: the sound's energy first (the nod reads it); then everyone's place and pose; then what is laid over the
  * poses (eye contact, the eyes' glow, what goes with a head, breath; breath last because it widens bones); then the
  * lights; then the camera, which follows the figures; and the viewer's place for the next frame's looks.
+ *
+ * The keys: space plays and pauses, the arrows skip ([ShowClock]); q, 0 (or escape), 1 to 6, a, s, d, e, r, t, y (or
+ * z), w and u move the camera by hand ([View]); f tries the front lamp's colours ([Lights]); o steps through the
+ * oversampling, g through the fog; m turns over what stands behind the band (wall or fence) and p the floor (plain or
+ * mirror) ([LookVariants]). A key that turns a variant over says the new one for two seconds below the line at the
+ * top.
  *
  * Two limits, as the prototype it was ported from has them. It takes the page for its own: its keys (space, the
  * arrows, single letters and digits) and a click anywhere are the show's, except while the user types in a field;
@@ -217,6 +223,15 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     private val adapts: Boolean
         get() = Oversampling.follows(samples) && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
 
+    /**
+     * The look's variants ([LookVariants]): what stands behind the band (`?stage=mesh`, the key m) and the floor
+     * (`?floor=mirror`, the key p), as chosen now.
+     */
+    private var variants: LookVariants = LookVariants.of(props.show.switches)
+
+    /** The timer that clears the line a variant's key wrote ([flash]), while it runs. */
+    private var flashTimer: Int? = null
+
     /** The line that says what the camera does, once it was looked up, and when it was last written. */
     private var hud: HTMLElement? = null
     private var hudAt = 0.0
@@ -232,6 +247,18 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         if (plain && key == "g") {
             chooseFog(FogQuality.entries[(fog.ordinal + 1) % FogQuality.entries.size])
+        }
+
+        if (plain && key == "m") {
+            variants = variants.nextStage()
+            stage?.look(variants.stage)
+            flash(variants.stageLine())
+        }
+
+        if (plain && key == "p") {
+            variants = variants.nextFloor()
+            stage?.floor(variants.floor)
+            flash(variants.floorLine(fog))
         }
     }
 
@@ -258,6 +285,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 window.removeEventListener("resize", onResize)
                 window.document.removeEventListener("visibilitychange", onVisibility)
                 window.removeEventListener("keydown", onKey)
+                flashTimer?.let { window.clearTimeout(it) }
+                flashTimer = null
                 // the loading too, where it still runs: nothing is built after this
                 scope.cancel()
                 running?.let {
@@ -297,6 +326,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 style = "position: fixed; left: 12px; top: 8px; font: 12px monospace; color: #8a93a8; " +
                     "pointer-events: none; white-space: pre;" + (if (props.show.switches.has(Switch.NoHud)) " display: none;" else "")
             }
+
+            div {
+                id = FLASH_ID
+                style = "position: fixed; left: 12px; top: 28px; font: 15px monospace; color: #d4dbea; " +
+                    "pointer-events: none; white-space: pre;" + (if (props.show.switches.has(Switch.NoHud)) " display: none;" else "")
+            }
         }
     }
 
@@ -314,7 +349,15 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         // line's first number is too high, for a tenth of a second)
         ctx.renderer.info.autoReset = false
 
-        val stage = Stage(show = show, scene = ctx.scene, camera = lens, renderer = ctx.renderer, fog = fog, shadows = shadows)
+        val stage = Stage(
+            show = show,
+            scene = ctx.scene,
+            camera = lens,
+            renderer = ctx.renderer,
+            fog = fog,
+            shadows = shadows,
+            variants = variants,
+        )
 
         this.stage = stage
         scene = ctx.scene
@@ -454,8 +497,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 "oversampling ${Oversampling.label(samples)} (key o)",
                 "fog ${fog.word} (key g)",
                 "shadows ${shadows.word}",
-                // only where it is not the wall as it was made
-                StageLook.of(show.switches).takeIf { it != StageLook.Wall }?.let { "stage ${it.word}" },
+                "${variants.stageLine()} (key m)",
+                "${variants.floorLine(fog)} (key p)",
                 "${fps.toFixed(0)} fps",
                 "slowest frame $worstShown ms",
                 "pixels ${sharpness.ratio.toFixed(2)}x",
@@ -474,6 +517,21 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             // for whoever takes a picture of the page: the show has drawn
             window.asDynamic().__ready = true
         }
+    }
+
+    /**
+     * Says [line] for two seconds below the line at the top (`stage: fence`): what a variant's key just chose. A key
+     * pressed again before that writes its own line, for two seconds from then. Not with `?nohud`.
+     */
+    private fun flash(line: String) {
+        val shown = element(FLASH_ID) ?: return
+
+        shown.textContent = line
+        flashTimer?.let { window.clearTimeout(it) }
+        flashTimer = window.setTimeout({
+            shown.textContent = ""
+            flashTimer = null
+        }, FLASH_MS)
     }
 
     /** Starts the counting of frames anew at [nowMs]: what was counted so far is not judged. */
@@ -503,7 +561,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
     /**
      * The fog on the floor at [quality], at once: the stage makes it anew where it is another (before the stage is
-     * built, it is built so). Tells [Props.picture].
+     * built, it is built so), and the mirror in the floor goes or comes with it ([LookVariants.mirrors]). Tells
+     * [Props.picture].
      */
     private fun chooseFog(quality: FogQuality) {
         fog = quality
@@ -547,6 +606,10 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     private companion object {
         const val NOTICE_ID = "liveact-notice"
         const val HUD_ID = "liveact-hud"
+        const val FLASH_ID = "liveact-flash"
+
+        /** How long a variant's key's line stays, in milliseconds. */
+        const val FLASH_MS = 2000
 
         /** The line is written this often, in milliseconds. */
         const val HUD_MS = 100.0

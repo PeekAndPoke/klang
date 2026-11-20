@@ -247,6 +247,16 @@ class GroundFog(
     }
 
     /**
+     * Hides the sheets ([hidden]) or shows them again: for a drawing of the scene they have no place in (the mirror
+     * floor's, [MirrorFloor], which does not mirror the fog that lies on the floor).
+     */
+    fun hide(hidden: Boolean) {
+        for (layer in layers) {
+            layer.mesh.visible = !hidden
+        }
+    }
+
+    /**
      * Takes the sheets out of the scene and frees all the fog holds on the graphics card: the sheets' materials and
      * their shape, the noise's picture, and the maps with what draws them. The fog is gone after it; call it once.
      */

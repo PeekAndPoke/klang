@@ -53,6 +53,9 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
 
     private val mains: List<MainLamp>
 
+    /** The lamps behind the band, where each hangs and its light at full: how brightly they light the stage ([Sun.lit]). */
+    private val behind: List<Pair<BackPlace, Double>>
+
     /** The lamps that cast a shadow at [ShadowQuality.High]: at another quality, some of them may cast none. */
     private val casters: List<Lamp>
 
@@ -148,6 +151,7 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
 
         lamps = all
         casters = castsAtHigh
+        behind = all.mapNotNull { lamp -> lamp.place?.let { place -> place to lamp.base } }
         mains = listOf<(Mood) -> MoodLamp>(Mood::left, Mood::right).mapIndexed { index, side ->
             val lamp = lamps[index]
 
@@ -210,14 +214,17 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
     /**
      * The sun behind the drummer at [t] (`?stage=mesh`, [Sun]): sets [into] to its colour in the mood and under the
      * front lamp's state [front] (from [frontAt]), and gives how bright it is, from 0: [house] 0 dark to 1, dimmed
-     * under the front lamp, and flickering like the lamps.
+     * under the front lamp, following how brightly the lamps behind light the stage ([Sun.follow]), and flickering
+     * like the lamps.
      */
     fun sun(t: Double, house: Double, front: FrontLight, into: Color): Double {
         val lamp = if (front.strobing) FrontColors.BLUE else plan.frontColor(t, tried)
+        val lit = Sun.lit(rig = plan.rigAt(t), lamps = behind)
 
         into.setHex(Sun.color(mood = plan.moodAt(t), front = lamp, frontLevel = front.level))
 
-        return lampFlicker(t, plan.own(SUN_SEED)) * house * Sun.share(front = front.level, strobing = front.strobing)
+        return lampFlicker(t, plan.own(SUN_SEED)) * house * Sun.share(front = front.level, strobing = front.strobing) *
+            Sun.follow(lit)
     }
 
     /**

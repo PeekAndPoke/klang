@@ -99,6 +99,14 @@ class NightSky(scene: Scene) {
         sky.position.copy(camera.position)
     }
 
+    /**
+     * Hides the sky ([hidden]) or shows it again: for the mirror in the floor, where its stars, a quarter of the
+     * screen's pixels large, would glitter like noise.
+     */
+    fun hide(hidden: Boolean) {
+        sky.visible = !hidden
+    }
+
     /** The sky at [t] (seconds); [ratio]: how many of the screen's points make one of the page's. */
     fun update(t: Double, ratio: Double) {
         time.value = t
