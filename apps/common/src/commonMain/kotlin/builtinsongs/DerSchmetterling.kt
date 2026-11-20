@@ -13,17 +13,17 @@ import io.peekandpoke.klang.apps.common.Song
 internal val derSchmetterlingSong = Song(
     id = "${BuiltInSongs.PREFIX}-der-schmetterling",
     title = "Der Schmetterling",
-    rpm = 36.5,
+    rpm = 35.0,
     icon = "bug",
     code = """import * from "stdlib"
 import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   12    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
+let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let transposition =   -1    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
-let snareHz       =  207    // Where does the snare cut through?
+let snareHz       =  214    // Where does the snare cut through?
 
 // Guitar rig - Pickups  ---------------------------------------------------------------------------------------------------------------------------
 
@@ -32,12 +32,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4700, 3.2)                              // the peak, up high and narrow
+  .lowpass(4700, 3.3)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3000, 1.6)                              // the peak, low and wide
+  .lowpass(2800, 2.4)                              // the peak, low and wide
   .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -71,7 +71,7 @@ let pedalFuzz = Kat.fn(x => x
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
 let pedalBoost = Kat.fn(x => x.parallel(
   clean => clean, 
-  dirt => dirt.highpass(300).mul(1.4)
+  dirt => dirt.highpass(720).mul(1.4)
 ).mul(0.6))
 
 // Guitar rig - Pre-Amps  ---------------------------------------------------------------------------------------------------------------------------
@@ -92,17 +92,17 @@ let preampCrunch = Kat.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
   .distort(0.18, "asym").highpass(100)
-  .lowpass(5500)
+  .lowpass(5800)
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.15, "tube").highpass(120)
-  .distort(0.09, "asym").highpass(100)
-  .distort(0.45, "soft")
-  .lowpass(4800)                                   // the fizz
-  .mul(0.64))                                      // volume
+  .distort(0.35, "tube").highpass(120)
+  .distort(0.45, "hard").highpass(100)
+  .distort(0.35, "soft")
+  .lowpass(5500)                                   // the fizz
+  .mul(0.65))                                      // volume
 
 // Guitar rig - Power Amps  --------------------------------------------------------------------------------------------------------------------------
 
@@ -130,8 +130,8 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
     .band(freq =  160, q = 0.6, db =  3.80)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.5, db =  4.50)        // roar:  low mids
-    .band(freq = 2700, q = 1.9, db =  1.80)        // bark:  the upper-mid speaker peak
+    .band(freq =  800, q = 0.5, db =  4.60)        // roar:  low mids
+    .band(freq = 2700, q = 1.9, db =  2.10)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
@@ -243,7 +243,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 0.9).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 0.95).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -271,16 +271,16 @@ let marimba = (() => {
   let f1  = Ign.sine(x => x.analog(pAnalog)).adsr(0.001, ring, 0.0, 0.40)
   let f4  = Ign.sine(Ign.freq().mul(4.05), x => x.analog(pAnalog)).adsr(0.001, 0.12, 0.0, 0.10).mul(0.35)
   let f10 = Ign.sine(Ign.freq().mul(10.075), x => x.analog(pAnalog)).adsr(0.001, 0.08, 0.0, 0.05).mul(0.25)
-  let f12 = Ign.sine(Ign.freq().mul(12.025), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.05)
+  let f12 = Ign.sine(Ign.freq().mul(12.025), x => x.analog(pAnalog)).adsr(0.001, 0.05, 0.0, 0.05).mul(0.15)
   let mallet = Ign.pinknoise().adsr(0.0005, 0.010, 0.0, 0.010).lowpass(2500).mul(9.0)                     // yarn head: a thump, not a click                    
  
   return f1.plus(f4).plus(f10).plus(f12).plus(mallet)
+    .adsr(0.010, 1.0, 0.0, 0.5).mul(0.1)
     .distort(0.3, "softsat")
     .eq(e => e
       .band(freq = Ign.freq(), q = 30.0, db = 9) // the resonator tube
     )
-    .adsr(0.010, 1.0, 0.0, 0.5).mul(0.1)
-    .shape("soft")
+    .mul(0.75)
     .classic()
 })()
 
@@ -291,7 +291,7 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).ad
   .clip(0.80)
 
 export lead_arrange = x => x.cylinder(0) //  .mute()
-  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.50))
+  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.30))
   .velocity("<1.1 0.95 1.00 0.95>*4")
   .shuffle("<1!64  1!17 4!14 1!1 1!32  1!7 4!8 1!1  1!64>")
   .mute(   "<1!64  0!32          1!32  0!32         1!64>")
@@ -319,7 +319,7 @@ let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
   .gain(1.0)
   .body(material = "spruce", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.36)
+  .katp("gain.gain", 0.33)
 
 export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
@@ -330,10 +330,10 @@ export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 
 // Guitar 2  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar2_pat =
-  `<[11 11 9  8  7 7 9 6]  [11 11 [13 11] 8   7  7 5  6]
-    [11 11 9 11  7 7 7 8]  [11 11 [13 9]  4   7  4 2  3]
-    [4 4 6 8     4 4 5 6]  [4 4 6 8          11 11 9 10]
-    [4 4 3 6     4 4 2 3]  [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 7] 8]>/4`
+  `<[4 4 6 8  7 7 9 10]  [11 11 [13 11] 8   7  4 5  6]
+    [4 4 6 8  7 7 7  8]  [11 11 [13 9]  4   7  4 2  3]
+    [4 4 6 8  4 4 5  6]  [4 4 6 8          11 11 9 10]
+    [4 4 3 6  4 4 2  3]  [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 7] 8]>/4`
 
 export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
   .sound(guitar).adsrOff().unison(voices = 7, spread = 0.08)
@@ -345,11 +345,11 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
 // once, so the two never write different bus settings (only the newest voice's would be heard).
 let rhythmBus = x => x.cylinder(2).katalyst(rhythmAmp)
   // How hard the amp is hit: the maintainer's by ear. Two guitars feed one amp now, and one compressor.
-  .gain(0.7)
+  .gain(1.0)
   // One amp, one wood: the maintainer's by ear. Maple was guitar 2's, mahogany guitar 3's.
   .body(material = "maple", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.40)
+  .katp("gain.gain", 0.28)
 
 export guitar2_arrange = x => x.apply(rhythmBus)  // . solo()
   .scale("<e2:minor>").mute("<0!128 1!16 0!16>") // .mute()
@@ -359,8 +359,8 @@ export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!
 
 // Guitar 3  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar3_pat =
-  `<[0 0  2 4  0 0 -2 -1]  [0 0 2 [4 4 4 -1]                  0 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1]  [0 0 2 [4 6 4  6]                  0 0 -2 -1]
+  `<[0 0  2 4  0 0 -2 -1]  [7 7 2 [4 4 4 -1]                  4 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1]  [7 7 2 [4 6 4  6]                  4 0 -2 -1]
     [0 0  2 4  0 0 -2 -1]  [0 [[0 3 4 5] 7] 2 [[4 5] 6 4 6]   [[7 6] 7] [7 0] -2 -1]
     [0 0 -1 3  0 0 -2 -1]  [0 0 3 [0 -2]                      0 0 [0 4 7 9] 6]>/4`
 
@@ -368,7 +368,7 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .sound(guitar).adsrOff().unison(voices = 5, spread = 0.08)
   .ignp("attack", perlin(0.005, 0.006).seed(3))
   .ignp("decay", guitarDecay(3))
-  .clip(guitarClip(3).fast(2)).pan(0.20).superimpose(pan(0.80))
+  .clip(guitarClip(3).fast(2)).pan(0.10).superimpose(pan(0.90))
 
 export guitar3_arrange = x => x.apply(rhythmBus) //  . solo()
   .scale("<e2:minor>").mute("<0!128 1!16 0!16>") //.mute()
@@ -383,7 +383,7 @@ export bass_pat =
     [0 0 2 4 0 0 -2 -1]!2
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.20) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.22) // . mute()
     .ignp("sub", 0.94).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
@@ -404,38 +404,38 @@ export bass = n(bass_pat).struct(
 // Trumpet  ------------------------------------------------------------------------------------------------------------------------------------------
 let trumpet = (() => {
   let pAnalog = Ign.slot.analog.add(60)
- 
-  let ring = Ign.constant(300).div(Ign.freq()).mul(0.85)  
- 
-  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(-3.0, x => x.adsr(0.005, 0.040, 0, 0)).adsr(0.010, ring, 0.3, 0.5).mul(0.45)
+  
+  let head  = Ign.sine(x => x.analog(pAnalog)).pitchEnvelope(-1.0, x => x.adsr(0.005, 0.030, 0, 0)).adsr(0.010, 0.75, 0.5, 0.4).mul(1.00)
   // the harmonics 2f..8f, fundamental left out: the ear rebuilds it, so the drum sits low in the mix and keeps its pitch,
   // and the pitch drop is heard up here, not felt at 70 Hz. They die well before the head does.
   let harms = Ign.sine(x => x.harmonics(15, 0.8).fundamental(0).analog(pAnalog).analogSpread(0.2))
-    .pitchEnvelope(-7, x => x.adsr(0.005, 0.005, 0, 0)).adsr(0.010, 0.75, 0.4, 0.30).mul(1.3)
+    .pitchEnvelope(-1, x => x.adsr(0.005, 0.030, 0, 0)).adsr(0.010, 0.75, 0.5, 0.4).mul(1.5)
  
-  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.002, 0.10, 0.2, 0.20).mul(0.25)
-  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.002, 0.06, 0.2, 0.10).mul(0.15)
-  // wood core: a crack, the force of the hit the skin gives, and the hit reads as hard
-  let beater = Ign.whitenoise().adsr(0.005, 0.050, 0.0, 0.015).lowpass(1500).mul(2.00)    
+  let m2 = Ign.sine(Ign.freq().mul(1.59), x => x.analog(pAnalog)).adsr(0.015, 0.20, 0.2, 0.20).mul(0.45)
+  let m3 = Ign.sine(Ign.freq().mul(2.14), x => x.analog(pAnalog)).adsr(0.015, 0.16, 0.2, 0.10).mul(0.35)
+  // breath
+  let beater = Ign.whitenoise().adsr(0.010, 0.80, 0.5, 0.015).lowpass(2500).mul(1.0)    
  
   return head.plus(harms).plus(m2).plus(m3).plus(beater)
-    .oversampleAtLeast(2, y => y.distort(0.90, "diode"))
-    .mul(0.15)
-    .shape("hard")
+    .oversampleAtLeast(2, y => y.distort(0.50, "diode"))
+    .mul(0.2)
+    .shape("soft")
     .classic()
 })()
 
-export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3 ~ -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2 ~ 1 0]>`
+export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3@2 -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2@2 1 0]>`
 
 export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
-  .velocity("1.0 0.8 0.9 0.8".sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.4)
-  .hpf(550).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.35)
+  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "membrane", wet = 0.3)
+  .tremolo(rate = beatRate(0.25), depth = 0.2)
+  .vibrato(rate = beatRate(0.25), semitones = 0.1)
+  .hpf(650).lpf("2200".add(perlin(-100, 100).fast(4))).clip(0.35) 
   .apply(
     x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
     x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
   )
 
-export trumpet_arrange = x => x.cylinder(5)  // .solo(0.5)
+export trumpet_arrange = x => x.cylinder(5) //  .solo(0.99)
   .scale("e5:minor").gain(0.24)
   .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
@@ -450,10 +450,10 @@ export trumpet = n(trumpet_pat).apply(trumpet_shape).tag("trommel")
 let metalKick = (() => {
   let thump = Ign.sine()
     .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
-    .adsr(0.0005, 0.22, 0.0, 0.05)
+    .adsr(0.0005, 0.25, 0.0, 0.05)
     .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.015, 0.0, 0.02).mul(3.0)
+  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(1.5)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
@@ -522,7 +522,7 @@ let metalSnare = (() => {
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.sound(metalKick).adsrOff().note("b1").gain(0.40).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+export kick_shape = x => x.sound(metalKick).adsrOff().note("e1").transpose(transposition).gain(0.37).velocity("0.98 0.94 0.96 0.94").pan(0.5)
 export kick_arrange = x => x.cylinder(6).mute("<0!128 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick") //  . solo()
 
@@ -577,7 +577,7 @@ export song_body = stack(
     hats.apply(hats_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
   ).analog(feel).reverb(wet = 0.25, size = 4.0) //. solo() //  .mute()
-).seed(sineOfDay.mul(60 * 24).round()).shuffle("<1!80 2!48 1!112 2!32>")
+).seed(sineOfDay.mul(60 * 24 * 15).round()).shuffle("<1!80 2!48 1!112 2!32>")
 
 export song = stack(
   // Count-in: four open hats at half the song's hat speed
@@ -587,13 +587,13 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 7500)
-    .mul(0.65) // the "brightness" knob
+    .mul(0.80) // the "brightness" knob
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.100, "soft").mul(0.95)).cut(4900)
+      .band(mid => mid.distort(0.100, "soft").mul(0.95)).cut(5500)
       .band(low => low.distort(0.001, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.80)
+    .mul(5.00)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )
