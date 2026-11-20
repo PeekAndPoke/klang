@@ -18,9 +18,11 @@ class PictureSpec : StringSpec({
         val picture = Picture()
         val chosen = mutableListOf<LookVariants>()
         var flips = 0
+        var fronts = 0
 
         picture.chooseLook(LookVariants(world = WorldLook.Night))
         picture.flipLook()
+        picture.tryFront()
 
         picture.attach(
             take = {},
@@ -29,17 +31,22 @@ class PictureSpec : StringSpec({
             takeReflections = {},
             takeLook = { chosen.add(it) },
             flipLook = { flips++ },
+            tryFront = { fronts++ },
         )
         picture.chooseLook(LookVariants(world = WorldLook.Night))
         picture.flipLook()
+        picture.tryFront()
         chosen shouldBe listOf(LookVariants(world = WorldLook.Night))
         flips shouldBe 1
+        fronts shouldBe 1
 
         picture.detach()
         picture.chooseLook(LookVariants())
         picture.flipLook()
+        picture.tryFront()
         chosen.size shouldBe 1
         flips shouldBe 1
+        fronts shouldBe 1
     }
 
     "the reflections' choice reaches the live act that has the handle, and nothing while none has it" {
@@ -47,7 +54,7 @@ class PictureSpec : StringSpec({
         val chosen = mutableListOf<ReflectionQuality>()
 
         picture.chooseReflections(ReflectionQuality.Off)
-        picture.attach(take = {}, takeFog = {}, takeShadows = {}, takeReflections = { chosen.add(it) }, takeLook = {}, flipLook = {})
+        picture.attach(take = {}, takeFog = {}, takeShadows = {}, takeReflections = { chosen.add(it) }, takeLook = {}, flipLook = {}, tryFront = {})
         picture.chooseReflections(ReflectionQuality.Off)
         chosen shouldBe listOf(ReflectionQuality.Off)
 

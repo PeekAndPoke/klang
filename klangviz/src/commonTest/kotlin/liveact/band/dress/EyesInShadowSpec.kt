@@ -11,6 +11,9 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 class EyesInShadowSpec : StringSpec({
 
@@ -34,6 +37,35 @@ class EyesInShadowSpec : StringSpec({
         // level with the lamp, and no number
         EyesInShadow.scale(lampZ = 8.6, eyeZ = 8.6, planeZ = -8.0).shouldBeNull()
         EyesInShadow.scale(lampZ = 8.6, eyeZ = Double.NaN, planeZ = -8.0).shouldBeNull()
+    }
+
+    "she looks at the camera within 50 degrees of it, no more beyond 65, and between the two it stays as it was" {
+        fun at(degrees: Double, was: Boolean): Boolean {
+            val a = degrees * PI / 180
+
+            // her face along z, the camera so many degrees off it, some metres away
+            return EyesInShadow.facing(was = was, faceX = 0.0, faceZ = 0.2, toX = 7 * sin(a), toZ = 7 * cos(a))
+        }
+
+        for (was in listOf(false, true)) {
+            at(degrees = 0.0, was = was) shouldBe true
+            at(degrees = 49.0, was = was) shouldBe true
+            at(degrees = -49.0, was = was) shouldBe true
+            at(degrees = 66.0, was = was) shouldBe false
+            at(degrees = -66.0, was = was) shouldBe false
+            at(degrees = 180.0, was = was) shouldBe false
+            // between the two: as it was
+            at(degrees = 57.0, was = was) shouldBe was
+            at(degrees = -57.0, was = was) shouldBe was
+        }
+    }
+
+    "a way of no length or no number says nothing: it stays as it was" {
+        for (was in listOf(false, true)) {
+            EyesInShadow.facing(was = was, faceX = 0.0, faceZ = 0.0, toX = 1.0, toZ = 1.0) shouldBe was
+            EyesInShadow.facing(was = was, faceX = 0.0, faceZ = 1.0, toX = 0.0, toZ = 0.0) shouldBe was
+            EyesInShadow.facing(was = was, faceX = Double.NaN, faceZ = 1.0, toX = 0.0, toZ = 1.0) shouldBe was
+        }
     }
 
     "the eyes cross: all in her face at 0, all in her shadow at 1, each fade eased" {

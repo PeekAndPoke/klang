@@ -40,9 +40,10 @@ import kotlin.math.min
 
 /**
  * Sirene's eyes in her shadow (`?eyes=shadow`, KLANG-00478; the maintainer, 2026-11-19: "when the front light is on
- * Sirene eyes move to the shadow"): while the low front lamp is on, the eyes of [rig] fade out of her face and two
- * glowing eyes fade in on the surface that takes the band's shadows, in the head of her shadow; when it goes off they
- * cross back ([EyesInShadow], about a second either way).
+ * Sirene eyes move to the shadow"): while the low front lamp is on and she looks at the camera
+ * ([EyesInShadow.facing]), the eyes of [rig] fade out of her face and two glowing eyes fade in on the surface that
+ * takes the band's shadows, in the head of her shadow; when the lamp goes off or she turns away they cross back
+ * ([EyesInShadow], about a second either way).
  *
  * The eyes on the surface are where the lamp throws her eyes: from the lamp through each eye as it is now onto the
  * surface, so they move with her as her shadow does, at its scale; as she turns her head they come closer together
@@ -76,6 +77,16 @@ class ShadowEyes private constructor(
     private val left: Vector3
     private val right: Vector3
 
+    /**
+     * The middle between her eyes and the place on the head's axis at their height, in the head bone's own space:
+     * from the one to the other is the way her face points.
+     */
+    private val brow: Vector3
+    private val axis: Vector3
+
+    /** Whether she looked at the camera at the last [update] (see [EyesInShadow.facing]). */
+    private var facing = false
+
     /** Half an eye's width and half its height, and how far apart the two eyes are, in the world, in metres. */
     private val halfWide: Double
     private val halfHigh: Double
@@ -100,6 +111,8 @@ class ShadowEyes private constructor(
     private val eyeR = vec()
     private val onL = vec()
     private val onR = vec()
+    private val browNow = vec()
+    private val axisNow = vec()
 
     // What the plane draws: its size, how far each eye's middle is from the plane's, an eye's half width and height
     // there, and the eyes' light (colour times brightness)
@@ -147,6 +160,8 @@ class ShadowEyes private constructor(
 
         left = atLeft.clone().add(inward)
         right = atRight.clone().add(inward)
+        brow = atLeft.clone().add(atRight).multiplyScalar(0.5)
+        axis = vec(x = 0.0, y = brow.y, z = 0.0)
 
         // the sizes in the world: the eyes' mesh may be scaled against it, as far as their distance says
         head.updateWorldMatrix(updateParents = true, updateChildren = false)
@@ -184,17 +199,30 @@ class ShadowEyes private constructor(
 
     /**
      * The eyes for this frame: the front lamp at [front], standing at [lamp], throws the band's shadows onto the
-     * surface at [planeZ] (along z, in metres). Call it after her eyes' glow is set for the frame: it takes their
-     * light from her face as far as they have crossed.
+     * surface at [planeZ] (along z, in metres); the camera stands at [camera] (none: she counts as looking at it).
+     * Call it after her eyes' glow is set for the frame: it takes their light from her face as far as they have
+     * crossed.
      */
-    fun update(front: FrontLight, lamp: Vector3, planeZ: Double) {
+    fun update(front: FrontLight, lamp: Vector3, planeZ: Double, camera: Vector3?) {
         val eyes = rig.eyes ?: return
         val nowMs = window.performance.now()
         val dt = if (updatedAt.isNaN()) 0.0 else ((nowMs - updatedAt) / 1000).coerceIn(0.0, 0.25)
 
         updatedAt = nowMs
 
-        val share = crossing.follow(target = FrontFade.on(front), dt = dt)
+        // the way her face points and the way to the camera, seen from above
+        head.updateWorldMatrix(updateParents = true, updateChildren = false)
+        browNow.copy(brow).applyMatrix4(head.matrixWorld)
+        axisNow.copy(axis).applyMatrix4(head.matrixWorld)
+        facing = camera == null || EyesInShadow.facing(
+            was = facing,
+            faceX = browNow.x - axisNow.x,
+            faceZ = browNow.z - axisNow.z,
+            toX = camera.x - axisNow.x,
+            toZ = camera.z - axisNow.z,
+        )
+
+        val share = crossing.follow(target = if (facing) FrontFade.on(front) else 0.0, dt = dt)
         val onWall = EyesInShadow.wall(share)
 
         // her eyes' light as it is set this frame, before it leaves her face
@@ -210,7 +238,6 @@ class ShadowEyes private constructor(
             return
         }
 
-        head.updateWorldMatrix(updateParents = true, updateChildren = false)
         eyeL.copy(left).applyMatrix4(head.matrixWorld)
         eyeR.copy(right).applyMatrix4(head.matrixWorld)
 
@@ -268,6 +295,7 @@ class ShadowEyes private constructor(
     fun rest() {
         mesh.visible = false
         crossing = FrontFade(rise = CROSSING, fall = CROSSING)
+        facing = false
         updatedAt = Double.NaN
         resting = true
     }

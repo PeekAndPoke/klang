@@ -75,8 +75,16 @@ class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.Hi
         val key = event as? KeyboardEvent
 
         if (key != null && !event.fromTyping() && key.key.lowercase() == "f" && !key.ctrlKey && !key.metaKey && !key.altKey) {
-            tried = if (tried + 1 < FrontColors.TRY.size) tried + 1 else -1
+            tryFront()
         }
+    }
+
+    /**
+     * The front lamp by hand, as the key f: full on in the next colour to try ([FrontColors.TRY]), after the last
+     * back to the show's own. With it the band's shadows stand behind them, so they can be looked at at any time.
+     */
+    fun tryFront() {
+        tried = if (tried + 1 < FrontColors.TRY.size) tried + 1 else -1
     }
 
     private val hue = Three.addon.createColor(0xffffff)

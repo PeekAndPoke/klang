@@ -322,6 +322,11 @@ class Stage(
         fogAsChosen()
     }
 
+    /** The front lamp by hand, as the key f ([Lights.tryFront]). */
+    fun tryFront() {
+        lights.tryFront()
+    }
+
     /**
      * The whole look turned to [to] at once (the key x): what stands behind the band, the floor, the haze, the time of
      * day, the underworld, the stone's unevenness, the reflection's blur, the stone and the stage's outline. Sirene's

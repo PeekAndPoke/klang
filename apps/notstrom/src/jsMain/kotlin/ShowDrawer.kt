@@ -406,8 +406,8 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
     }
 
     /**
-     * The look's variants with `?dev`, each a group of buttons ([LookGroup.all]), wrapping, and below them the show's
-     * other keys in a quiet line.
+     * The look's variants with `?dev`, each a group of buttons ([LookGroup.all]), wrapping; below them the front lamp
+     * by hand (the key f), which throws the band's shadows, and the show's other keys in a quiet line.
      */
     private fun FlowContent.looks() {
         div {
@@ -456,6 +456,23 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                         }
                     }
                 }
+            }
+        }
+
+        div {
+            css {
+                put("display", "flex")
+                put("justify-content", "center")
+                put("align-items", "center")
+                put("gap", "4px")
+                put("font-size", "13px")
+            }
+            title = FRONT_HINT
+
+            keyed(label = "Front lamp", key = "f")
+
+            lookButton(text = "Next", marked = false, dimmed = false) {
+                props.picture.tryFront()
             }
         }
 
@@ -576,8 +593,12 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
     }
 
     private companion object {
+        /** What the front lamp's button does, as its tooltip. */
+        const val FRONT_HINT = "The front lamp by hand, so the band's shadows stand behind them: amber, red, blue, " +
+            "violet, then back to the show's own"
+
         /** The show's other keys, in a quiet line below the look's controls with `?dev`. */
-        const val OTHER_KEYS = "Other keys: f front lamp, q total camera, 1 to 6 players, 0 back to the show's camera, " +
+        const val OTHER_KEYS = "Other keys: q total camera, 1 to 6 players, 0 back to the show's camera, " +
             "space play and pause, arrows skip"
 
         /** How often the drawer asks whether its time to go has come, while it is shown, in milliseconds. */

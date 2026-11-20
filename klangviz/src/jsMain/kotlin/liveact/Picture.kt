@@ -61,6 +61,9 @@ class Picture {
     /** Who flips the whole look: the same live act. */
     private var lookFlipper: (() -> Unit)? = null
 
+    /** Who turns the front lamp on by hand: the same live act. */
+    private var frontTrier: (() -> Unit)? = null
+
     /** The samples drawn for each pixel now, as the live act draws them; 1 until one tells. */
     val samples: Stream<Double> = samplesSource.readonly
 
@@ -133,8 +136,17 @@ class Picture {
     }
 
     /**
+     * Asks the live act for the front lamp by hand, as the key f does: full on in the next colour to try, after the
+     * last back to the show's own. Nothing happens while no live act has it.
+     */
+    fun tryFront() {
+        frontTrier?.invoke()
+    }
+
+    /**
      * The live act takes the choices from now on: [take] the oversampling's, [takeFog] the fog's, [takeShadows] the
-     * shadows', [takeReflections] the reflections', [takeLook] the look's variants, and [flipLook] flips the whole look.
+     * shadows', [takeReflections] the reflections', [takeLook] the look's variants, [flipLook] flips the whole look, and
+     * [tryFront] turns the front lamp on by hand.
      */
     internal fun attach(
         take: (Double) -> Unit,
@@ -143,6 +155,7 @@ class Picture {
         takeReflections: (ReflectionQuality) -> Unit,
         takeLook: (LookVariants) -> Unit,
         flipLook: () -> Unit,
+        tryFront: () -> Unit,
     ) {
         taker = take
         fogTaker = takeFog
@@ -150,6 +163,7 @@ class Picture {
         reflectionsTaker = takeReflections
         lookTaker = takeLook
         lookFlipper = flipLook
+        frontTrier = tryFront
     }
 
     /** The live act is gone. */
@@ -160,6 +174,7 @@ class Picture {
         reflectionsTaker = null
         lookTaker = null
         lookFlipper = null
+        frontTrier = null
     }
 
     /** The live act tells the look it shows now. */

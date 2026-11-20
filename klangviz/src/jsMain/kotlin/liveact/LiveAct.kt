@@ -261,7 +261,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      * (`?floor=mirror`, the key p), the haze (`?haze=parts`, the key h), Sirene's eyes (`?eyes=shadow`, the key
      * i), the band's skin (`?skin=lacquer`, the key l), the time of day (`?world=night`, the key n), the underworld
      * in the mirror (`?underworld=on`, the key v), the stone's unevenness (`?ripple=faint`, the key b) and the
-     * reflection's blur (`?blur=crisp`, the key c), the stone (`?stone=marble`, the key k) and the stage's outline
+     * reflection's blur (`?blur=crisp`, the key c), the stone (`?stone=plain`, the key k) and the stage's outline
      * (`?edge=on`, the key j).
      */
     private val variants: LookVariants
@@ -359,6 +359,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                         takeReflections = { quality -> chooseReflections(quality) },
                         takeLook = { to -> chooseLook(to) },
                         flipLook = { flipLook() },
+                        tryFront = { stage?.tryFront() },
                     )
                     it.tellSamples(samples)
                     it.tellFog(fog)
@@ -554,7 +555,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         now.stage.light(t = t, house = house, waiting = now.clock.waiting())
         if (variants.eyes == EyesLook.Shadow) {
-            shadowEyes?.update(front = now.stage.front, lamp = now.stage.frontLamp, planeZ = now.stage.shadowsAt)
+            shadowEyes?.update(
+                front = now.stage.front,
+                lamp = now.stage.frontLamp,
+                planeZ = now.stage.shadowsAt,
+                camera = camera?.position,
+            )
         }
 
         lacquer?.takeIf { it.worn }?.light(house = house, world = now.stage.world)
