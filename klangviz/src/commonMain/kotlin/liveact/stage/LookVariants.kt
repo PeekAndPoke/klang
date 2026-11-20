@@ -73,11 +73,12 @@ data class LookVariants(
         get() = haze == HazeLook.Parts && stage == StageLook.Mesh
 
     /**
-     * Whether the mirror is drawn with the fog at [fog]: where it is chosen and the fog is drawn at medium or finer.
+     * Whether the mirror is drawn with the fog at [fog]: where it is chosen and the fog is drawn at high (not at low or
+     * off).
      * The mirror draws the stage a second time, and where the fog had to go down to low or off (a slow machine, a
      * phone) it would cost the frames the fog gave back.
      */
-    fun mirrors(fog: FogQuality): Boolean = floor == FloorLook.Mirror && fog.layers >= FogQuality.Medium.layers
+    fun mirrors(fog: FogQuality): Boolean = floor == FloorLook.Mirror && fog == FogQuality.High
 
     /**
      * Whether the mirror shows the underworld with the fog at [fog]: where it is chosen and the mirror is drawn
@@ -111,14 +112,19 @@ data class LookVariants(
      * at all (`haze: parts (no haze at fog off)`).
      */
     fun hazeLine(fog: FogQuality): String {
-        val held = when {
-            haze == HazeLook.Whole -> ""
-            stage != StageLook.Mesh -> " (with the fence only)"
-            fog == FogQuality.Off -> " (no haze at fog off)"
-            else -> ""
-        }
+        val held = if (haze == HazeLook.Parts) hazeHeld(fog) else null
 
-        return "haze: ${haze.word}$held"
+        return "haze: ${haze.word}${held.inBrackets()}"
+    }
+
+    /**
+     * Why the haze's look does nothing with the fog at [fog], whichever is chosen: before the wall
+     * (`with the fence only`), or with no haze at all (`no haze at fog off`); null where it shows.
+     */
+    fun hazeHeld(fog: FogQuality): String? = when {
+        stage != StageLook.Mesh -> "with the fence only"
+        fog == FogQuality.Off -> "no haze at fog off"
+        else -> null
     }
 
     /** The line shown for a moment when Sirene's eyes are turned over: `eyes: shadow`. */
@@ -158,26 +164,33 @@ data class LookVariants(
      * and where the mirror is not drawn, why: on the plain floor (`floor: faint ripple (with the mirror floor only)`),
      * or at that fog (`floor: faint ripple (no mirror at fog low)`).
      */
-    fun rippleLine(fog: FogQuality): String = "floor: ${ripple.word} ripple${mirrorHeld(fog)}"
+    fun rippleLine(fog: FogQuality): String = "floor: ${ripple.word} ripple${mirrorHeld(fog).inBrackets()}"
 
     /**
      * The line shown for a moment when the reflection's blur is stepped, with the fog at [fog]: `floor: crisp
      * reflection`, and where the mirror is not drawn, why, as [rippleLine] says it.
      */
-    fun blurLine(fog: FogQuality): String = "floor: ${blur.word} reflection${mirrorHeld(fog)}"
+    fun blurLine(fog: FogQuality): String = "floor: ${blur.word} reflection${mirrorHeld(fog).inBrackets()}"
 
     /**
      * The line shown for a moment when the stone is turned over, with the fog at [fog]: `floor: marble`, and where the
      * mirror is not drawn, why, as [rippleLine] says it.
      */
-    fun stoneLine(fog: FogQuality): String = "floor: ${stone.word}${mirrorHeld(fog)}"
+    fun stoneLine(fog: FogQuality): String = "floor: ${stone.word}${mirrorHeld(fog).inBrackets()}"
 
-    /** Why a chosen look of the mirror does not show with the fog at [fog]: no mirror floor, or none drawn at that fog. */
-    private fun mirrorHeld(fog: FogQuality): String = when {
-        floor != FloorLook.Mirror -> " (with the mirror floor only)"
-        !mirrors(fog) -> " (no mirror at fog ${fog.word})"
-        else -> ""
+    /**
+     * Why a look of the mirror (the underworld, the ripple, the blur, the stone) does not show with the fog at [fog]:
+     * no mirror floor (`with the mirror floor only`), or none drawn at that fog (`no mirror at fog low`); null where
+     * the mirror is drawn.
+     */
+    fun mirrorHeld(fog: FogQuality): String? = when {
+        floor != FloorLook.Mirror -> "with the mirror floor only"
+        !mirrors(fog) -> "no mirror at fog ${fog.word}"
+        else -> null
     }
+
+    /** A reason as a line ends with it: ` (with the fence only)`; nothing where there is none. */
+    private fun String?.inBrackets(): String = if (this == null) "" else " ($this)"
 
     companion object {
         /**

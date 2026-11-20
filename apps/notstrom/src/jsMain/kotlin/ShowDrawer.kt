@@ -9,6 +9,8 @@ import io.peekandpoke.klang.viz.liveact.Oversampling
 import io.peekandpoke.klang.viz.liveact.Picture
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.LookFlip
+import io.peekandpoke.klang.viz.liveact.stage.LookGroup
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -23,18 +25,22 @@ import kotlinx.browser.window
 import kotlinx.html.FlowContent
 import kotlinx.html.InputType
 import kotlinx.html.Tag
+import kotlinx.html.button
 import kotlinx.html.div
 import kotlinx.html.input
 import kotlinx.html.label
+import kotlinx.html.span
+import kotlinx.html.title
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.Node
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.KeyboardEvent
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.ShowDrawer(picture: Picture, release: String, onVolume: (Double) -> Unit) = comp(
-    ShowDrawer.Props(picture = picture, release = release, onVolume = onVolume)
+fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (Double) -> Unit) = comp(
+    ShowDrawer.Props(picture = picture, release = release, dev = dev, onVolume = onVolume)
 ) {
     ShowDrawer(it)
 }
@@ -46,10 +52,10 @@ fun Tag.ShowDrawer(picture: Picture, release: String, onVolume: (Double) -> Unit
  * stage brings it, another tap on the stage hides it (that tap does nothing else in the show), taps in the drawer
  * keep it, and it goes by itself 10 s after the last touch on it, so a drawer left open does not stay over the show.
  * Mouse and touch are told apart by the pointer events' kind: a tap also sends the browser's emulated mouse events,
- * which would hold the drawer for ever as a mouse resting on it. It holds two rows.
+ * which would hold the drawer for ever as a mouse resting on it. It holds two rows (and with `?dev` the look, below).
  *
  * The first is the picture: the live act's oversampling, its steps (0.5x to 4x) with the one in use marked, the fog
- * on the floor, its qualities (off to xhigh) likewise, and the lamps' shadows (low, high), each following the real
+ * on the floor, its qualities (off, low, high) likewise, and the lamps' shadows (low, high), each following the real
  * state (the test's choice, the keys o and g, the live act's own step down), where a choice is the visitor's and
  * holds ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
  * nothing while it is hidden).
@@ -58,8 +64,17 @@ fun Tag.ShowDrawer(picture: Picture, release: String, onVolume: (Double) -> Unit
  * ([Props.onVolume] is told a gain from 0 to 1); and at its end, small and quiet, the [Props.release]. On a narrow
  * window a row wraps within itself, a group of buttons too, so nothing runs past the window's edge.
  *
+ * With `?dev` ([Props.dev], [DEV]), for whoever works on the show: below the two rows a third part, the look, with
+ * each of its variants as a group of buttons ([LookGroup]: `Stage (m)  [Wall] [Fence]`), the one in use marked, a
+ * variant that does nothing now (the haze before the wall, the ripple without the mirror) dimmed with the reason, and
+ * a quiet line with the show's other keys; the oversampling and the fog name their keys too. A choice there is taken
+ * as the key would take it, with its line at the top ([Picture.chooseLook], [Picture.flipLook]). The drawer then
+ * takes at most about a third of the window's height and scrolls within itself where it needs more.
+ *
  * The live act listens for clicks and keys on the whole window: what is clicked or typed in the drawer goes no
- * further while it is shown, so it reaches the show neither as a pause nor as a camera key. When it hides it gives the
+ * further while it is shown, so it reaches the show neither as a pause nor as a camera key. With `?dev` the show's
+ * single keys (letters, digits) go on to it all the same, so the look's keys work while the drawer is open; the space,
+ * Enter and the arrows stay with the drawer's controls ([DrawerShowing.passesKey]). When it hides it gives the
  * keyboard's focus back, so no hidden control takes the keys (an arrow on the volume, Space on fullscreen) and the
  * live act's keys work again.
  *
@@ -68,7 +83,7 @@ fun Tag.ShowDrawer(picture: Picture, release: String, onVolume: (Double) -> Unit
  */
 class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
 
-    data class Props(val picture: Picture, val release: String, val onVolume: (Double) -> Unit)
+    data class Props(val picture: Picture, val release: String, val dev: Boolean, val onVolume: (Double) -> Unit)
 
     private var shown: Boolean by value(false)
 
@@ -85,6 +100,9 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
 
     /** The shadows' quality now, as the live act tells. */
     private val shadows: ShadowQuality by subscribingTo(props.picture.shadows)
+
+    /** The look now, as the live act tells (shown with `?dev`). */
+    private val look: LookFlip by subscribingTo(props.picture.look)
 
     /** The frames a second, as last read (while the drawer is shown). */
     private var fps: Int by value(0)
@@ -246,17 +264,23 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 // hidden, its controls cannot be reached by Tab either (after the slide out)
                 put("visibility", if (shown) "visible" else "hidden")
                 put("transition", if (shown) "opacity 0.3s, transform 0.3s" else "opacity 0.3s, transform 0.3s, visibility 0s 0.3s")
+
+                // with the look's controls: at most about a third of the window, scrolling within itself beyond
+                if (props.dev) {
+                    put("max-height", "34vh")
+                    put("overflow-y", "auto")
+                }
             }
 
             // what happens in the drawer stays in it: the live act's window listeners hear none of it
             onClick { it.stopPropagation() }
             onKeyDown {
-                if (shown) {
+                if (shown && !passes(it)) {
                     it.stopPropagation()
                 }
             }
             onKeyUp {
-                if (shown) {
+                if (shown && !passes(it)) {
                     it.stopPropagation()
                 }
             }
@@ -264,7 +288,7 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
             // the picture
             row {
                 group {
-                    +"Oversampling"
+                    keyed(label = "Oversampling", key = "o")
 
                     for (step in Picture.STEPS) {
                         plainButton(text = Oversampling.label(step), primary = step == samples) { props.picture.choose(step) }
@@ -272,7 +296,7 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 }
 
                 group {
-                    +"Fog"
+                    keyed(label = "Fog", key = "g")
 
                     for (quality in FogQuality.entries) {
                         plainButton(text = fogLabel(quality), primary = quality == fog) { props.picture.chooseFog(quality) }
@@ -358,8 +382,129 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                     +props.release
                 }
             }
+
+            if (props.dev) {
+                looks()
+            }
         }
     }
+
+    /**
+     * The look's variants with `?dev`, each a group of buttons ([LookGroup.all]), wrapping, and below them the show's
+     * other keys in a quiet line.
+     */
+    private fun FlowContent.looks() {
+        div {
+            css {
+                put("display", "flex")
+                put("flex-wrap", "wrap")
+                put("justify-content", "center")
+                put("align-items", "center")
+                put("gap", "6px 20px")
+                put("max-width", "100%")
+                put("padding-top", "8px")
+                put("border-top", "1px solid #1b2030")
+                put("font-size", "13px")
+            }
+
+            for (variant in LookGroup.all(look = look, fog = fog)) {
+                div {
+                    css {
+                        put("display", "flex")
+                        put("flex-wrap", "wrap")
+                        put("justify-content", "center")
+                        put("align-items", "center")
+                        put("gap", "4px")
+                    }
+                    variant.held?.let { title = "Does nothing now: $it" }
+
+                    keyed(label = variant.label, key = variant.key)
+
+                    for (option in variant.options) {
+                        lookButton(text = option.label, marked = option.marked, dimmed = variant.held != null) {
+                            if (option.flips) {
+                                props.picture.flipLook()
+                            } else {
+                                props.picture.chooseLook(option.to)
+                            }
+                        }
+                    }
+
+                    variant.held?.let { reason ->
+                        span {
+                            css {
+                                put("color", "#6b7385")
+                                put("font-style", "italic")
+                            }
+                            +reason
+                        }
+                    }
+                }
+            }
+        }
+
+        div {
+            css {
+                put("color", "#6b7385")
+                put("font-size", "12px")
+                put("text-align", "center")
+            }
+            +OTHER_KEYS
+        }
+    }
+
+    /** A control's [label], and with `?dev` the [key] that does the same while the show plays, small beside it. */
+    private fun FlowContent.keyed(label: String, key: String) {
+        +label
+
+        if (props.dev) {
+            span {
+                css {
+                    put("color", "#6b7385")
+                    put("font-size", "12px")
+                    put("margin-left", "-2px")
+                }
+                +"($key)"
+            }
+        }
+    }
+
+    /**
+     * A small button of the look's: [marked] filled as the oversampling's in use is, [dimmed] faint where its variant
+     * does nothing now (it can still be chosen).
+     */
+    private fun FlowContent.lookButton(text: String, marked: Boolean, dimmed: Boolean, onClick: () -> Unit) {
+        button {
+            css {
+                put("padding", "3px 10px")
+                put("font", "inherit")
+                put("font-size", "13px")
+                put("border-radius", "5px")
+                put("cursor", "pointer")
+                put("opacity", if (dimmed) "0.45" else "1")
+
+                if (marked) {
+                    put("color", "#020308")
+                    put("background", "#e8ecf4")
+                    put("border", "1px solid #e8ecf4")
+                } else {
+                    put("color", "#e8ecf4")
+                    put("background", "transparent")
+                    put("border", "1px solid #6b7385")
+                }
+            }
+            onClick { onClick() }
+
+            +text
+        }
+    }
+
+    /**
+     * Whether a key pressed in the drawer goes on to the show: with `?dev` the show's single keys do
+     * ([DrawerShowing.passesKey]); without it, none.
+     */
+    private fun passes(event: KeyboardEvent): Boolean =
+        props.dev && DrawerShowing.passesKey(key = event.key, modified = event.ctrlKey || event.altKey || event.metaKey)
 
     /** A row of the drawer: its parts side by side, centred, wrapping within the row where the window is narrow. */
     private fun FlowContent.row(content: FlowContent.() -> Unit) {
@@ -398,16 +543,18 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
         ShadowQuality.High -> "High"
     }
 
-    /** A fog's label on its button: `Off`, `Low`, `Medium`, `High`, `XHigh`. */
+    /** A fog's label on its button: `Off`, `Low`, `High`. */
     private fun fogLabel(quality: FogQuality): String = when (quality) {
         FogQuality.Off -> "Off"
         FogQuality.Low -> "Low"
-        FogQuality.Medium -> "Medium"
         FogQuality.High -> "High"
-        FogQuality.XHigh -> "XHigh"
     }
 
     private companion object {
+        /** The show's other keys, in a quiet line below the look's controls with `?dev`. */
+        const val OTHER_KEYS = "Other keys: f front lamp, q total camera, 1 to 6 players, 0 back to the show's camera, " +
+            "space play and pause, arrows skip"
+
         /** How often the drawer asks whether its time to go has come, while it is shown, in milliseconds. */
         const val DUE_MS = 250
 

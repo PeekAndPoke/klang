@@ -58,18 +58,19 @@ data class StoredTest(
         /**
          * The machine test's version. Raise it when the test or the show's cost changes in a way that matters (what
          * is measured, how it is judged, a heavier stage): every kept result then counts no more, and each visitor's
-         * machine is tested anew. Not the release's name: every deploy would test again.
+         * machine is tested anew. Not the release's name: every deploy would test again. 3 since 2026-11-20: three
+         * fog qualities, and a kept `high` meant twelve sheets, now eight.
          */
-        const val TEST_VERSION = 2
+        const val TEST_VERSION = 3
 
         /** Where the browser keeps it. */
         const val STORAGE_KEY = "notstrom.machine-test"
 
         /**
          * The fogs the machine test chooses from, fewest sheets first: its first part draws the last, its fog part the
-         * first. No fog and the most sheets of all are the visitor's choices, never the test's.
+         * first. No fog is the visitor's choice, never the test's.
          */
-        val FOG_CHOICES: List<FogQuality> = listOf(FogQuality.Low, FogQuality.Medium, FogQuality.High)
+        val FOG_CHOICES: List<FogQuality> = listOf(FogQuality.Low, FogQuality.High)
 
         /** The oversampling the machine test chooses from: 0.5x and 4x are the visitor's choices, never the test's. */
         val OVERSAMPLE_CHOICES: List<Int> = listOf(1, 2)

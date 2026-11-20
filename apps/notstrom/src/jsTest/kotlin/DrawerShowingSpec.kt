@@ -84,4 +84,15 @@ class DrawerShowingSpec : StringSpec({
         showing.due(now = 11_000.0) shouldBe true
         showing.shown shouldBe false
     }
+
+    "with ?dev, a single key goes on to the show from the drawer; the space, Enter, the arrows and a modified key stay" {
+        listOf("n", "x", "N", "1", "0", "q", "f").all { DrawerShowing.passesKey(key = it, modified = false) } shouldBe true
+        DrawerShowing.passesKey(key = " ", modified = false) shouldBe false
+        DrawerShowing.passesKey(key = "Enter", modified = false) shouldBe false
+        DrawerShowing.passesKey(key = "ArrowLeft", modified = false) shouldBe false
+        DrawerShowing.passesKey(key = "Tab", modified = false) shouldBe false
+        DrawerShowing.passesKey(key = "Escape", modified = false) shouldBe false
+        DrawerShowing.passesKey(key = "n", modified = true) shouldBe false
+        DrawerShowing.passesKey(key = "", modified = false) shouldBe false
+    }
 })

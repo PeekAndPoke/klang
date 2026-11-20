@@ -71,6 +71,14 @@ class DrawerShowing {
     }
 
     companion object {
+        /**
+         * Whether a key pressed while a control of the drawer has the focus goes on to the show, with `?dev` (the
+         * show's keys work while the drawer is open): a single character, as the show's keys are (`n`, `x`, `1`), but
+         * not the space, which a button takes, and none with Ctrl, Alt or Meta ([modified]). The rest (the space,
+         * Enter, the arrows a slider takes, Tab, Escape) stays in the drawer. [key] is the event's `key`.
+         */
+        fun passesKey(key: String, modified: Boolean): Boolean = !modified && key.length == 1 && key != " "
+
         /** How long the drawer stays after the mouse last moved, in milliseconds. */
         const val MOUSE_MS = 3000.0
 

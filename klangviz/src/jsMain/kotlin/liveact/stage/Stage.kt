@@ -431,7 +431,7 @@ class Stage(
     private fun makeFog(quality: FogQuality, bed: FogBed): GroundFog? = when (quality) {
         FogQuality.Off -> null
 
-        FogQuality.Low, FogQuality.Medium, FogQuality.High, FogQuality.XHigh -> GroundFog(
+        FogQuality.Low, FogQuality.High -> GroundFog(
             scene = scene,
             renderer = renderer,
             quality = quality,

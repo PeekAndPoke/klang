@@ -68,8 +68,7 @@ data class MachineScore(val sound: Double, val picture: Double, val combined: In
  * The fog on the floor ([fogFor]): the test's first part draws it with its most sheets (high). Where that part holds
  * [HOLD_FPS], the fog stays so and the 2x part decides the oversampling as above. Where it does not, a fog part draws
  * the fewest sheets (low) at 1x instead of the 2x part, and the fog's sheets are chosen by how the frame time grows
- * with them. A small display ([isSmall]) gets fewer sheets whatever the rates. The test never chooses no fog, the
- * most sheets of all (xhigh) or 0.5x oversampling: those are the visitor's choices, and they hold.
+ * with them. The test never chooses no fog or 0.5x oversampling: those are the visitor's choices, and they hold.
  */
 object PictureQuality {
     /** The frames a second the 2x part must hold. */
@@ -87,14 +86,8 @@ object PictureQuality {
     /** The fog part must be this many times as fast as the first part to count as clearly faster (5 percent). */
     const val FOG_GAIN = 1.05
 
-    /** A display whose shorter side is below this many of the page's pixels (CSS pixels) is small: a phone's. */
-    const val SMALL_SIDE = 600
-
     /** Whether the 2x part of the picture test is worth running: not on a dense display, nor where 1x is too slow. */
     fun measuresTwice(fps1x: Double, density: Double): Boolean = density < DENSE && fps1x >= HOLD_FPS
-
-    /** Whether a display of [width] by [height] of the page's pixels is small ([SMALL_SIDE]). */
-    fun isSmall(width: Int, height: Int): Boolean = min(width, height) < SMALL_SIDE
 
     /**
      * Whether the fog part of the picture test is worth running: where the first part ([fpsFull], the fog at its
@@ -104,8 +97,8 @@ object PictureQuality {
 
     /**
      * The fog's sheets to start the show with: one of [choices], the counts of sheets the test may choose from,
-     * fewest first (notstrom's: low, medium and high). The first part ([fpsFull]) was drawn with the last of them,
-     * the fog part ([fpsFew]; null where it was not run) with the first. A [small] display gets at most [smallMost].
+     * fewest first (notstrom's: low and high). The first part ([fpsFull]) was drawn with the last of them, the fog
+     * part ([fpsFew]; null where it was not run) with the first.
      *
      * Where the first part holds [HOLD_FPS]: the most. Else the frame time is taken to grow in a straight line with
      * the sheets, `t(n) = a + b n` through the two parts (`t = 1000 / fps`, in milliseconds), and the most sheets
@@ -115,7 +108,7 @@ object PictureQuality {
      *
      * Where the fog part is not clearly faster than the first (less than [FOG_GAIN] times its rate, or slower): fewer
      * sheets buy nothing measurable, so the fog is not what holds the frames back (a display of 50 pictures a second
-     * or less caps both parts alike), and the look is not given up for no frames: the most the rules allow.
+     * or less caps both parts alike), and the look is not given up for no frames: the most.
      *
      * The plain answer, the fewest, where a part says nothing: no fog part, or a rate that is no number, not finite or
      * not above 0.
@@ -123,11 +116,11 @@ object PictureQuality {
      * Not here: stepping the fog down by itself while the show plays. Where the frames get slow there, the live act's
      * `Sharpness` (fewer pixels at 1x and 0.5x) and the oversampling's step down are the safety net.
      */
-    fun fogFor(fpsFull: Double, fpsFew: Double?, choices: List<Int>, small: Boolean, smallMost: Int): Int {
+    fun fogFor(fpsFull: Double, fpsFew: Double?, choices: List<Int>): Int {
         require(choices.size >= 2 && choices.zipWithNext().all { (a, b) -> a < b }) { "the fog's choices, fewest first: $choices" }
 
         val fewest = choices.first()
-        val most = if (small) choices.lastOrNull { it <= smallMost } ?: fewest else choices.last()
+        val most = choices.last()
 
         if (fpsFull >= HOLD_FPS) {
             return most

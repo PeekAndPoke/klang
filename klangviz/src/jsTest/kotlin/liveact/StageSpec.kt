@@ -157,8 +157,8 @@ class StageSpec : StringSpec({
                 // the ambient light, four lamps above and the one low at the front
                 lamps shouldBe 6
                 // floor, wall, riser, the lamps with their targets, the crowd's lights and the terraces they stand
-                // on, the night sky; and the fog's twelve sheets
-                scene.children.size shouldBe 17 + 12
+                // on, the night sky; and the fog's eight sheets (high)
+                scene.children.size shouldBe 17 + 8
 
                 // a frame's light step runs on it, before the song and in it
                 stage.light(t = -5.0, house = 0.07, waiting = true)
@@ -214,7 +214,7 @@ class StageSpec : StringSpec({
                 val sheets = scene.children.filter { it.asDynamic().material?.uniforms?.uMaps != null }
                 val picture: dynamic = sheets.first().asDynamic().material.uniforms.uMaps.value.renderTarget
 
-                sheets.size shouldBe 12
+                sheets.size shouldBe 8
                 (picture === drawnInto[0]) shouldBe true
                 picture.addEventListener("dispose") { _: dynamic -> freed++ }
             } finally {
@@ -235,7 +235,7 @@ class StageSpec : StringSpec({
                 other.dispose()
             }
 
-            // a card that cannot hold the maps: every sheet works the fog out for itself, and all twelve are there
+            // a card that cannot hold the maps: every sheet works the fog out for itself, and all eight are there
             r.extensions = js("({ has: function () { return false } })")
 
             val plain = three.createScene()
@@ -244,7 +244,7 @@ class StageSpec : StringSpec({
             try {
                 third.light(t = 62.0, house = 1.0, waiting = false)
                 drawnInto.size shouldBe 0
-                plain.children.count { it.asDynamic().material?.uniforms?.uHeight != null } shouldBe 12
+                plain.children.count { it.asDynamic().material?.uniforms?.uHeight != null } shouldBe 8
             } finally {
                 third.dispose()
             }
@@ -257,7 +257,7 @@ class StageSpec : StringSpec({
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
 
-            for ((query, sheets) in listOf("?fog=low" to 4, "?fog=xhigh" to 16, "?nofog" to 0, "?fog=off" to 0, "" to 12)) {
+            for ((query, sheets) in listOf("?fog=low" to 4, "?fog=high" to 8, "?fog=xhigh" to 8, "?nofog" to 0, "?fog=off" to 0, "" to 8)) {
                 val scene = three.createScene()
                 val show = Show(seed = 1, switches = Switches.parse(query))
                 val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
@@ -294,7 +294,7 @@ class StageSpec : StringSpec({
                 val freed = mutableListOf<String>()
                 val picture: dynamic = high.first().asDynamic().material.uniforms.uMaps.value.renderTarget
 
-                high.size shouldBe 12
+                high.size shouldBe 8
 
                 for (sheet in high) {
                     sheet.asDynamic().material.addEventListener("dispose") { _: dynamic -> freed.add("material") }
@@ -309,7 +309,7 @@ class StageSpec : StringSpec({
                 sheetsOf(scene) shouldBe high
 
                 stage.fog(FogQuality.Low)
-                freed.count { it == "material" } shouldBe 12
+                freed.count { it == "material" } shouldBe 8
                 freed.count { it == "geometry" } shouldBe 1
                 freed.count { it == "maps" } shouldBe 1
 
@@ -328,7 +328,7 @@ class StageSpec : StringSpec({
                 stage.fog(FogQuality.Off)
                 scene.children.size shouldBe 17
                 stage.light(t = 62.1, house = 1.0, waiting = false)
-                stage.fog(FogQuality.Medium)
+                stage.fog(FogQuality.High)
                 sheetsOf(scene).size shouldBe 8
             } finally {
                 stage.dispose()
@@ -351,9 +351,9 @@ class StageSpec : StringSpec({
                 val noise: dynamic = sheetsOf(scene).first().asDynamic().material.uniforms.uNoise.value
 
                 noise.addEventListener("dispose") { _: dynamic -> freed++ }
-                stage.fog(FogQuality.XHigh)
+                stage.fog(FogQuality.Low)
                 freed shouldBe 1
-                sheetsOf(scene).size shouldBe 16
+                sheetsOf(scene).size shouldBe 4
             } finally {
                 stage.dispose()
             }
@@ -437,11 +437,11 @@ class StageSpec : StringSpec({
                 freed shouldBe emptyList()
                 wall.visible shouldBe false
                 floorFog.none { it.visible } shouldBe true
-                scene.children.size shouldBe 17 + 12 + 3 + 12
+                scene.children.size shouldBe 17 + 8 + 3 + 8
 
                 val haze = sheetsOf(scene).filter { it !in floorFog }
 
-                haze.size shouldBe 12
+                haze.size shouldBe 8
                 haze.all { it.rotation.x == 0.0 && it.visible } shouldBe true
                 stage.light(t = 62.0, house = 1.0, waiting = false)
 
@@ -462,14 +462,14 @@ class StageSpec : StringSpec({
                 floorFog.all { it.visible } shouldBe true
                 fence.none { it.visible } shouldBe true
                 haze.none { it.visible } shouldBe true
-                scene.children.size shouldBe 17 + 12 + 3 + 12
+                scene.children.size shouldBe 17 + 8 + 3 + 8
                 stage.light(t = 62.1, house = 1.0, waiting = false)
 
                 // and to the fence again: the one made before
                 stage.look(StageLook.Mesh)
                 fence.all { it.visible } shouldBe true
                 haze.all { it.visible } shouldBe true
-                scene.children.size shouldBe 17 + 12 + 3 + 12
+                scene.children.size shouldBe 17 + 8 + 3 + 8
             } finally {
                 stage.dispose()
             }
@@ -479,7 +479,7 @@ class StageSpec : StringSpec({
         }
     }
 
-    "the mirror floor comes where it is chosen and the fog is medium or finer, goes off the floor, and is freed with the stage" {
+    "the mirror floor comes where it is chosen and the fog is high, goes off the floor, and is freed with the stage" {
         withThree { three ->
             Three.addon = three
 
@@ -502,7 +502,7 @@ class StageSpec : StringSpec({
 
                 (polished !== plain) shouldBe true
                 (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
-                scene.children.size shouldBe 17 + 12
+                scene.children.size shouldBe 17 + 8
                 polished.addEventListener("dispose") { _: dynamic -> freed++ }
 
                 // the fog at low takes the mirror off the floor, and gives the floor its own material back; the
@@ -739,7 +739,7 @@ class StageSpec : StringSpec({
             try {
                 // the lamp is on, but has no map yet: nothing parts
                 stage.light(t = 62.0, house = 1.0, waiting = false)
-                parts().size shouldBe 12
+                parts().size shouldBe 8
                 parts().all { it == 0.0 } shouldBe true
 
                 // a map as three.js would have made it: the haze opens with the lamp, reading that map
@@ -866,7 +866,7 @@ class StageSpec : StringSpec({
                     stage.light(t = 62.0, house = 1.0, waiting = false)
                     delay(100)
                     stage.light(t = 62.1, house = 1.0, waiting = false)
-                    sheetsOf(scene).size shouldBe 12
+                    sheetsOf(scene).size shouldBe 8
                     sheetsOf(scene).all { it.asDynamic().material.uniforms.uParts.value == 0.0 } shouldBe true
                 } finally {
                     front.shadow.map = null

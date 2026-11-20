@@ -98,8 +98,8 @@ fun Tag.NotstromApp(query: String) = comp(
  * said on the start screen, in plain words.
  *
  * The address's switches are the live act's ([Switch]: `?seed=7`, `?still`, `?oversample=2`, `?fog=low` and the rest);
- * `?nostrobe` presets the choice for the stroboscope. The line of text at the top is hidden for visitors; `?hud` shows
- * it ([showSwitches]).
+ * `?nostrobe` presets the choice for the stroboscope. The line of text at the top is hidden for visitors; `?dev` shows
+ * it, and the look's controls in the drawer ([showSwitches], [showsDev]).
  */
 class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
@@ -421,7 +421,6 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         phase = Phase.TestingPicture
 
         val density = window.devicePixelRatio
-        val small = PictureQuality.isSmall(width = window.screen.width, height = window.screen.height)
 
         pictureTenths = 0
 
@@ -460,8 +459,6 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             fpsFull = frames.fps,
             fpsFew = fewer,
             choices = StoredTest.FOG_CHOICES.map { it.layers },
-            small = small,
-            smallMost = FogQuality.Medium.layers,
         )
 
         val result = Tested(
@@ -775,7 +772,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                     }
                 }
                 Phase.Playing -> running?.let { now ->
-                    ShowDrawer(picture = now.picture, release = release, onVolume = { gain -> player?.setOutputVolume(gain) })
+                    ShowDrawer(
+                        picture = now.picture,
+                        release = release,
+                        dev = showsDev(props.query),
+                        onVolume = { gain -> player?.setOutputVolume(gain) },
+                    )
                 }
             }
         }

@@ -75,7 +75,8 @@ Not measured yet: what the MacBook does now. Candidates after that, by what they
 The shadows stay as they are (the maintainer, 2026-11-16: "keep the shadows as they are please"): no smaller maps,
 no fewer lookups.
 
-The fog keeps its twelve sheets (the maintainer, 2026-11-16: "we keep 12").
+The fog kept its twelve sheets (the maintainer, 2026-11-16: "we keep 12"), until 2026-11-20: three qualities now,
+high with eight sheets (see History).
 
 ## Measured and done, round 2 (2026-11-16)
 
@@ -135,7 +136,7 @@ Ideas, in the order they look worth trying:
 
 1. Draw the fog at half or quarter size and lay it over the picture: it is soft by nature and needs no
    oversampling. (Tried in round 2: it stepped along the legs. Replaced by the maps of round 3.)
-2. Cheaper fog: its noise read from a small prepared texture (done, round 1). Fewer sheets: dropped, twelve stay.
+2. Cheaper fog: its noise read from a small prepared texture (done, round 1). Fewer sheets: dropped, twelve stay (until 2026-11-20: high has eight).
 3. Fix the flicker where it arises: glitter and patterns that soften with distance, strings never thinner than a
    pixel. Then 1x or 2x may look as 4x does now.
 4. Shadows: dropped, they stay as they are (see round 1's candidates).
@@ -155,3 +156,4 @@ maintainer's machine.
 - 2026-11-16: the maintainer: the shadows stay as they are. Both shadow candidates dropped.
 - 2026-11-16: the maintainer: the fog keeps its twelve sheets.
 - 2026-11-17: round 3: the half-size fog stepped along the legs (the maintainer); the fog is now worked out as maps of the stage and drawn in the scene at full size.
+- 2026-11-20: the maintainer: "we only need three fog options now: off, low, medium -> with todays settings just renaming to: off, low, high". The fog's qualities are off, low (4 sheets) and high (8, the former medium); the show starts with 8 sheets now, veiling as much as the twelve did. The former high (12) and xhigh (16) are gone; notstrom's machine test chooses low or high (its version 3).

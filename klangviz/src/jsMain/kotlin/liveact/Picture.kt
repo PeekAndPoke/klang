@@ -7,6 +7,8 @@ package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
+import io.peekandpoke.klang.viz.liveact.stage.LookFlip
+import io.peekandpoke.klang.viz.liveact.stage.LookVariants
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 
@@ -16,8 +18,10 @@ import io.peekandpoke.ultra.streams.StreamSource
  * [choose], and tells the frame rate ([fps]) the live act counts for its line at the top, each half second while the
  * page is seen. The oversampling steps are [STEPS], the samples drawn for each pixel, as the key o cycles through
  * them. The fog on the floor likewise: it tells the [fog]'s quality whenever it changes (at its start, by the key g)
- * and takes what is asked with [chooseFog]; and the lamps' [shadows], taken with [chooseShadows]. A choice through the
- * handle is taken at once. It also tells how far the
+ * and takes what is asked with [chooseFog]; and the lamps' [shadows], taken with [chooseShadows]. The look ([look],
+ * its variants and which side of the key x is shown) whenever it changes (at its start, by a variant's key, by x),
+ * taken with [chooseLook] and [flipLook] as the keys take it, with the line at the top that says it. A choice through
+ * the handle is taken at once. It also tells how far the
  * band's figures have loaded ([figures]). For an app's controls, its loading screen and its picture test (notstrom's,
  * KLANG-00465); one handle for one live act at a time.
  */
@@ -28,6 +32,7 @@ class Picture {
     private val shadowsSource = StreamSource(ShadowQuality.High)
     private val fpsSource = StreamSource(0.0)
     private val figuresSource = StreamSource(Figures(arrived = 0, of = 0, failed = false))
+    private val lookSource = StreamSource(LookFlip.of(Switches()))
 
     /** How far the band's figures have loaded: [arrived] of [of] files; [failed] where one could not be loaded. */
     data class Figures(val arrived: Int, val of: Int, val failed: Boolean) {
@@ -44,6 +49,12 @@ class Picture {
     /** Who takes a choice of the shadows: the same live act. */
     private var shadowsTaker: ((ShadowQuality) -> Unit)? = null
 
+    /** Who takes a choice of the look's variants: the same live act. */
+    private var lookTaker: ((LookVariants) -> Unit)? = null
+
+    /** Who flips the whole look: the same live act. */
+    private var lookFlipper: (() -> Unit)? = null
+
     /** The samples drawn for each pixel now, as the live act draws them; 1 until one tells. */
     val samples: Stream<Double> = samplesSource.readonly
 
@@ -58,6 +69,9 @@ class Picture {
 
     /** How far the band's figures have loaded; none of none until the live act begins to load them. */
     val figures: Stream<Figures> = figuresSource.readonly
+
+    /** The look now, as the live act shows it ([LookFlip.shown]) and keeps for the key x; today's until one tells. */
+    val look: Stream<LookFlip> = lookSource.readonly
 
     /**
      * Asks the live act for [samples] for each pixel (one of [STEPS]; another is not taken). A choice by hand, as the
@@ -87,13 +101,35 @@ class Picture {
     }
 
     /**
-     * The live act takes the choices from now on: [take] the oversampling's, [takeFog] the fog's, [takeShadows] the
-     * shadows'.
+     * Asks the live act to show [variants]: each variant that differs is turned as its own key turns it (the key m for
+     * the stage, ...), on the side of the key x shown now, and the line at the top says it for a moment. Nothing
+     * happens while no live act has it.
      */
-    internal fun attach(take: (Double) -> Unit, takeFog: (FogQuality) -> Unit, takeShadows: (ShadowQuality) -> Unit) {
+    fun chooseLook(variants: LookVariants) {
+        lookTaker?.invoke(variants)
+    }
+
+    /** Asks the live act to flip the whole look, as the key x does. Nothing happens while no live act has it. */
+    fun flipLook() {
+        lookFlipper?.invoke()
+    }
+
+    /**
+     * The live act takes the choices from now on: [take] the oversampling's, [takeFog] the fog's, [takeShadows] the
+     * shadows', [takeLook] the look's variants, and [flipLook] flips the whole look.
+     */
+    internal fun attach(
+        take: (Double) -> Unit,
+        takeFog: (FogQuality) -> Unit,
+        takeShadows: (ShadowQuality) -> Unit,
+        takeLook: (LookVariants) -> Unit,
+        flipLook: () -> Unit,
+    ) {
         taker = take
         fogTaker = takeFog
         shadowsTaker = takeShadows
+        lookTaker = takeLook
+        lookFlipper = flipLook
     }
 
     /** The live act is gone. */
@@ -101,6 +137,13 @@ class Picture {
         taker = null
         fogTaker = null
         shadowsTaker = null
+        lookTaker = null
+        lookFlipper = null
+    }
+
+    /** The live act tells the look it shows now. */
+    internal fun tellLook(look: LookFlip) {
+        lookSource(look)
     }
 
     /** The live act tells what it draws now. */

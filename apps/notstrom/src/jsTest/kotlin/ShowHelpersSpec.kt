@@ -34,18 +34,26 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "?", strobe = false) shouldBe Switches.parse("nostrobe&nohud&look=new")
     }
 
-    "the line of text at the top shows only where the address asks for it with hud" {
+    "the line of text at the top shows only where the address asks for it with dev" {
         showSwitches(query = "?seed=3", strobe = true).has(Switch.NoHud) shouldBe true
         showSwitches(query = "?nohud", strobe = true) shouldBe Switches.parse("nohud&look=new")
-        showSwitches(query = "?hud&seed=3", strobe = true) shouldBe Switches.parse("seed=3&look=new")
-        showSwitches(query = "?hud&nohud", strobe = true).has(Switch.NoHud) shouldBe false
+        showSwitches(query = "?dev&seed=3", strobe = true) shouldBe Switches.parse("seed=3&look=new")
+        showSwitches(query = "?dev&nohud", strobe = true).has(Switch.NoHud) shouldBe false
+    }
+
+    "the former hud names nothing now: no line at the top, and a result is still kept" {
+        val switches = showSwitches(query = "?hud&seed=3", strobe = true)
+
+        switches.has(Switch.NoHud) shouldBe true
+        switches[Switch.Seed] shouldBe "3"
+        keepsTest("?hud") shouldBe true
     }
 
     "notest in the address skips the machine's tests, and is not handed on to the live act" {
         skipsTests("?seed=3&notest") shouldBe true
         skipsTests("?notesting&seed=3") shouldBe false
         skipsTests("") shouldBe false
-        showSwitches(query = "?notest&hud", strobe = true) shouldBe Switches.parse("look=new")
+        showSwitches(query = "?notest&dev", strobe = true) shouldBe Switches.parse("look=new")
     }
 
     "the test's oversampling is handed on, unless the address sets it by hand; 1 sets nothing" {
@@ -70,7 +78,7 @@ class ShowHelpersSpec : StringSpec({
     "the test's fog is handed on, unless the address sets it (fog= or nofog); high sets nothing" {
         showSwitches(query = "", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "low"
         showSwitches(query = "", strobe = true, fog = FogQuality.High).has(Switch.Fog) shouldBe false
-        showSwitches(query = "?fog=xhigh", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "xhigh"
+        showSwitches(query = "?fog=off", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "off"
         showSwitches(query = "?nofog", strobe = true, fog = FogQuality.Low) shouldBe Switches.parse("nofog&nohud&look=new")
         setsFog("?seed=1&fog=low") shouldBe true
         setsFog("?nofog") shouldBe true
@@ -79,7 +87,7 @@ class ShowHelpersSpec : StringSpec({
 
     "a test's result is kept only under an address with no switch but the app's own" {
         keepsTest("") shouldBe true
-        keepsTest("?nostrobe&hud&notest") shouldBe true
+        keepsTest("?nostrobe&dev&notest") shouldBe true
         keepsTest("?nofog") shouldBe false
         keepsTest("?shadows=low") shouldBe false
         keepsTest("?fog=low&nostrobe") shouldBe false
@@ -87,9 +95,18 @@ class ShowHelpersSpec : StringSpec({
         keepsTest("?seed=3") shouldBe false
         keepsTest("?t=5&nohud") shouldBe true
         // the look notstrom shows anyway changes nothing; another look does
-        keepsTest("?look=new&hud") shouldBe true
+        keepsTest("?look=new&dev") shouldBe true
         keepsTest("?look=today") shouldBe false
         keepsTest("?look=new&world=night") shouldBe false
+    }
+
+    "dev is the app's own: it shows the line at the top and the drawer's look controls, and is not handed on" {
+        showsDev("?notest&dev") shouldBe true
+        showsDev("?dev=1") shouldBe true
+        showsDev("?devices&seed=1") shouldBe false
+        showsDev("") shouldBe false
+        showSwitches(query = "?dev&seed=3&notest", strobe = true) shouldBe Switches.parse("seed=3&look=new")
+        keepsTest("?dev&notest") shouldBe true
     }
 
     "keys that name no live-act switch (a shared link's) do not stop a result from being kept" {
@@ -107,8 +124,8 @@ class ShowHelpersSpec : StringSpec({
         qualityLine(query = "", oversample = 1, fog = FogQuality.Low) shouldBe "Picture quality: standard, fog low."
         qualityLine(query = "?seed=2", oversample = 2, fog = FogQuality.High) shouldBe
             "Picture quality: high (2x oversampling), fog high."
-        qualityLine(query = "?oversample=4", oversample = 2, fog = FogQuality.Medium) shouldBe
-            "Picture quality: oversampling as the address sets it, fog medium."
+        qualityLine(query = "?oversample=4", oversample = 2, fog = FogQuality.High) shouldBe
+            "Picture quality: oversampling as the address sets it, fog high."
         qualityLine(query = "?nofog", oversample = 2, fog = FogQuality.Low) shouldBe
             "Picture quality: high (2x oversampling), fog as the address sets it."
         qualityLine(query = "?fog=low&oversample=1", oversample = 1, fog = FogQuality.Low) shouldBe

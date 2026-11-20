@@ -168,8 +168,8 @@ enum class Switch(val key: String) {
     NoFog("nofog"),
 
     /**
-     * `?fog=low`: how finely the fog on the floor is drawn: off, low, medium, high or xhigh (0, 4, 8, 12 or 16 level
-     * sheets, [FogQuality]); any other value is high, the fog as it was made. It wins over [NoFog].
+     * `?fog=low`: how finely the fog on the floor is drawn: off, low or high (0, 4 or 8 level sheets, [FogQuality]);
+     * any other value is high (also the former `medium` and `xhigh`). It wins over [NoFog].
      */
     Fog("fog"),
 
@@ -185,7 +185,7 @@ enum class Switch(val key: String) {
 
     /**
      * `?floor=mirror`: the floor ([FloorLook]): mirror, polished dark stone that mirrors the stage, drawn where the
-     * fog is drawn at medium or finer; any other value, or none, the floor as it was made. The key p turns it over
+     * fog is drawn at high (not at low or off); any other value, or none, the floor as it was made. The key p turns it over
      * while the show plays ([LookVariants]).
      */
     Floor("floor"),

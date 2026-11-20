@@ -14,35 +14,41 @@ import kotlin.math.pow
  * address (`?fog=low`) and in an app's controls.
  *
  * Where the fog is worked out as maps, one map for each sheet, the maps lie in one picture in [cols] columns and
- * [rows] rows. Each sheet lets [share] of its fog through, so that fewer sheets veil as much as [High]'s twelve do
- * (see [share]). [High] is the picture the live act was made with, and the one it starts with.
+ * [rows] rows. Each sheet lets [share] of its fog through, so that fewer sheets veil as much as the twelve the fog was
+ * made with ([MADE_LAYERS]) do (see [share]). [High] is the one the live act starts with.
+ *
+ * Three qualities since 2026-11-20 (the maintainer: "I also think we only need three fog options now: off, low,
+ * medium -> with todays settings just renaming to: off, low, high"): [High] is the former medium's eight sheets, so
+ * the picture a show starts with draws fewer sheets than the twelve before, veiling as much. The former high (twelve)
+ * and xhigh (sixteen) are gone; their words in an address name no quality now.
  */
 enum class FogQuality(val layers: Int, val word: String, val cols: Int, val rows: Int) {
     Off(layers = 0, word = "off", cols = 0, rows = 0),
     Low(layers = 4, word = "low", cols = 2, rows = 2),
-    Medium(layers = 8, word = "medium", cols = 4, rows = 2),
-    High(layers = 12, word = "high", cols = 4, rows = 3),
-    XHigh(layers = 16, word = "xhigh", cols = 4, rows = 4);
+    High(layers = 8, word = "high", cols = 4, rows = 2);
 
     /**
-     * The see-through share of each sheet, before it fades as the camera comes to its height: [High]'s sheets each
-     * let [HIGH_SHARE] through, and with fewer or more sheets each lets so much that all of them together veil
-     * what is behind as much as [High]'s do: `1 - (1 - 0.22)^(12 / layers)`. Low's four about 0.53, XHigh's sixteen
-     * about 0.17; 0 for [Off].
+     * The see-through share of each sheet, before it fades as the camera comes to its height: the twelve sheets the fog
+     * was made with ([MADE_LAYERS]) each let [MADE_SHARE] through, and with fewer sheets each lets so much that all of
+     * them together veil what is behind as much as those twelve did: `1 - (1 - 0.22)^(12 / layers)`. Low's four
+     * about 0.53, High's eight about 0.31; 0 for [Off].
      */
     val share: Double
-        get() = if (layers == 0) 0.0 else 1.0 - (1.0 - HIGH_SHARE).pow(High.layers.toDouble() / layers)
+        get() = if (layers == 0) 0.0 else 1.0 - (1.0 - MADE_SHARE).pow(MADE_LAYERS.toDouble() / layers)
 
     companion object {
-        /** The see-through share of each of [High]'s sheets: the fog as it was made. */
-        const val HIGH_SHARE = 0.22
+        /** The sheets the fog was made with: the veil every quality matches ([share]). */
+        const val MADE_LAYERS = 12
+
+        /** The see-through share of each of the [MADE_LAYERS] sheets the fog was made with. */
+        const val MADE_SHARE = 0.22
 
         /** The quality named [word] (`low`); null for any other word. */
         fun named(word: String?): FogQuality? = entries.firstOrNull { it.word == word }
 
         /**
-         * The quality the address asks for: `?fog=low` (a word of [FogQuality]), else `?nofog` [Off], else [High]
-         * (also for a word that names none).
+         * The quality the address asks for: `?fog=off`, `low` or `high` (a word of [FogQuality]), else `?nofog`
+         * [Off], else [High] (also for a word that names none, the former `medium` and `xhigh` among them).
          */
         fun of(switches: Switches): FogQuality = named(switches[Switch.Fog])
             ?: if (switches.has(Switch.NoFog)) Off else High

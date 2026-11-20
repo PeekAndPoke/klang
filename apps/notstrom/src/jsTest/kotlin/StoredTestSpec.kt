@@ -41,7 +41,9 @@ class StoredTestSpec : StringSpec({
         KEPT.fits(ratio = 1.25, width = 1280, height = 900) shouldBe false
     }
 
-    "a result of another test version counts no more" {
+    "a result of another test version counts no more, also one of version 2, before the three fog qualities" {
+        StoredTest.TEST_VERSION shouldBe 3
+        KEPT.copy(version = 2, fog = "high").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION + 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION - 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
     }
@@ -58,12 +60,12 @@ class StoredTestSpec : StringSpec({
     // The stored text, pinned: a field renamed in the code must not change it, or every visitor's kept result is lost
     "the kept text, field by field" {
         JSON.encodeToString(StoredTest.serializer(), KEPT) shouldBe
-            """{"version":2,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """{"version":3,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low"}"""
     }
 
     "a kept text is read back, also with a field it does not know" {
-        val text = """{"version":2,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+        val text = """{"version":3,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low","later":true}"""
 
         JSON.decodeFromString(StoredTest.serializer(), text) shouldBe KEPT
@@ -77,10 +79,11 @@ class StoredTestSpec : StringSpec({
         measuredLine(localNoon(year = 2027, month = 0, day = 2) + 5 * 60_000.0) shouldBe "Measured on this machine on 2 Jan 2027 at 12:05."
     }
 
-    "a kept result must hold what the test may choose: a fog of low, medium or high, and 1x or 2x" {
-        KEPT.copy(fog = "medium").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
+    "a kept result must hold what the test may choose: a fog of low or high, and 1x or 2x" {
         KEPT.copy(fog = "high").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
         KEPT.copy(fog = "off").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+        // the former qualities (until 2026-11-20) name none now
+        KEPT.copy(fog = "medium").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(fog = "xhigh").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(oversample = 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
         KEPT.copy(oversample = 4).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false

@@ -154,7 +154,6 @@ class LookVariantsSpec : StringSpec({
         under shouldBe start.copy(underworld = UnderworldLook.On)
         under.nextUnderworld() shouldBe start
         under.underworlds(FogQuality.High) shouldBe true
-        under.underworlds(FogQuality.Medium) shouldBe true
         under.underworlds(FogQuality.Low) shouldBe false
         start.underworlds(FogQuality.High) shouldBe false
         under.copy(floor = FloorLook.Plain).underworlds(FogQuality.High) shouldBe false
@@ -192,7 +191,7 @@ class LookVariantsSpec : StringSpec({
         seen shouldBe listOf(RippleLook.Gentle, RippleLook.Strong, RippleLook.None, RippleLook.Faint, RippleLook.Gentle)
         start.nextRipple() shouldBe start.copy(ripple = RippleLook.Strong)
         start.copy(ripple = RippleLook.Faint).rippleLine(FogQuality.High) shouldBe "floor: faint ripple"
-        start.rippleLine(FogQuality.Medium) shouldBe "floor: gentle ripple"
+        start.rippleLine(FogQuality.Off) shouldBe "floor: gentle ripple (no mirror at fog off)"
         start.rippleLine(FogQuality.Low) shouldBe "floor: gentle ripple (no mirror at fog low)"
         LookVariants().rippleLine(FogQuality.High) shouldBe "floor: gentle ripple (with the mirror floor only)"
     }
@@ -241,7 +240,7 @@ class LookVariantsSpec : StringSpec({
         seen shouldBe listOf(BlurLook.Crisp, BlurLook.Soft, BlurLook.Stone, BlurLook.Crisp)
         start.nextBlur() shouldBe start.copy(blur = BlurLook.Soft)
         start.copy(blur = BlurLook.Soft).blurLine(FogQuality.High) shouldBe "floor: soft reflection"
-        start.blurLine(FogQuality.Medium) shouldBe "floor: crisp reflection"
+        start.blurLine(FogQuality.Off) shouldBe "floor: crisp reflection (no mirror at fog off)"
         start.blurLine(FogQuality.Low) shouldBe "floor: crisp reflection (no mirror at fog low)"
         LookVariants().blurLine(FogQuality.High) shouldBe "floor: crisp reflection (with the mirror floor only)"
     }
@@ -298,10 +297,10 @@ class LookVariantsSpec : StringSpec({
         start.nextStage().nextFloor() shouldBe LookVariants(stage = StageLook.Mesh, floor = FloorLook.Mirror)
     }
 
-    "the mirror is drawn where it is chosen and the fog is medium or finer, never on the plain floor" {
+    "the mirror is drawn where it is chosen and the fog is high (not low or off), never on the plain floor" {
         val mirror = LookVariants(floor = FloorLook.Mirror)
 
-        FogQuality.entries.filter { mirror.mirrors(it) } shouldBe listOf(FogQuality.Medium, FogQuality.High, FogQuality.XHigh)
+        FogQuality.entries.filter { mirror.mirrors(it) } shouldBe listOf(FogQuality.High)
         FogQuality.entries.filter { LookVariants().mirrors(it) } shouldBe emptyList()
     }
 
@@ -310,7 +309,7 @@ class LookVariantsSpec : StringSpec({
         LookVariants(stage = StageLook.Mesh).stageLine() shouldBe "stage: fence"
         LookVariants().floorLine(FogQuality.High) shouldBe "floor: plain"
         LookVariants().floorLine(FogQuality.Off) shouldBe "floor: plain"
-        LookVariants(floor = FloorLook.Mirror).floorLine(FogQuality.Medium) shouldBe "floor: mirror"
+        LookVariants(floor = FloorLook.Mirror).floorLine(FogQuality.High) shouldBe "floor: mirror"
         LookVariants(floor = FloorLook.Mirror).floorLine(FogQuality.Low) shouldBe "floor: mirror (not drawn at fog low)"
         LookVariants(floor = FloorLook.Mirror).floorLine(FogQuality.Off) shouldBe "floor: mirror (not drawn at fog off)"
     }

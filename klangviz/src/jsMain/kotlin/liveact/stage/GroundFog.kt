@@ -73,10 +73,10 @@ import kotlin.random.Random
 // shadow map whether the lamp's light is held back on its way there by something well before the haze (the band, the
 // riser), and the haze thins there, so each big shadow on the surface behind stands in a clearing. The test sits in
 // the maps (see below), six readings of the lamp's map for each point of them (a point every 9 cm), whatever the
-// screen's size: some 1.5 million readings a frame at high, about what the noise already costs there. The sheets
-// themselves read only their maps, as before.
+// screen's size: some 1.5 million readings a frame at twelve sheets (one million at high's eight), about what the
+// noise already costs there. The sheets themselves read only their maps, as before.
 //
-// The sheets cover much of the picture many times over (twelve at the quality the fog was made with, FogQuality), so
+// The sheets cover much of the picture many times over (eight at high, twelve as the fog was made, FogQuality), so
 // working the fog out for every pixel of every sheet costs with the number of pixels. But what the fog is at a place
 // on the stage does not depend on the camera. So it is worked out once a frame as a map of the stage for each sheet
 // (a point every seven centimetres, all the maps side by side in one picture), and the sheets are drawn into the

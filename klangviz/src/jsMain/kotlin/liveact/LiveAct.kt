@@ -288,71 +288,47 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
 
         if (plain && key == "m") {
-            tune(variants.nextStage())
-            stage?.look(variants.stage)
-            flash(variants.stageLine())
+            chooseLook(variants.nextStage())
         }
 
         if (plain && key == "p") {
-            tune(variants.nextFloor())
-            stage?.floor(variants.floor)
-            flash(variants.floorLine(fog))
+            chooseLook(variants.nextFloor())
         }
 
         if (plain && key == "h") {
-            tune(variants.nextHaze())
-            stage?.haze(variants.haze)
-            flash(variants.hazeLine(fog))
+            chooseLook(variants.nextHaze())
         }
 
         if (plain && key == "i") {
-            tune(variants.nextEyes())
-            eyesAsChosen()
-            flash(variants.eyesLine())
+            chooseLook(variants.nextEyes())
         }
 
         if (plain && key == "l") {
-            tune(variants.nextSkin())
-            skinAsChosen()
-            flash(variants.skinLine())
+            chooseLook(variants.nextSkin())
         }
 
         if (plain && key == "n") {
-            tune(variants.nextWorld())
-            stage?.world(variants.world)
-            flash(variants.worldLine())
+            chooseLook(variants.nextWorld())
         }
 
         if (plain && key == "v") {
-            tune(variants.nextUnderworld())
-            stage?.underworld(variants.underworld)
-            flash(variants.underworldLine(fog))
+            chooseLook(variants.nextUnderworld())
         }
 
         if (plain && key == "b") {
-            tune(variants.nextRipple())
-            stage?.ripple(variants.ripple)
-            flash(variants.rippleLine(fog))
+            chooseLook(variants.nextRipple())
         }
 
         if (plain && key == "c") {
-            tune(variants.nextBlur())
-            stage?.blur(variants.blur)
-            flash(variants.blurLine(fog))
+            chooseLook(variants.nextBlur())
         }
 
         if (plain && key == "k") {
-            tune(variants.nextStone())
-            stage?.stone(variants.stone)
-            flash(variants.stoneLine(fog))
+            chooseLook(variants.nextStone())
         }
 
         if (plain && key == "x") {
-            look = look.flip()
-            stage?.turn(variants)
-            eyesAsChosen()
-            skinAsChosen()
-            flash(look.line())
+            flipLook()
         }
     }
 
@@ -364,10 +340,13 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                         take = { samples -> oversample(to = samples, byHand = true) },
                         takeFog = { quality -> chooseFog(quality) },
                         takeShadows = { quality -> chooseShadows(quality) },
+                        takeLook = { to -> chooseLook(to) },
+                        flipLook = { flipLook() },
                     )
                     it.tellSamples(samples)
                     it.tellFog(fog)
                     it.tellShadows(shadows)
+                    it.tellLook(look)
                 }
                 window.addEventListener("resize", onResize)
                 window.document.addEventListener("visibilitychange", onVisibility)
@@ -428,8 +407,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
             div {
                 id = FLASH_ID
-                // below the top line's five lines
-                style = "position: fixed; left: 12px; top: 96px; font: 15px monospace; color: #d4dbea; " +
+                // below the top line's six lines
+                style = "position: fixed; left: 12px; top: 112px; font: 15px monospace; color: #d4dbea; " +
                     "pointer-events: none; white-space: pre;" + (if (props.show.switches.has(Switch.NoHud)) " display: none;" else "")
             }
         }
@@ -630,6 +609,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     "${variants.skinLine()} (key l)",
                     "${variants.worldLine()} (key n)",
                     "${variants.underworldLine(fog)} (key v)",
+                ),
+                listOf(
                     "${variants.rippleLine(fog)} (key b)",
                     "${variants.blurLine(fog)} (key c)",
                     "${variants.stoneLine(fog)} (key k)",
@@ -663,9 +644,53 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }, FLASH_MS)
     }
 
-    /** The variants shown changed to [to] by a variant's own key: the other side of the key x stays as it was. */
-    private fun tune(to: LookVariants) {
+    /**
+     * The variants shown turned to [to] (a variant's own key, or a choice through [Props.picture]): each one that
+     * differs is turned as it is (the stage builds what it needs, Sirene's eyes and the band's skin are put on or
+     * off), and the line at the top says it for two seconds (each changed variant's line, where several changed).
+     * The other side of the key x stays as it was ([LookFlip.tune]). Tells [Props.picture].
+     */
+    private fun chooseLook(to: LookVariants) {
+        val was = variants
+
+        if (to == was) {
+            return
+        }
+
         look = look.tune(to)
+
+        val lines = listOfNotNull(
+            to.stageLine().takeIf { to.stage != was.stage },
+            to.floorLine(fog).takeIf { to.floor != was.floor },
+            to.hazeLine(fog).takeIf { to.haze != was.haze },
+            to.eyesLine().takeIf { to.eyes != was.eyes },
+            to.skinLine().takeIf { to.skin != was.skin },
+            to.worldLine().takeIf { to.world != was.world },
+            to.underworldLine(fog).takeIf { to.underworld != was.underworld },
+            to.rippleLine(fog).takeIf { to.ripple != was.ripple },
+            to.blurLine(fog).takeIf { to.blur != was.blur },
+            to.stoneLine(fog).takeIf { to.stone != was.stone },
+        )
+
+        // the stage turns to all of them at once, as for the key x: a variant that stays the same stays as it is
+        stage?.turn(to)
+        eyesAsChosen()
+        skinAsChosen()
+        flash(lines.joinToString("  |  "))
+        props.picture?.tellLook(look)
+    }
+
+    /**
+     * The whole look flipped (the key x, or [Props.picture]): the other side shown as it was last tuned
+     * ([LookFlip.flip]), and the line at the top says which for two seconds. Tells [Props.picture].
+     */
+    private fun flipLook() {
+        look = look.flip()
+        stage?.turn(variants)
+        eyesAsChosen()
+        skinAsChosen()
+        flash(look.line())
+        props.picture?.tellLook(look)
     }
 
     /**

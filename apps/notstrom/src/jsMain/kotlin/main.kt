@@ -14,7 +14,7 @@ import kotlinx.browser.document
 import kotlinx.browser.window
 
 // Notstrom's page: the band's app alone (NotstromApp). The address's switches (`?seed=7&nostrobe`) are the live act's:
-// see Switch in klangviz for the list of them all. Its line of text at the top shows only with `?hud`.
+// see Switch in klangviz for the list of them all. Its line of text at the top shows only with `?dev`.
 
 private val kraft = kraftApp {
     addons {

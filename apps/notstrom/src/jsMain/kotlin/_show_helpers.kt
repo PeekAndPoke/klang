@@ -15,7 +15,10 @@ import kotlin.random.Random
  * as the start screen has it: [strobe] false sets `nostrobe`, true takes it away (also where the address had it).
  *
  * The line of text at the top (what the camera does, the frames, the seed) is for whoever works on the show, not for
- * visitors: it is hidden (`nohud`) unless the address asks for it with [HUD] (`?hud`).
+ * visitors: it is hidden (`nohud`) unless the address asks for the controls for whoever works on the show with [DEV]
+ * (`?dev`; the maintainer, 2026-11-20: "the ?dev option enables the hud or turns it off when ?dev is not present. we
+ * can remove the ?hud option."). The former `?hud` names nothing now: it is handed on as a word the live act does not
+ * know, and shows no line.
  *
  * [oversample]: the oversampling the machine's test chose (`oversample=2`); the address's own `?oversample=` wins.
  * [fog]: the fog the machine's test chose (`fog=low`; high, the live act's own, sets nothing); the address's own
@@ -36,7 +39,7 @@ fun showSwitches(
     frozenAt: Double? = null,
 ): Switches {
     val parts = query.removePrefix("?").split("&").filter { it.isNotEmpty() }
-    val hud = parts.any { it.substringBefore("=") == HUD }
+    val hud = parts.any { it.substringBefore("=") == DEV }
     // what the app decides is set below or not handed on; the address's others are handed on
     val others = parts.filter { it.substringBefore("=") !in APP_SWITCHES }
     // the oversampling the test chose, unless the address sets it by hand
@@ -55,10 +58,10 @@ fun showSwitches(
 
 /**
  * The address's switches the app decides itself, whatever the address says: the stroboscope (`nostrobe`, the start
- * screen's choice), the line at the top (`nohud`, and the app's own `hud`), the frozen time (`t`), and the app's own
- * `notest`. None of them changes what the machine test measures.
+ * screen's choice), the line at the top (`nohud`, shown by the app's own `dev`), the frozen time (`t`), and the app's
+ * own `notest`. None of them changes what the machine test measures.
  */
-val APP_SWITCHES: Set<String> = setOf(Switch.NoStrobe.key, Switch.NoHud.key, Switch.Time.key, HUD, NO_TEST)
+val APP_SWITCHES: Set<String> = setOf(Switch.NoStrobe.key, Switch.NoHud.key, Switch.Time.key, DEV, NO_TEST)
 
 /**
  * Whether the machine test's result under the address of [query] may be kept for the next visit ([StoredTest]): only
@@ -78,11 +81,18 @@ fun keepsTest(query: String): Boolean =
 /** Said on the result screen where a result just measured is not kept for the next visit ([keepsTest]). */
 const val NOT_KEPT = "Not kept for the next visit: the address changes the picture."
 
-/** The address's switch that shows the line of text at the top, which notstrom hides by default (`?hud`). */
-const val HUD = "hud"
-
 /** The address's switch that skips the machine's tests before the show (`?notest`): for repeat visitors. */
 const val NO_TEST = "notest"
+
+/**
+ * The address's switch for whoever works on the show (`?dev`): the line of text at the top, which notstrom hides by
+ * default, and the look's variants and the keys in the show's drawer (the maintainer, 2026-11-20: "when a ?dev param
+ * is in the uri, then the drawer also shows all the graphics options and keys to switch them").
+ */
+const val DEV = "dev"
+
+/** Whether the address asks for the drawer's controls for whoever works on the show ([DEV]). */
+fun showsDev(query: String): Boolean = query.keys().any { it == DEV }
 
 /** Whether the address skips the machine's tests ([NO_TEST]). */
 fun skipsTests(query: String): Boolean = query.keys().any { it == NO_TEST }
