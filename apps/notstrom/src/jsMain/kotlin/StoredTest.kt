@@ -60,7 +60,7 @@ data class StoredTest(
          * is measured, how it is judged, a heavier stage): every kept result then counts no more, and each visitor's
          * machine is tested anew. Not the release's name: every deploy would test again.
          */
-        const val TEST_VERSION = 1
+        const val TEST_VERSION = 2
 
         /** Where the browser keeps it. */
         const val STORAGE_KEY = "notstrom.machine-test"

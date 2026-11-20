@@ -20,6 +20,10 @@ import kotlin.random.Random
  * [oversample]: the oversampling the machine's test chose (`oversample=2`); the address's own `?oversample=` wins.
  * [fog]: the fog the machine's test chose (`fog=low`; high, the live act's own, sets nothing); the address's own
  * `?fog=` or `?nofog` wins ([setsFog]).
+ * The look is the new one (`look=new`: the fence, the mirror floor, the haze giving way to the shadows, Sirene's eyes in
+ * her shadow, the lacquer, the drifting world; the maintainer, 2026-11-20: "please make the new look the default look in
+ * notstrom"), unless the address sets `?look=` itself ([setsLook]; `?look=today` gives the look as it was made). The key
+ * x flips between the two while the show plays.
  * [frozenAt]: the time the show is frozen at (the picture test's band, standing); the address's `?t=` is not taken,
  * as a frozen show would never start. Taken from the address: the live act's other switches (`seed`, `still`, the
  * camera's, `oversample`, `fog`, ...); decided here: `nostrobe`, `nohud`, `t`.
@@ -42,6 +46,7 @@ fun showSwitches(
         Switch.NoHud.key.takeUnless { hud },
         "${Switch.Oversample.key}=$oversample".takeUnless { byHand || oversample <= 1 },
         "${Switch.Fog.key}=${fog.word}".takeUnless { setsFog(query) || fog == FogQuality.High },
+        "${Switch.Look.key}=$NEW_LOOK".takeUnless { setsLook(query) },
         frozenAt?.let { "${Switch.Time.key}=$it" },
     )
 
@@ -76,6 +81,12 @@ fun skipsTests(query: String): Boolean = query.keys().any { it == NO_TEST }
 
 /** Whether the address sets the oversampling by hand (`?oversample=2`): it wins over the test's choice. */
 fun setsOversample(query: String): Boolean = query.keys().any { it == Switch.Oversample.key }
+
+/** The look notstrom shows unless the address sets one ([Switch.Look]). */
+const val NEW_LOOK = "new"
+
+/** Whether the address sets the look itself (`?look=new`, `?look=today`): it wins over notstrom's own, the new one. */
+fun setsLook(query: String): Boolean = query.keys().any { it == Switch.Look.key }
 
 /** Whether the address sets the fog by hand (`?fog=low`, or `?nofog`): it wins over the test's choice. */
 fun setsFog(query: String): Boolean = query.keys().any { it == Switch.Fog.key || it == Switch.NoFog.key }

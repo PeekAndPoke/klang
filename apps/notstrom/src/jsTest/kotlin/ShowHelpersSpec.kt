@@ -30,14 +30,14 @@ class ShowHelpersSpec : StringSpec({
     }
 
     "an address without switches gives only what the app decides: no line of text at the top, and the stroboscope" {
-        showSwitches(query = "", strobe = true) shouldBe Switches.parse("nohud")
-        showSwitches(query = "?", strobe = false) shouldBe Switches.parse("nostrobe&nohud")
+        showSwitches(query = "", strobe = true) shouldBe Switches.parse("nohud&look=new")
+        showSwitches(query = "?", strobe = false) shouldBe Switches.parse("nostrobe&nohud&look=new")
     }
 
     "the line of text at the top shows only where the address asks for it with hud" {
         showSwitches(query = "?seed=3", strobe = true).has(Switch.NoHud) shouldBe true
-        showSwitches(query = "?nohud", strobe = true) shouldBe Switches.parse("nohud")
-        showSwitches(query = "?hud&seed=3", strobe = true) shouldBe Switches.parse("seed=3")
+        showSwitches(query = "?nohud", strobe = true) shouldBe Switches.parse("nohud&look=new")
+        showSwitches(query = "?hud&seed=3", strobe = true) shouldBe Switches.parse("seed=3&look=new")
         showSwitches(query = "?hud&nohud", strobe = true).has(Switch.NoHud) shouldBe false
     }
 
@@ -45,7 +45,7 @@ class ShowHelpersSpec : StringSpec({
         skipsTests("?seed=3&notest") shouldBe true
         skipsTests("?notesting&seed=3") shouldBe false
         skipsTests("") shouldBe false
-        showSwitches(query = "?notest&hud", strobe = true) shouldBe Switches()
+        showSwitches(query = "?notest&hud", strobe = true) shouldBe Switches.parse("look=new")
     }
 
     "the test's oversampling is handed on, unless the address sets it by hand; 1 sets nothing" {
@@ -71,7 +71,7 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "low"
         showSwitches(query = "", strobe = true, fog = FogQuality.High).has(Switch.Fog) shouldBe false
         showSwitches(query = "?fog=xhigh", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "xhigh"
-        showSwitches(query = "?nofog", strobe = true, fog = FogQuality.Low) shouldBe Switches.parse("nofog&nohud")
+        showSwitches(query = "?nofog", strobe = true, fog = FogQuality.Low) shouldBe Switches.parse("nofog&nohud&look=new")
         setsFog("?seed=1&fog=low") shouldBe true
         setsFog("?nofog") shouldBe true
         setsFog("?foggy&seed=1") shouldBe false
@@ -109,5 +109,11 @@ class ShowHelpersSpec : StringSpec({
             "Picture quality: high (2x oversampling), fog as the address sets it."
         qualityLine(query = "?fog=low&oversample=1", oversample = 1, fog = FogQuality.Low) shouldBe
             "Picture quality: as the address sets it (oversampling and fog)."
+    }
+
+    "the new look is notstrom's own, and an address that sets the look wins" {
+        showSwitches(query = "", strobe = true)[Switch.Look] shouldBe "new"
+        showSwitches(query = "?look=today", strobe = true)[Switch.Look] shouldBe "today"
+        showSwitches(query = "?look=new&world=night", strobe = true)[Switch.Look] shouldBe "new"
     }
 })

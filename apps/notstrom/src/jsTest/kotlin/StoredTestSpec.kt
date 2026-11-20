@@ -58,12 +58,12 @@ class StoredTestSpec : StringSpec({
     // The stored text, pinned: a field renamed in the code must not change it, or every visitor's kept result is lost
     "the kept text, field by field" {
         JSON.encodeToString(StoredTest.serializer(), KEPT) shouldBe
-            """{"version":1,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """{"version":2,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low"}"""
     }
 
     "a kept text is read back, also with a field it does not know" {
-        val text = """{"version":1,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+        val text = """{"version":2,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low","later":true}"""
 
         JSON.decodeFromString(StoredTest.serializer(), text) shouldBe KEPT
