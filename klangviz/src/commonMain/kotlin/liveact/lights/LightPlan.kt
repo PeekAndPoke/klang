@@ -290,7 +290,8 @@ class LightPlan(private val show: Show) {
     /**
      * How much the front lamp is on at [t] (0 to 1), and whether it strobes. The light changes sides now and then:
      * for eight bars in every forty the lamps behind go down and the one lamp low at the front comes up, so the band
-     * throws big shadows up the wall; a second each way. Where in the song, the seed decides.
+     * throws big shadows up the wall; a second each way. Where in the song, the seed decides. Not before
+     * [FIRST_SHADOWS]: a stretch that would begin earlier is left out whole, and so is a stroboscope's.
      *
      * [waiting]: before the click. [trying]: a colour is tried by hand (the key f), the lamp is full on.
      */
@@ -321,16 +322,37 @@ class LightPlan(private val show: Show) {
         // and full on was too hard, the maintainer, 2026-11-16). Flashing this fast over the whole picture can
         // trigger seizures in people with photosensitive epilepsy: a public showing needs a warning before it.
         // ?nostrobe switches it off.
-        if (!show.switches.has(Switch.NoStrobe) && runs.any { t >= it.from - 0.02 && t < it.to + 0.08 }) {
+        if (!show.switches.has(Switch.NoStrobe) && strobes(runs = runs, t = t)) {
             val sixteenth = (t * show.bpm / 60 * 4) % 1
 
             return FrontLight(level = if (sixteenth < 0.28) 1.0 else Strobe.LOW, strobing = true)
+        }
+
+        // when the stretch this moment lies in began (x at 26): one that began too early is left out whole, so the
+        // lamp never comes up in the middle of its stretch
+        if (t - (x - 26) * bar < FIRST_SHADOWS) {
+            return FrontLight.off
         }
 
         return FrontLight(level = smooth((x - 26) * bar / 1.0) * smooth((34 - x) * bar / 1.0), strobing = false)
     }
 
     companion object {
+        /**
+         * The front lamp stays dark until this much of the song has passed, in seconds: its big shadows, and with
+         * them the haze's clearings and Sirene's eyes in her shadow, are a revelation and came too early (the
+         * maintainer, 2026-11-20: "they come to early... let at least 45 seconds of the song pass then we can show
+         * it"). The key f and `?front` are not held back.
+         */
+        const val FIRST_SHADOWS = 45.0
+
+        /**
+         * Whether the stroboscope flashes at [t]: inside one of the bass drum's [runs] (a little before and after),
+         * but only a run that begins at [first] or later.
+         */
+        fun strobes(runs: List<Run>, t: Double, first: Double = FIRST_SHADOWS): Boolean =
+            runs.any { it.from >= first && t >= it.from - 0.02 && t < it.to + 0.08 }
+
         /** A mood stays for [HOLD] bars; over the next [TURN] it goes over into another. */
         const val HOLD = 24
         const val TURN = 4

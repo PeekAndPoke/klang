@@ -51,6 +51,45 @@ class LightPlanSpec : StringSpec({
         bassDrumRuns(emptyList()) shouldBe emptyList()
     }
 
+    "the front lamp stays dark for the first 45 seconds, and its first stretch then comes whole" {
+        for (seed in 0 until 60) {
+            val show = Show(seed = seed)
+            val plan = LightPlan(show)
+            val levels = generateSequence(0.0) { it + 0.05 }.takeWhile { it < 45.0 + 41 * show.bar }
+                .map { t -> t to plan.frontAt(t = t, waiting = false, trying = false).level }
+                .toList()
+
+            withClue("seed $seed") {
+                levels.filter { it.first < LightPlan.FIRST_SHADOWS }.maxOf { it.second } shouldBe 0.0
+                // it still comes, fully, within the next round of forty bars
+                levels.maxOf { it.second } shouldBeGreaterThan 0.99
+                // and rises from dark: no step up larger than a twentieth of a second of its one second rise allows
+                levels.zipWithNext().maxOf { (a, b) -> b.second - a.second } shouldBeLessThan 0.2
+            }
+        }
+    }
+
+    "the key f and the address's front lamp are not held back" {
+        val plan = LightPlan(Show(seed = 3))
+
+        plan.frontAt(t = 5.0, waiting = false, trying = true).level shouldBe 1.0
+        val asked = LightPlan(Show(seed = 3, switches = Switches.parse("?front=0.7")))
+
+        asked.frontAt(t = 5.0, waiting = false, trying = false).level shouldBe 0.7
+    }
+
+    "a stroboscope's run that begins before the first shadows is left out, a later one flashes" {
+        val runs = listOf(Run(from = 30.0, to = 50.0), Run(from = 60.0, to = 62.0))
+
+        LightPlan.strobes(runs = runs, t = 40.0) shouldBe false
+        LightPlan.strobes(runs = runs, t = 48.0) shouldBe false
+        LightPlan.strobes(runs = runs, t = 59.99) shouldBe true
+        LightPlan.strobes(runs = runs, t = 61.0) shouldBe true
+        LightPlan.strobes(runs = runs, t = 62.07) shouldBe true
+        LightPlan.strobes(runs = runs, t = 62.09) shouldBe false
+        LightPlan.strobes(runs = listOf(Run(from = 45.0, to = 46.0)), t = 45.5) shouldBe true
+    }
+
     "a show opens in the first mood, and no mood follows itself" {
         for (seed in 0 until 60) {
             val plan = LightPlan(Show(seed = seed))
