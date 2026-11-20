@@ -55,7 +55,7 @@ class LightPlanSpec : StringSpec({
         for (seed in 0 until 60) {
             val show = Show(seed = seed)
             val plan = LightPlan(show)
-            val levels = generateSequence(0.0) { it + 0.05 }.takeWhile { it < 45.0 + 41 * show.bar }
+            val levels = generateSequence(0.0) { it + 0.05 }.takeWhile { it < 45.0 + 45 * show.bar }
                 .map { t -> t to plan.frontAt(t = t, waiting = false, trying = false).level }
                 .toList()
 
@@ -63,10 +63,27 @@ class LightPlanSpec : StringSpec({
                 levels.filter { it.first < LightPlan.FIRST_SHADOWS }.maxOf { it.second } shouldBe 0.0
                 // it still comes, fully, within the next round of forty bars
                 levels.maxOf { it.second } shouldBeGreaterThan 0.99
-                // and rises from dark: no step up larger than a twentieth of a second of its one second rise allows
-                levels.zipWithNext().maxOf { (a, b) -> b.second - a.second } shouldBeLessThan 0.2
+                // and rises from dark: no step up larger than a twentieth of a second of its slow rise allows
+                levels.zipWithNext().maxOf { (a, b) -> b.second - a.second } shouldBeLessThan 0.02
             }
         }
+    }
+
+    "the front lamp comes up and goes down slowly" {
+        val show = Show(seed = 3)
+        val plan = LightPlan(show)
+        val levels = generateSequence(0.0) { it + 0.05 }.takeWhile { it < 45.0 + 81 * show.bar }
+            .map { t -> t to plan.frontAt(t = t, waiting = false, trying = false).level }
+            .toList()
+        // the first stretch: from where the lamp leaves the dark to where it is dark again
+        val on = levels.dropWhile { it.second == 0.0 }.takeWhile { it.second > 0.0 }
+        val full = on.filter { it.second > 0.999 }
+        val fade = minOf(LightPlan.SHADOW_FADE, 4 * show.bar)
+
+        (full.first().first - on.first().first) shouldBe (fade plusOrMinus 0.4)
+        (on.last().first - full.last().first) shouldBe (fade plusOrMinus 0.4)
+        // and between the two it stands full for the rest of its eight bars
+        (full.last().first - full.first().first) shouldBe (8 * show.bar - fade plusOrMinus 0.4)
     }
 
     "the key f and the address's front lamp are not held back" {

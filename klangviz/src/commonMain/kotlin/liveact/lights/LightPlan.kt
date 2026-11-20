@@ -13,6 +13,7 @@ import io.peekandpoke.klang.viz.liveact.smooth
 import kotlin.math.PI
 import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 
@@ -290,8 +291,9 @@ class LightPlan(private val show: Show) {
     /**
      * How much the front lamp is on at [t] (0 to 1), and whether it strobes. The light changes sides now and then:
      * for eight bars in every forty the lamps behind go down and the one lamp low at the front comes up, so the band
-     * throws big shadows up the wall; a second each way. Where in the song, the seed decides. Not before
-     * [FIRST_SHADOWS]: a stretch that would begin earlier is left out whole, and so is a stroboscope's.
+     * throws big shadows up the wall. It comes and goes slowly ([SHADOW_FADE]), half of each way before and half
+     * after the eight bars' ends. Where in the song, the seed decides. Not before [FIRST_SHADOWS]: a stretch that
+     * would begin earlier is left out whole, and so is a stroboscope's.
      *
      * [waiting]: before the click. [trying]: a colour is tried by hand (the key f), the lamp is full on.
      */
@@ -328,13 +330,20 @@ class LightPlan(private val show: Show) {
             return FrontLight(level = if (sixteenth < 0.28) 1.0 else Strobe.LOW, strobing = true)
         }
 
-        // when the stretch this moment lies in began (x at 26): one that began too early is left out whole, so the
+        // each way takes this long, and never more than four bars: at a fast tempo the lamp still stands full for
+        // four of its eight
+        val fade = min(SHADOW_FADE, 4 * bar)
+        // seconds since the stretch's first bar (x at 26) and until its last bar's end (x at 34)
+        val since = (x - 26) * bar
+        val left = (34 - x) * bar
+
+        // when the stretch this moment lies in began to rise: one that began too early is left out whole, so the
         // lamp never comes up in the middle of its stretch
-        if (t - (x - 26) * bar < FIRST_SHADOWS) {
+        if (t - (since + fade / 2) < FIRST_SHADOWS) {
             return FrontLight.off
         }
 
-        return FrontLight(level = smooth((x - 26) * bar / 1.0) * smooth((34 - x) * bar / 1.0), strobing = false)
+        return FrontLight(level = smooth(since / fade + 0.5) * smooth(left / fade + 0.5), strobing = false)
     }
 
     companion object {
@@ -345,6 +354,12 @@ class LightPlan(private val show: Show) {
          * it"). The key f and `?front` are not held back.
          */
         const val FIRST_SHADOWS = 45.0
+
+        /**
+         * How long the front lamp takes to come up, and to go down again, in seconds (the maintainer, 2026-11-21:
+         * "The shadows on the back must fade slower in and out ... creepy slow"; it was one second each way).
+         */
+        const val SHADOW_FADE = 8.0
 
         /**
          * Whether the stroboscope flashes at [t]: inside one of the bass drum's [runs] (a little before and after),
