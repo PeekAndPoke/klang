@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.BandGlance
 import io.peekandpoke.klang.viz.liveact.band.skills.CameraStare
@@ -30,6 +31,8 @@ val SIRENE: Member = Member(
         seed = 67.0,
         // how wild: elegant, with a little wildness
         wildness = 2,
+        // how her hips move as she walks: the measure of the band's, the lure (the others' are against hers)
+        gait = Gait(hips = 1.0),
         traits = Traits(
             depth = 0.9, beats = listOf(1.0, 0.5, 0.8, 0.5), lag = 0.0, soft = 0.13, chance = 0.2, skip = 0.0,
             look = 0.14, tilt = 0.04, lean = 0.02,

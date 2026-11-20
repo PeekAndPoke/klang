@@ -9,6 +9,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
@@ -60,6 +61,22 @@ class MembersSpec : StringSpec({
         kinds.size shouldBe kinds.distinct().size
         // (and there are idle skills on the sheets to look at)
         kinds.size shouldBeGreaterThan 1
+    }
+
+    "every member has a gait, the hips moving from 0 to 1.5 as they walk; Sirene's are the measure, and move the most" {
+        // the maintainer, 2026-11-20: "when walking we need a setting for each char how much the hip moves"
+        for (player in Player.entries) {
+            val hips = Members.of(player).character.gait.hips
+
+            withClue("how much the hips of $player move") {
+                hips shouldBeGreaterThanOrEqual 0.0
+                hips shouldBeLessThanOrEqual 1.5
+            }
+        }
+
+        // her stroll is what the hips' motion at 1 is (see `HipMotion`), and she is the lure
+        Members.of(Player.Sirene).character.gait.hips shouldBe 1.0
+        Player.entries.maxBy { Members.of(it).character.gait.hips } shouldBe Player.Sirene
     }
 
     "on Sirene's sheet every timed look goes back slowly: it falls over 1.5 s at least, no faster than it rises, and still arrives" {

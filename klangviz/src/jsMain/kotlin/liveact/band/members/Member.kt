@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.Skill
 
@@ -53,11 +54,11 @@ data class Dress(
 
 /**
  * A member's character: how they move with the music apart from playing (see `Mover`), the [traits], with the [seed]
- * of their own chance; and how wild they are, [wildness], a whole number from 0 (elegant) to 10 (animal): the idle
+ * of their own chance; how wild they are, [wildness], a whole number from 0 (elegant) to 10 (animal): the idle
  * skills on their sheet fit it (see `fits`; the maintainer, 2026-11-18: "we should apply stats ... 0 = elegant and
- * 10 = animal").
+ * 10 = animal"); and how they walk, [gait]: how much the hips move (see [Gait]).
  */
-data class Character(val seed: Double, val traits: Traits, val wildness: Int) {
+data class Character(val seed: Double, val traits: Traits, val wildness: Int, val gait: Gait) {
     init {
         require(wildness in 0..10) { "a wildness is from 0 to 10: $wildness" }
     }

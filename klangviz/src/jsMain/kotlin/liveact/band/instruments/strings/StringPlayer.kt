@@ -12,10 +12,12 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.figure.walkHips
 import io.peekandpoke.klang.viz.liveact.band.members.Bearing
 import io.peekandpoke.klang.viz.liveact.band.skills.BrowWipe
 import io.peekandpoke.klang.viz.liveact.band.skills.CapTug
@@ -270,8 +272,11 @@ class StringPlayer(
         }
     }
 
-    /** The player at [t]: the strings' light, the body with the beat, the instrument on the trunk, both hands. */
-    fun update(t: Double) {
+    /**
+     * The player at [t]: the strings' light, the body with the beat, the instrument on the trunk, both hands. [hips]:
+     * how the hips move as the player walks (the walk-in, see `walkInHips`); the arms hold the instrument as ever.
+     */
+    fun update(t: Double, hips: HipMotion = HipMotion.NONE) {
         if (part.refresh()) {
             notes = fingered(strums = part.events, now = t)
         }
@@ -340,6 +345,8 @@ class StringPlayer(
             rig.turn("hips", Z_AXIS, SETTLE_TILT * settle)
             rig.turn("belly", Z_AXIS, -SETTLE_TILT * settle)
         }
+
+        walkHips(rig = rig, motion = hips)
 
         // now and then the player straightens up from the instrument: the back comes up (a little past upright, and
         // not forward of where a player who leans back already is), the chest opens, the head lifts and looks out

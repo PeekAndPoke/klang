@@ -91,6 +91,9 @@ class Rig(val root: Object3D) {
     /** Where each foot starts at rest, in the figure's space (the bone to the toe starts at the ankle). */
     val ankle: Map<Side, Vector3>
 
+    /** How far the hip joints stand from the middle at rest, in the figure's space (the bone to the knee starts there). */
+    val hipHalf: Double
+
     /** How high the head's bone starts at rest. */
     val height: Double
 
@@ -160,6 +163,7 @@ class Rig(val root: Object3D) {
         shoulder = mapOf(Side.L to local("elbowL"), Side.R to local("elbowR"))
         armLength = local("elbowL").distanceTo(local("wristL")) + local("wristL").distanceTo(local("handL"))
         ankle = mapOf(Side.L to local("toeL"), Side.R to local("toeR"))
+        hipHalf = local("kneeL").x
         height = local("head").y
         faceAhead = dir(0.0, 0.0, 1.0).applyQuaternion(bone("head").getWorldQuaternion(quat()).invert())
 

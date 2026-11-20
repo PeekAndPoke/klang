@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.NeckScratch
@@ -26,6 +27,8 @@ val WUCHT: Member = Member(
         seed = 11.0,
         // how wild: the most animal of the band
         wildness = 9,
+        // how his hips move as he walks: the bull rolls his weight, the hips hardly twist
+        gait = Gait(hips = 0.2),
         traits = Traits(
             depth = 1.0, beats = listOf(1.0, 0.7, 0.9, 0.7), lag = -0.02, soft = 0.10, chance = 0.15,
             look = 0.05, tilt = 0.03, lean = 0.01,

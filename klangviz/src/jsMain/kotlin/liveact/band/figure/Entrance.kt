@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.band.figure
 
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
+import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Entrance
 import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -65,6 +66,48 @@ fun enter(rig: Rig, entrance: Entrance, home: Place, t: Double): WalkIn {
     return WalkIn(going = smooth(speed / 0.45), far = way * k, since = t - t1)
 }
 
+/** How long a step of the walk-in is, in the figure's size: each leg steps this far. */
+private const val STEP = 0.42
+
+/**
+ * The steps' phase on the walk-in ([walk] from [enter]): by the way made, a whole number at every step of the left
+ * foot, which lands ahead there (see [stepLegs]).
+ */
+fun strideOf(rig: Rig, walk: WalkIn): Double = walk.far / (STEP * rig.s / 0.6)
+
+/**
+ * The hips' motion on the walk-in ([walk] from [enter]) of one who walks with [gait] (see [HipMotion]): as much as
+ * the walk-in has them move ([WalkKind.WalkIn]), with the legs' steps.
+ */
+fun walkInHips(rig: Rig, walk: WalkIn, gait: Gait): HipMotion = HipMotion.at(
+    stride = strideOf(rig, walk),
+    going = walk.going,
+    amount = gait.hipsOn(WalkKind.WalkIn),
+    s = rig.s,
+    hipHalf = rig.hipHalf,
+)
+
+/**
+ * The hips' motion of a stroll at [stride] (see [HipMotion.at]) for [rig]: [going] how far it walks, [amount] how
+ * much its hips move.
+ */
+fun strollHips(rig: Rig, stride: Double, going: Double, amount: Double): HipMotion =
+    HipMotion.at(stride = stride, going = going, amount = amount, s = rig.s, hipHalf = rig.hipHalf)
+
+/**
+ * Moves the hips of [rig] by [motion] (see [HipMotion]), and the belly and the chest answer: called after the
+ * player's own move of the hips, before anything reaches for a place on the body. [shoulders]: the shoulders' own
+ * turn against the legs, where the walk has one (see [HipMotion.SHOULDERS]), turned with the chest's answer.
+ */
+fun walkHips(rig: Rig, motion: HipMotion, shoulders: Double = 0.0) {
+    rig.moveHips(vec(motion.sway, -motion.lower, 0.0))
+    rig.turn("hips", Y_AXIS, motion.yaw)
+    rig.turn("hips", Z_AXIS, motion.roll)
+    rig.turn("belly", Z_AXIS, motion.waist)
+    rig.turn("chest", Y_AXIS, motion.chestYaw + shoulders)
+    rig.turn("chest", Z_AXIS, motion.chestRoll)
+}
+
 /** The legs step by the way made ([walk] from [enter]); the feet the pose had are kept as far as it stands. */
 fun stepLegs(rig: Rig, walk: WalkIn) {
     if (walk.going < 0.002) {
@@ -72,8 +115,8 @@ fun stepLegs(rig: Rig, walk: WalkIn) {
     }
 
     val s = rig.s
-    val step = 0.42 * s
-    val stride = walk.far / (step / 0.6)
+    val step = STEP * s
+    val stride = strideOf(rig, walk)
 
     rig.update()
 
@@ -93,17 +136,18 @@ fun stepLegs(rig: Rig, walk: WalkIn) {
     }
 }
 
-/** A plain walk for a figure with nothing to hold up: upright, the arms hanging and swinging against the legs. */
-fun walkPose(rig: Rig, walk: WalkIn) {
+/**
+ * A plain walk for a figure with nothing to hold up, who walks with [gait]: upright, the hips moving as the gait
+ * has them on the walk-in (see [walkInHips]), the arms hanging and swinging against the legs.
+ */
+fun walkPose(rig: Rig, walk: WalkIn, gait: Gait) {
     val s = rig.s
-    val step = 0.42 * s
-    val stride = walk.far / (step / 0.6)
-    val swing = cos(2 * PI * stride) * walk.going
+    val swing = cos(2 * PI * strideOf(rig, walk)) * walk.going
 
     rig.reset()
     rig.update()
     rig.moveHips(vec(0.0, -0.012 * rig.pelvis.y, 0.0))
-    rig.turn("chest", Y_AXIS, -0.16 * swing)
+    walkHips(rig = rig, motion = walkInHips(rig = rig, walk = walk, gait = gait), shoulders = -HipMotion.SHOULDERS * swing)
 
     for (side in Side.entries) {
         val sign = side.sign

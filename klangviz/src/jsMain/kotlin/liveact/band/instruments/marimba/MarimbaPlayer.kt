@@ -10,10 +10,12 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.figure.walkHips
 import io.peekandpoke.klang.viz.liveact.band.instruments.StickPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.Stroke
 import io.peekandpoke.klang.viz.liveact.band.instruments.holdStick
@@ -160,8 +162,11 @@ class MarimbaPlayer(
         return from.clone().lerp(to, smooth((gap - until) / max(0.05, gap * 0.8)))
     }
 
-    /** The marimba player and her marimba at [t] (seconds). */
-    fun update(t: Double) {
+    /**
+     * The marimba player and her marimba at [t] (seconds). [hips]: how her hips move as she walks (the walk-in, see
+     * `walkInHips`); the arms hang with the mallets as ever.
+     */
+    fun update(t: Double, hips: HipMotion = HipMotion.NONE) {
         if (part.refresh()) {
             plan()
         }
@@ -264,6 +269,7 @@ class MarimbaPlayer(
         rig.update()
         rig.moveHips(vec(shift, -(0.015 + 0.03 * up + 0.010 * body * mover.parts.knees - 0.02 * abs(weight)) * rig.pelvis.y, 0.0))
         rig.turn("hips", Z_AXIS, -0.05 * weight)
+        walkHips(rig = rig, motion = hips)
         rig.turn("belly", X_AXIS, 0.02 + 0.11 * up + 0.02 * body * mover.parts.trunk)
         rig.turn("belly", Z_AXIS, 0.04 * weight)
         rig.turn("chest", Y_AXIS, 0.22 * (middle - shift) / s)

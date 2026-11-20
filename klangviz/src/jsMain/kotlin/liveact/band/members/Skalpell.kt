@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.ShakeOut
@@ -26,6 +27,8 @@ val SKALPELL: Member = Member(
         seed = 37.0,
         // how wild: a mix of both
         wildness = 5,
+        // how his hips move as he walks: the precise one walks upright and straight, a little hip
+        gait = Gait(hips = 0.35),
         traits = Traits(
             depth = 0.8, beats = listOf(0.9, 0.55, 0.9, 0.55), lag = 0.02, soft = 0.13, chance = 0.6, skip = 0.18,
             look = 0.30, tilt = 0.10, lean = 0.03,

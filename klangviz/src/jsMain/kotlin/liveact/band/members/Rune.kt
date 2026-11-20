@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.CountIn
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
@@ -30,6 +31,8 @@ val RUNE: Member = Member(
         seed = 53.0,
         // how wild: the most elegant of the band
         wildness = 1,
+        // how her hips move as she walks: she glides, the hips going quietly under a body that stays still
+        gait = Gait(hips = 0.45),
         traits = Traits(
             depth = 0.68, beats = listOf(1.0, 0.25, 0.6, 0.25), lag = 0.03, soft = 0.18, chance = 0.35,
             look = 0.10, tilt = 0.12, lean = 0.015,

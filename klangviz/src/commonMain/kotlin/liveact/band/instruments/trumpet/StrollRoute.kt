@@ -5,8 +5,10 @@
 
 package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 
+import io.peekandpoke.klang.viz.liveact.band.figure.WalkKind
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollLeg.Pose
 import io.peekandpoke.klang.viz.liveact.hash01
+import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.smoother
 import kotlin.math.PI
 import kotlin.math.abs
@@ -107,6 +109,52 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
         }
 
         return HOME
+    }
+
+    /**
+     * The kind of walk's modifier on her hips [x] seconds after the stroll began (see [WalkKind]): each leg's kind
+     * ([walkKindOf]), eased from the one before over [KIND_BLEND] seconds that end as the leg begins. Every leg
+     * begins from a standstill of [PAUSE] seconds or two at least (or [WAIT], at her place), so the change is made
+     * while she stands, and the hips never jump. Before the stroll, the first leg's.
+     */
+    internal fun hipsAt(x: Double): Double {
+        // the legs from the round before to the one a blend ahead, each with when the change to its kind begins; the
+        // round before ends a [WAIT] at her place, so its last change lies more than a blend back
+        val now = max(0.0, x)
+        val changes = mutableListOf<Pair<Double, Double>>()
+
+        for (round in max(0, roundAt(now) - 1)..roundAt(now + KIND_BLEND) + 1) {
+            for ((i, walk) in roundOf(round).walks.withIndex()) {
+                changes.add((startOf(round) + walk.start - KIND_BLEND) to walkKindOf(round = round, leg = i).hips)
+            }
+        }
+
+        // the kind of the last change a whole blend back (or the first), and each change since eased in
+        val settled = max(0, changes.indexOfLast { (at, _) -> at <= x - KIND_BLEND })
+        var hips = changes[settled].second
+
+        for (k in settled + 1 until changes.size) {
+            val (at, kind) = changes[k]
+
+            if (at > x) {
+                break
+            }
+
+            hips += (kind - changes[k - 1].second) * smooth((x - at) / KIND_BLEND)
+        }
+
+        return hips
+    }
+
+    /**
+     * The kind of walk of the leg [leg] of the round [round]: on the way to the camera the catwalk ([WalkKind.Camera],
+     * up close too), and back from it a plain stroll; on an edge round the arc along the edge ([WalkKind.Edge]), and
+     * the ways to it and from it a plain stroll; on a plain round, a plain stroll.
+     */
+    internal fun walkKindOf(round: Int, leg: Int): WalkKind = when (roundOf(round).kind) {
+        Kind.Plain -> WalkKind.Stroll
+        Kind.Edge -> if (leg == 1) WalkKind.Edge else WalkKind.Stroll
+        Kind.Camera, Kind.Close -> if (leg == 0) WalkKind.Camera else WalkKind.Stroll
     }
 
     /** Which round [x] seconds after the stroll began lies in (the first is 0). */
@@ -437,6 +485,12 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
          * more between walking").
          */
         internal const val WAIT = 20.0
+
+        /**
+         * The kind of walk's modifier on her hips eases from one kind to the next over so many seconds (see
+         * [hipsAt]): less than the shortest standstill before a leg (two seconds, at the camera up close).
+         */
+        internal const val KIND_BLEND = 1.0
 
         /** The seconds she stands at the end of a leg, but at the camera up close. */
         internal const val PAUSE = 4.0

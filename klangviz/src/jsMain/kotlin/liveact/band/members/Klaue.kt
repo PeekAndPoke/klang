@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.BrowWipe
 import io.peekandpoke.klang.viz.liveact.band.skills.CameraGlance
@@ -28,6 +29,8 @@ val KLAUE: Member = Member(
         seed = 41.0,
         // how wild: animal
         wildness = 8,
+        // how his hips move as he walks: his swagger is in the shoulders, chest out, not in the hips
+        gait = Gait(hips = 0.3),
         traits = Traits(
             fits = Traits.Fits(every = 12.0, share = 0.22, calm = 0.30),
             depth = 0.85, beats = listOf(1.0, 0.85, 1.0, 0.85), lag = -0.03, soft = 0.11, chance = 0.25,

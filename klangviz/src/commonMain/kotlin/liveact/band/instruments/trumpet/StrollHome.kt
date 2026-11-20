@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 
+import io.peekandpoke.klang.viz.liveact.band.figure.WalkKind
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollLeg.Pose
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Offset
 import io.peekandpoke.klang.viz.liveact.hash01
@@ -145,6 +146,25 @@ class StrollHome(
         }
 
         return smooth((x - start) / STARE_RISE) * (1 - smooth((x - end) / STARE_FALL))
+    }
+
+    /**
+     * The kind of walk's modifier on her hips at [t] (seconds into the show; see [WalkKind]): her route's, as its legs
+     * have it (see [StrollRoute.hipsAt]), and from when she left it the way home's ([WalkKind.Home]), eased in over
+     * [StrollRoute.KIND_BLEND] seconds, as she may leave it walking. It goes by the time, the route and when she left
+     * it alone, so a replaced stroll walks as the one it replaces did.
+     */
+    fun hipsAt(t: Double): Double {
+        val x = t - from
+        val onRoute = route.hipsAt(x + shift)
+
+        if (x <= leftRoute) {
+            return onRoute
+        }
+
+        val home = smooth((x - leftRoute) / StrollRoute.KIND_BLEND)
+
+        return onRoute + (WalkKind.Home.hips - onRoute) * home
     }
 
     /** Where she is at [t] (seconds into the show), off her place, in her sizes. */

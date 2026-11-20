@@ -24,6 +24,7 @@ import io.peekandpoke.klang.viz.liveact.band.figure.capture
 import io.peekandpoke.klang.viz.liveact.band.figure.enter
 import io.peekandpoke.klang.viz.liveact.band.figure.eyesAt
 import io.peekandpoke.klang.viz.liveact.band.figure.stepLegs
+import io.peekandpoke.klang.viz.liveact.band.figure.walkInHips
 import io.peekandpoke.klang.viz.liveact.band.figure.walkPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.drums.Drummer
 import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
@@ -244,6 +245,7 @@ class Notstrom private constructor(
         traits = character(SchmetterlingCast.TRUMPET).traits,
         seed = character(SchmetterlingCast.TRUMPET).seed,
         looks = headLooksOf(SchmetterlingCast.TRUMPET),
+        gait = character(SchmetterlingCast.TRUMPET).gait,
     )
 
     /** The string players, in the order they are moved each frame. */
@@ -323,14 +325,18 @@ class Notstrom private constructor(
             enter(rig = rig(player), entrance = entrance, home = StagePlot.PLACES.getValue(player), t = t)
         }
 
-        // the string players and the marimba player walk as they stand, the legs stepping
+        // the string players and the marimba player walk as they stand, the legs stepping and the hips moving as each
+        // one's gait has them on the walk-in
         for ((player, stringPlayer) in strings) {
-            stringPlayer.update(t)
+            stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walks.getValue(player), gait = character(player).gait))
             stepLegs(rig(player), walks.getValue(player))
         }
 
-        marimba.update(t)
-        stepLegs(rig(SchmetterlingCast.MARIMBA), walks.getValue(SchmetterlingCast.MARIMBA))
+        val marimbaRig = rig(SchmetterlingCast.MARIMBA)
+        val marimbaWalk = walks.getValue(SchmetterlingCast.MARIMBA)
+
+        marimba.update(t, hips = walkInHips(rig = marimbaRig, walk = marimbaWalk, gait = character(SchmetterlingCast.MARIMBA).gait))
+        stepLegs(marimbaRig, marimbaWalk)
 
         // the drummer walks in with the sticks in his hands, and sits down once he is at the stool
         drummer.update(t)
@@ -342,7 +348,7 @@ class Notstrom private constructor(
         if (sit < 1) {
             val seated = capture(drumRig)
 
-            walkPose(drumRig, drumWalk)
+            walkPose(rig = drumRig, walk = drumWalk, gait = character(SchmetterlingCast.DRUMS).gait)
             blend(rig = drumRig, a = capture(drumRig), b = seated, w = sit)
 
             for (side in Side.entries) {
@@ -364,7 +370,7 @@ class Notstrom private constructor(
             null
         }
 
-        frontwoman.update(t, her)
+        frontwoman.update(t, put = her, hips = her?.let { walkInHips(rig = herRig, walk = herWalk, gait = character(SchmetterlingCast.TRUMPET).gait) })
         stepLegs(herRig, herWalk)
     }
 }

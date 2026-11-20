@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.HeadScratch
@@ -25,6 +26,8 @@ val BEBEN: Member = Member(
         seed = 23.0,
         // how wild: more animal than not
         wildness = 6,
+        // how his hips move as he walks: tall and stooped, he walks from the knees, the hips hardly go
+        gait = Gait(hips = 0.25),
         traits = Traits(
             steady = 0.9, depth = 0.9, beats = listOf(1.0, 0.2, 0.7, 0.2), lag = 0.07, soft = 0.18, chance = 0.12,
             skip = 0.0, look = 0.22, tilt = 0.06, lean = 0.02,

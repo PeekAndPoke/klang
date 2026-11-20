@@ -10,11 +10,16 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.figure.Gait
+import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.TALL
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
+import io.peekandpoke.klang.viz.liveact.band.figure.WalkKind
+import io.peekandpoke.klang.viz.liveact.band.figure.strollHips
+import io.peekandpoke.klang.viz.liveact.band.figure.walkHips
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.TOTAL_DRIFT_Y
@@ -74,7 +79,8 @@ private object Raise {
  * with the trumpet at her lips, see [freeToLook]) and, but for a look at one behind her, as far as the place is in
  * sight. [camera]: where the camera is (a live vector the show keeps, as her skills' looks at it have it; where it
  * is not given, where the total stands): on a stroll to it she stares at it (see [StrollHome.stareAt]), over all her
- * other looks.
+ * other looks. [gait]: how she walks, how much her hips move (see [Gait]; as her stroll had them before there were
+ * gaits unless given), on each kind of walk as much as its modifier says (see [StrollHome.hipsAt]).
  */
 class TrumpetPlayer(
     private val show: Show,
@@ -84,12 +90,14 @@ class TrumpetPlayer(
     seed: Double = 3.0,
     private val looks: (Double) -> List<Look> = { emptyList() },
     private val camera: Vector3 = HOME.pos.clone(),
+    private val gait: Gait = Gait(hips = 1.0),
 ) {
     /**
      * Where she is and how she walks: [at] her place on the stage, [turn] which way she faces, [speed] how fast she
-     * goes, [going] 0 standing to 1 walking. Put from outside by her walk-in, or her own (her place, her strolls).
+     * goes, [going] 0 standing to 1 walking, [hips] the kind of walk's modifier on her hips (see [WalkKind]). Put
+     * from outside by her walk-in, or her own (her place, her strolls).
      */
-    class Walk(val at: Vector3, val turn: Double, val speed: Double, val going: Double = 0.0)
+    class Walk(val at: Vector3, val turn: Double, val speed: Double, val going: Double = 0.0, val hips: Double = WalkKind.Stroll.hips)
 
     /**
      * What sounds at a moment: the [note] (null without any), whether it [sounding] (fading shortly after it ends),
@@ -274,7 +282,13 @@ class TrumpetPlayer(
         val now = facing(k, t)
         val turn = k.turnAt(t)
 
-        return Walk(at = home.clone().add(strollAt(k, t)), turn = homeTurn + turn, speed = now.speed, going = now.going)
+        return Walk(
+            at = home.clone().add(strollAt(k, t)),
+            turn = homeTurn + turn,
+            speed = now.speed,
+            going = now.going,
+            hips = k.way.hipsAt(t),
+        )
     }
 
     /** What sounds at [t]: the note, whether it sounds (fading shortly after it ends), how high it is, how hard it is blown. */
@@ -352,8 +366,12 @@ class TrumpetPlayer(
         }.filter { it.share > 0 }
     }
 
-    /** [put]: where she is put from outside (her walk-in); else she is at her place, or strolling. */
-    fun update(t: Double, put: Walk? = null) {
+    /**
+     * [put]: where she is put from outside (her walk-in); else she is at her place, or strolling. [hips]: the hips'
+     * motion where it is given from outside (her walk-in, as her legs step it there: see `walkInHips`); else her
+     * stroll's, by her [gait] and the kind of walk.
+     */
+    fun update(t: Double, put: Walk? = null, hips: HipMotion? = null) {
         if (part.refresh()) {
             plan(now = t)
         }
@@ -404,25 +422,25 @@ class TrumpetPlayer(
 
         val going = walk.going
         // she walks in time: a step every two beats, so two steps a bar; a step is as long as her pace asks for. And she
-        // dances a little as she goes: the hips dip on every beat and sway onto the standing leg, the shoulders turn
-        // against the hips, the arms swing wide
+        // dances a little as she goes: the hips dip on every beat, sway onto the standing leg, turn with the legs and
+        // drop on the swinging leg's side, as much as her gait and the kind of walk have them (see [HipMotion]); the
+        // shoulders turn against the legs, the arms swing wide
         val stride = beat / 4
         val step = min(0.5 * s, walk.speed * 0.6 * 4 * 60 / bpm)
         val swing = cos(2 * PI * stride)                        // 1 as the left foot lands ahead
         val dip = going * (0.5 + 0.5 * cos(2 * PI * beat))      // 1 on the beat
+        val motion = hips ?: strollHips(rig = rig, stride = stride, going = going, amount = gait.hipsWith(walk.hips))
 
         rig.reset()
         rig.update()
         rig.moveHips(
             vec(
-                0.025 * sway * s * (1 - going) + 0.035 * s * going * sin(2 * PI * stride),
+                0.025 * sway * s * (1 - going),
                 -(0.010 + 0.014 * body * parts.knees * (1 - 0.6 * going) + 0.008 * breath) * rig.pelvis.y - 0.010 * s * dip,
                 -0.02 * back * s,
             )
         )
-        rig.turn("hips", Y_AXIS, 0.10 * going * swing)
-        rig.turn("chest", Y_AXIS, -0.26 * going * swing)
-        rig.turn("chest", Z_AXIS, 0.05 * going * sin(2 * PI * stride))
+        walkHips(rig = rig, motion = motion, shoulders = -HipMotion.SHOULDERS * going * swing)
         // the frontman stands tall: chest out, head up, hardly a bend in the knees
         rig.turn("belly", X_AXIS, -0.03 - 0.5 * back + 0.025 * body * parts.trunk)
         rig.turn("chest", X_AXIS, -0.35 * back)
