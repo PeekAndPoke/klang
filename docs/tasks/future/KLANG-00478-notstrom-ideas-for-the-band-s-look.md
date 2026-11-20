@@ -67,6 +67,18 @@ faceless.
 
 ## The ideas
 
+### The eyes: inside the skull, with a slight glow
+
+The maintainer, 2026-11-20, for Rune and Sirene first, "also as a precedent for the rest of the chars": "Currently
+the eyes appear 'bolted on to the head'. They need so sit inside the skull like real eyes do. When they are light
+can they emit a slight glow? ... caricature glow again, very slightly to give the eyes a little more 'life' and less
+of a painted on look."
+
+- The eyes sit in sockets: set back into the skull under a brow, not laid onto its surface.
+- A lit eye has a faint halo of its own colour round it, drawn, not computed (a caricature of a glow, as the kit's
+  and the sun's are); very slight.
+- After Rune's body and Sirene's feet; then the same for the other four.
+
 ### Sirene's eyes move to her shadow
 
 The maintainer, 2026-11-19: "I like the idea that when the front light is on Sirene eyes move to the shadow."
@@ -177,3 +189,4 @@ Not built: the bodies and the true-self shadows (they need modelling and the cha
 - 2026-11-20: steps 1 to 6 of the new look built behind keys (e17a1ffa3 to e52c06039).
 - 2026-11-20: the ghosts: a dark stage with the light behind the fence, in several colours.
 - 2026-11-20: Sirene's feet become comfortable ones, the heels are Rune's; Rune's target chosen.
+- 2026-11-20: the belt of Sirene's dress; the eyes inside the skull with a slight glow.
