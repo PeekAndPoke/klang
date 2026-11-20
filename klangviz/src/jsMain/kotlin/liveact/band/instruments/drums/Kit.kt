@@ -92,11 +92,14 @@ private class DrumGlow(val color: Int, val peak: Double, val fade: Double)
 // The kick and the snare light up when hit and fade as the sound does; the eye reads light steeply, so the falls are
 // short. Not the whole drum (the maintainer, 2026-11-20: "It looks 'cheap' when the whole thing lights up"): on the
 // kick's front head only the ring and the band's name (the head's glow is read through a picture of just those), on
-// the snare only its two hoops, the head and the shell stay dark. Thin lines carry little light, so their peaks are
-// high where the whole face's was 0.03; the snare's hoops are pale and catch the eye sooner, so theirs is below the kick's
-// (the maintainer, 2026-11-20: "Kick highlight is good as is. Snare highlight is a bit too bright compared to the kick").
-private val KICK_GLOW = DrumGlow(color = 0xffa050, peak = 1.2, fade = 0.09)
-private val SNARE_GLOW = DrumGlow(color = 0xffe8c8, peak = 0.9, fade = 0.07)
+// the snare only its two hoops, the head and the shell stay dark. Thin lines carry little light, so the peak is high
+// where the whole face's was 0.03. One colour and one brightness for both, and not so bright that the kick outshines
+// the other instruments (the maintainer, 2026-11-20, at 1.2: "it outshines all the other instruments. And the snare
+// should have the same highlight color and brightness as the kick").
+private const val DRUM_GLOW_COLOR = 0xffa050
+private const val DRUM_GLOW_PEAK = 0.8
+private val KICK_GLOW = DrumGlow(color = DRUM_GLOW_COLOR, peak = DRUM_GLOW_PEAK, fade = 0.09)
+private val SNARE_GLOW = DrumGlow(color = DRUM_GLOW_COLOR, peak = DRUM_GLOW_PEAK, fade = 0.07)
 
 /** A snare hoop's height, as a share of the figure's scale; and how far it stands out from the shell. */
 private const val HOOP_HEIGHT = 0.014
