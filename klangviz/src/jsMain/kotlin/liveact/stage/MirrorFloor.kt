@@ -441,7 +441,8 @@ void main() {
          * crawling than a full-size picture would), and the more it fades (to 0.7, over some 3 m). The blur's five reads each
          * count by their brightness, less the brighter (after Karis), so a small glint or an eye does not swell and
          * pulse as one of them catches it and the next frame not. Then the stone's own
-         * share: 0.6 looking down on it, more at a glancing angle (after Schlick's Fresnel); none far out
+         * share: 0.45 looking down on it, up to 0.8 at a glancing angle (after Schlick's Fresnel; it was 0.6 to 1, the
+         * maintainer, 2026-11-20: "a little less strong / bright"); none far out
          * among the audience. The floor's own light (the lamps' pools) is turned down to 0.3 under it.
          *
          * The marble ([StoneLook.Marble], `marbleAt`): the level lines of a warped noise, some metres long, thinned out
@@ -595,7 +596,7 @@ vec3 mirrored(vec3 world) {
   }
   float keep = mix(0.7, 1.0, blurs.y);
   vec3 toEye = normalize(cameraPosition - world);
-  float fresnel = 0.6 + 0.4 * pow(1.0 - clamp(toEye.y, 0.0, 1.0), 5.0);
+  float fresnel = 0.45 + 0.35 * pow(1.0 - clamp(toEye.y, 0.0, 1.0), 5.0);
   float reach = 1.0 - smoothstep(14.0, 30.0, length(world.xz));
   return seen * fresnel * keep * reach;
 }"""
