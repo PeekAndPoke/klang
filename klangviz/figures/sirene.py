@@ -6,6 +6,16 @@ import math
 from mathutils import Vector
 
 from figure import Figure, MUSCLES, draw_chin, shape_bust, shape_face, shape_muscles, skull
+from foot import flat_feet
+
+# Her shoes: flat and comfortable, she walks about the stage through the whole show (the maintainer, 2026-11-20: no
+# heels). Two to choose from. The slipper is foot.py's plain shoe as it is: soft, slim, close to a bare foot.
+SLIPPER = dict()
+# The trainer: a little wider and higher over the toes, on a sole of its own that is thicker at the heel.
+TRAINER = dict(back=0.050, front=0.154, heel=0.029, ball=0.034, round_toe=3.4, sole=0.008, rim=(0.023, 0.018),
+               square_sole=6.0, welt=(0.019, 0.015, 0.0015), stem=(0.047, 0.020),
+               tops=((-0.050, 0.060), (-0.022, 0.070), (0.0, 0.076), (0.030, 0.068), (0.065, 0.052), (0.105, 0.040),
+                     (0.154, 0.036)))
 
 
 class Sirene(Figure):
@@ -26,15 +36,11 @@ class Sirene(Figure):
                   chest=(0, -0.012, 0.0), ribs=(0, -0.006, 0.0),
                   # the legs come together toward the knees (a woman's thighs run inward), the feet closer
                   thighL=(-0.012, 0, 0), thighR=(0.012, 0, 0), kneeL=(-0.016, 0, 0), kneeR=(0.016, 0, 0), calfL=(-0.018, 0, 0.020), calfR=(0.018, 0, 0.020),
-                  # a high-arched foot, as on invisible heels: the ankle (and with it the heel) stands high, the
-                  # foot runs steeply down to the ball, which is on the floor, and the toes come to a point
-                  ankleL=(-0.020, 0.005, 0.050), ankleR=(0.020, 0.005, 0.050),
-                  toeL=(-0.025, 0.080, -0.004), toeR=(0.025, 0.080, -0.004)),
+                  # flat feet, under the knees: the ankle at its plain height, the bone "toe" from it to the foot's
+                  # ball, turned out a little (the foot itself is made by flat_feet(), see sculpt())
+                  ankleL=(-0.020, 0, 0), ankleR=(0.020, 0, 0),
+                  toeL=(-0.0274, 0.071, -0.013), toeR=(0.0274, 0.071, -0.013)),
         extras=[("nose", "head", (0, -0.094, -0.014), 0.014, 1.0, False),
-                ("tipL", "toeL", (0.004, -0.060, -0.011), 0.011, 1.0, False),
-                ("tipR", "toeR", (-0.004, -0.060, -0.011), 0.011, 1.0, False),
-                ("heelL", "ankleL", (0.0, 0.032, -0.028), 0.021, 1.0, False),
-                ("heelR", "ankleR", (0.0, 0.032, -0.028), 0.021, 1.0, False),
                 # the mitten's fingers, beyond the hand's joint: a hand as long as a hand is (the joint stays put)
                 ("fingersL", "handL", (0, -0.004, -0.035), 0.019, 0.55, False),
                 ("fingersR", "handR", (0, -0.004, -0.035), 0.019, 0.55, False)],
@@ -43,6 +49,8 @@ class Sirene(Figure):
     def sculpt(self, w):
         # who has a bust has no chest muscle drawn over it
         shape_muscles(w.body, w.P, w.height, only=[m for m in MUSCLES if m not in ("pec", "glute")], gain=dict(calf=1.25))
+        # a little more of the thighs' muscles (the maintainer, 2026-11-20: "slight accentuate the thigh muscles")
+        shape_thighs(w.body, w.P)
         # her seat: round and high, not wide (the shared buttock sits lower and spreads more)
         shape_seat(w.body, w.P)
         shape_bust(w.body, w.P["chest"], w.height, apart=0.056, down=0.046, out=0.042, size=0.056)
@@ -52,9 +60,12 @@ class Sirene(Figure):
         # 2026-11-17)
         draw_chin(w.body, w.head, w.hs, 0.7, drop=1.6, fore=0.6)
         # a long, smooth line from the waist to the hips: the trunk a little wider where the waist flares into
-        # the hips (the widest at the hip joints, not below), at heights in metres
-        shape_line(w.body, [(1.16, 1.0), (1.10, 0.97), (1.06, 1.04), (1.00, 1.07), (0.95, 1.06), (0.90, 1.03),
-                            (0.85, 1.0), (0.80, 0.975), (0.74, 0.955), (0.66, 0.95), (0.58, 1.0)])
+        # the hips (the widest at the hip joints, not below), at heights in metres. The hips flare a tenth less
+        # beyond the waist than they did (the maintainer, 2026-11-20: "the hips are a little too much"); a fifth
+        # less is (1.06, 1.029), (1.00, 1.022), (0.95, 0.985), (0.90, 0.942), (0.85, 0.907), (0.80, 0.885),
+        # (0.74, 0.897), (0.66, 0.929)
+        shape_line(w.body, [(1.16, 1.0), (1.10, 0.97), (1.06, 1.035), (1.00, 1.046), (0.95, 1.022), (0.90, 0.985),
+                            (0.85, 0.951), (0.80, 0.927), (0.74, 0.925), (0.66, 0.940), (0.58, 1.0)])
         shape_hands(w.body, w.P)
         # the neck's base runs smoothly into the shoulders (the skin left a crease there)
         chest = w.P["chest"].pos
@@ -63,6 +74,10 @@ class Sirene(Figure):
         for side in ("L", "R"):
             hip = w.P["hip" + side].pos
             smooth_region(w.body, hip + Vector((0.4 * hip.x, 0.085, -0.115)), 0.065, 5)
+        # a little less seat (the maintainer, 2026-11-20: "not a lot but a little too much"): a tenth less
+        ease_seat(w.body, w.P, less=0.10)
+        # her feet, last: they are made new and joined to the shins (see foot.py)
+        flat_feet(w.body, w.P, SLIPPER)
 
     def back_of_head(self, w):
         # her head after the long skulls of ancient Egyptian sculpture (the maintainer's picture, 2026-11-16): see
@@ -180,3 +195,59 @@ def shape_seat(body, P, gain=0.85, lift=0.15, narrow=0.88):
             if q > 9.0 or v.co.y < at.pos.y:
                 continue
             v.co += rise * math.exp(-q / 2)
+
+
+# The thighs' muscles she has more of than the shared figure draws, as MUSCLES gives its own: at which point, where
+# from it, the direction of the rise, its height and its size, all in that point's radius (x toward her own side)
+THIGHS = [
+    # the thigh's front (the shared "quad", nearly half as much again)
+    ("thigh", (0.10, -0.75, 0.40), (0.0, -1.0, 0.0), 0.058, (0.55, 0.60, 1.30)),
+    # its outer front (vastus lateralis): an athletic thigh's outer line
+    ("thigh", (0.60, -0.30, 0.20), (1.0, -0.5, 0.0), 0.07, (0.45, 0.60, 1.10)),
+    # its inner front just above the knee (vastus medialis, the "teardrop")
+    ("knee", (-0.45, -0.55, 1.20), (-1.0, -0.8, 0.0), 0.10, (0.50, 0.55, 0.80)),
+]
+
+
+def shape_thighs(body, P):
+    """
+    A little more muscle on the thighs: the soft rises of THIGHS, drawn out of the legs' skin as shape_muscles()
+    draws the shared ones. The arms are left alone (a hand hangs beside the thigh, near enough to be caught).
+    """
+    arms = {body.vertex_groups[n + s].index for n in ("elbow", "wrist", "hand") for s in "LR"}
+    for point, offset, direction, height, size in THIGHS:
+        for side, sx in (("L", 1.0), ("R", -1.0)):
+            at = P[point + side]
+            R = at.radius
+            centre = at.pos + Vector((sx * offset[0], offset[1], offset[2])) * R
+            rise = Vector((sx * direction[0], direction[1], direction[2])).normalized() * (height * R)
+            for v in body.data.vertices:
+                d = v.co - centre
+                q = (d.x / (size[0] * R)) ** 2 + (d.y / (size[1] * R)) ** 2 + (d.z / (size[2] * R)) ** 2
+                if q > 9.0 or any(g.group in arms and g.weight > 0.01 for g in v.groups):
+                    continue
+                v.co += rise * math.exp(-q / 2)
+
+
+def ease_seat(body, P, less, top=1.04, full=(0.88, 0.78), low=0.60):
+    """
+    A smaller seat: the skin behind the hip joints comes [less] (a share) closer to them, all of it between the
+    heights [full], fading smoothly to nothing at [top] (the small of the back) and [low] (the back of the thigh),
+    so the line from the back over the seat into the thigh stays one curve, only gentler. The arms are left alone.
+    """
+    arms = {body.vertex_groups[n + s].index for n in ("elbow", "wrist", "hand") for s in "LR"}
+    y0 = P["hipL"].pos.y
+
+    def smooth(x):
+        x = min(1.0, max(0.0, x))
+        return x * x * (3 - 2 * x)
+
+    for v in body.data.vertices:
+        if v.co.y <= y0 or not low < v.co.z < top:
+            continue
+
+        if any(g.group in arms and g.weight > 0.01 for g in v.groups):
+            continue
+
+        k = smooth((top - v.co.z) / (top - full[0])) * smooth((v.co.z - low) / (full[1] - low))
+        v.co.y = y0 + (v.co.y - y0) * (1.0 - less * k)
