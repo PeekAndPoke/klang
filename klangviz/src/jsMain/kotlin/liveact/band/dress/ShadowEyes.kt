@@ -40,8 +40,9 @@ import kotlin.math.min
 
 /**
  * Sirene's eyes in her shadow (`?eyes=shadow`, KLANG-00478; the maintainer, 2026-11-19: "when the front light is on
- * Sirene eyes move to the shadow"): while the low front lamp is on and she looks at the camera
- * ([EyesInShadow.facing]), the eyes of [rig] fade out of her face and two glowing eyes fade in on the surface that
+ * Sirene eyes move to the shadow"): while the low front lamp is on and she looks away from the surface behind her
+ * ([EyesInShadow.facing]; wherever the camera is), the eyes of [rig] fade out of her face and two glowing eyes fade in
+ * on the surface that
  * takes the band's shadows, in the head of her shadow; when the lamp goes off or she turns away they cross back
  * ([EyesInShadow], about a second either way).
  *
@@ -84,7 +85,7 @@ class ShadowEyes private constructor(
     private val brow: Vector3
     private val axis: Vector3
 
-    /** Whether she looked at the camera at the last [update] (see [EyesInShadow.facing]). */
+    /** Whether she looked away from the surface behind her at the last [update] (see [EyesInShadow.facing]). */
     private var facing = false
 
     /** Half an eye's width and half its height, and how far apart the two eyes are, in the world, in metres. */
@@ -199,27 +200,27 @@ class ShadowEyes private constructor(
 
     /**
      * The eyes for this frame: the front lamp at [front], standing at [lamp], throws the band's shadows onto the
-     * surface at [planeZ] (along z, in metres); the camera stands at [camera] (none: she counts as looking at it).
+     * surface at [planeZ] (along z, in metres).
      * Call it after her eyes' glow is set for the frame: it takes their light from her face as far as they have
      * crossed.
      */
-    fun update(front: FrontLight, lamp: Vector3, planeZ: Double, camera: Vector3?) {
+    fun update(front: FrontLight, lamp: Vector3, planeZ: Double) {
         val eyes = rig.eyes ?: return
         val nowMs = window.performance.now()
         val dt = if (updatedAt.isNaN()) 0.0 else ((nowMs - updatedAt) / 1000).coerceIn(0.0, 0.25)
 
         updatedAt = nowMs
 
-        // the way her face points and the way to the camera, seen from above
+        // the way her face points and the way straight away from the surface behind her, seen from above
         head.updateWorldMatrix(updateParents = true, updateChildren = false)
         browNow.copy(brow).applyMatrix4(head.matrixWorld)
         axisNow.copy(axis).applyMatrix4(head.matrixWorld)
-        facing = camera == null || EyesInShadow.facing(
+        facing = EyesInShadow.facing(
             was = facing,
             faceX = browNow.x - axisNow.x,
             faceZ = browNow.z - axisNow.z,
-            toX = camera.x - axisNow.x,
-            toZ = camera.z - axisNow.z,
+            toX = 0.0,
+            toZ = axisNow.z - planeZ,
         )
 
         val share = crossing.follow(target = if (facing) FrontFade.on(front) else 0.0, dt = dt)

@@ -559,7 +559,6 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 front = now.stage.front,
                 lamp = now.stage.frontLamp,
                 planeZ = now.stage.shadowsAt,
-                camera = camera?.position,
             )
         }
 

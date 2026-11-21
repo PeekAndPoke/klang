@@ -39,11 +39,11 @@ class EyesInShadowSpec : StringSpec({
         EyesInShadow.scale(lampZ = 8.6, eyeZ = Double.NaN, planeZ = -8.0).shouldBeNull()
     }
 
-    "she looks at the camera within 50 degrees of it, no more beyond 65, and between the two it stays as it was" {
+    "she looks a way within 50 degrees of it, no more beyond 65, and between the two it stays as it was" {
         fun at(degrees: Double, was: Boolean): Boolean {
             val a = degrees * PI / 180
 
-            // her face along z, the camera so many degrees off it, some metres away
+            // her face along z, the way so many degrees off it, some metres long
             return EyesInShadow.facing(was = was, faceX = 0.0, faceZ = 0.2, toX = 7 * sin(a), toZ = 7 * cos(a))
         }
 

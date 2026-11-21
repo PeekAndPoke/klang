@@ -179,7 +179,6 @@ class MeetBand private constructor(
             front = FrontLight(level = if (settled) MeetLayout.glowOf(player = Player.Sirene, turn = turn) else 0.0, strobing = false),
             lamp = lamp,
             planeZ = surfaceZ,
-            camera = camera,
         )
     }
 

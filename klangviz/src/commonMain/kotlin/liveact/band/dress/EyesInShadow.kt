@@ -23,25 +23,27 @@ import kotlin.math.hypot
  * first [CROSS] of it ([face]), the shadow's fade in over the last [CROSS] ([wall]), each eased. The two overlap only
  * in the middle, both faint there: they never both shine at full (the maintainer's wish, 2026-11-20).
  *
- * They cross only while she looks at the camera ([facing]; the maintainer, 2026-11-21: "when the shadows are shown
- * and Sirene does not face the camera the shadow should not have the eyes. Only when Sirene looks at the camera").
- * Turned away, her eyes are in her face, also while the lamp is on.
+ * They cross only while she looks away from the surface that takes her shadow ([facing]; the maintainer,
+ * 2026-11-21: "the eyes should only appear in the shadows when Sirene looks away from the fence / backdrop ... no
+ * matter where the camera is"; before that it went by the camera). Turned toward it, her eyes are in her face, also
+ * while the lamp is on.
  */
 object EyesInShadow {
     /** The share of the crossing each side's fade takes: more than a half, so the two overlap a little. */
     const val CROSS = 0.6
 
     /**
-     * She looks at the camera while her face points no more than [TOWARD] off the way to it, and no more once it
-     * points more than [AWAY] off it, both in radians (50 and 65 degrees), seen from above; between the two it
-     * stays as it was, so the eyes do not flutter where she stands at the edge.
+     * She looks a way while her face points no more than [TOWARD] off it, and no more once it points more than
+     * [AWAY] off it, both in radians (50 and 65 degrees), seen from above; between the two it stays as it was, so
+     * the eyes do not flutter where she stands at the edge.
      */
     const val TOWARD = 50 * PI / 180
     const val AWAY = 65 * PI / 180
 
     /**
-     * Whether she looks at the camera: her face points along ([faceX], [faceZ]) and the camera lies along ([toX],
-     * [toZ]) from her head, both across the stage and along it (how long they are does not count). [was]: whether
+     * Whether she looks a given way (for the eyes: straight away from the surface behind her): her face points along
+     * ([faceX], [faceZ]) and the way is ([toX], [toZ]), both across the stage and along it (how long they are does
+     * not count). [was]: whether
      * she did the frame before; it stays where the two are between [TOWARD] and [AWAY] apart, or where a way has no
      * length or is no number.
      */
