@@ -53,9 +53,16 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
     /**
      * Takes the stage on by [dt] seconds, at the show's time [t] (seconds), toward what [look] asks for or, while the
      * show opens, its opening's world, the ghosts in [ghost]; gives where it stands then. The first call starts it
-     * where it begins, at once.
+     * where it begins, at once. [turnSeconds]: how long a whole turn takes once the opening is over, where it is to
+     * be slower than the usual pace (the ghosts' visits, [GhostVisits]); without it the usual pace.
      */
-    fun follow(t: Double, look: WorldLook, dt: Double, ghost: GhostLight = GhostLight.Cold): WorldTime {
+    fun follow(
+        t: Double,
+        look: WorldLook,
+        dt: Double,
+        ghost: GhostLight = GhostLight.Cold,
+        turnSeconds: Double = WorldFade.TURN_SECONDS,
+    ): WorldTime {
         val fade = fade ?: begin(t = t, look = look, ghost = ghost)
 
         if (part == Part.Before && t >= 0.0) {
@@ -67,7 +74,7 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
         } else {
             look.target(t = t, period = period, ghost = ghost)
         }
-        val turn = if (part == Part.Turning) TURN_SECONDS else WorldFade.TURN_SECONDS
+        val turn = if (part == Part.Turning) TURN_SECONDS else turnSeconds
         val now = fade.follow(target = target, dt = dt, turnSeconds = turn)
 
         if (part == Part.Turning && now == target) {

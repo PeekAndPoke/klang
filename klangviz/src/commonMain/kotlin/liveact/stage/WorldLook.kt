@@ -28,7 +28,8 @@ import io.peekandpoke.klang.viz.liveact.lights.WorldTime
  *   ([HazeLook.Parts]); with the haze whole they stand veiled behind it, and before the wall the world is only the
  *   dark stage.
  * - [Drift]: the time moves on its own, from day to night and back ([WorldLight.drift]), a round in about four
- *   minutes; it does not pass through the ghosts.
+ *   minutes. Its way does not pass through the ghosts, but now and then they visit for a while, in their three
+ *   colours in turn ([io.peekandpoke.klang.viz.liveact.lights.GhostVisits]).
  */
 enum class WorldLook(val word: String) {
     Off("off"),

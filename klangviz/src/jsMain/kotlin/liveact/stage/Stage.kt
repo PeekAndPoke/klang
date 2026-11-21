@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.dress.dressLevel
 import io.peekandpoke.klang.viz.liveact.lights.FrontFade
 import io.peekandpoke.klang.viz.liveact.lights.FrontLight
+import io.peekandpoke.klang.viz.liveact.lights.GhostVisits
 import io.peekandpoke.klang.viz.liveact.lights.Lights
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.lights.WorldCourse
@@ -553,7 +554,17 @@ class Stage(
             distance.color.setHex(DARK).scale(glow)
         }
 
-        val world = worldCourse.follow(t = t, look = variants.world, dt = dt, ghost = variants.ghosts)
+        // where the world drifts, the ghosts visit now and then, in their three colours in turn (GhostVisits); the
+        // stage turns to them and back slowly, and a world chosen by hand has none
+        val drifts = variants.world == WorldLook.Drift
+        val visited = drifts && GhostVisits.visiting(t = t, seed = show.seed)
+        val world = worldCourse.follow(
+            t = t,
+            look = if (visited) WorldLook.Ghosts else variants.world,
+            dt = dt,
+            ghost = if (drifts) GhostVisits.light(t = t, seed = show.seed) else variants.ghosts,
+            turnSeconds = if (drifts) GhostVisits.TURN_SECONDS else WorldFade.TURN_SECONDS,
+        )
 
         this.front = front
         this.world = world
