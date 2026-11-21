@@ -220,11 +220,19 @@ class LightPlan(private val show: Show) {
         return MOODS[order[max(0, k)]]
     }
 
-    /** The moods at [t]: the one that holds, going over into the next in its last bars. */
+    /**
+     * How many of its round's last bars the [k]th mood takes to go over into the next: one of [TURNS], the seed's
+     * choice, so some changes come quickly and some creep in, hardly noticed (the maintainer, 2026-11-21: "In general
+     * sometimes the mood changes can be more subtle and more slowly").
+     */
+    fun turnOf(k: Int): Int = TURNS[floor(hash01(k * 5.7 + show.seed * 0.39 + 8.1) * TURNS.size).toInt() % TURNS.size]
+
+    /** The moods at [t]: the one that holds, going over into the next in its round's last bars ([turnOf]). */
     fun moodAt(t: Double): MoodMix {
         val x = max(0.0, t) / show.bar
-        val k = floor(x / (HOLD + TURN)).toInt()
-        val u = smooth((x - k * (HOLD + TURN) - HOLD) / TURN)
+        val k = floor(x / ROUND).toInt()
+        val turn = turnOf(k)
+        val u = smooth((x - k * ROUND - (ROUND - turn)) / turn)
 
         return MoodMix(from = moodOf(k), to = moodOf(k + 1), share = u)
     }
@@ -289,7 +297,7 @@ class LightPlan(private val show: Show) {
             return chosen.toIntOrNull(16) ?: 0
         }
 
-        if (opens && t < SHADOW_FADE) {
+        if (opens && t < OPENING_FADE) {
             return FrontColors.RED
         }
 
@@ -308,7 +316,7 @@ class LightPlan(private val show: Show) {
      *
      * Where the show opens ([opens]) it is the opening's light as well: full on, red, while the band walks in, so
      * they come in as red figures on a dark stage with their big shadows behind them, and down again over
-     * [SHADOW_FADE] as the song begins (the maintainer picked this mood for the walk-in from stills, 2026-11-21:
+     * [OPENING_FADE] as the song begins (the maintainer picked this mood for the walk-in from stills, 2026-11-21:
      * "i like this mood ... the left one": the night with the red front lamp full on). It is the one time the
      * shadows show before [FIRST_SHADOWS].
      *
@@ -336,8 +344,8 @@ class LightPlan(private val show: Show) {
         }
 
         // the opening's light goes down as the song begins
-        if (opens && t < SHADOW_FADE) {
-            return FrontLight(level = smooth(1 - t / SHADOW_FADE), strobing = false)
+        if (opens && t < OPENING_FADE) {
+            return FrontLight(level = smooth(1 - t / OPENING_FADE), strobing = false)
         }
 
         // and as a stroboscope, while the bass drum runs fast (see runs): it flashes on the sixteenths (about ten a
@@ -390,9 +398,19 @@ class LightPlan(private val show: Show) {
         fun strobes(runs: List<Run>, t: Double, first: Double = FIRST_SHADOWS): Boolean =
             runs.any { it.from >= first && t >= it.from - 0.02 && t < it.to + 0.08 }
 
-        /** A mood stays for [HOLD] bars; over the next [TURN] it goes over into another. */
-        const val HOLD = 24
-        const val TURN = 4
+        /**
+         * A mood's round, in bars: it holds, and over the round's last bars it goes over into another, as many of
+         * them as one of [TURNS] says ([turnOf]): in 4 bars as it always did, or more slowly in 8 or in 16.
+         */
+        const val ROUND = 28
+        val TURNS: List<Int> = listOf(4, 8, 16)
+
+        /**
+         * How long the front lamp takes to go down when the song begins, where it lit the walk-in ([frontAt]), in
+         * seconds (the maintainer, 2026-11-21: "The change in mood after the walkin is too sudden"; it was 8).
+         * The world turns from the opening's to the look's own in the same time ([WorldCourse.TURN_SECONDS]).
+         */
+        const val OPENING_FADE = 20.0
 
         /**
          * A rig (which lamps behind are on) stays for [RIG_HOLD] bars; over the next [RIG_TURN] it goes over into
@@ -404,8 +422,8 @@ class LightPlan(private val show: Show) {
         /**
          * The moods: the colours of the two main lamps behind (the left one, the right one), and where each seems to
          * hang, off its first place (x, y, z in metres): as if other lamps of the rig had been turned on, so the
-         * shadows lie a little differently. A mood stays for 24 bars; over the next 4 it goes over into another, the
-         * seed's choice, never the same again at once. The show opens in the first.
+         * shadows lie a little differently. A mood's round is [ROUND] bars; over its last bars it goes over into
+         * another, the seed's choice, never the same again at once. The show opens in the first.
          */
         val MOODS: List<Mood> = listOf(
             // cold against hot

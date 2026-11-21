@@ -104,10 +104,10 @@ class LightPlanSpec : StringSpec({
         levels.first() shouldBe 1.0
         levels.zipWithNext().forEach { (a, b) -> (a - b) shouldBeLessThan 0.02 }
         levels.zipWithNext().all { (a, b) -> b <= a } shouldBe true
-        plan.frontAt(t = LightPlan.SHADOW_FADE / 2, waiting = false, trying = false).level shouldBe (0.5 plusOrMinus 1e-9)
-        plan.frontColor(t = LightPlan.SHADOW_FADE / 2, tried = -1) shouldBe FrontColors.RED
+        plan.frontAt(t = LightPlan.OPENING_FADE / 2, waiting = false, trying = false).level shouldBe (0.5 plusOrMinus 1e-9)
+        plan.frontColor(t = LightPlan.OPENING_FADE / 2, tried = -1) shouldBe FrontColors.RED
         // and then dark until the first shadows' time, as in a show that does not open
-        levels.filterIndexed { i, _ -> i * 0.05 >= LightPlan.SHADOW_FADE + 0.1 }.maxOf { it } shouldBe 0.0
+        levels.filterIndexed { i, _ -> i * 0.05 >= LightPlan.OPENING_FADE + 0.1 }.maxOf { it } shouldBe 0.0
 
         // a show that does not open keeps its walk-in dark
         LightPlan(Show(seed = 3)).frontAt(t = -7.0, waiting = false, trying = false).level shouldBe 0.0
@@ -150,18 +150,47 @@ class LightPlanSpec : StringSpec({
         }
     }
 
-    "a mood holds for its bars and goes over into the next in the bars after" {
+    "a mood holds for its bars and goes over into the next in its round's last bars" {
         val show = Show(seed = 0)
         val plan = LightPlan(show)
-        val round = (LightPlan.HOLD + LightPlan.TURN) * show.bar
+        val round = LightPlan.ROUND * show.bar
+        val turn = plan.turnOf(0)
 
         plan.moodAt(0.0).share shouldBe 0.0
-        plan.moodAt(LightPlan.HOLD * show.bar).share shouldBe 0.0
-        plan.moodAt((LightPlan.HOLD + LightPlan.TURN / 2.0) * show.bar).share shouldBe 0.5
+        plan.moodAt((LightPlan.ROUND - turn) * show.bar).share shouldBe 0.0
+        plan.moodAt((LightPlan.ROUND - turn / 2.0) * show.bar).share shouldBe (0.5 plusOrMinus 1e-9)
         plan.moodAt(round + 0.01).from shouldBe plan.moodOf(1)
         plan.moodAt(round + 0.01).to shouldBe plan.moodOf(2)
         // before the song the first mood holds
         plan.moodAt(-10.0).from shouldBe LightPlan.MOODS[0]
+    }
+
+    "some moods change in four bars, some creep in over eight or sixteen; never with a jump" {
+        for (seed in 0 until 20) {
+            val show = Show(seed = seed)
+            val plan = LightPlan(show)
+            val turns = (0 until 40).map { plan.turnOf(it) }
+
+            withClue("seed $seed: the turns of the first 40 moods, $turns") {
+                turns.toSet() shouldBe LightPlan.TURNS.toSet()
+            }
+
+            // the share over the first six rounds, every twentieth of a second: it rises with no step larger than
+            // the quickest turn allows, and falls only where a round ends, from 1 to 0, as the next mood takes over
+            val shares = generateSequence(0.0) { it + 0.05 }.takeWhile { it < 6 * LightPlan.ROUND * show.bar }
+                .map { plan.moodAt(it).share }
+                .toList()
+            val quickest = 1.5 * 0.05 / (LightPlan.TURNS.min() * show.bar)
+
+            shares.zipWithNext().forEach { (a, b) ->
+                if (b < a) {
+                    a shouldBeGreaterThan 0.99
+                    b shouldBeLessThan 0.01
+                } else {
+                    (b - a) shouldBeLessThan quickest + 1e-9
+                }
+            }
+        }
     }
 
     "the moods' order is the same under the same seed, and another under another" {

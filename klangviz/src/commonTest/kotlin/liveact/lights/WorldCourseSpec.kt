@@ -37,16 +37,18 @@ class WorldCourseSpec : StringSpec({
         course.opens shouldBe true
     }
 
-    "when the song begins it turns to the look's own in eight seconds; then it is over" {
+    "when the song begins it turns to the look's own in twenty seconds; then it is over" {
         val course = WorldCourse(opening = WorldLook.Ember)
+        val turn = WorldCourse.TURN_SECONDS
 
+        turn shouldBe 20.0
         course.follow(t = -0.5, look = WorldLook.Day, dt = 0.0) shouldBe ember
         course.follow(t = 0.0, look = WorldLook.Day, dt = 0.5) shouldBe
-            WorldTime(on = 1.0, night = 1.0 - 0.5 / 8, ember = 1.0 - 0.5 / 8)
+            WorldTime(on = 1.0, night = 1.0 - 0.5 / turn, ember = 1.0 - 0.5 / turn)
         course.opens shouldBe true
-        course.follow(t = 4.0, look = WorldLook.Day, dt = 3.5) shouldBe WorldTime(on = 1.0, night = 0.5, ember = 0.5)
+        course.follow(t = 10.0, look = WorldLook.Day, dt = 9.5) shouldBe WorldTime(on = 1.0, night = 0.5, ember = 0.5)
         course.opens shouldBe true
-        course.follow(t = 8.0, look = WorldLook.Day, dt = 4.0) shouldBe day
+        course.follow(t = 20.0, look = WorldLook.Day, dt = 10.0) shouldBe day
         course.opens shouldBe false
     }
 
@@ -113,7 +115,7 @@ class WorldCourseSpec : StringSpec({
 
         course.follow(t = -3.0, look = WorldLook.Day, dt = 0.0, ghost = GhostLight.Red) shouldBe
             WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghosts = 1.0, ghostLight = GhostLight.Red)
-        course.follow(t = 9.0, look = WorldLook.Day, dt = 9.0, ghost = GhostLight.Red) shouldBe day.copy(ghostLight = GhostLight.Red)
+        course.follow(t = 21.0, look = WorldLook.Day, dt = 21.0, ghost = GhostLight.Red) shouldBe day.copy(ghostLight = GhostLight.Red)
         course.opens shouldBe false
     }
 })

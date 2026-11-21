@@ -101,9 +101,10 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
     companion object {
         /**
          * How long the turn from the opening's world to the look's own takes when the song begins, in seconds, as a
-         * whole turn (from ember to day). A first guess for the maintainer's eye: slow enough to be felt as the song's
-         * dawn, not as a switch.
+         * whole turn (from night to day): slow enough to be felt as the song's dawn, not as a switch. It was 8 (the
+         * maintainer, 2026-11-21: "The change in mood after the walkin is too sudden"); the front lamp that lit the
+         * walk-in goes down in the same time ([LightPlan.OPENING_FADE]).
          */
-        const val TURN_SECONDS = 8.0
+        const val TURN_SECONDS = 20.0
     }
 }
