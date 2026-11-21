@@ -149,6 +149,30 @@ class StrollHome(
     }
 
     /**
+     * Whom she visits at [t] (seconds into the show), and how far she looks and turns to them: her route's (see
+     * [StrollRoute.visitAt]), and where she leaves it beside one (her way home begins there), let go over
+     * [StrollRoute.VISIT_EASE] seconds from then. Null but while she stands beside one. It goes by the time, the route
+     * and when she left it alone, so a replaced stroll visits as the one it replaces did.
+     */
+    fun visitAt(t: Double): StrollRoute.Visiting? {
+        val x = t - from
+
+        if (x <= 0.0) {
+            return null
+        }
+
+        val on = route.visitAt(min(x, leftRoute) + shift) ?: return null
+
+        if (x <= leftRoute) {
+            return on
+        }
+
+        val stays = 1 - smooth((x - leftRoute) / StrollRoute.VISIT_EASE)
+
+        return StrollRoute.Visiting(who = on.who, share = on.share * stays, turn = on.turn * stays)
+    }
+
+    /**
      * The kind of walk's modifier on her hips at [t] (seconds into the show; see [WalkKind]): her route's, as its legs
      * have it (see [StrollRoute.hipsAt]), and from when she left it the way home's ([WalkKind.Home]), eased in over
      * [StrollRoute.KIND_BLEND] seconds, as she may leave it walking. It goes by the time, the route and when she left

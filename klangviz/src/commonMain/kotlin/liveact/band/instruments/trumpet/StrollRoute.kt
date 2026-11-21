@@ -93,6 +93,12 @@ class StrollRoute(
         Visit,
     }
 
+    /**
+     * Whom she visits at a moment ([who]), how far she looks at them ([share], 0 to 1) and how far she has turned
+     * to them ([turn], radians off the way she faces at rest, toward them): see [visitAt].
+     */
+    class Visiting(val who: Player, val share: Double, val turn: Double)
+
     /** One leg in the round's time: walked from [start] for [time] seconds (seconds into the round). */
     internal class Walk(val leg: StrollLeg, val start: Double, val time: Double)
 
@@ -121,6 +127,16 @@ class StrollRoute(
         val place = others.getValue(who)
 
         Offset(x = place.x + beside.x, z = place.z + beside.z)
+    }
+
+    /**
+     * How far she turns to each one she visits, standing at their spot: toward their place, off the way she faces at
+     * rest, at the most by [VISIT_TURN] to either side.
+     */
+    private val turns: Map<Player, Double> = spots.mapValues { (who, spot) ->
+        val place = others.getValue(who)
+
+        max(-VISIT_TURN, min(VISIT_TURN, wrap(atan2(place.x - spot.x, place.z - spot.z) - restTurn)))
     }
 
     /** Where she is [x] seconds after the stroll began, off her place, in her sizes. */
@@ -229,6 +245,37 @@ class StrollRoute(
         val start = startOf(round)
 
         return (start + window.start)..(start + window.endInclusive)
+    }
+
+    /**
+     * Whom she visits [x] seconds after the stroll began, and how far she looks and turns to them (see [Visiting]);
+     * null but while she stands beside one (since 2026-11-21: a visit without a glance at the one she visits is no
+     * visit). Over her stay she turns to them and back, eased in over [VISIT_EASE] seconds as she has come
+     * to a stand and out over as many before she walks on, so she arrives and leaves facing the audience as at every
+     * standstill; at the most by [VISIT_TURN], so she stays open to the audience, and toward the one she visits
+     * (where they stand behind her, the most to the side they are on).
+     */
+    internal fun visitAt(x: Double): Visiting? {
+        if (x <= 0.0) {
+            return null
+        }
+
+        val round = roundAt(x)
+        val worked = roundOf(round)
+        val into = x - startOf(round)
+
+        for ((i, who) in worked.visits.withIndex()) {
+            val start = worked.walks[i].start + worked.walks[i].time
+            val end = worked.walks[i + 1].start
+
+            if (into >= start && into <= end) {
+                val share = smooth((into - start) / VISIT_EASE) * smooth((end - into) / VISIT_EASE)
+
+                return Visiting(who = who, share = share, turn = share * turns.getValue(who))
+            }
+        }
+
+        return null
     }
 
     /** The round [round] worked out (once, then kept). */
@@ -686,6 +733,12 @@ class StrollRoute(
 
         /** How long she stays beside one she visits, in seconds. */
         internal const val VISIT_STAY = 5.0
+
+        /** She turns to the one she visits and looks at them over this many seconds, and away again (see [visitAt]). */
+        internal const val VISIT_EASE = 1.0
+
+        /** The most she turns to the one she visits, in radians: 45 degrees, open to the audience (see [visitAt]). */
+        internal const val VISIT_TURN = PI / 4
 
         /**
          * The fastest pace a visit may ask of her: where the round has no time for two at it, she visits one, and

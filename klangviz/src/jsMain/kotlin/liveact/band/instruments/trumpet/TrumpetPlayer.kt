@@ -124,6 +124,13 @@ class TrumpetPlayer(
         /** How far her face is before her middle, and the room left before the camera, in her sizes. */
         const val FACE = 0.1
         const val ROOM = 0.1
+
+        /**
+         * Where she looks at one she visits (see [visitLook]): so high over their place, in metres, about at their
+         * eyes; on the riser, over the riser, as the drummer sits at the kit.
+         */
+        const val EYES = 1.6
+        const val SEATED_EYES = 1.25
     }
 
     /** Which way the stroll goes at one moment: how fast, how much it walks (0 to 1), and the turn into its way. */
@@ -147,6 +154,14 @@ class TrumpetPlayer(
     }
 
     private val mover = Mover(show = show, seed = seed, traits = traits)
+
+    /**
+     * Where the others' eyes are, about, for her look at one she visits ([visitLook]): over their place in the stage
+     * plot (the rigs of the others are not hers to read), at [EYES], or [SEATED_EYES] over the riser.
+     */
+    private val heads: Map<Player, Vector3> = StagePlot.PLACES.mapValues { (_, place) ->
+        vec(place.x, place.y + (if (place.y > 0.0) SEATED_EYES else EYES), place.z)
+    }
 
     /** Her way on a stroll, the same for every stroll (see [StrollRoute]): a stroll only shifts its time. */
     private val route: StrollRoute
@@ -268,7 +283,8 @@ class TrumpetPlayer(
 
         heading = atan2(sin(heading), cos(heading))
 
-        return Facing(speed = speed, going = going, turn = heading * going)
+        // standing beside one she visits, she turns to them (see [StrollRoute.visitAt]; 0 where she walks)
+        return Facing(speed = speed, going = going, turn = heading * going + (k.way.visitAt(x)?.turn ?: 0.0))
     }
 
     /** Her place on the stage at [t], which way she walks, how fast, and how far she has walked in this stroll. */
@@ -322,6 +338,17 @@ class TrumpetPlayer(
         return if (share > 0) Look(share = share, at = camera, still = true) else null
     }
 
+    /**
+     * Her look at one she visits on a stroll at [t] (see [StrollHome.visitAt]): at their eyes, about, from their place
+     * in the stage plot ([heads]); one behind her she looks at over her shoulder. Null where she visits nobody.
+     */
+    private fun visitLook(t: Double): Look? {
+        val k = strolls.firstOrNull { t > it.from && t < it.to } ?: return null
+        val visiting = k.way.visitAt(t) ?: return null
+
+        return if (visiting.share > 0) Look(share = visiting.share, at = heads.getValue(visiting.who), behind = true) else null
+    }
+
     /** A [look] as far as she takes it ([share]), toward [yaw]: off the way she faces, as far as a head turns. */
     private class Turn(val look: Look, val share: Double, val yaw: Double)
 
@@ -351,7 +378,7 @@ class TrumpetPlayer(
             return atan2(sin(off), cos(off))
         }
 
-        return (looks(t) + listOfNotNull(stareAt(t))).map { look ->
+        return (looks(t) + listOfNotNull(visitLook(t), stareAt(t))).map { look ->
             val yaw = yawOf(look = look, from = walk)
             val before: ((Int) -> Double)? = if (put) {
                 null

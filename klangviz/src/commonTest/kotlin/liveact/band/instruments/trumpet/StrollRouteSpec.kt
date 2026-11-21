@@ -191,7 +191,8 @@ class StrollRouteSpec : StringSpec({
 
     "she arrives at every standstill already facing the way she stands, and leaves it walking forward" {
         // over the last and the first half second: within 6 degrees (half a second out she may still be on the
-        // last of a short bend into it; some 5 degrees at most)
+        // last of a short bend into it; some 5 degrees at most). Her way, that is: beside one she visits she then
+        // turns to them while she stands, as the route says (see the visits' turn below), and back before she leaves
         everyRoute { s, where ->
             for (round in 0 until ROUNDS) {
                 for ((from, to, _) in legsOf(s.route, round)) {
@@ -459,6 +460,112 @@ class StrollRouteSpec : StringSpec({
         }
 
         visited shouldBe OTHERS.keys
+    }
+
+    "beside one she visits she turns to them and looks at them, eased in and out, 45 degrees at the most" {
+        // (2026-11-21: a visit without a glance at the one she visits is no visit) Every 1/60 s round each stand of a
+        // visit, for three seeds: the turn and the look's share never jump (a frame's step at most 0.025 rad and
+        // 0.03: eased over a second, 45 degrees moves 0.0196 rad a frame at the most), the turn points toward the
+        // one she visits and stays within the cap, and in the middle of her stay she looks at them all the way.
+        // Off a stand there is no visit. (Kept light: the specs run in the browser too.)
+        val frame = 1.0 / 60
+
+        for (seed in SEEDS.take(2)) {
+            val route = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST, others = OTHERS_OFF)
+
+            for (round in 0 until 24) {
+                val worked = route.roundOf(round)
+                val start = route.startOf(round)
+
+                if (worked.kind != Kind.Visit) {
+                    route.visitAt(start + 0.5 * route.lengthOf(round)) shouldBe null
+                    continue
+                }
+
+                for ((i, who) in worked.visits.withIndex()) {
+                    val from = start + worked.walks[i].start + worked.walks[i].time
+                    val to = start + worked.walks[i + 1].start
+                    val spot = route.spots.getValue(who)
+                    val place = OTHERS_OFF.getValue(who)
+                    val toward = wrap(atan2(place.x - spot.x, place.z - spot.z) - 0.1)
+                    var t = from - 0.5
+                    var before = route.visitAt(t)
+
+                    while (t < to + 0.5) {
+                        t += frame
+
+                        val now = route.visitAt(t)
+
+                        withClue("seed $seed, round $round, $t s, beside $who (from $from to $to s)") {
+                            abs((now?.turn ?: 0.0) - (before?.turn ?: 0.0)) shouldBeLessThan 0.025
+                            abs((now?.share ?: 0.0) - (before?.share ?: 0.0)) shouldBeLessThan 0.03
+                            abs(now?.turn ?: 0.0) shouldBeLessThanOrEqual StrollRoute.VISIT_TURN + 1e-12
+                            (now == null || now.who == who) shouldBe true
+                            (t > from && t < to || now == null || now.share < 1e-9) shouldBe true
+                        }
+
+                        before = now
+                    }
+
+                    val middle = route.visitAt(0.5 * (from + to))
+
+                    withClue("seed $seed, round $round: in the middle of her stay beside $who (toward them $toward)") {
+                        middle?.share shouldBe (1.0 plusOrMinus 1e-9)
+                        (middle!!.turn * toward > 0) shouldBe true
+                        abs(middle.turn) shouldBe (min(abs(toward), StrollRoute.VISIT_TURN) plusOrMinus 1e-9)
+                    }
+                }
+            }
+        }
+
+    }
+
+    "a stroll lets go of a visit from where it turns home, as smoothly, and is done with it by its end" {
+        // one stroll that turns home from beside one she visits (kept short: the specs run in the browser too)
+        val frame = 1.0 / 60
+        val route = StrollRoute(seed = 1, restTurn = 0.1, closest = CLOSEST, others = OTHERS_OFF)
+        var cut = 0
+        var k = 0
+
+        while (cut < 1 && k < 40) {
+            val from = 100.0 * k
+
+            k++
+
+            // the first stand beside someone in the stroll's first two rounds, in the show's time
+            val shift = StrollHome(route = route, from = from, to = from + 1).shift
+            val first = route.roundAt(shift + 1e-9)
+            val stand = (first..first + 1).firstNotNullOfOrNull { round ->
+                val walk = route.roundOf(round).walks.first()
+
+                if (route.roundOf(round).kind == Kind.Visit) route.startOf(round) + walk.start + walk.time else null
+            } ?: continue
+            val middle = from + stand - shift + 0.5 * StrollRoute.VISIT_STAY
+            // an end a few seconds after the middle of the stand: she turns home from beside them
+            val stroll = (1..12).map { late -> StrollHome(route = route, from = from, to = middle + late) }.firstOrNull {
+                (route.visitAt(it.leftRoute + it.shift)?.share ?: 0.0) > 0.1
+            } ?: continue
+            var t = stroll.from
+            var before = 0.0
+
+            cut++
+
+            while (t < stroll.to + 1) {
+                val now = stroll.visitAt(t)?.turn ?: 0.0
+
+                withClue("the stroll from ${stroll.from} s to ${stroll.to} s, at $t s") {
+                    abs(now - before) shouldBeLessThan 0.025
+                    (t < stroll.to || abs(now) < 1e-9) shouldBe true
+                }
+
+                before = now
+                t += frame
+            }
+        }
+
+        withClue("a stroll that turns home from beside one she visits") {
+            cut shouldBe 1
+        }
     }
 
     "a visit takes the place of a plain round only: the rounds to the camera and the edge's stay as they were" {
