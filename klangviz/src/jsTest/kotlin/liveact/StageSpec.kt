@@ -161,9 +161,9 @@ class StageSpec : StringSpec({
 
                 // the ambient light, four lamps above and the one low at the front
                 lamps shouldBe 6
-                // floor, wall, riser, the lamps with their targets, the crowd's lights and the terraces they stand
+                // floor, wall, riser and its glow on the floor, the lamps with their targets, the crowd's lights and the terraces they stand
                 // on, the night sky; and the fog's eight sheets (high)
-                scene.children.size shouldBe 17 + 8
+                scene.children.size shouldBe 18 + 8
 
                 // a frame's light step runs on it, before the song and in it
                 stage.light(t = -5.0, house = 0.07, waiting = true)
@@ -269,7 +269,7 @@ class StageSpec : StringSpec({
 
                 try {
                     sheetsOf(scene).size shouldBe sheets
-                    scene.children.size shouldBe 17 + sheets
+                    scene.children.size shouldBe 18 + sheets
                 } finally {
                     stage.dispose()
                 }
@@ -324,14 +324,14 @@ class StageSpec : StringSpec({
 
                 low.size shouldBe 4
                 low.none { it in high } shouldBe true
-                scene.children.size shouldBe 17 + 4
+                scene.children.size shouldBe 18 + 4
                 (maps.width.unsafeCast<Int>() to maps.height.unsafeCast<Int>()) shouldBe (2 * 384 to 2 * 324)
                 low.map { it.asDynamic().material.uniforms.uCell.value.x.unsafeCast<Double>() } shouldBe listOf(0.0, 1.0, 0.0, 1.0)
                 stage.light(t = 62.0, house = 1.0, waiting = false)
 
                 // off: no sheet at all; and back to a fog
                 stage.fog(FogQuality.Off)
-                scene.children.size shouldBe 17
+                scene.children.size shouldBe 18
                 stage.light(t = 62.1, house = 1.0, waiting = false)
                 stage.fog(FogQuality.High)
                 sheetsOf(scene).size shouldBe 8
@@ -339,7 +339,7 @@ class StageSpec : StringSpec({
                 stage.dispose()
             }
 
-            scene.children.size shouldBe 17
+            scene.children.size shouldBe 18
         }
     }
 
@@ -442,7 +442,7 @@ class StageSpec : StringSpec({
                 freed shouldBe emptyList()
                 wall.visible shouldBe false
                 floorFog.none { it.visible } shouldBe true
-                scene.children.size shouldBe 17 + 8 + 3 + 8
+                scene.children.size shouldBe 18 + 8 + 3 + 8
 
                 val haze = sheetsOf(scene).filter { it !in floorFog }
 
@@ -467,14 +467,14 @@ class StageSpec : StringSpec({
                 floorFog.all { it.visible } shouldBe true
                 fence.none { it.visible } shouldBe true
                 haze.none { it.visible } shouldBe true
-                scene.children.size shouldBe 17 + 8 + 3 + 8
+                scene.children.size shouldBe 18 + 8 + 3 + 8
                 stage.light(t = 62.1, house = 1.0, waiting = false)
 
                 // and to the fence again: the one made before
                 stage.look(StageLook.Mesh)
                 fence.all { it.visible } shouldBe true
                 haze.all { it.visible } shouldBe true
-                scene.children.size shouldBe 17 + 8 + 3 + 8
+                scene.children.size shouldBe 18 + 8 + 3 + 8
             } finally {
                 stage.dispose()
             }
@@ -507,7 +507,7 @@ class StageSpec : StringSpec({
 
                 (polished !== plain) shouldBe true
                 (js("Object.prototype.hasOwnProperty").call(floor, "onBeforeRender") == true) shouldBe true
-                scene.children.size shouldBe 17 + 8
+                scene.children.size shouldBe 18 + 8
                 polished.addEventListener("dispose") { _: dynamic -> freed++ }
 
                 // the fog has no say in it: at low and off the mirror stays on the floor
