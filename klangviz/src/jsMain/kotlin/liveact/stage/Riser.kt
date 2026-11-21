@@ -137,7 +137,7 @@ class Riser(scene: Scene) {
         val beat = if (sinceKick == null || sinceKick < 0.0) 0.0 else exp(-sinceKick / BEAT_FADE)
         val share = level.coerceIn(0.0, 1.0)
 
-        gap.color.setHex(GLOW_COLOR).scale(share * (GAP_REST + (1.0 - GAP_REST) * beat))
+        gap.color.setHex(GLOW_COLOR).scale(share * (GAP_REST + (GAP_BEAT - GAP_REST) * beat))
         pool.color.setHex(GLOW_COLOR).scale(share * (POOL_REST + (POOL_BEAT - POOL_REST) * beat))
         lines.value = share
     }
@@ -180,16 +180,20 @@ class Riser(scene: Scene) {
         const val RADIUS = 1.62
 
         /** The gap under the plinth that glows, how far its foot is set in, and how much of the top edge is cut off. */
-        const val GAP = 0.045
+        const val GAP = 0.03
         const val SET_IN = 0.14
         const val CHAMFER = 0.05
 
         /** How high the sides are between the gap and the cut-off edge: the top is [Stage.RISER] high. */
         const val SIDE_HIGH = Stage.RISER - GAP - CHAMFER
 
-        /** The glow's colour; how bright it is in the gap between two hits, against 1 at a hit. */
-        const val GLOW_COLOR = 0xff9a3c
-        const val GAP_REST = 0.3
+        /**
+         * The glow's colour; how bright it is in the gap between two hits and at a hit: an ember under the stone, not
+         * a lamp (the maintainer, 2026-11-21: "the glow ring around the riser is too much").
+         */
+        const val GLOW_COLOR = 0xff8a30
+        const val GAP_REST = 0.07
+        const val GAP_BEAT = 0.30
 
         /**
          * How rough the stone is: matt, so a lamp that shines on a side straight on (the low front lamp) does not
@@ -199,9 +203,9 @@ class Riser(scene: Scene) {
         const val STONE_ROUGH = 0.9
 
         /** The glow on the floor: how far it reaches around the plinth (metres), how bright at rest and at a hit. */
-        const val REACH = 0.9
-        const val POOL_REST = 0.04
-        const val POOL_BEAT = 0.14
+        const val REACH = 0.6
+        const val POOL_REST = 0.0
+        const val POOL_BEAT = 0.05
         const val POOL_Y = 0.006
 
         /** How fast a hit's light goes, in seconds to 1/e. */
