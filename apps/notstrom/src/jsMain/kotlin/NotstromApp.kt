@@ -101,6 +101,13 @@ fun Tag.NotstromApp(query: String) = comp(
  * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, the shadows, the reflections, the way back to the
  * start screen, fullscreen, the volume). What fails on the way is said on the start screen, in plain words.
  *
+ * Beside Start, a quiet button "Meet the band" leads to a page of its own ([MeetTheBandPage]): the six members round a
+ * hexagon of fence panels, one at a time at the front in the light of a lamp on the floor, their true self in the
+ * shadow behind, their name, what they play and how wild they are laid over it. It has no sound, runs no test and is
+ * not fullscreen; it draws with the oversampling of the test this machine has (just measured, or kept and fitting),
+ * else at 1x ([meetSamples]). Its "Back" (or Escape) unmounts it, everything it made freed, and the start screen is
+ * there again; where its figures do not load, the start screen says so ([MEET_FAILED]).
+ *
  * The address's switches are the live act's ([Switch]: `?seed=7`, `?still`, `?oversample=2`, `?fog=low` and the rest);
  * `?nostrobe` presets the choice for the stroboscope. The line of text at the top is hidden for visitors; `?dev` shows
  * it, and the look's controls in the drawer ([showSwitches], [showsDev]).
@@ -129,6 +136,9 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         /** The band walks in and plays. */
         Playing,
+
+        /** The page "Meet the band" ([MeetTheBandPage]): the band one by one, no sound. */
+        Meet,
     }
 
     /**
@@ -241,6 +251,9 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     private var beside: Job? = null
 
     private var stages = 0
+
+    /** How often the page "Meet the band" was opened: each time it is another component, made anew. */
+    private var meetings = 0
 
     /** The step of the show's opening that fades now; null outside the opening (the tests' phases have none). */
     private var fading: Fading? by value(null)
@@ -429,6 +442,42 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         leaveFullscreen()
         stop(problem = null)
         player?.setOutputVolume(1.0)
+    }
+
+    /**
+     * The quiet button beside Start: the page "Meet the band" ([MeetTheBandPage]). No sound, so no player and no
+     * check of the browser; the start screen's problem, if any, is gone.
+     */
+    private fun meet() {
+        if (phase != Phase.Start || checking) {
+            return
+        }
+
+        problem = null
+        warning = null
+        meetings++
+        phase = Phase.Meet
+    }
+
+    /** From the page "Meet the band" back to the start screen, saying [problem] where there is one. */
+    private fun leaveMeet(problem: String?) {
+        if (phase != Phase.Meet) {
+            return
+        }
+
+        this.problem = problem
+        phase = Phase.Start
+    }
+
+    /**
+     * The samples the page "Meet the band" draws with: the oversampling of the test this machine has, just measured
+     * ([tested]) or kept ([StoredTest]) where it fits the machine as it is now (as [goOn] takes it); else 1.
+     */
+    private fun meetSamples(): Double {
+        val screen = window.screen
+        val fitting = kept()?.takeIf { it.fits(ratio = window.devicePixelRatio, width = screen.width, height = screen.height) }
+
+        return (tested?.oversample ?: fitting?.oversample ?: 1).toDouble()
     }
 
     /**
@@ -888,6 +937,22 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                         onBack = { backToStart() },
                     )
                 }
+                Phase.Meet -> div {
+                    // each visit is a component of its own: made anew, and freed when it goes
+                    key = "meet-$meetings"
+                    css {
+                        put("position", "absolute")
+                        put("inset", "0")
+                    }
+
+                    MeetTheBandPage(
+                        release = release,
+                        models = MODELS,
+                        samples = meetSamples(),
+                        onBack = { leaveMeet(problem = null) },
+                        onFailed = { leaveMeet(problem = MEET_FAILED) },
+                    )
+                }
             }
         }
     }
@@ -960,6 +1025,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
             actions(gap = if (choosing) "28px" else "44px") {
                 actionButton(text = "Start") { start() }
+                actionButton(text = MEET_THE_BAND, primary = false) { meet() }
             }
 
             problem?.let { text ->

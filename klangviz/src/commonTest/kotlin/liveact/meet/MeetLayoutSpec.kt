@@ -51,6 +51,20 @@ class MeetLayoutSpec : StringSpec({
         MeetLayout.FIXTURE shouldBeLessThan MeetLayout.LAMP
     }
 
+    "the next member stands to the right and comes in from the right; after the last the first, and back" {
+        MeetLayout.next(Player.Sirene) shouldBe Player.Skalpell
+        MeetLayout.next(Player.Klaue) shouldBe Player.Sirene
+        MeetLayout.previous(Player.Sirene) shouldBe Player.Klaue
+        MeetLayout.previous(Player.Skalpell) shouldBe Player.Sirene
+        // the turn for the next one is a step to smaller angles: the carousel turns so they come from the right
+        MeetLayout.turnFor(MeetLayout.next(Player.Sirene)) shouldBe (MeetLayout.turnFor(Player.Sirene) - MeetLayout.STEP plusOrMinus 1e-12)
+        MeetLayout.spotOf(player = MeetLayout.next(Player.Sirene), turn = MeetLayout.turnFor(Player.Sirene)).x shouldBeGreaterThan 0.0
+
+        for (player in Player.entries) {
+            MeetLayout.previous(MeetLayout.next(player)) shouldBe player
+        }
+    }
+
     "how far from the front: either way, whatever the rounds" {
         MeetLayout.offFront(0.3) shouldBe (0.3 plusOrMinus 1e-12)
         MeetLayout.offFront(-0.3) shouldBe (0.3 plusOrMinus 1e-12)
@@ -74,6 +88,18 @@ class MeetLayoutSpec : StringSpec({
         MeetLayout.dip(MeetLayout.STEP / 2) shouldBe (1.0 - MeetLayout.DIP plusOrMinus 1e-12)
         MeetLayout.dip(MeetLayout.STEP / 4) shouldBeGreaterThan 1.0 - MeetLayout.DIP
         MeetLayout.dip(MeetLayout.STEP / 4) shouldBeLessThan 1.0
+    }
+
+    "on a tall picture the camera looks lower: the frame's top stays, the floor gets the height shown more" {
+        MeetLayout.lookHigh(16.0 / 9.0) shouldBe MeetLayout.LOOK_HIGH
+        MeetLayout.lookHigh(1.0) shouldBe MeetLayout.LOOK_HIGH
+
+        val phone = 390.0 / 844.0
+        val shown = MeetLayout.FRAME_WIDE / phone
+
+        MeetLayout.lookHigh(phone) shouldBeLessThan MeetLayout.LOOK_HIGH
+        MeetLayout.lookHigh(phone) + shown / 2 shouldBe (MeetLayout.LOOK_HIGH + MeetLayout.FRAME_HIGH / 2 plusOrMinus 1e-12)
+        MeetLayout.lookHigh(Double.NaN) shouldBe MeetLayout.LOOK_HIGH
     }
 
     "the lens fits the frame by the narrower side: a wide picture by its height, a tall one by its width" {

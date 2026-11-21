@@ -41,7 +41,8 @@ import kotlin.math.sqrt
  * [models] is the address of the folder that holds the figures (ending in a slash); [version] the figures' release,
  * asked for with each file (as for the live act). [samples]: the samples drawn for each pixel (1: the screen's own
  * pixels; 2: twice as many, smoother edges; see the live act's oversampling). [onFigures]: told how many of the six
- * figures' files have arrived, as each one does.
+ * figures' files have arrived, as each one does. [onFailed]: told once where the figures could not be loaded (the
+ * scene stays dark then; the reason is in the console).
  */
 @Suppress("FunctionName")
 fun Tag.MeetTheBand(
@@ -50,6 +51,7 @@ fun Tag.MeetTheBand(
     selected: Player,
     samples: Double = 1.0,
     onFigures: ((count: Int, of: Int) -> Unit)? = null,
+    onFailed: (() -> Unit)? = null,
 ) = comp(
     MeetTheBand.Props(
         models = models,
@@ -57,6 +59,7 @@ fun Tag.MeetTheBand(
         selected = selected,
         samples = samples,
         onFigures = onFigures,
+        onFailed = onFailed,
     )
 ) {
     MeetTheBand(it)
@@ -86,6 +89,8 @@ class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
         val samples: Double = 1.0,
         /** Told how many of how many figures' files have arrived. Null: nobody is told. */
         val onFigures: ((count: Int, of: Int) -> Unit)? = null,
+        /** Told once where the figures could not be loaded. Null: nobody is told. */
+        val onFailed: (() -> Unit)? = null,
     )
 
     @Suppress("unused")
@@ -154,8 +159,8 @@ class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
         camera = lens
         scene = ctx.scene
         stage = room
+        // where it looks follows the picture's shape (resize)
         lens.position.set(0.0, MeetLayout.CAMERA_HIGH, MeetLayout.CAMERA_Z)
-        lens.lookAt(0.0, MeetLayout.LOOK_HIGH, room.surfaceZ)
         // nothing is shown until the band stands: the room alone is no picture of them
         ctx.scene.visible = false
         sample()
@@ -176,6 +181,7 @@ class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
                 // without its figures there is nobody to meet: the room stays dark, and the reason is said where a
                 // developer looks
                 console.error("Meet the Band could not make the band (its figures are looked for in '${props.models}')", e)
+                props.onFailed?.invoke()
 
                 return@launch
             }
@@ -216,7 +222,10 @@ class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
         resize()
     }
 
-    /** The picture follows the box's size; the lens fits the frame by the narrower side ([MeetLayout.fov]). */
+    /**
+     * The picture follows the box's size; the lens fits the frame by the narrower side ([MeetLayout.fov]), and on a
+     * tall picture the camera looks lower ([MeetLayout.lookHigh]).
+     */
     private fun resize() {
         val box = dom?.unsafeCast<HTMLElement>() ?: return
         val width = box.clientWidth
@@ -230,6 +239,7 @@ class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
         camera?.let {
             it.aspect = width.toDouble() / height.toDouble()
             it.fov = MeetLayout.fov(it.aspect)
+            it.lookAt(0.0, MeetLayout.lookHigh(it.aspect), stage?.surfaceZ ?: (MeetLayout.MIDDLE_Z + MeetLayout.BACK))
             it.updateProjectionMatrix()
         }
     }

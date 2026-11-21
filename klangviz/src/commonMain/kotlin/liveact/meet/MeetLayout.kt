@@ -96,6 +96,15 @@ object MeetLayout {
     /** Where [player] stands round the hexagon, in the carousel's own turn (see [MeetLayout]): 0 for Sirene. */
     fun angleOf(player: Player): Double = ORDER.indexOf(player) * STEP
 
+    /**
+     * The member after [player] round the hexagon ([ORDER], after the last the first): the one standing to the right
+     * of the front, who comes in from the right as the carousel turns to them.
+     */
+    fun next(player: Player): Player = ORDER[(ORDER.indexOf(player) + 1) % ORDER.size]
+
+    /** The member before [player] round the hexagon ([ORDER], before the first the last): the one to the left. */
+    fun previous(player: Player): Player = ORDER[(ORDER.indexOf(player) + ORDER.size - 1) % ORDER.size]
+
     /** The carousel's turn that brings [player] to the front. */
     fun turnFor(player: Player): Double = -angleOf(player)
 
@@ -141,6 +150,20 @@ object MeetLayout {
         val across = atan(FRAME_WIDE / 2 / FRAME_AT / wide)
 
         return 2 * max(tall, across) * 180.0 / PI
+    }
+
+    /**
+     * How high on the surface behind the front member the camera looks, for a picture [aspect] wide to its height: at
+     * [LOOK_HIGH] where the picture is wide enough to show the frame's height ([fov]); on a taller one the frame's top
+     * stays where it is on a wide one, and all the height the picture shows more goes below, to the floor (where an
+     * app's words can stand under the lamp). An aspect of no number or not above 0 counts as square.
+     */
+    fun lookHigh(aspect: Double): Double {
+        // NaN-guard: an aspect of no number fails the comparison and counts as square
+        val wide = if (aspect > 0.0) aspect else 1.0
+        val shown = max(FRAME_HIGH, FRAME_WIDE / wide)
+
+        return LOOK_HIGH + (FRAME_HIGH - shown) / 2
     }
 
     /** How brightly the fixture before [player]'s feet glows with the carousel at [turn] ([glow]). */
