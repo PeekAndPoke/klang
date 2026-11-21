@@ -27,8 +27,9 @@ import kotlin.random.Random
  * her shadow, the lacquer, the drifting world; the maintainer, 2026-11-20: "please make the new look the default look in
  * notstrom"), unless the address sets `?look=` itself ([setsLook]; `?look=today` gives the look as it was made). The key
  * x flips between the two while the show plays.
- * The show opens in the ember (`opening=ember`, [OPENING]: dark and red before the song, turning slowly to the look's
- * own when it begins; the maintainer, 2026-11-20: "It should also be dark in the beginning"), unless the address sets
+ * The show opens in the night (`opening=night`, [OPENING]: dark before the song, the band red in the front lamp's
+ * light, turning slowly to the look's own when it begins; the maintainer, 2026-11-20: "It should also be dark in the
+ * beginning"), unless the address sets
  * `?opening=` itself ([setsOpening]; `?opening=off` opens as before), and not in a frozen show (the picture test's).
  * [frozenAt]: the time the show is frozen at (the picture test's band, standing); the address's `?t=` is not taken,
  * as a frozen show would never start. Taken from the address: the live act's other switches (`seed`, `still`, the
@@ -116,11 +117,13 @@ const val NEW_LOOK = "new"
 fun setsLook(query: String): Boolean = query.keys().any { it == Switch.Look.key }
 
 /**
- * The world notstrom's show opens in unless the address sets one ([Switch.Opening]): the ember, the deep red furnace
- * behind the drummer and red smoke (the maintainer, 2026-11-20, of the opening: "It should also be dark in the
- * beginning. The 'amber' mood we call it i think").
+ * The world notstrom's show opens in unless the address sets one ([Switch.Opening]): the night, where the live act
+ * lights the walk-in with the red front lamp, the band red figures on a dark stage with their big shadows behind them
+ * (the maintainer picked it from stills, 2026-11-21: "i like this mood ... the left one"). It was the ember until
+ * then, the deep red furnace behind the drummer and red smoke (the maintainer, 2026-11-20, of the opening: "It should
+ * also be dark in the beginning. The 'amber' mood we call it i think").
  */
-const val OPENING = "ember"
+const val OPENING = "night"
 
 /** Whether the address sets the opening itself (`?opening=off`, `?opening=night`): it wins over notstrom's own. */
 fun setsOpening(query: String): Boolean = query.keys().any { it == Switch.Opening.key }

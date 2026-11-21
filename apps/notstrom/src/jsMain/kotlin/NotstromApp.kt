@@ -95,7 +95,7 @@ fun Tag.NotstromApp(query: String) = comp(
  * (the click was taken here), and the live act's clock starts the song when the walk-in is over. The show's opening
  * fades ([OpeningFade]): the screen of the click goes to black, the show gets ready on the black, and when the band
  * stands the black goes, the stage pitch black by itself: its light comes up slowly as the band walks in, in the
- * ember (`opening=ember`, [showSwitches]) that turns to the look's own world when the song begins; the tests' phases
+ * night (`opening=night`, [showSwitches]) that turns to the look's own world when the song begins; the tests' phases
  * have no fade. The live act steps
  * the oversampling down by itself where the frames stay slow. While the show plays, a moving mouse brings up a
  * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, the shadows, the reflections, fullscreen, the

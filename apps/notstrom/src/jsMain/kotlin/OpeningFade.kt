@@ -13,7 +13,7 @@ package io.peekandpoke.klang.notstrom
  *   the readying screen's words come up on the black, at the screen's pace, so a slow connection does not look stuck.
  * - [Step.Standing]: the band stands and the walk-in begins. The black over the stage goes in a moment ([UNVEIL]):
  *   the stage is pitch black itself then, and its own light comes up as the band walks in (the live act's opening,
- *   `opening=ember`, [io.peekandpoke.klang.viz.liveact.lights.LightsUp]; the maintainer, 2026-11-20: "I would only do
+ *   `opening=night`, [io.peekandpoke.klang.viz.liveact.lights.LightsUp]; the maintainer, 2026-11-20: "I would only do
  *   the lights and start from pitch black"). Where the address turns the opening off, the stage is there at once.
  *
  * Each layer's share ([Layers]) is a function of the seconds since its step began, eased at both ends. Those seconds

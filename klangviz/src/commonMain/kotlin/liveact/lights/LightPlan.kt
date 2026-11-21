@@ -10,6 +10,7 @@ import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingTags
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 import kotlin.math.PI
 import kotlin.math.floor
 import kotlin.math.max
@@ -182,6 +183,9 @@ fun lampFlicker(t: Double, own: Double): Double {
 /** The lights' plan for one [show]: the moods, the front lamp, the stroboscope. */
 class LightPlan(private val show: Show) {
 
+    /** Whether the show opens (`?opening=night`, [WorldLook.opens]): then the front lamp lights the walk-in ([frontAt]). */
+    private val opens: Boolean = WorldLook.opens(show.switches)
+
     /** Where the bass drum runs fast: the stroboscope's stretches. */
     val runs: List<Run>
         get() {
@@ -269,7 +273,10 @@ class LightPlan(private val show: Show) {
         return BackRigMix(from = rigOf(k), to = rigOf(k + 1), share = u)
     }
 
-    /** The front lamp's colour at [t]; [tried]: the colour tried by hand (an index into [FrontColors.TRY]), -1 for none. */
+    /**
+     * The front lamp's colour at [t]; [tried]: the colour tried by hand (an index into [FrontColors.TRY]), -1 for none.
+     * While it lights the opening ([opens]), the red.
+     */
     fun frontColor(t: Double, tried: Int): Int {
         if (tried >= 0) {
             return FrontColors.TRY[tried]
@@ -280,6 +287,10 @@ class LightPlan(private val show: Show) {
         if (chosen != null) {
             // as parseInt(..., 16) in the prototype; what is no number is black, as three.js makes of NaN
             return chosen.toIntOrNull(16) ?: 0
+        }
+
+        if (opens && t < SHADOW_FADE) {
+            return FrontColors.RED
         }
 
         val turn = floor((t / show.bar + (show.seed * 7.0) % 40) / 40)
@@ -294,6 +305,12 @@ class LightPlan(private val show: Show) {
      * throws big shadows up the wall. It comes and goes slowly ([SHADOW_FADE]), half of each way before and half
      * after the eight bars' ends. Where in the song, the seed decides. Not before [FIRST_SHADOWS]: a stretch that
      * would begin earlier is left out whole, and so is a stroboscope's.
+     *
+     * Where the show opens ([opens]) it is the opening's light as well: full on, red, while the band walks in, so
+     * they come in as red figures on a dark stage with their big shadows behind them, and down again over
+     * [SHADOW_FADE] as the song begins (the maintainer picked this mood for the walk-in from stills, 2026-11-21:
+     * "i like this mood ... the left one": the night with the red front lamp full on). It is the one time the
+     * shadows show before [FIRST_SHADOWS].
      *
      * [waiting]: before the click. [trying]: a colour is tried by hand (the key f), the lamp is full on.
      */
@@ -315,7 +332,12 @@ class LightPlan(private val show: Show) {
         }
 
         if (t < 0) {
-            return FrontLight.off
+            return if (opens) FrontLight(level = 1.0, strobing = false) else FrontLight.off
+        }
+
+        // the opening's light goes down as the song begins
+        if (opens && t < SHADOW_FADE) {
+            return FrontLight(level = smooth(1 - t / SHADOW_FADE), strobing = false)
         }
 
         // and as a stroboscope, while the bass drum runs fast (see runs): it flashes on the sixteenths (about ten a

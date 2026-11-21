@@ -30,14 +30,14 @@ class ShowHelpersSpec : StringSpec({
     }
 
     "an address without switches gives only what the app decides: no line of text at the top, and the stroboscope" {
-        showSwitches(query = "", strobe = true) shouldBe Switches.parse("nohud&look=new&opening=ember")
-        showSwitches(query = "?", strobe = false) shouldBe Switches.parse("nostrobe&nohud&look=new&opening=ember")
+        showSwitches(query = "", strobe = true) shouldBe Switches.parse("nohud&look=new&opening=night")
+        showSwitches(query = "?", strobe = false) shouldBe Switches.parse("nostrobe&nohud&look=new&opening=night")
     }
 
     "the line of text at the top shows only where the address asks for it with dev" {
         showSwitches(query = "?seed=3", strobe = true).has(Switch.NoHud) shouldBe true
-        showSwitches(query = "?nohud", strobe = true) shouldBe Switches.parse("nohud&look=new&opening=ember")
-        showSwitches(query = "?dev&seed=3", strobe = true) shouldBe Switches.parse("seed=3&look=new&opening=ember")
+        showSwitches(query = "?nohud", strobe = true) shouldBe Switches.parse("nohud&look=new&opening=night")
+        showSwitches(query = "?dev&seed=3", strobe = true) shouldBe Switches.parse("seed=3&look=new&opening=night")
         showSwitches(query = "?dev&nohud", strobe = true).has(Switch.NoHud) shouldBe false
     }
 
@@ -53,7 +53,7 @@ class ShowHelpersSpec : StringSpec({
         skipsTests("?seed=3&notest") shouldBe true
         skipsTests("?notesting&seed=3") shouldBe false
         skipsTests("") shouldBe false
-        showSwitches(query = "?notest&dev", strobe = true) shouldBe Switches.parse("look=new&opening=ember")
+        showSwitches(query = "?notest&dev", strobe = true) shouldBe Switches.parse("look=new&opening=night")
     }
 
     "the test's oversampling is handed on, unless the address sets it by hand; 1 sets nothing" {
@@ -79,7 +79,7 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "low"
         showSwitches(query = "", strobe = true, fog = FogQuality.High).has(Switch.Fog) shouldBe false
         showSwitches(query = "?fog=off", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "off"
-        showSwitches(query = "?nofog", strobe = true, fog = FogQuality.Low) shouldBe Switches.parse("nofog&nohud&look=new&opening=ember")
+        showSwitches(query = "?nofog", strobe = true, fog = FogQuality.Low) shouldBe Switches.parse("nofog&nohud&look=new&opening=night")
         setsFog("?seed=1&fog=low") shouldBe true
         setsFog("?nofog") shouldBe true
         setsFog("?foggy&seed=1") shouldBe false
@@ -107,7 +107,7 @@ class ShowHelpersSpec : StringSpec({
         showsDev("?dev=1") shouldBe true
         showsDev("?devices&seed=1") shouldBe false
         showsDev("") shouldBe false
-        showSwitches(query = "?dev&seed=3&notest", strobe = true) shouldBe Switches.parse("seed=3&look=new&opening=ember")
+        showSwitches(query = "?dev&seed=3&notest", strobe = true) shouldBe Switches.parse("seed=3&look=new&opening=night")
         keepsTest("?dev&notest") shouldBe true
     }
 
@@ -146,8 +146,8 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "?look=new&world=night", strobe = true)[Switch.Look] shouldBe "new"
     }
 
-    "the show opens in the ember, unless the address sets the opening; a frozen show (the picture test's) has none" {
-        showSwitches(query = "", strobe = true)[Switch.Opening] shouldBe "ember"
+    "the show opens in the night, unless the address sets the opening; a frozen show (the picture test's) has none" {
+        showSwitches(query = "", strobe = true)[Switch.Opening] shouldBe "night"
         showSwitches(query = "?opening=off", strobe = true)[Switch.Opening] shouldBe "off"
         showSwitches(query = "?opening=night&look=today", strobe = true)[Switch.Opening] shouldBe "night"
         showSwitches(query = "", strobe = false, frozenAt = 0.0).has(Switch.Opening) shouldBe false

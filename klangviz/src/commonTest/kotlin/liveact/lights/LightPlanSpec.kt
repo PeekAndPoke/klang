@@ -86,6 +86,35 @@ class LightPlanSpec : StringSpec({
         (full.last().first - full.first().first) shouldBe (8 * show.bar - fade plusOrMinus 0.4)
     }
 
+    "where the show opens, the front lamp lights the walk-in in red and goes down as the song begins" {
+        val plan = LightPlan(Show(seed = 3, switches = Switches.parse("?opening=night")))
+
+        // before the click nothing; then full on and red all through the walk-in
+        plan.frontAt(t = -15.0, waiting = true, trying = false).level shouldBe 0.0
+        listOf(-15.0, -7.0, -0.01).forEach { t ->
+            plan.frontAt(t = t, waiting = false, trying = false) shouldBe FrontLight(level = 1.0, strobing = false)
+            plan.frontColor(t = t, tried = -1) shouldBe FrontColors.RED
+        }
+
+        // down over the fade as the song begins, with no step, still red
+        val levels = generateSequence(0.0) { it + 0.05 }.takeWhile { it < 45.0 }
+            .map { t -> plan.frontAt(t = t, waiting = false, trying = false).level }
+            .toList()
+
+        levels.first() shouldBe 1.0
+        levels.zipWithNext().forEach { (a, b) -> (a - b) shouldBeLessThan 0.02 }
+        levels.zipWithNext().all { (a, b) -> b <= a } shouldBe true
+        plan.frontAt(t = LightPlan.SHADOW_FADE / 2, waiting = false, trying = false).level shouldBe (0.5 plusOrMinus 1e-9)
+        plan.frontColor(t = LightPlan.SHADOW_FADE / 2, tried = -1) shouldBe FrontColors.RED
+        // and then dark until the first shadows' time, as in a show that does not open
+        levels.filterIndexed { i, _ -> i * 0.05 >= LightPlan.SHADOW_FADE + 0.1 }.maxOf { it } shouldBe 0.0
+
+        // a show that does not open keeps its walk-in dark
+        LightPlan(Show(seed = 3)).frontAt(t = -7.0, waiting = false, trying = false).level shouldBe 0.0
+        LightPlan(Show(seed = 3, switches = Switches.parse("?opening=off")))
+            .frontAt(t = -7.0, waiting = false, trying = false).level shouldBe 0.0
+    }
+
     "the key f and the address's front lamp are not held back" {
         val plan = LightPlan(Show(seed = 3))
 
