@@ -51,8 +51,8 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(2800, 2.4)                              // the peak, low and wide
-  .mul(1.3))                                       // hot output
+  .lowpass(3300, 2.5)                              // the peak, low and wide
+  .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
 let pickupNeck = Ign.fn(x => x
@@ -408,7 +408,7 @@ let beatBus = x => x.cylinder(3).katalyst(beatAmp)
 // 0.40 the gain of chug. Chug keeps that ratio as how hard it hits the amp (0.73 = 0.40 / 0.55).
 let heavyBus = x => x.cylinder(4).katalyst(heavyAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.42 * heavyTrim)
+  .katp("gain.gain", 0.38 * heavyTrim)
 
 let strikeBus = x => x.cylinder(5).katalyst(strikeAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
@@ -481,7 +481,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.90 0.85 0.90 0.93".sub(perlin(0.0, 0.2).seed(2)))
-  .pregain(0.5).gain(1.0).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .pregain(0.6).gain(0.8).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.50),
     // x => x.pan(0.10),
   ).apply(heavyBus)
@@ -492,7 +492,7 @@ export wings = chords => n(chords).ply(16)
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.92 0.85 0.90 0.94".sub(perlin(0.0, 0.2).seed(3)))
-  .pregain(0.5).gain(1.0).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .pregain(0.6).gain(0.8).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.95),
     x => x.pan(0.05),
   )
@@ -690,16 +690,16 @@ let heavyDrums = arrange(
 // Song  ------------------------------------------------------------------------------------------------------------
 export song = stack(
   arrange(
-    [8, spinning],
-    [4, answering],
-    [4, quickening],
-    [4, stretching],
+    // [8, spinning],
+    // [4, answering],
+    // [4, quickening],
+    // [4, stretching],
     [4, holdingBreath],
     [12, heavyBlock],
     [12, stack(heavyBlock, heavyDrums)],
-    [12, flyingOff],
-    [4, lastChord],
-    [2, silence]
+    // [12, flyingOff],
+    // [4, lastChord],
+    // [2, silence]
   )
     .scale(songScale)
     .analog(feel)
@@ -711,11 +711,11 @@ export song = stack(
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7.5, 7500)     
-    .mul(0.30)
+    .mul(0.25)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(4800)
-      .band(low => low.distort(0.001, "soft").mul(1.05))
+      .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5100)
+      .band(low => low.distort(0.001, "soft").mul(1.08))
     ) // the glue on the mids only: the kick and the hats stay clean
     .mul(4.6)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only

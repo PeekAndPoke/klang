@@ -37,8 +37,8 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(2800, 2.4)                              // the peak, low and wide
-  .mul(1.3))                                       // hot output
+  .lowpass(3200, 2.4)                              // the peak, low and wide
+  .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
 let pickupNeck = Ign.fn(x => x
@@ -425,7 +425,7 @@ let trumpet2 = (() => {
     .oversampleAtLeast(4, y => y.distort(0.45, "asym"))      // the lips: one-sided, before the bell
     .plus(breath)
     .eq(e => e.band(1200, 1.2, 4.0).band(2800, 1.5, 3.0))    // the bell's two peaks
-    .mul(0.10)
+    .mul(0.12)
     .shape("soft")
     .classic()
 })()
@@ -593,13 +593,13 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7, 7500)
-    .mul(0.80) // the "brightness" knob
+    .mul(0.75) // the "saturation" knob
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.95)).cut(5100)
-      .band(low => low.distort(0.001, "soft").mul(1.08))
+      .band(low => low.distort(0.001, "soft").mul(1.10))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(5.00)
+    .mul(4.70)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )
