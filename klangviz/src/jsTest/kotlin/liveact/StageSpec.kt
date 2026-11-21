@@ -12,6 +12,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.stage.AroundLook
 import io.peekandpoke.klang.viz.liveact.stage.BackWall
 import io.peekandpoke.klang.viz.liveact.stage.Fence
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
@@ -482,6 +483,85 @@ class StageSpec : StringSpec({
 
             // the stage frees both fogs; the wall and the fence are the scene's to free
             freed.sorted() shouldBe listOf("fog", "haze")
+        }
+    }
+
+    "the surroundings: none in the look as made; with ?around a group of three, the sides only before the fence; kept while off; freed" {
+        withThree { three ->
+            Three.addon = three
+
+            val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
+            val plainScene = three.createScene()
+            val plain = Stage(show = Show(seed = 1), scene = plainScene, camera = camera, renderer = standInRenderer(), kick = KICK)
+
+            fun groups(scene: Scene): List<Object3D> =
+                scene.children.filter { group ->
+                    group.children.size == 3 && group.children.all { it.asDynamic().material?.uniforms?.uPick != null }
+                }
+
+            try {
+                groups(plainScene) shouldBe emptyList()
+            } finally {
+                plain.dispose()
+            }
+
+            val scene = three.createScene()
+            val stage = Stage(
+                show = Show(seed = 1, switches = Switches.parse("?around=ruins")),
+                scene = scene,
+                camera = camera,
+                renderer = standInRenderer(),
+                kick = KICK,
+            )
+            val freed = mutableListOf<String>()
+
+            try {
+                // floor, wall, riser and its glow, the lamps and their targets, the crowd, the terraces, the sky, the fog's
+                // eight sheets, and the surroundings as one group
+                scene.children.size shouldBe 18 + 8 + 1
+
+                val around = groups(scene).single()
+                val (left, right, far) = around.children.toList()
+
+                fun pick(): List<Double> {
+                    val p: dynamic = left.asDynamic().material.uniforms.uPick.value
+
+                    return listOf(p.x.unsafeCast<Double>(), p.y.unsafeCast<Double>(), p.z.unsafeCast<Double>())
+                }
+
+                fun shown(): Double = left.asDynamic().material.uniforms.uShow.value.unsafeCast<Double>()
+
+                for (part in listOf(left, far)) {
+                    part.asDynamic().material.uniforms.uMap.value.addEventListener("dispose") { _: dynamic -> freed.add("picture") }
+                }
+
+                // the ruins, held: their channel, there in full; before the wall the sides are hidden, the horizon is not
+                stage.light(t = 62.0, house = 1.0, waiting = false)
+                pick() shouldBe listOf(0.0, 1.0, 0.0)
+                shown() shouldBe 1.0
+                listOf(left.visible, right.visible, far.visible) shouldBe listOf(false, false, true)
+
+                // the fence: the sides come
+                stage.look(StageLook.Mesh)
+                stage.light(t = 62.1, house = 1.0, waiting = false)
+                listOf(left.visible, right.visible, far.visible) shouldBe listOf(true, true, true)
+
+                // off: hidden and kept; on again, the stones: the same group, nothing new made
+                stage.around(AroundLook.Off)
+                around.visible shouldBe false
+                stage.around(AroundLook.Stones)
+                stage.light(t = 62.2, house = 1.0, waiting = false)
+                around.visible shouldBe true
+                groups(scene).single() shouldBe around
+                pick() shouldBe listOf(0.0, 0.0, 1.0)
+                freed shouldBe emptyList()
+            } finally {
+                stage.dispose()
+            }
+
+            // both pictures freed, and the group out of the scene
+            freed shouldBe listOf("picture", "picture")
+            groups(scene) shouldBe emptyList()
         }
     }
 

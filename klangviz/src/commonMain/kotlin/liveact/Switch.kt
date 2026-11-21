@@ -7,6 +7,8 @@ package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.lights.WorldCourse
+import io.peekandpoke.klang.viz.liveact.stage.AroundCourse
+import io.peekandpoke.klang.viz.liveact.stage.AroundLook
 import io.peekandpoke.klang.viz.liveact.stage.BlurLook
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FloorLook
@@ -279,6 +281,15 @@ enum class Switch(val key: String) {
      * key j turns it over while the show plays ([LookVariants]).
      */
     Edge("edge"),
+
+    /**
+     * `?around=ruins`: what surrounds the stage and the audience ([AroundLook]): large dark shapes lit from below,
+     * left and right of the stage behind the fence and as a horizon round the audience. forest, ruins or stones: that
+     * one all through; off: none; turns, or any other value: they come by turns, the forest first, the next each time
+     * the ghosts visit, when the stage is all but dark ([AroundCourse]). Without it, the new look ([Look]) has them by
+     * turns and the look as made none. No key: an app's controls choose it ([LookVariants]).
+     */
+    Around("around"),
 
     // The look as a whole
 

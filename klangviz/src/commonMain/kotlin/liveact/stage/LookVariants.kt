@@ -14,8 +14,8 @@ import io.peekandpoke.klang.viz.liveact.Switches
  * what the band's bodies are made of ([skin]), the two worlds' time of day ([world]) and the ghosts' colour
  * ([ghosts]; no key, it shows in the ghosts world only), the other world in the mirror
  * floor ([underworld]), how uneven the mirror floor's stone is ([ripple]), how blurred its reflection is ([blur]) and
- * what stone it is ([stone]); and a working aid, the stage's outline ([outline]). A later variant joins them here, with
- * its key and its line.
+ * what stone it is ([stone]); a working aid, the stage's outline ([outline]); and what surrounds the stage and the
+ * audience ([around]; no key: an app's controls choose it). A later variant joins them here, with its key and its line.
  *
  * They start as the address asks ([of]); a key turns one of them over ([nextStage], the key m; [nextFloor], the key
  * p; [nextHaze], the key h; [nextEyes], the key i; [nextSkin], the key l; [nextWorld], the key n; [nextUnderworld],
@@ -37,6 +37,7 @@ data class LookVariants(
     val blur: BlurLook = BlurLook.Crisp,
     val stone: StoneLook = StoneLook.Marble,
     val outline: OutlineLook = OutlineLook.Off,
+    val around: AroundLook = AroundLook.Off,
 ) {
     /** The next of the stage's looks, after the last the first again. */
     fun nextStage(): LookVariants = copy(stage = StageLook.entries[(stage.ordinal + 1) % StageLook.entries.size])
@@ -215,7 +216,7 @@ data class LookVariants(
          * The band's new look as a whole (KLANG-00478; `?look=new`, the key x): the fence, the mirror floor, the haze
          * giving way to the shadows, Sirene's eyes in her shadow, the lacquer, and the time of day drifting from day
          * to night and back. The underworld stays off: it is a moment of a show, called by its own key. The stone
-         * gently uneven, the reflection crisp and the stone marble, as without the new look.
+         * gently uneven, the reflection crisp and the stone marble, as without the new look. The surroundings by turns.
          */
         val NEW = LookVariants(
             stage = StageLook.Mesh,
@@ -230,6 +231,7 @@ data class LookVariants(
             blur = BlurLook.Crisp,
             stone = StoneLook.Marble,
             outline = OutlineLook.Off,
+            around = AroundLook.Turns,
         )
 
         /** Whether the address asks for the new look as a whole: `?look=new`. */
@@ -238,7 +240,7 @@ data class LookVariants(
         /**
          * The variants the address asks for (`?stage=mesh`, `?floor=mirror`, `?haze=parts`, `?eyes=shadow`,
          * `?skin=lacquer`, `?world=night`, `?ghosts=red`, `?underworld=on`, `?ripple=faint`, `?blur=crisp`,
-         * `?stone=plain`, `?edge=on`), each over the look as made, or with `?look=new` over [NEW]
+         * `?stone=plain`, `?edge=on`, `?around=ruins`), each over the look as made, or with `?look=new` over [NEW]
          * (`?look=new&world=night`: the new look at night). A variant's switch counts where it is given at all, also
          * empty or with another word (`?look=new&stage` is the wall).
          */
@@ -258,6 +260,7 @@ data class LookVariants(
                 blur = if (switches.has(Switch.Blur)) BlurLook.of(switches) else base.blur,
                 stone = if (switches.has(Switch.Stone)) StoneLook.of(switches) else base.stone,
                 outline = if (switches.has(Switch.Edge)) OutlineLook.of(switches) else base.outline,
+                around = if (switches.has(Switch.Around)) AroundLook.of(switches) else base.around,
             )
         }
     }

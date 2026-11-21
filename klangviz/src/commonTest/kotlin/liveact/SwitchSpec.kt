@@ -28,7 +28,7 @@ class SwitchSpec : StringSpec({
             "warm", "snakes", "nosnakes", "straight", "eyes", "skin",
             "rig", "fcolor", "front", "nostrobe",
             "nosky", "nofog", "fog", "fullfog", "stage", "floor", "haze", "world", "ghosts", "drift", "opening",
-            "underworld", "ripple", "blur", "stone", "edge",
+            "underworld", "ripple", "blur", "stone", "edge", "around",
             "look",
         )
     }

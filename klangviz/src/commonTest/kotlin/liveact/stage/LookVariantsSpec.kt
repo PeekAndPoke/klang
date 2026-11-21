@@ -305,7 +305,7 @@ class LookVariantsSpec : StringSpec({
         LookVariants().blurLine(ReflectionQuality.On) shouldBe "floor: crisp reflection (with the mirror floor only)"
     }
 
-    "the new look is the fence, the mirror, the parting haze, the eyes in the shadow, the lacquer and the drift; no underworld" {
+    "the new look: the fence, the mirror, the parting haze, the eyes in the shadow, the lacquer, the drift, the surroundings" {
         LookVariants.NEW shouldBe LookVariants(
             stage = StageLook.Mesh,
             floor = FloorLook.Mirror,
@@ -318,6 +318,7 @@ class LookVariantsSpec : StringSpec({
             blur = BlurLook.Crisp,
             stone = StoneLook.Marble,
             outline = OutlineLook.Off,
+            around = AroundLook.Turns,
         )
     }
 

@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.lights
 
 import io.peekandpoke.klang.viz.liveact.hash01
+import io.peekandpoke.klang.viz.liveact.stage.AroundCourse
 import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 import kotlin.math.floor
 
@@ -82,8 +83,11 @@ object GhostVisits {
         return floor(t / ROUND).toInt()
     }
 
-    /** When the visit of [round] begins, in seconds; null where the round has none. */
-    private fun beginOf(round: Int, seed: Int): Double? {
+    /**
+     * When the visit of [round] of the show of [seed] begins, in seconds; null where the round has none. (Also where the
+     * surroundings turn, [AroundCourse].)
+     */
+    internal fun beginOf(round: Int, seed: Int): Double? {
         if (hash01(round * 127.1 + seed * 0.618 + 5.3) >= CHANCE) {
             return null
         }

@@ -63,7 +63,8 @@ import kotlin.math.min
  * time of day of the two worlds drives the lamps, the sun, the haze and, behind the fence, the cold world seen through
  * the band's shadows ([WorldLight]), and by night the lamps' light on the wall and the fence leans cold ([WallLean]);
  * with `?opening=ember` the show opens in that world before its song, and turns slowly to its own when the song begins
- * ([WorldCourse]); with `?underworld=on` ([UnderworldLook]) the mirror floor shows the other world. The look as [variants] says
+ * ([WorldCourse]); with `?underworld=on` ([UnderworldLook]) the mirror floor shows the other world; with `?around=forest`
+ * ([AroundLook], and by turns in the new look) the surroundings frame the stage and the audience ([Around]). The look as [variants] says
  * (the address's, without them), the fog at [fog]'s quality, the lamps' shadows at [shadows]', the mirror floor's
  * reflections as [reflections] say (`?reflections=off`: the mirror floor drawn plain); the stroboscope on the song's
  * tag [kick] (see [Lights]). Sets on [renderer],
@@ -73,7 +74,8 @@ import kotlin.math.min
  * Each frame: [light], and [follow] once the camera is placed. Once the band stands: [shade]. The fog at another
  * quality, while the show plays: [fog]; the shadows: [shadows]; the reflections: [reflections]; the look behind the
  * band: [look]; the floor: [floor];
- * the haze: [haze]; the time of day: [world]; the underworld: [underworld]; all of them at once: [turn]. What
+ * the haze: [haze]; the time of day: [world]; the underworld: [underworld]; the surroundings: [around]; all of them at
+ * once: [turn]. What
  * the band needs of the front lamp's shadows ([front], [frontLamp], [shadowsAt]): after [light]. Who has to know when
  * the mirror draws ([mirrorDrawing]). When the stage goes: [dispose].
  *
@@ -123,6 +125,9 @@ class Stage(
 
     /** The wire-mesh fence in place of the wall, once the look was the fence; hidden while the wall stands. */
     private var fence: Fence? = null
+
+    /** The surroundings, once the look had them; hidden while it has none. */
+    private var around: Around? = null
 
     /**
      * The mirror in the floor, once it was chosen and the reflections were on ([LookVariants.mirrors]); on the floor
@@ -264,6 +269,21 @@ class Stage(
         sky = if (show.switches.has(Switch.NoSky)) null else NightSky(scene)
         fogAsChosen()
         mirrorAsChosen()
+        aroundAsChosen()
+    }
+
+    /**
+     * The surroundings as [variants] says: made where they are wanted and there are none yet (their two pictures are
+     * drawn then), shown; hidden where they are not wanted.
+     */
+    private fun aroundAsChosen() {
+        val wanted = variants.around != AroundLook.Off
+
+        if (wanted && around == null) {
+            around = Around(scene)
+        }
+
+        around?.show(wanted)
     }
 
     /**
@@ -338,6 +358,16 @@ class Stage(
         blur(to.blur)
         stone(to.stone)
         outline(to.outline)
+        around(to.around)
+    }
+
+    /**
+     * The surroundings turned to [to] ([AroundLook]), at once: made the first time they are wanted, hidden where they
+     * are off, and kept.
+     */
+    fun around(to: AroundLook) {
+        variants = variants.copy(around = to)
+        aroundAsChosen()
     }
 
     /**
@@ -449,6 +479,8 @@ class Stage(
             // glitter in it like noise
             mirror = MirrorFloor(floor = floor, scene = scene, renderer = renderer, outline = outlined) { hidden ->
                 sky?.hide(hidden)
+                // nor is the horizon round the audience, which it never sees
+                around?.hideFar(hidden)
 
                 if (variants.stage == StageLook.Wall) {
                     groundFog?.hide(hidden)
@@ -620,6 +652,16 @@ class Stage(
 
         mirror?.underworld(under)
 
+        // the surroundings, by turns where the world drifts: the next one each time the ghosts visit
+        around?.let {
+            it.sides(variants.stage == StageLook.Mesh)
+            it.light(
+                moment = AroundCourse.at(t = t, seed = show.seed, look = variants.around, drifts = drifts),
+                world = world,
+                level = glow,
+            )
+        }
+
         sky?.update(t = t, ratio = renderer.getPixelRatio(), level = glow)
 
         // the crowd moves with the music: still while it waits, and by how loud it is once it plays
@@ -698,8 +740,9 @@ class Stage(
     }
 
     /**
-     * Stops what the stage listens for (the key f, which tries the front lamp's colours) and frees what the fog and the
-     * mirror hold (the floor has its own material again). The rest is in the scene and is freed with it.
+     * Stops what the stage listens for (the key f, which tries the front lamp's colours) and frees what the fog, the
+     * mirror and the surroundings hold (the floor has its own material again). The rest is in the scene and is freed
+     * with it.
      */
     fun dispose() {
         lights.dispose()
@@ -707,6 +750,8 @@ class Stage(
         fogs.clear()
         mirror?.dispose()
         mirror = null
+        around?.dispose()
+        around = null
         // the wall and the fence are in the scene, freed with it; the one hidden as well
     }
 
