@@ -17,6 +17,7 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Kind
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Offset
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.stage.StageEdge
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -35,6 +36,26 @@ private val CLOSEST = Offset(x = 0.71, z = 5.94)
 
 /** The rounds sampled. */
 private const val ROUNDS = 8
+
+/** Sirene's place in the stage plot (`StagePlot`), in metres, and her size in metres (her rig's scale). */
+private const val PLACE_X = -0.7
+private const val PLACE_Z = 2.2
+private const val SIZE = 0.98
+
+/** The others' places in the stage plot (`StagePlot`), in metres: the bass, a guitar, the marimba, a guitar, the drums. */
+private val OTHERS = listOf(-2.15 to 0.4, -3.0 to 1.7, 1.7 to 0.4, 3.0 to 1.7, 0.1 to -2.1)
+
+/** The marimba's side toward the audience, in metres: from its left end to its right (as `Marimba` stands it). */
+private val MARIMBA_FRONT = (0.86 to 1.23) to (2.26 to 1.45)
+
+/** How far [x], [z] lies from the line from [a] to [b], all in metres. */
+private fun fromLine(x: Double, z: Double, a: Pair<Double, Double>, b: Pair<Double, Double>): Double {
+    val dx = b.first - a.first
+    val dz = b.second - a.second
+    val u = max(0.0, min(1.0, ((x - a.first) * dx + (z - a.second) * dz) / (dx * dx + dz * dz)))
+
+    return hypot(x - a.first - u * dx, z - a.second - u * dz)
+}
 
 /** The step of the samples, in seconds. */
 private const val DT = 0.05
@@ -213,19 +234,27 @@ class StrollRouteSpec : StringSpec({
         }
     }
 
-    "she stays in the front of the stage, where she strolled before, but on the way to the camera" {
-        // across: from -0.55 to 1.1 of her size (her old stroll: -0.48 to 1.08); toward the audience: from 0.2
-        // behind her place to 0.7 before it, and on the front edge's arc up to 0.9
+    "she stays in the front of the stage, where she strolls, but on the way to the camera" {
+        // a plain round across from -0.7 to 1.35 of her size, an edge round from -1.36 to 1.36 (wider since
+        // 2026-11-21: they were both -0.55 to 1.1); toward the audience from 0.2 behind her place to 0.9 before it,
+        // and on the front edge's arc up to 1.15 (they were 0.7 and 0.9)
         everyRoute { s, where ->
             for ((i, t) in s.times.withIndex()) {
                 val p = s.at[i]
 
                 when (s.kindAt(t)) {
-                    Kind.Plain, Kind.Edge -> withClue("$where, $t s, a ${s.kindAt(t)} round: at $p") {
-                        p.x shouldBeGreaterThan -0.55
-                        p.x shouldBeLessThan 1.1
+                    Kind.Plain -> withClue("$where, $t s, a plain round: at $p") {
+                        p.x shouldBeGreaterThan -0.7
+                        p.x shouldBeLessThan 1.35
                         p.z shouldBeGreaterThan -0.2
-                        p.z shouldBeLessThan (if (s.kindAt(t) == Kind.Edge) 0.9 else 0.7)
+                        p.z shouldBeLessThan 0.9
+                    }
+
+                    Kind.Edge -> withClue("$where, $t s, an edge round: at $p") {
+                        p.x shouldBeGreaterThan -1.36
+                        p.x shouldBeLessThan 1.36
+                        p.z shouldBeGreaterThan -0.2
+                        p.z shouldBeLessThan 1.15
                     }
 
                     Kind.Camera, Kind.Close -> Unit
@@ -283,9 +312,11 @@ class StrollRouteSpec : StringSpec({
         for ((route, round) in edges) {
             val (from, to, walk) = legsOf(route, round)[1]
 
-            withClue("round $round: the arc goes across the width she strolls in") {
-                abs(walk.leg.last.x - walk.leg.first.x) shouldBeGreaterThan 1.0
-                min(walk.leg.first.z, walk.leg.last.z) shouldBeGreaterThan 0.35
+            // (the maintainer, 2026-11-21: "Sirene needs to walk further towrds the crowd a bit and take a wider
+            // angle along the crowd": it went across 1.2 of her size from 0.37 before her place, now 2.6 from 0.62)
+            withClue("round $round: the arc goes across the width she strolls in, and wider") {
+                abs(walk.leg.last.x - walk.leg.first.x) shouldBeGreaterThan 2.4
+                min(walk.leg.first.z, walk.leg.last.z) shouldBeGreaterThan 0.6
             }
 
             // all through its middle three fifths (the ease starts and ends it slowly) she walks
@@ -297,6 +328,48 @@ class StrollRouteSpec : StringSpec({
                 }
 
                 t += DT
+            }
+        }
+    }
+
+    "over many seeds and an hour, she stays on the stage, clear of the others, and walks the wider edge one round in five" {
+        // (the maintainer, 2026-11-21: "Sirene needs to walk further towrds the crowd a bit and take a wider angle
+        // along the crowd") Every 0.1 s of the first 60 rounds, for 45 seeds, in metres on the stage: she stays
+        // 1.1 m inside the stage's edge or more (0.6 m and the mirror's fade), 1.3 m from the others' places
+        // (some 1.44 m at the nearest, the guitarist to her left) and 1 m before the marimba (1.37 m).
+        // The edge rounds go out to both ends of the wider arc, and walk it in 9 to 17 rounds of 60.
+        for (seed in (-20..20) + listOf(42, 67, 1234, -1234)) {
+            val route = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST)
+            val end = route.startOf(60)
+            var left = 0.0
+            var right = 0.0
+            var t = 0.0
+
+            while (t < end) {
+                val p = route.at(t)
+                val x = PLACE_X + SIZE * p.x
+                val z = PLACE_Z + SIZE * p.z
+
+                withClue("seed $seed, $t s, a ${route.roundOf(route.roundAt(t)).kind} round: at $x, $z m") {
+                    StageEdge.distance(x = x, z = z) shouldBeGreaterThan 0.6 + StageEdge.FADE
+                    OTHERS.minOf { (ox, oz) -> hypot(x - ox, z - oz) } shouldBeGreaterThan 1.3
+                    fromLine(x = x, z = z, a = MARIMBA_FRONT.first, b = MARIMBA_FRONT.second) shouldBeGreaterThan 1.0
+                }
+
+                if (route.roundOf(route.roundAt(t)).kind == Kind.Edge) {
+                    left = min(left, p.x)
+                    right = max(right, p.x)
+                }
+
+                t += 0.1
+            }
+
+            val edges = (0 until 60).count { route.roundOf(it).kind == Kind.Edge }
+
+            withClue("seed $seed: the edge rounds of the first 60 ($edges), as far left ($left) and right ($right) as they go") {
+                (edges in 9..17) shouldBe true
+                left shouldBeLessThan StrollRoute.EDGE_LEFT + 0.05
+                right shouldBeGreaterThan StrollRoute.EDGE_RIGHT - 0.05
             }
         }
     }
