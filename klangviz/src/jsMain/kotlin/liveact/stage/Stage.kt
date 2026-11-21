@@ -86,7 +86,7 @@ class Stage(
     private val scene: Scene,
     private val camera: PerspectiveCamera,
     private val renderer: WebGLRenderer,
-    kick: String,
+    private val kick: String,
     fog: FogQuality = FogQuality.of(show.switches),
     shadows: ShadowQuality = ShadowQuality.of(show.switches),
     reflections: ReflectionQuality = ReflectionQuality.of(show.switches),
@@ -189,7 +189,7 @@ class Stage(
     private var lightAt = Double.NaN
 
     /** The drummer's riser. */
-    val riser: Mesh
+    private val riser: Riser
 
     private val crowd: Crowd
 
@@ -255,18 +255,7 @@ class Stage(
 
         lights = Lights(show = show, scene = scene, kick = kick, shadows = shadows)
 
-        riser = Three.addon.createMesh(
-            Three.addon.createBoxGeometry(2.9, RISER, 2.2),
-            Three.addon.createMeshStandardMaterial(jsObject {
-                color = 0x08090c
-                roughness = 0.5
-                metalness = 0.2
-            }),
-        )
-        riser.position.set(0.0, RISER / 2, -1.75)
-        riser.castShadow = true
-        riser.receiveShadow = true
-        scene.add(riser)
+        riser = Riser(scene)
 
         crowd = Crowd(scene)
         sky = if (show.switches.has(Switch.NoSky)) null else NightSky(scene)
@@ -568,6 +557,8 @@ class Stage(
 
         this.front = front
         this.world = world
+        // the riser's glow beats with the bass drum; in the ghosts, where the stage is all but dark, it nearly goes
+        riser.light(level = glow * (1.0 - 0.85 * WorldLight.ghostShare(world)), sinceKick = sinceKick(t))
 
         // the one that stands: the other is hidden and kept as it was
         val wall = if (variants.stage == StageLook.Wall) wall else null
@@ -637,6 +628,15 @@ class Stage(
         sky?.follow(camera)
     }
 
+    /** How long ago the bass drum was last hit at [t], in seconds; null before its first hit and without a song. */
+    private fun sinceKick(t: Double): Double? {
+        val kicks = show.times(kick)
+        // the last hit at or before t: the first one after it, less one
+        val after = kicks.binarySearch { if (it <= t) -1 else 1 }.let { -(it + 1) }
+
+        return kicks.getOrNull(after - 1)?.let { t - it }
+    }
+
     /**
      * What stands on the floor darkens it right below itself, whatever the lamps do: the kit and the riser. None
      * under the players' feet (the maintainer, 2026-11-15): the lamps' own shadows hold them on the floor.
@@ -656,7 +656,7 @@ class Stage(
         val texture = Three.addon.createCanvasTexture(canvas)
 
         shadeUnder(over = kit, width = 2.2, depth = 1.9, forward = 0.5, floorY = RISER, index = 0, texture = texture)
-        shadeUnder(over = riser, width = 3.6, depth = 2.9, forward = 0.0, floorY = 0.0, index = 1, texture = texture)
+        shadeUnder(over = riser.body, width = 3.9, depth = 3.0, forward = 0.0, floorY = 0.0, index = 1, texture = texture)
     }
 
     /**
