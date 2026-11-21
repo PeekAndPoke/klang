@@ -1133,7 +1133,7 @@ class StageSpec : StringSpec({
                 stage.front shouldBe FrontLight.off
                 stage.light(t = 62.0, house = 1.0, waiting = false)
                 stage.front shouldBe FrontLight(level = 1.0, strobing = false)
-                listOf(stage.frontLamp.x, stage.frontLamp.y, stage.frontLamp.z) shouldBe listOf(0.6, 0.25, 8.6)
+                listOf(stage.frontLamp.x, stage.frontLamp.y, stage.frontLamp.z) shouldBe listOf(0.0, 0.25, 8.6)
                 stage.look(StageLook.Mesh)
                 stage.shadowsAt shouldBe -10.5
             } finally {

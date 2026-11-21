@@ -161,11 +161,14 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
             place = null,
         )
 
-        // the lamp at the front: on the floor before the stage, looking up at the band and the wall, wide
+        // the lamp at the front: on the floor before the stage, looking up at the band and the wall, wide. In the
+        // stage's middle: it stood 0.6 m to the right, and as it throws everything some three times its way from the
+        // lamp, the band's shadows all stood nearly 2 m left of the band, the outermost on the left half out of the
+        // picture (the maintainer, 2026-11-21: "the shadows and ghosts are all shifted a bit to the left")
         val low = Three.addon.createSpotLight(
             color = 0xff8420, intensity = 95.0, distance = 40.0, angle = 0.62, penumbra = 0.5, decay = 1.0,
         )
-        low.position.set(0.6, 0.25, 8.6)
+        low.position.set(0.0, 0.25, 8.6)
         low.target.position.set(0.0, 2.6, -8.0)
         // the band's big shadows on the wall are the look: it casts at every quality
         low.castShadow = shadows.casts(null)
