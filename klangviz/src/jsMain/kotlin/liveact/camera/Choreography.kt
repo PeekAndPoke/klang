@@ -31,7 +31,7 @@ import kotlin.math.tan
 //   looks   34 bars on the total, then three looks in a row, three bars each, with a cut between them (close on one
 //           player, or the stage from another angle)
 //   arc     the same, but the nine bars are one look: the camera goes slowly part of the way round one player
-//   circle  24 bars on the total, then one slow flight right round the whole band, from the start position and
+//   circle  16 bars on the total, then one slow flight right round the whole band, from the start position and
 //           back to it, with no cut at all
 //   flight  20 bars on the total, then out backward over the audience to the mixing desk far back (the FOH), a
 //           while there, and back in; one of the two ways may be a cut instead (see Flight)

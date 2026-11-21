@@ -250,8 +250,8 @@ class View(
                 return if (subject is Subject.Angle && subject.angle === REVERSE) choreography.reverse(t) else choreography.shot(subject)
             }
 
-            is Hand.Circle -> if (u < 16 * bar) {
-                return choreography.circleBy(way = now.way, u = smoother(u / (16 * bar)), home = home)
+            is Hand.Circle -> if (u < HAND_CIRCLE * bar) {
+                return choreography.circleBy(way = now.way, u = smoother(u / (HAND_CIRCLE * bar)), home = home)
             }
 
             is Hand.Arc -> return choreography.arcBy(player = now.player, way = now.way, u = min(1.0, u / (9 * bar)))
@@ -389,6 +389,9 @@ class View(
     }
 
     private companion object {
+        /** How long the circle round the band takes by hand (the key a), in bars: slower than it was (16). */
+        const val HAND_CIRCLE = 22
+
         /** The keys for a fixed angle on the stage. */
         val ANGLE_KEYS: Map<String, Placement> =
             mapOf(

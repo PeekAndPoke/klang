@@ -13,10 +13,11 @@ import kotlin.math.floor
 // from the looks the camera has begun, so it has a spec (KLANG-00451). Where a look puts the camera, and how it moves
 // between them, the choreography works out.
 
-// A round in bars: where the looks begin, where the way back begins, where the circle begins
+// A round in bars: where the looks begin, where the way back begins, where the circle begins. The circle takes the
+// round's last 32 bars (it took 24: the maintainer, 2026-11-21, "the 360 around the band has to be a bit slower").
 internal const val FIRST = 34
 internal const val BACK = 43
-internal const val CIRCLE = 24
+internal const val CIRCLE = 16
 internal const val ROUND = 48
 
 /** The reverse total begins and ends, in bars. */
