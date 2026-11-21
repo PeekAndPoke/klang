@@ -168,7 +168,7 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
         val low = Three.addon.createSpotLight(
             color = 0xff8420, intensity = 95.0, distance = 40.0, angle = 0.62, penumbra = 0.5, decay = 1.0,
         )
-        low.position.set(0.0, 0.25, 8.6)
+        low.position.set(0.0, 0.25, FRONT_Z)
         low.target.position.set(0.0, 2.6, -8.0)
         // the band's big shadows on the wall are the look: it casts at every quality
         low.castShadow = shadows.casts(null)
@@ -226,6 +226,14 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
         if (read) {
             front.light.shadow.autoUpdate = true
         }
+    }
+
+    /**
+     * The front lamp [by] metres nearer to the band than it stands (0: where it stands): what it throws on the
+     * surface behind grows with it (the ghosts, [WorldLight.ghostApproach]).
+     */
+    fun approach(by: Double) {
+        front.light.position.z = FRONT_Z - by
     }
 
     /** How much the front lamp is on at [t], and whether it strobes; [waiting]: before the click. */
@@ -342,6 +350,9 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
     }
 
     private companion object {
+        /** Where the front lamp stands along z, in metres: on the floor before the stage. */
+        const val FRONT_Z = 8.6
+
         /** How bright the faint light everywhere is. */
         const val AMBIENT = 0.05
 

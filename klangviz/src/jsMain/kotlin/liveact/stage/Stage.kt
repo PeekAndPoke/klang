@@ -191,6 +191,9 @@ class Stage(
     /** The drummer's riser. */
     private val riser: Riser
 
+    /** How long the ghosts have been there, in seconds of the frames; 0 while there are none. */
+    private var ghostsSince = 0.0
+
     private val crowd: Crowd
 
     /** The night sky over the theatre; none with ?nosky. */
@@ -554,6 +557,13 @@ class Stage(
             ghost = if (drifts) GhostVisits.light(t = t, seed = show.seed) else variants.ghosts,
             turnSeconds = if (drifts) GhostVisits.TURN_SECONDS else WorldFade.TURN_SECONDS,
         )
+
+        // in the ghosts the front lamp creeps toward the band, so the ghosts grow ever so slightly; it goes back as
+        // they go
+        val ghosts = WorldLight.ghostShare(world)
+
+        ghostsSince = if (ghosts > 0.0) ghostsSince + dt else 0.0
+        lights.approach(by = WorldLight.ghostApproach(ghostsSince) * ghosts)
 
         this.front = front
         this.world = world

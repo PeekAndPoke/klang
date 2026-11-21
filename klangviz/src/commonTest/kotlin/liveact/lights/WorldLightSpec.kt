@@ -213,6 +213,23 @@ class WorldLightSpec : StringSpec({
         WorldLight.drift(t = 15.0, period = 30.0) shouldBe (1.0 plusOrMinus 1e-12)
     }
 
+    "in the ghosts the front lamp creeps toward the band: not at first, ever slower, never past its way" {
+        WorldLight.ghostApproach(since = 0.0) shouldBe 0.0
+        WorldLight.ghostApproach(since = -3.0) shouldBe 0.0
+        WorldLight.ghostApproach(since = Double.NaN) shouldBe 0.0
+
+        val early = WorldLight.ghostApproach(since = 5.0)
+        val later = WorldLight.ghostApproach(since = 10.0)
+        val late = WorldLight.ghostApproach(since = 15.0)
+
+        early shouldBeLessThan later
+        // ever slower: the second five seconds bring less than the first
+        (late - later) shouldBeLessThan (later - early)
+        WorldLight.ghostApproach(since = 1000.0) shouldBe (WorldLight.GHOST_APPROACH plusOrMinus 1e-9)
+        WorldLight.ghostApproach(since = WorldLight.GHOST_APPROACH_SECONDS) shouldBe
+            (WorldLight.GHOST_APPROACH * (1 - kotlin.math.exp(-1.0)) plusOrMinus 1e-12)
+    }
+
     "the drift at no time is the day; at no period, or none above 0, the period as made" {
         WorldLight.drift(t = Double.NaN) shouldBe near(0.0)
         WorldLight.drift(t = 60.0, period = Double.NaN) shouldBe WorldLight.drift(t = 60.0)

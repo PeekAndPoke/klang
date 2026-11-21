@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.lights
 import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.exp
 
 /**
  * What the time of day of the two worlds ([WorldTime]) does to the light (KLANG-00478, to be judged by eye; the
@@ -40,6 +41,10 @@ import kotlin.math.cos
  *   ([ghostDepth]); the light on the surfaces behind is dimmed.
  */
 object WorldLight {
+    /** How far the front lamp creeps toward the band in the ghosts, in metres, and in how many seconds to 1/e. */
+    const val GHOST_APPROACH = 0.9
+    const val GHOST_APPROACH_SECONDS = 16.0
+
     /** How long a round of the drift takes, in seconds: day to night and back in about four minutes. */
     const val DRIFT_PERIOD = 240.0
 
@@ -263,6 +268,22 @@ object WorldLight {
      * ghosts' pale light ([ghostPale]) in place of the cold world, the surface around them its deep ([ghostDepth]).
      */
     fun ghostShare(world: WorldTime): Double = world.on * world.ghosts
+
+    /**
+     * How far the front lamp has come toward the band, in metres, [since] seconds into the ghosts (the maintainer,
+     * 2026-11-21: "Can we make it that the ghosts 'grow' ever so slightly", "meaning the lamp needs to slowly get
+     * closer to the band"): the ghosts are the band's shadows by that lamp, so as it creeps closer they grow, the
+     * ones of who stands nearest to it the most. It comes [GHOST_APPROACH] at most, most of it in the first half
+     * minute, and ever slower. No time, or none yet: not at all.
+     */
+    fun ghostApproach(since: Double): Double {
+        // NaN-guard: no time is no way
+        if (since != since || since <= 0.0) {
+            return 0.0
+        }
+
+        return GHOST_APPROACH * (1.0 - exp(-since / GHOST_APPROACH_SECONDS))
+    }
 
     /**
      * How far the haze stays parted before the band's shadows in the ghosts, whatever the front lamp does, 0 to 1: a
