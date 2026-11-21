@@ -33,6 +33,15 @@ var dressLevel: Double
     }
 
 /**
+ * How far the braid's hoops are lifted off the floor, in metres of the figure as modelled. Unlifted they lay at 0.45,
+ * 0.90 and 1.35 m, and the one at 0.90 m read as a belt on Sirene's hips, where she is widest (the maintainer,
+ * 2026-11-20: "the 'belt' on her dress painting is sitting a little too low, which is most apparent from her back
+ * side view"). At her waist (a lift of 0.15) it was "way too far up"; it is a quarter of that way now, his measure:
+ * the hoops lie at 0.04 m, 0.49 m (the knee), 0.94 m (the belt, on the upper hip) and 1.38 m (the collar).
+ */
+private const val BRAID_LIFT = 0.0375
+
+/**
  * A pattern a body can wear: [key] names it (in the program's cache key), [glsl] is its value at the place `p`, an
  * expression; [before] are statements that work out what that expression needs, where one line is not enough.
  *
@@ -97,10 +106,12 @@ enum class ClothPattern(val key: String, val glsl: String, val inlay: String, va
 
     /**
      * Fine lines woven round the body, crossing each other in a braid between thin hoops: the engraving on a
-     * banknote or a watch's dial.
+     * banknote or a watch's dial. The hoops lie every 0.449 m, lifted by [BRAID_LIFT] so that one is the belt on the
+     * wearer's upper hip.
      */
     Braid(
         key = "braid",
+        before = "p.y -= $BRAID_LIFT;",
         glsl = "1.0 - smoothstep(0.10, 0.24, min(min(abs(sin(atan(p.z, p.x) * 5.0 + 1.6 * sin(p.y * 14.0))), " +
             "abs(sin(atan(p.z, p.x) * 5.0 - 1.6 * sin(p.y * 14.0)))), 1.6 * abs(sin(p.y * 7.0))))",
         inlay = "klLine(min(min(abs(sin(atan(p.z, p.x) * 5.0 + 1.6 * sin(p.y * 14.0))), " +

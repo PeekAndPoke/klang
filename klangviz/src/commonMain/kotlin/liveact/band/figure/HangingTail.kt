@@ -32,11 +32,16 @@ data class TailFeel(
 ) {
     companion object {
         /**
-         * A thick plait of lacquered hair (Rune's): it follows a turn of the head a little late, swings past once and
-         * is still within a second or so; tilted with the head it hangs a little, as a stiff plait does. Tuned by eye
-         * (2026-11-20).
+         * A thick plait of lacquered hair (Rune's): it follows a turn of the head a little late, swings past it once
+         * at most, barely, and is still within a second; tilted with the head it hangs a little, as a stiff plait
+         * does. First tuned by eye on her short tail (2026-11-20: hold 300, keep 12, calm 4.5, drag 0.5, weight 0.5,
+         * swing 0.6). On her long tail that moved "like a semi-inflated baloon ... i think the movement needs more
+         * damping" (the maintainer, the same day): the lower half was pulled so weakly that it swung slowly, once in
+         * nearly two seconds, and the calm was a quarter of what stops such a swing at once. Now the tip is pulled
+         * five times as strongly (it swings back in under a second), the calm is three times as strong (near what
+         * stops the swing at once all along the tail), and it may swing less far.
          */
-        val PLAIT: TailFeel = TailFeel(hold = 300.0, keep = 12.0, calm = 4.5, drag = 0.5, weight = 0.5, swing = 0.6)
+        val PLAIT: TailFeel = TailFeel(hold = 300.0, keep = 60.0, calm = 14.0, drag = 0.8, weight = 0.6, swing = 0.35)
     }
 }
 

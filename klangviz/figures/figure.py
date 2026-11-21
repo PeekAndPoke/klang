@@ -543,7 +543,8 @@ class Figure:
     """
     One character of the band. It says who it is ([key]: its file's name and its name in the show), its measures on
     the shared skeleton ([frame], see BASE) and how its body is shaped: [sculpt] (muscles, bust, face, chin), the
-    back of its head where it has one of its own ([back_of_head]) and its hair ([hair]). [build] makes the figure:
+    back of its head where it has one of its own ([back_of_head]), its eyes where they are not the plain ones ([eyes])
+    and its hair ([hair]). [build] makes the figure:
     the shared steps in their fixed order, the character's own between them.
     """
     key = None
@@ -556,6 +557,15 @@ class Figure:
     def back_of_head(self, w):
         """A skull of its own behind the head, as a mesh; None for the plain round head."""
         return None
+
+    def eyes(self, w, p, back):
+        """The eyes ([p]: the figure's measures, [back]: its own skull, or None): set on the head's real surface, each
+        in a shallow socket pressed into it. A head that brings its eyes with it (head.py) does nothing here."""
+        head = w.head
+        surface = [v.co.copy() for v in w.body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
+        if back:
+            surface += [v.co.copy() for v in back.data.vertices]
+        add_eyes(w.body, p, head, w.hs, surface, [w.body] + ([back] if back else []))
 
     def hair(self, w):
         """Hair joined to the body, after the eyes."""
@@ -580,11 +590,7 @@ class Figure:
         self.sculpt(w)
         # a skull of its own, where one is worn, before the eyes: they have to find the forehead it makes
         back = self.back_of_head(w)
-        head = w.head
-        surface = [v.co.copy() for v in body.data.vertices if (v.co - head.pos).length < 2.2 * head.radius]
-        if back:
-            surface += [v.co.copy() for v in back.data.vertices]
-        add_eyes(body, p, head, w.hs, surface, [body] + ([back] if back else []))
+        self.eyes(w, p, back)
         if back:
             join_into(body, back)
         self.hair(w)
