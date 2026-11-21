@@ -45,7 +45,8 @@ object MeetLayout {
 
     /**
      * From the middle to the dark surface behind the mesh, which takes the shadows: 1.25 m behind the mesh, so 1.6 m
-     * behind the member, as far as the lamp is before them ([LAMP]): their shadow on it is twice their size.
+     * behind the member. With the lamp 2.8 m before them ([LAMP]) their shadow on it is a little over one and a half
+     * times their size.
      */
     const val BACK: Double = 3.35
 
@@ -56,11 +57,12 @@ object MeetLayout {
     const val FIXTURE: Double = 5.65
 
     /**
-     * From the middle to the lamp that casts the shadows, low before the front place: 1.6 m before the member. Nearer,
-     * the shadow grows larger than the designs have it (about twice the figure) and stretches up steeply (a low lamp
-     * close by throws what is high far higher); farther, it shrinks.
+     * From the middle to the lamp that casts the shadows, low before the front place: 2.8 m before the member. Nearer,
+     * the shadow grows and stretches up steeply (a low lamp close by throws what is high far higher); farther, it
+     * shrinks. It was 1.6 m before the member, the shadow twice the figure (the maintainer, 2026-11-21: "the shadows
+     * a bit too large, meaning the light is too close. Not the light visible on the floor but the rendering light").
      */
-    const val LAMP: Double = 6.55
+    const val LAMP: Double = 7.75
 
     /** How high the lamp that casts the shadows shines from: as low as a fixture's glowing top, in metres. */
     const val LAMP_HIGH: Double = 0.2
