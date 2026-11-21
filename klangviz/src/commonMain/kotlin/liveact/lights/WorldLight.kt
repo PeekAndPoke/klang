@@ -58,11 +58,18 @@ object WorldLight {
      */
     const val GHOST_GLOW = 2.4
 
-    /** How far the haze parts before the figures in the ghosts ([ghostClearing]): a veil stays. */
-    const val GHOST_CLEARING = 0.6
+    /**
+     * How far the haze parts before the figures in the ghosts ([ghostClearing]): a little, so the haze lies over the
+     * figures much as over the surface around them, and they stand in it as light in a haze (0.6 at first, which
+     * left them clear and flat against the haze).
+     */
+    const val GHOST_CLEARING = 0.3
 
-    /** How bright the figures in the ghosts' haze are, as a share of the colour's pale ([GhostLight.pale]). */
-    const val GHOST_PALE = 0.95
+    /**
+     * How bright the figures in the ghosts' haze are, as a share of the colour's pale ([GhostLight.pale]); the fence
+     * makes them brightest inside and dimmer at the edge and lower down (0.95 at first, for figures flat and full).
+     */
+    const val GHOST_PALE = 1.1
 
     /** How strongly the lacquer mirrors the ghosts' glow behind the band, as a share of the colour's glow ([roomSun]). */
     const val GHOST_ROOM = 0.9

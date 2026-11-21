@@ -44,8 +44,9 @@ import kotlin.math.PI
  * night and at ember the band's shadows on the surface behind become windows into a cold, moonlit world beyond it
  * ([beyond]): inside each shadow the surface shows a far land of hills under a night sky, seen with depth (it moves
  * against the surface as the camera moves); outside the shadows the surface stays as it is, and by night the lamps'
- * light on it, and half as much on the wires, leans cold and dims ([world], [WallLean]). In the ghosts the windows are
- * pale figures in the ghosts' colour, there all the time, and the surface around them glows in its deep ([world]).
+ * light on it, and half as much on the wires, leans cold and dims ([world], [WallLean]). In the ghosts the shadows are
+ * pale figures in the ghosts' colour, there all the time, light standing in the haze with soft edges ([GHOST]), and
+ * the surface around them glows in its deep ([world]).
  *
  * Hidden and shown again with [show] (the look turned over to the wall and back while the show plays: kept, so the
  * turn back costs no new materials). Everything it makes is in the scene and is freed with it, or with [dispose] where
@@ -73,13 +74,10 @@ class Fence(private val scene: Scene) {
     private val beyondShare = uniform(0.0)
 
     /**
-     * The ghosts ([world], [WorldLight.ghostShare]): how far the windows show the ghosts' pale light in place of the
-     * cold world, that light, and the deep the surface behind sends of its own.
+     * The ghosts ([world], [WorldLight.ghostShare]): how far the band's shadows show the ghosts' pale light ([GHOST])
+     * in place of the cold world's windows, that light, and the deep the surface behind sends of its own.
      */
     private val ghostShare = uniform(0.0)
-
-    /** How far around a place the band's shadow is read for its window, in metres: wider in the ghosts ([world]). */
-    private val windowEdge = uniform(WINDOW_EDGE)
     private val ghostPale = vec()
     private val ghostDepth = vec()
 
@@ -165,11 +163,10 @@ class Fence(private val scene: Scene) {
             shader.uniforms["uGhost"] = ghostShare
             shader.uniforms["uGhostPale"] = uniform(ghostPale)
             shader.uniforms["uGhostDepth"] = uniform(ghostDepth)
-            shader.uniforms["uWindowEdge"] = windowEdge
             shader.vertexShader = shader.vertexShader.withWorld()
             backLean.into(shader)
             shader.fragmentShader = shader.fragmentShader
-                .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\n$SUN_GLOW\n$STAINS\n$BEYOND")
+                .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vWorld;\n$SUN_GLOW\n$STAINS\n$BEYOND\n$GHOST")
                 .replaceFirst(
                     "#include <color_fragment>",
                     "#include <color_fragment>\nfloat stain = stains(vWorld.xy);\ndiffuseColor.rgb *= 0.55 + 0.6 * stain;",
@@ -179,8 +176,12 @@ class Fence(private val scene: Scene) {
                     "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uSunGlow * sunGlow(vWorld.xy) * (0.8 + 0.4 * stain);\n" +
                         "totalEmissiveRadiance += uGhostDepth * (0.7 + 0.6 * stain);\n" +
                         "if (uBeyond > 0.0) {\n" +
-                        "  vec3 ghost = uGhostPale * (0.55 + 0.7 * stain);\n" +
-                        "  totalEmissiveRadiance += uBeyond * windowAt(vWorld) * mix(beyond(vWorld), ghost, uGhost);\n" +
+                        "  if (uGhost < 1.0) {\n" +
+                        "    totalEmissiveRadiance += uBeyond * windowAt(vWorld) * beyond(vWorld) * (1.0 - uGhost);\n" +
+                        "  }\n" +
+                        "  if (uGhost > 0.0) {\n" +
+                        "    totalEmissiveRadiance += uBeyond * uGhost * ghostAt(vWorld, stain);\n" +
+                        "  }\n" +
                         "}",
                 )
         }
@@ -210,7 +211,6 @@ class Fence(private val scene: Scene) {
         backLean.world(world)
         wireLean.world(world = world, share = WIRE_LEAN)
         ghostShare.value = WorldLight.ghostShare(world)
-        windowEdge.value = WINDOW_EDGE + (GHOST_EDGE - WINDOW_EDGE) * WorldLight.ghostShare(world)
 
         val (pr, pg, pb) = WorldLight.ghostPale(world)
         val (dr, dg, db) = WorldLight.ghostDepth(world)
@@ -297,10 +297,22 @@ class Fence(private val scene: Scene) {
         private const val WINDOW_EDGE = 0.05
 
         /**
-         * In the ghosts, how far around the band's shadow is read instead, in metres: the figures' edges soft, so they
-         * glow rather than stand as cut-outs.
+         * How many readings of the front lamp's map each ring of a ghost takes ([GHOST]): its body and its aura, each
+         * this many.
          */
-        private const val GHOST_EDGE = 0.14
+        private const val GHOST_TAPS = 16
+
+        /**
+         * How far around the place the ghost's body is read, in metres at the place the map is read ([BAND_GAP] toward
+         * the lamp; on the surface some 1.3 times as far): its edge, soft over a few centimetres.
+         */
+        private const val GHOST_BODY = 0.035
+
+        /**
+         * How far around the place the ghost's aura is read, in metres as [GHOST_BODY]: how far inside a ghost is
+         * brightest (its thick parts more than its thin arms) and how far its glow reaches out into the haze.
+         */
+        private const val GHOST_AURA = 0.32
 
         /** The mesh and the surface: as wide as the wall was, and as high. */
         private const val WIDE = 60.0
@@ -416,10 +428,9 @@ void chainLink(vec2 p, out float cover, out vec3 n, out float rim, out float sha
         /**
          * The cold world beyond the surface, for a place of it (in the world): `windowAt` is how much the place lies in
          * the band's shadow from the front lamp, 0 to 1, read from the lamp's map [BAND_GAP] m toward the lamp (so the
-         * fence's posts open no window) and [WINDOW_EDGE] m around (a soft edge of a few millimetres on the surface; in
-         * the ghosts up to [GHOST_EDGE], softer);
-         * six readings of the map, only where the cold world shows at all. `beyond` is what the window shows, the
-         * light it sends: a night sky, silver blue at the horizon and deep blue higher up, with the glow of a moon high
+         * fence's posts open no window) and [WINDOW_EDGE] m around (a soft edge of a few millimetres on the surface);
+         * six readings of the map, only where the cold world shows at all (the ghosts read it their own way, [GHOST]).
+         * `beyond` is what the window shows, the light it sends: a night sky, silver blue at the horizon and deep blue higher up, with the glow of a moon high
          * to the left; far hills, 60 m behind the surface, dark blue, their ridges caught by the moon, mist lying in
          * the valley before them; nearer hills with a few bare trees, 18 m behind, nearly black. Where the ray from the camera through the place
          * meets each layer gives the depth: the land moves against the surface as the camera moves.
@@ -432,7 +443,6 @@ uniform float uBeyond;
 uniform float uGhost;
 uniform vec3 uGhostPale;
 uniform vec3 uGhostDepth;
-uniform float uWindowEdge;
 
 float lampHeldBack(vec3 at) {
   vec4 c = uFrontShadowMatrix * vec4(at, 1.0);
@@ -445,8 +455,8 @@ float lampHeldBack(vec3 at) {
 float windowAt(vec3 world) {
   vec3 toLamp = normalize(uFrontLamp - world);
   vec3 near = world + toLamp * ${BAND_GAP.toFixed(3)};
-  vec3 across = normalize(cross(toLamp, vec3(0.0, 1.0, 0.0))) * uWindowEdge;
-  vec3 up = normalize(cross(across, toLamp)) * uWindowEdge;
+  vec3 across = normalize(cross(toLamp, vec3(0.0, 1.0, 0.0))) * ${WINDOW_EDGE.toFixed(3)};
+  vec3 up = normalize(cross(across, toLamp)) * ${WINDOW_EDGE.toFixed(3)};
   float held = 2.0 * lampHeldBack(near) + lampHeldBack(near + across) + lampHeldBack(near - across) +
     lampHeldBack(near + up) + lampHeldBack(near - up);
   return smoothstep(0.15, 0.85, held / 6.0);
@@ -487,6 +497,48 @@ vec3 beyond(vec3 world) {
   float near = landAt(world, dir, 18.0, 1.3, 4.1, 1.4, above);
   light = mix(light, vec3(0.002, 0.003, 0.007) + vec3(0.04, 0.05, 0.07) * exp(min(above, 0.0) * 10.0), near);
   return 1.3 * light;
+}"""
+
+        /**
+         * The ghosts ([WorldLight.ghostShare]), for a place of the surface behind and its stain: `ghostAt` is the light
+         * the band's shadow sends there, as a figure of pale light standing in the haze. It reads the front lamp's map
+         * as [BEYOND] does ([BAND_GAP] m toward the lamp), but in two discs of [GHOST_TAPS] readings each, spread evenly
+         * (each turned on from the one before by the golden angle) and turned as a whole by a turn of its own for each
+         * pixel: the body, [GHOST_BODY] m around, gives the figure and its soft edge; the aura, [GHOST_AURA] m around,
+         * makes the thick parts brighter than the thin ones and glows out a little beyond the edge. Lower down the
+         * figure dims into the haze on the floor, and the surface's stains show through it.
+         *
+         * Why so many readings (the maintainer, 2026-11-21, "heavy aliasing around the bodies"): the windows' five
+         * readings in a cross, made wider for the ghosts, laid five copies of each figure over one another, a short
+         * way apart; each copy's edge was the map's own, hard at its points, and the light rose in steps of a sixth
+         * from one copy to the next. Sixteen readings over a disc rise in sixteenths, and the turn for each pixel breaks
+         * what is left of the copies into a fine grain.
+         */
+        private val GHOST = """
+vec3 ghostAt(vec3 world, float stain) {
+  vec3 toLamp = normalize(uFrontLamp - world);
+  vec3 near = world + toLamp * ${BAND_GAP.toFixed(3)};
+  vec3 across = normalize(cross(toLamp, vec3(0.0, 1.0, 0.0)));
+  vec3 up = normalize(cross(across, toLamp));
+  // the turn for this pixel (interleaved gradient noise), and the golden angle the readings turn on by
+  float turn = 6.2831853 * fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  vec2 dir = vec2(cos(turn), sin(turn));
+  mat2 golden = mat2(-0.7373688, 0.6754903, -0.6754903, -0.7373688);
+  float body = 0.0;
+  float aura = 0.0;
+  for (int i = 0; i < $GHOST_TAPS; i++) {
+    float r = sqrt((float(i) + 0.5) / ${GHOST_TAPS}.0);
+    body += lampHeldBack(near + (across * dir.x + up * dir.y) * (r * ${GHOST_BODY.toFixed(3)}));
+    aura += lampHeldBack(near + (across * dir.y - up * dir.x) * (r * ${GHOST_AURA.toFixed(3)}));
+    dir = golden * dir;
+  }
+  body /= ${GHOST_TAPS}.0;
+  aura /= ${GHOST_TAPS}.0;
+  float shape = smoothstep(0.1, 0.9, body);
+  float inside = smoothstep(0.2, 0.9, aura);
+  float rise = 0.5 + 0.5 * smoothstep(0.2, 3.0, world.y);
+  float light = shape * (0.45 + 0.55 * inside) * rise * (0.6 + 0.6 * stain) + 0.3 * aura * aura;
+  return uGhostPale * light;
 }"""
 
         /**
