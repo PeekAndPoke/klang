@@ -170,8 +170,9 @@ class StageSpec : StringSpec({
                 stage.light(t = 62.0, house = 1.0, waiting = false)
 
                 // the sky goes with the camera, once the stage is told where the camera stands this frame: its
-                // stars, its moon and its shooting star are the one group of three in the scene
-                val sky = scene.children.single { it.children.size == 3 && it.children.none { child -> child.isLight } }
+                // stars, its moon and its shooting star are the one group in the scene that holds stars (the riser is
+                // a group of three too, of stone)
+                val sky = scene.children.single { it.children.size == 3 && it.children.any { child -> child.asDynamic().isPoints == true } }
 
                 camera.position.set(4.0, 11.0, 46.0)
                 (sky.position.x == 4.0) shouldBe false
