@@ -40,11 +40,13 @@ import kotlin.math.sqrt
  *
  * What a round does (see [Kind]): most go from point to point in the front of the stage; some walk along its front
  * edge in one long arc (the maintainer, 2026-11-19: "a long arc along the edge of the stage near the audience"),
- * since 2026-11-21 a little nearer the audience and much wider, from between the bass player and the guitarist to
- * short of the marimba (the maintainer: "Sirene needs to walk further towrds the crowd a bit and take a wider angle
- * along the crowd", see [EDGE_LEFT]); in about two of five she walks up to the camera, stands there a moment and
- * goes back, and in some of those she comes on until her face nearly fills the wide shot, as far as [closest] (the
- * maintainer, 2026-11-19: "'frighteningly close' to the total camera sometimes").
+ * since 2026-11-21 one big loop before the whole band, out past the guitarist on either side and some 1.5 m toward
+ * the audience in its middle, out of the lit area on purpose (the maintainer, 2026-11-21: "Sirene needs to walk
+ * further towrds the crowd a bit and take a wider angle along the crowd", and, the first step far too small, with
+ * a loop drawn over the stage: "She needs to step out of the lit area and walk much wider... something like the
+ * picture attached maybe", see [EDGE_LEFT]); in about two of five she walks up to the camera, stands there a moment
+ * and goes back, and in some of those she comes on until her face nearly fills the wide shot, as far as [closest]
+ * (the maintainer, 2026-11-19: "'frighteningly close' to the total camera sometimes").
  *
  * Places are off her place, in her sizes: x across the stage, z toward the audience. [closest]: the nearest she may
  * come to the camera, off her place in her sizes (who knows the camera works it out); she never passes it.
@@ -242,20 +244,22 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
             }
         }
 
-        // the round's pace sets how tight she may bend: on the long way to the camera she walks faster, and bends
-        // wider. Worked out three times over, as the bends make the way longer.
+        // the round's pace sets how tight she may bend: on the long way to the camera and round the band's front
+        // (since 2026-11-21, when the edge's loop grew, see [EDGE_LEFT]) she walks faster, and bends wider. Worked
+        // out three times over, as the bends make the way longer.
         var radius = RADIUS
         var legs = emptyList<StrollLeg>()
         var walking = window
         var total = 0.0
-        val passes = if (kind == Kind.Camera || kind == Kind.Close) 3 else 1
+        val widens = kind != Kind.Plain
+        val passes = if (widens) 3 else 1
 
         repeat(passes) {
             legs = ways(radius).map { StrollLeg(it) }
             walking = window - pauses(legs.size).sum()
             total = legs.sumOf { it.length }
 
-            if (kind == Kind.Camera || kind == Kind.Close) {
+            if (widens) {
                 radius = min(RADIUS_MOST, max(RADIUS, RADIUS_PER_PACE * total / walking))
             }
         }
@@ -390,7 +394,7 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
 
     /**
      * An edge round's ways: out to one end of the front edge (which end, the roll says), along the whole width in
-     * one long arc that bulges a little toward the audience, with no standstill on it, and home. She stands at
+     * one long arc that bulges toward the audience ([BULGE]), with no standstill on it, and home. She stands at
      * each end facing the audience: at the first a quarter turn before the arc, at the last a quarter turn after it.
      */
     private fun edgeWays(round: Int, radius: Double): List<List<Pose>> {
@@ -564,43 +568,51 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
 
         /**
          * The share of the other rounds that walk the edge, where the round has time for it at [EDGE_PACE]. Since
-         * the arc grew wider (2026-11-21, see [EDGE_LEFT]) only the rounds of 61 and 69 seconds have that time, and
-         * the share went from 0.55 to 0.7, so about as many rounds walk the edge as before (one in five).
+         * the edge became the big loop (2026-11-21, see [EDGE_LEFT]) only the rounds of 69 seconds have that time,
+         * and every one of them that goes to no camera walks it: some 3 rounds in 20 (it was 0.55 of the rounds
+         * that had the time, and 0.7 for the first, smaller widening the same day, about one in five).
          */
-        internal const val EDGE_SHARE = 0.7
+        internal const val EDGE_SHARE = 1.0
 
         /**
          * The fastest pace an edge round may ask of her; a round that would need more is a plain one. 0.15 until
-         * the arc grew wider (2026-11-21): the way out to one end, along to the other and home is now some 6 of
-         * her sizes, which the rounds of 61 and 69 seconds walk at 0.15 to 0.2, still a slow stroll (0.37 of her
-         * size a second at the most).
+         * 2026-11-21, then 0.2 for a first widening; since the big loop (see [EDGE_LEFT]) the way out to one end,
+         * along the loop and home is some 16.5 of her sizes, which a round of 69 seconds walks at 0.40 to 0.41 of
+         * her size a second, 0.76 at the most: a relaxed walk, faster than a stroll, as the walks to the camera. A
+         * round of 61 seconds would need 0.5, beyond a calm walk.
          */
-        internal const val EDGE_PACE = 0.2
+        internal const val EDGE_PACE = 0.41
 
         /**
-         * The ends of the front edge's arc, where she stands before it and after it (the maintainer, 2026-11-21:
-         * "Sirene needs to walk further towrds the crowd a bit and take a wider angle along the crowd"; they were
-         * -0.25 and 0.95, within the widths of a plain round). Wider than a plain round's stops, as on the arc she
-         * passes before the others: to the left she stands between the bass player and the guitarist in the total's
-         * sight (some 1.97 m left of the stage's middle), to the right short of the marimba (some 0.57 m right of
-         * the middle). Further right she would stand before the marimba, or, past it, need a pace no round has.
+         * The ends of the front edge's loop, where she stands before it and after it (the maintainer, 2026-11-21:
+         * "Sirene needs to walk further towrds the crowd a bit and take a wider angle along the crowd", and then, with
+         * a loop drawn over the stage: "She needs to step out of the lit area and walk much wider... something like
+         * the picture attached maybe"). They were -0.25 and 0.95, within the widths of a plain round, and -1.3 and
+         * 1.3 for a first widening the same day, which was far too small. Now the loop goes out past the guitarists
+         * on both sides: she stands some 3.64 m left of the stage's middle and 3.22 m right of it, 3.2 to 3.4 m
+         * before it, beyond both guitarists in the total's sight, so she hides neither. At the left end she stands
+         * outside the total's picture (at 16:9 one shoulder at its edge), at the right end inside it at 16:9 (half
+         * out at 16:10, out at 4:3).
          */
-        internal const val EDGE_LEFT = -1.3
-        internal const val EDGE_RIGHT = 1.3
+        internal const val EDGE_LEFT = -3.0
+        internal const val EDGE_RIGHT = 4.0
 
         /**
-         * How near the audience the edge's arc runs: from [EDGE_NEAR], up to [EDGE_SPREAD] more (nearer since
-         * 2026-11-21, see [EDGE_LEFT]: it was from 0.5). So she comes to some 3.3 m before the stage's middle,
-         * still some 10 m short of the stage's front edge (`StageEdge`, 13.5 m before it).
+         * How near the audience the edge's loop runs at its ends: from [EDGE_NEAR], up to [EDGE_SPREAD] more (since
+         * 2026-11-21, see [EDGE_LEFT]: it was from 0.5, then 0.75). Its middle comes [BULGE] nearer still.
          */
-        internal const val EDGE_NEAR = 0.75
+        internal const val EDGE_NEAR = 1.1
         internal const val EDGE_SPREAD = 0.1
 
         /** The quarter turns into the edge's arc and out of it: their radius. */
         internal const val EDGE_TURN = 0.12
 
-        /** How far the edge's arc bulges toward the audience in its middle. */
-        internal const val BULGE = 0.08
+        /**
+         * How far the edge's loop bulges toward the audience in its middle (since 2026-11-21, see [EDGE_LEFT]: it was
+         * 0.08): she comes to some 4.75 m before the stage's middle, as the maintainer drew it, where the total's
+         * picture still has her feet, and some 8.7 m short of the stage's front edge (`StageEdge`, 13.5 m before it).
+         */
+        internal const val BULGE = 1.4
 
         /** The arc's points, about this far apart. */
         internal const val EDGE_EVERY = 0.25

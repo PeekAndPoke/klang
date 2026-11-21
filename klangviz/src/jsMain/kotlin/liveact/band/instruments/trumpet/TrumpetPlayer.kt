@@ -425,8 +425,10 @@ class TrumpetPlayer(
         // dances a little as she goes: the hips dip on every beat, sway onto the standing leg, turn with the legs and
         // drop on the swinging leg's side, as much as her gait and the kind of walk have them (see [HipMotion]); the
         // shoulders turn against the legs, the arms swing wide
+        // (a step no longer than 0.8 of her size: it was 0.5, and on the big loop along the front and on her way to
+        // the camera, where she walks faster, her feet covered only two thirds of the ground and she glided)
         val stride = beat / 4
-        val step = min(0.5 * s, walk.speed * 0.6 * 4 * 60 / bpm)
+        val step = min(0.8 * s, walk.speed * 0.6 * 4 * 60 / bpm)
         val swing = cos(2 * PI * stride)                        // 1 as the left foot lands ahead
         val dip = going * (0.5 + 0.5 * cos(2 * PI * beat))      // 1 on the beat
         val motion = hips ?: strollHips(rig = rig, stride = stride, going = going, amount = gait.hipsWith(walk.hips))

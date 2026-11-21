@@ -235,9 +235,10 @@ class StrollRouteSpec : StringSpec({
     }
 
     "she stays in the front of the stage, where she strolls, but on the way to the camera" {
-        // a plain round across from -0.7 to 1.35 of her size, an edge round from -1.36 to 1.36 (wider since
-        // 2026-11-21: they were both -0.55 to 1.1); toward the audience from 0.2 behind her place to 0.9 before it,
-        // and on the front edge's arc up to 1.15 (they were 0.7 and 0.9)
+        // a plain round across from -0.7 to 1.35 of her size (since 2026-11-21: it was -0.55 to 1.1), toward the
+        // audience from 0.2 behind her place to 0.9 before it (it was 0.7); an edge round, the big loop before the
+        // band (since 2026-11-21: it was -0.55 to 1.1 and up to 0.9), from -3.05 to 4.05 across and from 0.5 behind
+        // her place (its bends, wider at its pace) to 2.65 before it
         everyRoute { s, where ->
             for ((i, t) in s.times.withIndex()) {
                 val p = s.at[i]
@@ -251,10 +252,10 @@ class StrollRouteSpec : StringSpec({
                     }
 
                     Kind.Edge -> withClue("$where, $t s, an edge round: at $p") {
-                        p.x shouldBeGreaterThan -1.36
-                        p.x shouldBeLessThan 1.36
-                        p.z shouldBeGreaterThan -0.2
-                        p.z shouldBeLessThan 1.15
+                        p.x shouldBeGreaterThan -3.05
+                        p.x shouldBeLessThan 4.05
+                        p.z shouldBeGreaterThan -0.5
+                        p.z shouldBeLessThan 2.65
                     }
 
                     Kind.Camera, Kind.Close -> Unit
@@ -312,11 +313,12 @@ class StrollRouteSpec : StringSpec({
         for ((route, round) in edges) {
             val (from, to, walk) = legsOf(route, round)[1]
 
-            // (the maintainer, 2026-11-21: "Sirene needs to walk further towrds the crowd a bit and take a wider
-            // angle along the crowd": it went across 1.2 of her size from 0.37 before her place, now 2.6 from 0.62)
-            withClue("round $round: the arc goes across the width she strolls in, and wider") {
-                abs(walk.leg.last.x - walk.leg.first.x) shouldBeGreaterThan 2.4
-                min(walk.leg.first.z, walk.leg.last.z) shouldBeGreaterThan 0.6
+            // (the maintainer, 2026-11-21: "She needs to step out of the lit area and walk much wider... something
+            // like the picture attached maybe": it went across 1.2 of her size from 0.37 before her place, then 2.6
+            // from 0.62, now 7 from 0.96)
+            withClue("round $round: the loop goes across the whole band's front") {
+                abs(walk.leg.last.x - walk.leg.first.x) shouldBeGreaterThan 6.5
+                min(walk.leg.first.z, walk.leg.last.z) shouldBeGreaterThan 0.95
             }
 
             // all through its middle three fifths (the ease starts and ends it slowly) she walks
@@ -332,12 +334,13 @@ class StrollRouteSpec : StringSpec({
         }
     }
 
-    "over many seeds and an hour, she stays on the stage, clear of the others, and walks the wider edge one round in five" {
+    "over many seeds and an hour, she stays on the stage, clear of the others, and walks the big loop in 3 rounds of 20" {
         // (the maintainer, 2026-11-21: "Sirene needs to walk further towrds the crowd a bit and take a wider angle
         // along the crowd") Every 0.1 s of the first 60 rounds, for 45 seeds, in metres on the stage: she stays
-        // 1.1 m inside the stage's edge or more (0.6 m and the mirror's fade), 1.3 m from the others' places
-        // (some 1.44 m at the nearest, the guitarist to her left) and 1 m before the marimba (1.37 m).
-        // The edge rounds go out to both ends of the wider arc, and walk it in 9 to 17 rounds of 60.
+        // 1.1 m inside the stage's edge or more (0.6 m and the mirror's fade), 0.95 m from the others' places
+        // (some 1.01 m at the nearest, the guitarist to her left, as the maintainer's drawn loop passes him at
+        // 1.02 m; it was 1.3 m before the big loop, 2026-11-21) and 1 m before the marimba (1.03 m).
+        // The edge rounds go out to both ends of the loop, and walk it in 9 rounds of 60 (8 to 10 allowed).
         for (seed in (-20..20) + listOf(42, 67, 1234, -1234)) {
             val route = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST)
             val end = route.startOf(60)
@@ -352,7 +355,7 @@ class StrollRouteSpec : StringSpec({
 
                 withClue("seed $seed, $t s, a ${route.roundOf(route.roundAt(t)).kind} round: at $x, $z m") {
                     StageEdge.distance(x = x, z = z) shouldBeGreaterThan 0.6 + StageEdge.FADE
-                    OTHERS.minOf { (ox, oz) -> hypot(x - ox, z - oz) } shouldBeGreaterThan 1.3
+                    OTHERS.minOf { (ox, oz) -> hypot(x - ox, z - oz) } shouldBeGreaterThan 0.95
                     fromLine(x = x, z = z, a = MARIMBA_FRONT.first, b = MARIMBA_FRONT.second) shouldBeGreaterThan 1.0
                 }
 
@@ -367,7 +370,7 @@ class StrollRouteSpec : StringSpec({
             val edges = (0 until 60).count { route.roundOf(it).kind == Kind.Edge }
 
             withClue("seed $seed: the edge rounds of the first 60 ($edges), as far left ($left) and right ($right) as they go") {
-                (edges in 9..17) shouldBe true
+                (edges in 8..10) shouldBe true
                 left shouldBeLessThan StrollRoute.EDGE_LEFT + 0.05
                 right shouldBeGreaterThan StrollRoute.EDGE_RIGHT - 0.05
             }
