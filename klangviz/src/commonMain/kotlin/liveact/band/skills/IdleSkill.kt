@@ -51,16 +51,7 @@ const val IDLE_MARGIN: Double = 1.0
  * and a margin of at most nine (see `MarimbaPlayer.idleMargin`), 13.5 s. What it does with the figure is the pose's
  * own.
  */
-sealed interface IdleSkill : Mannerism {
-    /** When it may be used, and how much. */
-    val timing: ChanceInSlots
-
-    /** Where its rolls are taken from, as for a timed skill (see [TimedSkill.rolls]): each kind its own. */
-    val rolls: Double
-
-    /** The skill's own chance, from the member's [roll]: the same, its indices moved on by [rolls]. */
-    fun own(roll: (Double) -> Double): (Double) -> Double = { index -> roll(index + rolls) }
-}
+sealed interface IdleSkill : Mannerism, ChanceSkill
 
 /** The free hand (a string player's strumming hand) goes to the side of the head, scratches there a little, and comes back. */
 data class HeadScratch(override val timing: ChanceInSlots) : IdleSkill {

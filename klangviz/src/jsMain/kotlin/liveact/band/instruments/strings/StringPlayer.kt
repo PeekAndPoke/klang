@@ -163,11 +163,6 @@ class StringPlayer(
     /** When the player straightens up from the instrument, where their sheet has it; never without. */
     private val straighten: Straighten? = skills.filterIsInstance<Straighten>().firstOrNull()
 
-    /**
-     * When this player's stretches of straightening up begin, in seconds into the song: each player's at another
-     * moment, so they do not all rise together, and nobody in the song's first seconds.
-     */
-    private val straightenFrom: Double = straighten?.let { it.every * (0.3 + 0.7 * show.own(0, seed + 32.5)) } ?: 0.0
     private val s = rig.s
 
     /** The instrument on the strap (see [StrungInstrument]). */
@@ -356,7 +351,7 @@ class StringPlayer(
         // now and then the player straightens up from the instrument: the back comes up (a little past upright, and
         // not forward of where a player who leans back already is), the chest opens, the head lifts and looks out
         val up = show.switches.double(Switch.Straight)?.coerceIn(0.0, 1.0)
-            ?: straighten?.at(t - straightenFrom) { stretch, purpose -> show.own(stretch * 3 + purpose, seed + 31.5) }
+            ?: straighten?.at(t = t, roll = { index -> show.own(index, seed) })
             ?: 0.0
         val straight = min(lean, 0.0) - 0.05
 

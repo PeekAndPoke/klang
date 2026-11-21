@@ -549,6 +549,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         eyeContact(
             show = show,
+            timing = props.score.eyeContact,
             rigs = now.band.rigs,
             her = her,
             herNotes = now.band.playsAt(her),

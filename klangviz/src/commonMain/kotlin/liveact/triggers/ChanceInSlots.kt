@@ -9,8 +9,8 @@ import io.peekandpoke.klang.viz.liveact.smooth
 import kotlin.math.floor
 
 /**
- * By chance, in slots of time: a [Trigger], and how much what it triggers is in use (see [inUse]). The looks and the
- * idle skills on the members' sheets are equipped with it.
+ * By chance, in slots of time: a [Trigger], and how much what it triggers is in use (see [inUse]). The looks, the idle
+ * skills and the straightening up on the members' sheets are equipped with it, and the eye contact in a song's score.
  *
  * The show's time is cut into slots of [every] seconds, and each slot is one chance, of which [chance] (0 to 1) are
  * taken. A use begins at the earliest [earliest] seconds into its slot; the starts spread over the slot but for

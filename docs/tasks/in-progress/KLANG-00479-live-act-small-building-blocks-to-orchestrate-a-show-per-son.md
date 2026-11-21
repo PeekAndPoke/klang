@@ -141,6 +141,10 @@ that and can be taken in any order, or side by side. Step 9 can begin thin right
 
 ## History
 
+- 2026-11-21: step 2 done. Straightening up and the eye contact are on `ChanceInSlots` (the maintainer: "yes the
+  moments may change"); the eye contact's timing is the score's (`Score.eyeContact`), its pairs stay; a contact no
+  longer hides its first second. Stills where neither runs are unchanged; how often and how long stayed (106 and
+  103 contacts, 248 and 239 straightenings over five seeds of 600 s).
 - 2026-11-21: step 2, first part. One vocabulary (`triggers/`: `Trigger`, `ChanceInSlots`, `BeforePhrase`,
   `PartPause`); the count-in, the crossed mallets and the idles are on it; straightening up is a skill on the three
   string players' sheets. Twenty-one stills before and after agree. Open: eye contact and straightening up keep

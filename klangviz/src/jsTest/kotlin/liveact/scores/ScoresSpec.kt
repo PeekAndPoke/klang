@@ -13,6 +13,9 @@ import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_BACK
+import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_LATE_LEAST
+import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_MEET
 
 /** Every song's score. */
 private val SCORES = mapOf("Der Schmetterling" to DER_SCHMETTERLING)
@@ -49,6 +52,15 @@ class ScoresSpec : StringSpec({
                     entrance.start shouldBeLessThan entrance.end
                     entrance.end shouldBeLessThanOrEqual 0.0
                 }
+            }
+        }
+    }
+
+    "an eye contact has room in its rise for the glance and the answer, and in its fall for the way back" {
+        for ((name, score) in SCORES) {
+            withClue(name) {
+                score.eyeContact.rise shouldBeGreaterThanOrEqual CONTACT_MEET + CONTACT_LATE_LEAST
+                score.eyeContact.fall shouldBeGreaterThanOrEqual CONTACT_BACK
             }
         }
     }

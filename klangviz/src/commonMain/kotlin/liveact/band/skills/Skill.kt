@@ -28,26 +28,31 @@ import kotlin.math.min
  * there were skills, and it stands first on every sheet that has it.
  *
  * Not every skill is timed: the crossed mallets ([CrossedMallets]) and the count in ([CountIn]) go by the member's
- * part, an idle skill ([IdleSkill]) by chance within the pauses of the part, the straightening up ([Straighten]) by a
- * chance of its own. The idle ones rank among themselves in the sheet's order. When a skill happens is said in one
- * vocabulary (see `Trigger`).
+ * part, an idle skill ([IdleSkill]) by chance within the pauses of the part. The idle ones rank among themselves in
+ * the sheet's order. When a skill happens is said in one vocabulary (see `Trigger`).
  */
 sealed interface Skill
 
-/** A skill used now and then by chance, at the moments its [timing] gives (see [ChanceInSlots]). */
-sealed interface TimedSkill : Skill {
+/**
+ * A skill used now and then by chance, at the moments its [timing] gives (see [ChanceInSlots]), with the member's own
+ * chance: the looks ([TimedSkill]), the idle skills ([IdleSkill]) and the straightening up ([Straighten]).
+ */
+sealed interface ChanceSkill : Skill {
     /** When it is used, and how much. */
     val timing: ChanceInSlots
 
     /**
      * Where its rolls are taken from: added to every index it asks the member's chance for (see [own]). Each kind
-     * of timed skill has its own, so two kinds never take the same roll for the same slot.
+     * has its own, so two kinds never take the same roll for the same slot.
      */
     val rolls: Double
 
     /** The skill's own chance, from the member's [roll]: the same, its indices moved on by [rolls]. */
     fun own(roll: (Double) -> Double): (Double) -> Double = { index -> roll(index + rolls) }
 }
+
+/** A look, used now and then by chance (see [ChanceSkill]): the head turns to where it goes (see `lookAt`). */
+sealed interface TimedSkill : ChanceSkill
 
 /**
  * Eye contact: the member returns a look another member offers (the pairs and their moments: `eyeContact`). One

@@ -11,7 +11,8 @@ package io.peekandpoke.klang.viz.liveact.triggers
  * song, so any moment of the show gives the same answer whenever it is asked for, and a still can be taken again.
  *
  * The kinds in use:
- * - By chance, in slots of time ([ChanceInSlots]): the looks and the idle skills on the members' sheets.
+ * - By chance, in slots of time ([ChanceInSlots]): the looks, the idle skills and the straightening up on the
+ *   members' sheets, and the band's eye contact in the score.
  * - By the part, before a phrase ([BeforePhrase]): the count in.
  *
  * What goes by the part goes by its pauses ([PartPause]), each with its own numbers: a phrase begins after a pause
@@ -24,9 +25,5 @@ package io.peekandpoke.klang.viz.liveact.triggers
  *   kept in mind, not read yet).
  * - Always: the breath, the eyes' waver, the nod.
  * - On a cue: a named moment of a song, written in its score (step 9).
- *
- * Two that happen by chance in slots still draw their chances by formulas of their own, older than [ChanceInSlots]:
- * the eye contact (`eyeContact`) and the straightening up (`Straighten`). On [ChanceInSlots] they would happen at
- * other moments, so they wait for the maintainer's word (KLANG-00479).
  */
 sealed interface Trigger

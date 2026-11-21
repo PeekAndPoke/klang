@@ -17,8 +17,8 @@ private val CAST = Cast(
     marimba = NoteSeat(player = Player.Wucht, plays = "Marimba", tag = "mallets"),
     trumpet = NoteSeat(player = Player.Beben, plays = "Trumpet", tag = "horn"),
     strings = listOf(
-        StringSeat(player = Player.Sirene, plays = "Bass", design = Bass.DESIGN, tags = listOf("low"), riffStep = 0.5, riffLow = 28),
-        StringSeat(player = Player.Skalpell, plays = "Guitar", design = Guitar.DESIGN, tags = listOf("g1", "g2"), riffStep = 0.25, riffLow = 52),
+        StringSeat(player = Player.Sirene, plays = "Bass", design = Bass.B, tags = listOf("low"), riffStep = 0.5, riffLow = 28),
+        StringSeat(player = Player.Skalpell, plays = "Guitar", design = Guitar.A, tags = listOf("g1", "g2"), riffStep = 0.25, riffLow = 52),
     ),
     seldom = listOf(Player.Beben),
 )

@@ -18,6 +18,7 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.bass.Bass
 import io.peekandpoke.klang.viz.liveact.band.instruments.guitar.Guitar
 import io.peekandpoke.klang.viz.liveact.song.DrumTags
 import io.peekandpoke.klang.viz.liveact.stage.Stage
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * Der Schmetterling's score: the band Notstrom plays it, each on the instrument and the part named here, from the
@@ -41,7 +42,7 @@ val DER_SCHMETTERLING: Score = Score(
             StringSeat(
                 player = Player.Beben,
                 plays = "Bass",
-                design = Bass.DESIGN,
+                design = Bass.A,
                 tags = listOf("bass"),
                 riffStep = 0.5,
                 riffLow = 28,
@@ -49,7 +50,7 @@ val DER_SCHMETTERLING: Score = Score(
             StringSeat(
                 player = Player.Skalpell,
                 plays = "Lead guitar",
-                design = Guitar.DESIGN,
+                design = Guitar.A,
                 tags = listOf("guitar1"),
                 riffStep = 0.25,
                 riffLow = 52,
@@ -57,12 +58,11 @@ val DER_SCHMETTERLING: Score = Score(
             StringSeat(
                 player = Player.Klaue,
                 plays = "Rhythm guitar",
-                design = Guitar.DESIGN,
+                design = Guitar.C,
                 // the rhythm guitar's two parts
                 tags = listOf("guitar2", "guitar3"),
                 riffStep = 0.125,
                 riffLow = 40,
-                outline = Guitar.SINGLE_CUTAWAY,
             ),
         ),
         // the marimba and the trumpet rest for long stretches of this song
@@ -90,5 +90,19 @@ val DER_SCHMETTERLING: Score = Score(
             Player.Rune to Entrance(fromX = 8.5, fromZ = 0.9, start = -10.5, end = -4.8),
             Player.Sirene to Entrance(fromX = -8.5, fromZ = 2.9, start = -8.5, end = -2.4),
         ),
+    ),
+    // two of them look at each other: a chance every 11 s, two in five taken. Up to 4.3 s from the first one's glance
+    // until both look (the other answers one to three seconds late), the look shared 0.7 to 1.6 s, and both back at
+    // their playing 2.15 s after the first looks away
+    eyeContact = ChanceInSlots(
+        every = 11.0,
+        chance = 0.4,
+        cooldown = 0.0,
+        least = 2.85,
+        most = 3.75,
+        earliest = 0.2,
+        reserve = 9.8,
+        rise = 4.3,
+        fall = 2.15,
     ),
 )

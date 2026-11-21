@@ -10,18 +10,16 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.Skill
+import io.peekandpoke.klang.viz.liveact.band.skills.contactAt
 import io.peekandpoke.klang.viz.liveact.band.skills.turning
 import io.peekandpoke.klang.viz.liveact.hash01
-import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 import io.peekandpoke.klang.viz.liveact.valueNoise
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.floor
-import kotlin.math.max
 import kotlin.math.sin
 
 // What makes them alive apart from playing and moving with the beat: eye contact, the eyes' wavering glow, breath.
@@ -29,10 +27,9 @@ import kotlin.math.sin
 // each frame is worked out from the time alone.
 
 /**
- * Eye contact: every now and then two of them look at each other for a few seconds, then back to their playing.
- * Chance picks the moment and the pair, the same at the same place in the song. Pairs that have something to say
- * to each other: the rhythm section, neighbours, the frontwoman and whoever she passes. Each of the two turns only
- * with the skill ([EyeContact]): one without it does not answer, the other still offers the look.
+ * The pairs that have something to say to each other in an eye contact (see [contactAt]): the rhythm section,
+ * neighbours, the frontwoman and whoever she passes. Each of the two turns only with the skill ([EyeContact]): one
+ * without it does not answer, the other still offers the look.
  */
 val PAIRS: List<Pair<Player, Player>> = listOf(
     Player.Beben to Player.Wucht,
@@ -47,99 +44,33 @@ val PAIRS: List<Pair<Player, Player>> = listOf(
     Player.Skalpell to Player.Klaue,
 )
 
-/** How often eye contact may happen: a chance every [every] seconds, of which [chance] are taken. */
-data class ContactTiming(val every: Double, val chance: Double)
-
-/** The timing of eye contact. */
-val CONTACT = ContactTiming(every = 11.0, chance = 0.4)
+/** The salt of the band's chance for the eye contact: the show's chance under it (a member's own is under their seed). */
+private const val CONTACT_SALT = 311.7
 
 /**
- * Who looks at whom: the [first] starts it, the [second] answers. [wFirst], [wSecond]: how far each head has turned
- * toward the other (0 to 1); [nodFirst], [nodSecond]: the small nod each gives as their eyes meet.
- */
-private class Contact(
-    val first: Player,
-    val second: Player,
-    val wFirst: Double,
-    val wSecond: Double,
-    val nodFirst: Double,
-    val nodSecond: Double,
-)
-
-/**
- * Who looks at whom at [t], and how far each head has turned; null when nobody does. [her]: the trumpet player, who
+ * Turns the heads of the two who look at each other at [t] (see [contactAt]), by the band's [timing] (the score's),
+ * each only where their [skills] give them [EyeContact] (see [turning]). [her]: the trumpet player (the cast's), who
  * looks at nobody while she plays; [herNotes]: when she plays.
- */
-private fun contactAt(show: Show, t: Double, her: Player, herNotes: List<Double>): Contact? {
-    if (t < 1) {
-        return null
-    }
-
-    val slot = floor(t / CONTACT.every)
-
-    fun roll(n: Int): Double = hash01((slot + n) * 12.9898 + 311.7 + show.seed * 0.6180339)
-
-    if (roll(0) > CONTACT.chance) {
-        return null
-    }
-
-    // one of the two starts it; the other notices and answers one to three seconds later
-    val drawn = PAIRS[floor(roll(1) * PAIRS.size).toInt() % PAIRS.size]
-    val pair = if (roll(4) < 0.5) drawn else drawn.second to drawn.first
-    val late = 1.0 + 2.0 * roll(5)
-    val start = slot * CONTACT.every + 0.2 + roll(2) * 1.2
-    val hold = 0.7 + 0.9 * roll(3)                 // how long they really look at each other: short
-    val meet = late + 1.3                          // when both look
-    val away = meet + hold                         // when the first one looks away again
-
-    // she does not look away while she plays: the trumpet is at her lips
-    val hers = pair.first == her || pair.second == her
-
-    if (hers && herNotes.any { x -> x > start - 3 && x < start + away + 3 }) {
-        return null
-    }
-
-    val x = t - start
-    // No staring. The first one glances over, a second or so, and is half back at the playing when the other
-    // notices and looks; then the first looks again and they share it briefly. A head never turns all the way: a
-    // good half, as people look with their eyes; the beat's nod goes on underneath.
-    val glance = 0.50 * smooth(x / 1.2) * smooth((2.0 - x) / 0.9)
-    val again = 0.62 * smooth((x - late - 0.4) / 0.9) * smooth((away + 0.9 - x) / 0.9)
-    val second = 0.58 * smooth((x - late) / 1.1) * smooth((away + 0.35 + 0.9 - x) / 0.9)
-
-    // as their eyes meet, a small nod to each other, the second a moment after the first
-    fun greet(at: Double): Double {
-        val d = (x - at) / 0.28
-
-        return exp(-d * d)
-    }
-
-    return Contact(
-        first = pair.first,
-        second = pair.second,
-        wFirst = max(glance, again),
-        wSecond = second,
-        nodFirst = greet(meet + 0.25),
-        nodSecond = greet(meet + 0.45),
-    )
-}
-
-/**
- * Turns the heads of the two who look at each other at [t], each only where their [skills] give them [EyeContact]
- * (see [turning]). [her]: the trumpet player (the cast's), who looks at nobody while she plays; [herNotes]: when she
- * plays.
  */
 fun eyeContact(
     show: Show,
+    timing: ChanceInSlots,
     rigs: Map<Player, Rig>,
     her: Player,
     herNotes: List<Double>,
     t: Double,
     skills: (Player) -> List<Skill>,
 ) {
-    val contact = contactAt(show = show, t = t, her = her, herNotes = herNotes)
+    val contact = contactAt(
+        t = t,
+        timing = timing,
+        roll = { index -> show.own(index, CONTACT_SALT) },
+        pairs = PAIRS,
+        her = her,
+        herNotes = herNotes,
+    )
 
-    if (contact == null || (contact.wFirst <= 0 && contact.wSecond <= 0)) {
+    if (contact == null || (contact.firstTurn <= 0 && contact.secondTurn <= 0)) {
         return
     }
 
@@ -156,19 +87,19 @@ fun eyeContact(
     val eb = eyesAt(b)
 
     if (firstTurns) {
-        a.faceTo(eb, contact.wFirst)
+        a.faceTo(eb, contact.firstTurn)
     }
 
     if (secondTurns) {
-        b.faceTo(ea, contact.wSecond)
+        b.faceTo(ea, contact.secondTurn)
     }
 
     if (firstTurns) {
-        a.turn("head", X_AXIS, 0.09 * contact.nodFirst)
+        a.turn("head", X_AXIS, 0.09 * contact.firstNod)
     }
 
     if (secondTurns) {
-        b.turn("head", X_AXIS, 0.09 * contact.nodSecond)
+        b.turn("head", X_AXIS, 0.09 * contact.secondNod)
     }
 }
 

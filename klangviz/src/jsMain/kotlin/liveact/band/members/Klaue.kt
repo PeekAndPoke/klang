@@ -86,7 +86,20 @@ val KLAUE: Member = Member(
                 fall = 0.7,
             ),
         ),
-        // now and then he straightens up from his instrument: a chance every 21 s, a little over half of them taken
-        Straighten(every = 21.0, chance = 0.55),
+        // now and then he straightens up from his instrument (a chance every 21 s, a little over half of them taken):
+        // up over 1.8 s, held four to nine seconds, down over 2.6 s
+        Straighten(
+            ChanceInSlots(
+                every = 21.0,
+                chance = 0.55,
+                cooldown = 0.0,
+                least = 6.6,
+                most = 11.6,
+                earliest = 0.5,
+                reserve = 13.9,
+                rise = 1.8,
+                fall = 2.6,
+            ),
+        ),
     ),
 )

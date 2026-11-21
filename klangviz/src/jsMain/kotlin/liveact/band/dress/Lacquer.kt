@@ -69,8 +69,10 @@ class DressedBody(val mesh: SkinnedMesh, val material: MeshStandardMaterial, val
  *   Where the strip changes, the room is drawn and filtered anew, at most some eight times a second and only while
  *   the time moves; with the time off it is never drawn again.
  * - **The instruments:** the drums' shells and the string instruments' bodies lacquered (black, smooth, mirroring the
- *   room), the cymbals' and the trumpet's brass polished brighter, the steel mirroring the room; their colours and
- *   finishes as they were when it is turned off. The marimba's bars and every light stay as they are.
+ *   room), the cymbals' and the trumpet's brass polished brighter, the steel and the string instruments' gold
+ *   hardware mirroring the room; their colours and finishes as they were when it is turned off. A string
+ *   instrument's body with gold of its own takes the lacquered finish from the shared one (`StrungInstrument`), its
+ *   gold drawn over it. The marimba's bars and every light stay as they are.
  *
  * The eyes are not touched: they are meshes of their own.
  */
@@ -354,6 +356,7 @@ class Lacquer private constructor(
                 Polish(material = KitMaterials.brass, color = BRASS, roughness = BRASS_ROUGH, metalness = 1.0),
                 Polish(material = KitMaterials.steel),
                 Polish(material = StringMaterials.metal),
+                Polish(material = StringMaterials.gold),
                 Polish(material = MarimbaMaterials.steel),
             ) + brass.map { Polish(material = it, color = BRASS, roughness = BRASS_ROUGH, metalness = 1.0) }
 
