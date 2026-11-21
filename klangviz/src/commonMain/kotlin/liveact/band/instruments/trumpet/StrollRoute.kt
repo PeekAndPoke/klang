@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 
+import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.figure.WalkKind
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollLeg.Pose
 import io.peekandpoke.klang.viz.liveact.hash01
@@ -48,14 +49,24 @@ import kotlin.math.sqrt
  * and goes back, and in some of those she comes on until her face nearly fills the wide shot, as far as [closest]
  * (the maintainer, 2026-11-19: "'frighteningly close' to the total camera sometimes").
  *
+ * Now and then, instead of a plain round, she visits the others (see [Kind.Visit]; the maintainer, 2026-11-21:
+ * 'And Sirene should "visit" her band-members').
+ *
  * Places are off her place, in her sizes: x across the stage, z toward the audience. [closest]: the nearest she may
- * come to the camera, off her place in her sizes (who knows the camera works it out); she never passes it.
+ * come to the camera, off her place in her sizes (who knows the camera works it out); she never passes it. [others]:
+ * where the others stand, off her place, in her sizes (who knows the stage plot hands them in); she visits those
+ * given, beside them (see [VISIT_BESIDE]), and none where none are given.
  *
  * A round is worked out once, when it is first asked for, and kept: a stroll begins with one of the first
  * [FIRST_ROUNDS] rounds (see [StrollHome]) and an hour holds some 63 of them, so the route keeps at most some 80,
  * and every stroll shares them.
  */
-class StrollRoute(private val seed: Int, private val restTurn: Double, private val closest: Offset) {
+class StrollRoute(
+    private val seed: Int,
+    private val restTurn: Double,
+    private val closest: Offset,
+    private val others: Map<Player, Offset> = emptyMap(),
+) {
 
     /** Where she is, off her place: [x] across the stage, [z] toward the audience, in her sizes. */
     data class Offset(val x: Double, val z: Double)
@@ -73,6 +84,13 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
 
         /** Up to the camera as far as she may come ([closest]), slowly and straight for the last stretch, and back. */
         Close,
+
+        /**
+         * To one of the others, a while beside them ([VISIT_STAY]), on to one next to them where the round has the
+         * time for it ([VISIT_PAIRS]), and home (the maintainer, 2026-11-21: 'And Sirene should "visit" her
+         * band-members'). She stands there facing the audience, as at every standstill.
+         */
+        Visit,
     }
 
     /** One leg in the round's time: walked from [start] for [time] seconds (seconds into the round). */
@@ -82,7 +100,12 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
      * A round worked out: what it does ([kind]), its legs in order, and in a round to the camera when she stares at
      * it ([stare], seconds into the round: see [stareOf]).
      */
-    internal class Round(val kind: Kind, val walks: List<Walk>, val stare: ClosedFloatingPointRange<Double>? = null)
+    internal class Round(
+        val kind: Kind,
+        val walks: List<Walk>,
+        val stare: ClosedFloatingPointRange<Double>? = null,
+        val visits: List<Player> = emptyList(),
+    )
 
     private val rounds: List<Int> = LENGTHS.indices.map { i -> LENGTHS[(i + seed.mod(LENGTHS.size)) % LENGTHS.size] }
 
@@ -92,6 +115,13 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
     private val restZ: Double = cos(restTurn)
 
     private val worked = HashMap<Int, Round>()
+
+    /** Where she stands to visit each of the others given, off her place, in her sizes (see [VISIT_BESIDE]). */
+    internal val spots: Map<Player, Offset> = VISIT_BESIDE.filterKeys { it in others }.mapValues { (who, beside) ->
+        val place = others.getValue(who)
+
+        Offset(x = place.x + beside.x, z = place.z + beside.z)
+    }
 
     /** Where she is [x] seconds after the stroll began, off her place, in her sizes. */
     fun at(x: Double): Offset {
@@ -153,10 +183,10 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
     /**
      * The kind of walk of the leg [leg] of the round [round]: on the way to the camera the catwalk ([WalkKind.Camera],
      * up close too), and back from it a plain stroll; on an edge round the arc along the edge ([WalkKind.Edge]), and
-     * the ways to it and from it a plain stroll; on a plain round, a plain stroll.
+     * the ways to it and from it a plain stroll; on a plain round and a visit, a plain stroll.
      */
     internal fun walkKindOf(round: Int, leg: Int): WalkKind = when (roundOf(round).kind) {
-        Kind.Plain -> WalkKind.Stroll
+        Kind.Plain, Kind.Visit -> WalkKind.Stroll
         Kind.Edge -> if (leg == 1) WalkKind.Edge else WalkKind.Stroll
         Kind.Camera, Kind.Close -> if (leg == 0) WalkKind.Camera else WalkKind.Stroll
     }
@@ -207,7 +237,10 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
     /** A number from 0 to 1 for the round [round], its leg [leg] and the [k]th choice there: the same every time. */
     private fun roll(round: Int, leg: Int, k: Int): Double = hash01(seed * 12.9898 + round * 78.233 + leg * 37.719 + k * 4.581)
 
-    /** What the round [round] is meant to do (an edge round with no time for its way becomes a plain one, see [build]). */
+    /**
+     * What the round [round] is meant to do (an edge round with no time for its way becomes a plain one or a visit,
+     * a visit with no time for its way a plain one, see [build]).
+     */
     private fun wanted(round: Int): Kind {
         // about two rounds in five go to the camera (the sum as a floating number: a large seed must not wrap round;
         // and taken modulo by floor, so a negative seed does not make every round one)
@@ -223,16 +256,44 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
             }
         }
 
-        return if (roll(round = round, leg = 99, k = 0) < EDGE_SHARE) Kind.Edge else Kind.Plain
+        return if (roll(round = round, leg = 99, k = 0) < EDGE_SHARE) Kind.Edge else plainOr(round)
     }
 
-    /** The round [round] worked out as a round of the [kind]. */
-    private fun build(round: Int, kind: Kind): Round {
+    /** A plain round or, in about [VISIT_SHARE] of them, a visit (where there is anyone to visit). */
+    private fun plainOr(round: Int): Kind =
+        if (spots.isNotEmpty() && roll(round = round, leg = 96, k = 0) < VISIT_SHARE) Kind.Visit else Kind.Plain
+
+    /**
+     * Whom she visits in the round [round]: one of the others (the roll says who), and where she may go on from
+     * them to another ([VISIT_PAIRS]), at most [most] in all.
+     */
+    private fun visitsOf(round: Int, most: Int): List<Player> {
+        val order = VISIT_ORDER.filter { it in spots }
+        val first = order[min(order.size - 1, floor(roll(round = round, leg = 95, k = 0) * order.size).toInt())]
+        val next = VISIT_PAIRS.mapNotNull { (a, b) ->
+            when (first) {
+                a -> b
+                b -> a
+                else -> null
+            }
+        }.filter { it in spots }
+
+        if (most < 2 || next.isEmpty()) {
+            return listOf(first)
+        }
+
+        return listOf(first, next[min(next.size - 1, floor(roll(round = round, leg = 95, k = 1) * next.size).toInt())])
+    }
+
+    /** The round [round] worked out as a round of the [kind]; a visit to at most [most] of the others. */
+    private fun build(round: Int, kind: Kind, most: Int = 2): Round {
         val window = lengthOf(round) - WAIT
+        val visits = if (kind == Kind.Visit) visitsOf(round = round, most = most) else emptyList()
         // the standstills between the legs: at the camera up close a moment only, two to three seconds
         val pauses: (Int) -> List<Double> = { legs ->
             when (kind) {
                 Kind.Close -> listOf(2.0 + roll(round = round, leg = 0, k = 71))
+                Kind.Visit -> List(legs - 1) { VISIT_STAY }
                 Kind.Plain, Kind.Edge, Kind.Camera -> List(legs - 1) { PAUSE }
             }
         }
@@ -241,12 +302,13 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
                 Kind.Plain -> plainWays(round = round, window = window, radius = radius)
                 Kind.Edge -> edgeWays(round = round, radius = radius)
                 Kind.Camera, Kind.Close -> cameraWays(round = round, close = kind == Kind.Close, radius = radius)
+                Kind.Visit -> visitWays(round = round, visits = visits, radius = radius)
             }
         }
 
-        // the round's pace sets how tight she may bend: on the long way to the camera and round the band's front
-        // (since 2026-11-21, when the edge's loop grew, see [EDGE_LEFT]) she walks faster, and bends wider. Worked
-        // out three times over, as the bends make the way longer.
+        // the round's pace sets how tight she may bend: on the long way to the camera, round the band's front
+        // (since 2026-11-21, when the edge's loop grew, see [EDGE_LEFT]) and on a visit she walks faster, and bends
+        // wider. Worked out three times over, as the bends make the way longer.
         var radius = RADIUS
         var legs = emptyList<StrollLeg>()
         var walking = window
@@ -265,7 +327,12 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
         }
 
         if (kind == Kind.Edge && total / walking > EDGE_PACE) {
-            return build(round = round, kind = Kind.Plain)
+            return build(round = round, kind = plainOr(round))
+        }
+
+        // a visit with no time for its way visits one fewer, or none
+        if (kind == Kind.Visit && total / walking > VISIT_PACE) {
+            return if (visits.size > 1) build(round = round, kind = Kind.Visit, most = 1) else build(round = round, kind = Kind.Plain)
         }
 
         val stands = pauses(legs.size)
@@ -282,10 +349,10 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
 
         val stare = when (kind) {
             Kind.Camera, Kind.Close -> stareOf(there = walks[0], back = walks[1])
-            Kind.Plain, Kind.Edge -> null
+            Kind.Plain, Kind.Edge, Kind.Visit -> null
         }
 
-        return Round(kind = kind, walks = walks, stare = stare)
+        return Round(kind = kind, walks = walks, stare = stare, visits = visits)
     }
 
     /**
@@ -441,6 +508,13 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
             arc,
             way(from = e2, to = HOME, round = round, leg = 2, radius = radius),
         )
+    }
+
+    /** A visit's ways: from her place to each of the [visits] in turn, beside them ([spots]), and home. */
+    private fun visitWays(round: Int, visits: List<Player>, radius: Double): List<List<Pose>> {
+        val stops = listOf(HOME) + visits.map { spots.getValue(it) } + HOME
+
+        return (0 until stops.size - 1).map { j -> way(from = stops[j], to = stops[j + 1], round = round, leg = j, radius = radius) }
     }
 
     /**
@@ -603,6 +677,52 @@ class StrollRoute(private val seed: Int, private val restTurn: Double, private v
          */
         internal const val EDGE_NEAR = 1.1
         internal const val EDGE_SPREAD = 0.1
+
+        /**
+         * The share of the plain rounds that are visits instead (see [Kind.Visit]): about one round in five (the
+         * maintainer, 2026-11-21: 'And Sirene should "visit" her band-members').
+         */
+        internal const val VISIT_SHARE = 0.5
+
+        /** How long she stays beside one she visits, in seconds. */
+        internal const val VISIT_STAY = 5.0
+
+        /**
+         * The fastest pace a visit may ask of her: where the round has no time for two at it, she visits one, and
+         * where not even for one, the round is a plain one. Rounds of 47, 53 and 61 seconds have the time.
+         */
+        internal const val VISIT_PACE = 0.3
+
+        /**
+         * Where she stands to visit each of the others: off their place, in her sizes (some 0.98 m each), each
+         * spot chosen on the stage plot of 2026-11-21 (`StagePlot`). Beside them as the total sees them, so she hides
+         * nobody there, about a metre from them and clear of their instruments: in front of the guitarists, on the
+         * side toward the middle (some 1.1 m from each, 0.66 m and 0.86 m from their guitars' heads); before the bass
+         * player on the side toward the middle (1.31 m from him, 0.7 m from his bass's head, which reaches out that
+         * way); left of the marimba (1.2 m from its player, 0.48 m from the marimba's end); and before the riser,
+         * right of its middle (0.55 m before it, 2.1 m from the drummer up on it, 1.03 m from the marimba player).
+         */
+        internal val VISIT_BESIDE: Map<Player, Offset> = mapOf(
+            Player.Skalpell to Offset(x = 0.87, z = 0.77),
+            Player.Beben to Offset(x = 0.92, z = 0.97),
+            Player.Wucht to Offset(x = 0.71, z = 2.04),
+            Player.Rune to Offset(x = -1.22, z = 0.1),
+            Player.Klaue to Offset(x = -0.82, z = 0.71),
+        )
+
+        /** The others in the order the roll picks the first of a visit from. */
+        internal val VISIT_ORDER: List<Player> = listOf(Player.Klaue, Player.Skalpell, Player.Beben, Player.Wucht, Player.Rune)
+
+        /**
+         * Whom she may go on to from whom on a visit: the ways between their spots are clear of the others and their
+         * instruments (between the bass player's and the drummer's the bass's head stands in the way, and between the
+         * marimba's and the right guitarist's the marimba).
+         */
+        internal val VISIT_PAIRS: List<Pair<Player, Player>> = listOf(
+            Player.Skalpell to Player.Beben,
+            Player.Skalpell to Player.Klaue,
+            Player.Wucht to Player.Rune,
+        )
 
         /** The quarter turns into the edge's arc and out of it: their radius. */
         internal const val EDGE_TURN = 0.12

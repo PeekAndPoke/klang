@@ -10,6 +10,8 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
@@ -192,6 +194,10 @@ class TrumpetPlayer(
             seed = show.seed,
             restTurn = homeTurn,
             closest = closestToCamera(chin = rig.bone("head").getWorldPosition(vec()).y),
+            // the others' places in the stage plot, off hers, in her sizes: she visits them on some rounds
+            others = StagePlot.PLACES.filterKeys { it != Player.Sirene }.mapValues { (_, place) ->
+                StrollRoute.Offset(x = (place.x - home.x) / s, z = (place.z - home.z) / s)
+            },
         )
 
         part.refresh()

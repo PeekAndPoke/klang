@@ -219,7 +219,7 @@ class StrollStareSpec : StringSpec({
                     val now = home.stareAt(t)
 
                     when (seen.kind) {
-                        Kind.Plain, Kind.Edge -> withClue("$where, a ${seen.kind} round, at $t s") { now shouldBe 0.0 }
+                        Kind.Plain, Kind.Edge, Kind.Visit -> withClue("$where, a ${seen.kind} round, at $t s") { now shouldBe 0.0 }
                         Kind.Camera, Kind.Close -> Unit
                     }
 

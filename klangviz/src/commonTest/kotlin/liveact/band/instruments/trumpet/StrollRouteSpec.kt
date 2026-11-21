@@ -14,6 +14,7 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Kind
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Offset
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -31,6 +32,9 @@ import kotlin.math.sin
 private val SEEDS = listOf(0, 1, 2, 3, 7, 42, 67, -5, 1234)
 private val RESTS = listOf(0.1, -0.2)
 
+/** The seeds the route is checked with in the world, over its first 60 rounds: few enough for the browser's run. */
+private val WORLD_SEEDS = (-5..5) + listOf(42, 67, 1234, -1234)
+
 /** The nearest to the camera, as the frontwoman's player works it out for Sirene (0.71 across, 5.94 ahead). */
 private val CLOSEST = Offset(x = 0.71, z = 5.94)
 
@@ -42,8 +46,29 @@ private const val PLACE_X = -0.7
 private const val PLACE_Z = 2.2
 private const val SIZE = 0.98
 
-/** The others' places in the stage plot (`StagePlot`), in metres: the bass, a guitar, the marimba, a guitar, the drums. */
-private val OTHERS = listOf(-2.15 to 0.4, -3.0 to 1.7, 1.7 to 0.4, 3.0 to 1.7, 0.1 to -2.1)
+/** The others' places in the stage plot (`StagePlot`), in metres. */
+private val OTHERS: Map<Player, Pair<Double, Double>> = mapOf(
+    Player.Beben to (-2.15 to 0.4),
+    Player.Skalpell to (-3.0 to 1.7),
+    Player.Rune to (1.7 to 0.4),
+    Player.Klaue to (3.0 to 1.7),
+    Player.Wucht to (0.1 to -2.1),
+)
+
+/** The others' places as the frontwoman's player hands them to her route: off her place, in her sizes (StrollGaitSpec too). */
+internal val OTHERS_OFF: Map<Player, Offset> = OTHERS.mapValues { (_, at) ->
+    Offset(x = (at.first - PLACE_X) / SIZE, z = (at.second - PLACE_Z) / SIZE)
+}
+
+/** The drummer's riser, in metres: from its left to its right, from its back to its front (as `Stage` stands it). */
+private const val RISER_LEFT = -1.45
+private const val RISER_RIGHT = 1.45
+private const val RISER_BACK = -2.85
+private const val RISER_FRONT = -0.65
+
+/** How far [x], [z] lies outside the riser, in metres (0 on it or in it). */
+private fun fromRiser(x: Double, z: Double): Double =
+    hypot(max(0.0, max(RISER_LEFT - x, x - RISER_RIGHT)), max(0.0, max(RISER_BACK - z, z - RISER_FRONT)))
 
 /** The marimba's side toward the audience, in metres: from its left end to its right (as `Marimba` stands it). */
 private val MARIMBA_FRONT = (0.86 to 1.23) to (2.26 to 1.45)
@@ -83,7 +108,7 @@ private class Sampled(val route: StrollRoute, val restTurn: Double) {
 }
 
 private fun sampled(seed: Int, restTurn: Double): Sampled =
-    Sampled(route = StrollRoute(seed = seed, restTurn = restTurn, closest = CLOSEST), restTurn = restTurn)
+    Sampled(route = StrollRoute(seed = seed, restTurn = restTurn, closest = CLOSEST, others = OTHERS_OFF), restTurn = restTurn)
 
 private fun everyRoute(check: (Sampled, String) -> Unit) {
     for (seed in SEEDS) {
@@ -258,7 +283,8 @@ class StrollRouteSpec : StringSpec({
                         p.z shouldBeLessThan 2.65
                     }
 
-                    Kind.Camera, Kind.Close -> Unit
+                    // (a visit goes where the others are: the world's guard has it, below)
+                    Kind.Camera, Kind.Close, Kind.Visit -> Unit
                 }
             }
 
@@ -269,7 +295,7 @@ class StrollRouteSpec : StringSpec({
                 when (s.route.roundOf(round).kind) {
                     Kind.Camera -> withClue("$where, round $round goes to the camera") { near shouldBeGreaterThan 3.0 }
                     Kind.Close -> withClue("$where, round $round comes up close") { near shouldBeGreaterThan CLOSEST.z - 0.2 }
-                    Kind.Plain, Kind.Edge -> Unit
+                    Kind.Plain, Kind.Edge, Kind.Visit -> Unit
                 }
             }
         }
@@ -336,13 +362,19 @@ class StrollRouteSpec : StringSpec({
 
     "over many seeds and an hour, she stays on the stage, clear of the others, and walks the big loop in 3 rounds of 20" {
         // (the maintainer, 2026-11-21: "Sirene needs to walk further towrds the crowd a bit and take a wider angle
-        // along the crowd") Every 0.1 s of the first 60 rounds, for 45 seeds, in metres on the stage: she stays
+        // along the crowd") Every 0.2 s of the first 60 rounds, for 15 seeds (no more and no finer: the specs
+        // also run in the browser, where 45 seeds every 0.1 s held it so long that the test run lost it), in
+        // metres on the stage: she stays
         // 1.1 m inside the stage's edge or more (0.6 m and the mirror's fade), 0.95 m from the others' places
         // (some 1.01 m at the nearest, the guitarist to her left, as the maintainer's drawn loop passes him at
         // 1.02 m; it was 1.3 m before the big loop, 2026-11-21) and 1 m before the marimba (1.03 m).
         // The edge rounds go out to both ends of the loop, and walk it in 9 rounds of 60 (8 to 10 allowed).
-        for (seed in (-20..20) + listOf(42, 67, 1234, -1234)) {
-            val route = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST)
+        // On a visit (2026-11-21) she comes near the ones she visits and their instruments by design: 0.85 m from
+        // the one she visits (0.93 m at the nearest, the bass player, as she turns to stand beside him), 0.6 m before
+        // the marimba's front (0.66 m, beside its left end) and 0.25 m from the riser (0.32 m, before it); the others
+        // 0.95 m as on every round. Off a visit she keeps 0.3 m from the riser too.
+        for (seed in WORLD_SEEDS) {
+            val route = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST, others = OTHERS_OFF)
             val end = route.startOf(60)
             var left = 0.0
             var right = 0.0
@@ -352,11 +384,18 @@ class StrollRouteSpec : StringSpec({
                 val p = route.at(t)
                 val x = PLACE_X + SIZE * p.x
                 val z = PLACE_Z + SIZE * p.z
+                val round = route.roundOf(route.roundAt(t))
+                val visit = round.kind == Kind.Visit
 
-                withClue("seed $seed, $t s, a ${route.roundOf(route.roundAt(t)).kind} round: at $x, $z m") {
+                withClue("seed $seed, $t s, a ${round.kind} round (visits ${round.visits}): at $x, $z m") {
                     StageEdge.distance(x = x, z = z) shouldBeGreaterThan 0.6 + StageEdge.FADE
-                    OTHERS.minOf { (ox, oz) -> hypot(x - ox, z - oz) } shouldBeGreaterThan 0.95
-                    fromLine(x = x, z = z, a = MARIMBA_FRONT.first, b = MARIMBA_FRONT.second) shouldBeGreaterThan 1.0
+
+                    for ((who, at) in OTHERS) {
+                        hypot(x - at.first, z - at.second) shouldBeGreaterThan (if (who in round.visits) 0.85 else 0.95)
+                    }
+
+                    fromLine(x = x, z = z, a = MARIMBA_FRONT.first, b = MARIMBA_FRONT.second) shouldBeGreaterThan (if (visit) 0.6 else 1.0)
+                    fromRiser(x = x, z = z) shouldBeGreaterThan (if (visit) 0.25 else 0.3)
                 }
 
                 if (route.roundOf(route.roundAt(t)).kind == Kind.Edge) {
@@ -364,7 +403,7 @@ class StrollRouteSpec : StringSpec({
                     right = max(right, p.x)
                 }
 
-                t += 0.1
+                t += 0.2
             }
 
             val edges = (0 until 60).count { route.roundOf(it).kind == Kind.Edge }
@@ -373,6 +412,73 @@ class StrollRouteSpec : StringSpec({
                 (edges in 8..10) shouldBe true
                 left shouldBeLessThan StrollRoute.EDGE_LEFT + 0.05
                 right shouldBeGreaterThan StrollRoute.EDGE_RIGHT - 0.05
+            }
+        }
+    }
+
+    "now and then she visits the others, every one of them, and stands beside them a while" {
+        // (the maintainer, 2026-11-21: 'And Sirene should "visit" her band-members') Every one of them is visited
+        // over the first 60 rounds of a few seeds, one or two in a round; at each stop she stands where the spot
+        // says for the stay's time, about a metre from the one she visits.
+        val visited = mutableSetOf<Player>()
+
+        for (seed in SEEDS) {
+            val route = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST, others = OTHERS_OFF)
+
+            for (round in 0 until 60) {
+                val worked = route.roundOf(round)
+
+                if (worked.kind != Kind.Visit) {
+                    continue
+                }
+
+                (worked.visits.size in 1..2) shouldBe true
+                visited += worked.visits
+
+                for ((i, who) in worked.visits.withIndex()) {
+                    val spot = route.spots.getValue(who)
+                    val arrives = route.startOf(round) + worked.walks[i].start + worked.walks[i].time
+                    val (ox, oz) = OTHERS.getValue(who)
+                    var t = arrives
+
+                    withClue("seed $seed, round $round: beside $who, at $spot") {
+                        hypot(PLACE_X + SIZE * spot.x - ox, PLACE_Z + SIZE * spot.z - oz) shouldBe (1.15 plusOrMinus 1.0)
+                        worked.walks[i + 1].start - (worked.walks[i].start + worked.walks[i].time) shouldBe
+                            (StrollRoute.VISIT_STAY plusOrMinus 1e-9)
+                    }
+
+                    while (t <= arrives + StrollRoute.VISIT_STAY) {
+                        withClue("seed $seed, round $round, $t s: standing beside $who") {
+                            apart(route.at(t), spot) shouldBe (0.0 plusOrMinus 1e-9)
+                        }
+
+                        t += 0.25
+                    }
+                }
+            }
+        }
+
+        visited shouldBe OTHERS.keys
+    }
+
+    "a visit takes the place of a plain round only: the rounds to the camera and the edge's stay as they were" {
+        for (seed in WORLD_SEEDS) {
+            val alone = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST)
+            val visiting = StrollRoute(seed = seed, restTurn = 0.1, closest = CLOSEST, others = OTHERS_OFF)
+            val visits = (0 until 60).count { visiting.roundOf(it).kind == Kind.Visit }
+
+            for (round in 0 until 60) {
+                val was = alone.roundOf(round).kind
+                val now = visiting.roundOf(round).kind
+
+                withClue("seed $seed, round $round: a $was round alone, a $now round with the others to visit") {
+                    (now == was || (was == Kind.Plain && now == Kind.Visit)) shouldBe true
+                }
+            }
+
+            // about one round in five (5 to 17 of 60 over these seeds, 11.4 on average)
+            withClue("seed $seed: the visits of the first 60 rounds ($visits)") {
+                (visits in 4..18) shouldBe true
             }
         }
     }

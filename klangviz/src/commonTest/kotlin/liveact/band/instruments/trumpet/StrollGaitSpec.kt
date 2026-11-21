@@ -71,7 +71,8 @@ class StrollGaitSpec : StringSpec({
         val seen = mutableSetOf<StrollRoute.Kind>()
 
         for (seed in SEEDS) {
-            val route = StrollRoute(seed = seed, restTurn = REST, closest = CLOSEST)
+            // with the others to visit (see StrollRouteSpec), so every kind of round comes
+            val route = StrollRoute(seed = seed, restTurn = REST, closest = CLOSEST, others = OTHERS_OFF)
 
             for (r in 0 until StrollRoute.FIRST_ROUNDS) {
                 val round = route.roundOf(r)
@@ -80,7 +81,7 @@ class StrollGaitSpec : StringSpec({
 
                 for ((i, walk) in round.walks.withIndex()) {
                     val expected = when (round.kind) {
-                        StrollRoute.Kind.Plain -> PLAIN
+                        StrollRoute.Kind.Plain, StrollRoute.Kind.Visit -> PLAIN
                         StrollRoute.Kind.Edge -> if (i == 1) EDGE else PLAIN
                         StrollRoute.Kind.Camera, StrollRoute.Kind.Close -> if (i == 0) CAMERA else PLAIN
                     }
