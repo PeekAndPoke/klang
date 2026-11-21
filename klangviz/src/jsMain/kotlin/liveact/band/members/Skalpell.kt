@@ -11,8 +11,9 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.ShakeOut
-import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
+import io.peekandpoke.klang.viz.liveact.band.skills.Straighten
 import io.peekandpoke.klang.viz.liveact.band.skills.TuneUp
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * Skalpell's sheet: slim, long hair, the virtuoso. Where his part pauses (the whole middle of the song) he tunes up
@@ -42,7 +43,7 @@ val SKALPELL: Member = Member(
     skills = listOf(
         EyeContact,
         TuneUp(
-            SkillTiming(
+            ChanceInSlots(
                 every = 15.0,
                 chance = 0.5,
                 cooldown = 0.0,
@@ -55,7 +56,7 @@ val SKALPELL: Member = Member(
             ),
         ),
         ShakeOut(
-            SkillTiming(
+            ChanceInSlots(
                 every = 9.0,
                 chance = 0.5,
                 cooldown = 0.0,
@@ -67,5 +68,7 @@ val SKALPELL: Member = Member(
                 fall = 0.7,
             ),
         ),
+        // now and then he straightens up from his instrument: a chance every 21 s, a little over half of them taken
+        Straighten(every = 21.0, chance = 0.55),
     ),
 )

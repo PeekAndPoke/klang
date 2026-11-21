@@ -29,8 +29,10 @@ import io.peekandpoke.klang.viz.liveact.band.skills.Look
 import io.peekandpoke.klang.viz.liveact.band.skills.NeckScratch
 import io.peekandpoke.klang.viz.liveact.band.skills.NeckStretch
 import io.peekandpoke.klang.viz.liveact.band.skills.ShakeOut
+import io.peekandpoke.klang.viz.liveact.band.skills.Skill
 import io.peekandpoke.klang.viz.liveact.band.skills.Slouch
 import io.peekandpoke.klang.viz.liveact.band.skills.StickTwirl
+import io.peekandpoke.klang.viz.liveact.band.skills.Straighten
 import io.peekandpoke.klang.viz.liveact.band.skills.TuneUp
 import io.peekandpoke.klang.viz.liveact.band.skills.browHand
 import io.peekandpoke.klang.viz.liveact.band.skills.capHand
@@ -134,8 +136,8 @@ private class IdleHand(
  * strumming hand leaves the strings for them (a scratch of the head, a tug at the cap, a wipe of the brow, a slouch),
  * the fretting hand leaves the neck (a shake out, a peg to tune), each hand's over the ones after it; a slouch
  * settles the body, the head leans in to tune, and dips into a wipe of the brow or with a tug at the cap;
- * [straighten]: when the player straightens up from the instrument (null: never; `?straight=1` holds everyone
- * straight, to look at the pose).
+ * [skills]: the member's skills, as their sheet equips them (none unless given): of them the pose itself acts the
+ * straightening up from the instrument ([Straighten]; `?straight=1` holds everyone straight, to look at the pose).
  */
 class StringPlayer(
     private val show: Show,
@@ -148,7 +150,7 @@ class StringPlayer(
     outline: BodyOutline = design.outline,
     private val looks: (Double) -> List<Look> = { emptyList() },
     private val idles: (Double) -> List<IdleInUse> = { emptyList() },
-    private val straighten: Straighten? = Straighten(every = 21.0, chance = 0.55),
+    skills: List<Skill> = emptyList(),
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
 
@@ -157,6 +159,9 @@ class StringPlayer(
     private val bang: Double = bearing?.bang ?: 0.2
     private val bounce: Double = bearing?.bounce ?: 0.03
     private val step: Double = bearing?.step ?: 0.0
+
+    /** When the player straightens up from the instrument, where their sheet has it; never without. */
+    private val straighten: Straighten? = skills.filterIsInstance<Straighten>().firstOrNull()
 
     /**
      * When this player's stretches of straightening up begin, in seconds into the song: each player's at another

@@ -13,7 +13,8 @@ import io.peekandpoke.klang.viz.liveact.band.skills.BrowWipe
 import io.peekandpoke.klang.viz.liveact.band.skills.CameraGlance
 import io.peekandpoke.klang.viz.liveact.band.skills.CapTug
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
-import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
+import io.peekandpoke.klang.viz.liveact.band.skills.Straighten
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * Klaue's sheet: the heavier one with the cap, less fine than [Player.Skalpell] and with the power. The one who
@@ -47,7 +48,7 @@ val KLAUE: Member = Member(
     skills = listOf(
         EyeContact,
         CameraGlance(
-            SkillTiming(
+            ChanceInSlots(
                 every = 11.0,
                 chance = 0.5,
                 cooldown = 0.0,
@@ -60,7 +61,7 @@ val KLAUE: Member = Member(
             ),
         ),
         CapTug(
-            SkillTiming(
+            ChanceInSlots(
                 every = 10.0,
                 chance = 0.55,
                 cooldown = 0.0,
@@ -73,7 +74,7 @@ val KLAUE: Member = Member(
             ),
         ),
         BrowWipe(
-            SkillTiming(
+            ChanceInSlots(
                 every = 17.0,
                 chance = 0.55,
                 cooldown = 0.0,
@@ -85,5 +86,7 @@ val KLAUE: Member = Member(
                 fall = 0.7,
             ),
         ),
+        // now and then he straightens up from his instrument: a chance every 21 s, a little over half of them taken
+        Straighten(every = 21.0, chance = 0.55),
     ),
 )

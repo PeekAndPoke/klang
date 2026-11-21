@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.viz.liveact.band.skills
+package io.peekandpoke.klang.viz.liveact.triggers
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
@@ -19,7 +19,7 @@ import io.peekandpoke.klang.viz.liveact.smooth
 import kotlin.math.floor
 
 /** Klaue's glance at the camera, as his sheet equips him with it. */
-private val KLAUE = SkillTiming(
+private val KLAUE = ChanceInSlots(
     every = 11.0,
     chance = 0.5,
     cooldown = 0.0,
@@ -33,7 +33,7 @@ private val KLAUE = SkillTiming(
 
 /**
  * The glance at the camera as the string player worked it out before it was a skill (`StringPlayer.glanceAt` until
- * 2026-11-17), copied expression for expression: what [SkillTiming.inUse] must give with Klaue's numbers, to the bit.
+ * 2026-11-17), copied expression for expression: what [ChanceInSlots.inUse] must give with Klaue's numbers, to the bit.
  */
 private fun glanceBefore(show: Show, seed: Double, t: Double): Double {
     val every = 11.0
@@ -58,7 +58,7 @@ private fun glanceBefore(show: Show, seed: Double, t: Double): Double {
  * hundredth of a second.
  */
 private fun uses(
-    timing: SkillTiming,
+    timing: ChanceInSlots,
     roll: (Double) -> Double,
     since: Double,
     until: Double,
@@ -88,7 +88,7 @@ private fun uses(
     return out
 }
 
-class SkillTimingSpec : StringSpec({
+class ChanceInSlotsSpec : StringSpec({
 
     "a chance not taken gives nothing all through its slot" {
         // every roll 0.9: more than the chance of one in two, so no chance is taken

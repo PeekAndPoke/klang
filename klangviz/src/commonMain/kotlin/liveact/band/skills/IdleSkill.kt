@@ -6,12 +6,13 @@
 package io.peekandpoke.klang.viz.liveact.band.skills
 
 import io.peekandpoke.klang.viz.liveact.Timed
-import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
+import io.peekandpoke.klang.viz.liveact.triggers.PartPause
 import kotlin.math.abs
 
 // What a member does with the hands while the part pauses (the maintainer, 2026-11-18: "more skills for when a player
 // is idle... relaxing poses, head-scratching, brush hair back"). Used by chance as a timed skill is, but only within a
-// pause of the member's own part (see idleAt). Each kind is as wild as it looks, and fits the members about as wild
+// pause of the member's own part (see idleAt and PartPause). Each kind is as wild as it looks, and fits the members about as wild
 // (see fits): the maintainer, 2026-11-18: "we should apply stats ... 0 = elegant and 10 = animal ... Depending on that
 // stat we assign the skills".
 
@@ -41,7 +42,7 @@ fun fits(skill: Mannerism, wildness: Int): Boolean = abs(skill.wildness - wildne
 const val IDLE_MARGIN: Double = 1.0
 
 /**
- * A skill used now and then by chance, at the moments its [timing] gives (see [SkillTiming]), but only where the
+ * A skill used now and then by chance, at the moments its [timing] gives (see [ChanceInSlots]), but only where the
  * member's part pauses for the whole of the use and [IDLE_MARGIN] either side of it (see [idleAt]): so a hand is
  * never off the instrument when a note comes, and no use is cut off halfway. That holds as far as the part is known
  * around now: a use is judged by the notes known when it is asked for, so one is never cut off only where the song
@@ -52,7 +53,7 @@ const val IDLE_MARGIN: Double = 1.0
  */
 sealed interface IdleSkill : Mannerism {
     /** When it may be used, and how much. */
-    val timing: SkillTiming
+    val timing: ChanceInSlots
 
     /** Where its rolls are taken from, as for a timed skill (see [TimedSkill.rolls]): each kind its own. */
     val rolls: Double
@@ -62,7 +63,7 @@ sealed interface IdleSkill : Mannerism {
 }
 
 /** The free hand (a string player's strumming hand) goes to the side of the head, scratches there a little, and comes back. */
-data class HeadScratch(override val timing: SkillTiming) : IdleSkill {
+data class HeadScratch(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 5000.0
 
     override val wildness: Int get() = 8
@@ -73,7 +74,7 @@ data class HeadScratch(override val timing: SkillTiming) : IdleSkill {
  * and hangs limp before the instrument, the shoulders drop and the weight settles. Only a string player's pose shows
  * it so far.
  */
-data class Slouch(override val timing: SkillTiming) : IdleSkill {
+data class Slouch(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 7000.0
 
     override val wildness: Int get() = 7
@@ -83,14 +84,14 @@ data class Slouch(override val timing: SkillTiming) : IdleSkill {
  * The head tilts slowly ear to shoulder: to one side, back through the middle, to the other side, and back; the
  * shoulders still. One stretch to a use.
  */
-data class NeckStretch(override val timing: SkillTiming) : IdleSkill {
+data class NeckStretch(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 6000.0
 
     override val wildness: Int get() = 2
 }
 
 /** A string player shakes out the fretting hand: it comes off the neck, hangs, shakes loosely from the wrist, and returns. */
-data class ShakeOut(override val timing: SkillTiming) : IdleSkill {
+data class ShakeOut(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 8000.0
 
     override val wildness: Int get() = 4
@@ -100,28 +101,28 @@ data class ShakeOut(override val timing: SkillTiming) : IdleSkill {
  * A string player tunes: the fretting hand goes up to a peg at the head of the neck and turns it a little, the head
  * leans in toward the instrument as if listening, and the strumming hand plucks a string softly now and then.
  */
-data class TuneUp(override val timing: SkillTiming) : IdleSkill {
+data class TuneUp(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 9000.0
 
     override val wildness: Int get() = 4
 }
 
 /** The strumming hand goes to the peak of the cap, tugs it down a little, and comes back. For one with a cap. */
-data class CapTug(override val timing: SkillTiming) : IdleSkill {
+data class CapTug(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 11000.0
 
     override val wildness: Int get() = 7
 }
 
 /** The strumming arm wipes the brow: the forearm goes across it in one swipe, the head dipping a little into it. */
-data class BrowWipe(override val timing: SkillTiming) : IdleSkill {
+data class BrowWipe(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 12000.0
 
     override val wildness: Int get() = 8
 }
 
 /** The drummer twirls a stick: the right hand held up beside him, the stick spins in the fingers a few turns. */
-data class StickTwirl(override val timing: SkillTiming) : IdleSkill {
+data class StickTwirl(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 13000.0
 
     override val wildness: Int get() = 7
@@ -130,7 +131,7 @@ data class StickTwirl(override val timing: SkillTiming) : IdleSkill {
 /**
  * The drummer scratches the back of his neck with the butt end of the left stick, the head tilting forward a little.
  */
-data class NeckScratch(override val timing: SkillTiming) : IdleSkill {
+data class NeckScratch(override val timing: ChanceInSlots) : IdleSkill {
     override val rolls: Double get() = 14000.0
 
     override val wildness: Int get() = 10
@@ -145,7 +146,7 @@ data class IdleInUse(val skill: IdleSkill, val share: Double, val since: Double,
 
 /**
  * The use of [skill] at [t] (seconds into the show), where it is in use: how much, as its timing gives (see
- * [SkillTiming.inUse]), and since when; null where it is not, and all through a use where a note of the part begins
+ * [ChanceInSlots.inUse]), and since when; null where it is not, and all through a use where a note of the part begins
  * within it or less than [margin] seconds either side of it (a note just a margin away is allowed, on either side),
  * and all through one that begins before [arrives] (when the member is at their place: not on the walk-in).
  * [margin]: [IDLE_MARGIN], or more where the member's pose does more of its own around a phrase.
@@ -167,11 +168,9 @@ fun idleAt(
         return null
     }
 
-    // the first note after the margin before the use begins (one just at it is allowed): none may begin before the
-    // margin after the use is over (one just at it is allowed)
-    val (_, next) = plays.around(span.start - margin)
-
-    if (next != null && next.t < span.endInclusive + margin) {
+    // the pause the margin before the use lies in (a note just at it is allowed) lasts until the margin after the use
+    // is over (a note just at it is allowed)
+    if (!PartPause.at(plays = plays, t = span.start - margin).lastsUntil(span.endInclusive + margin)) {
         return null
     }
 

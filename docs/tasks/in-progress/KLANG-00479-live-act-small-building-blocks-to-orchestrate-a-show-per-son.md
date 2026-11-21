@@ -141,6 +141,11 @@ that and can be taken in any order, or side by side. Step 9 can begin thin right
 
 ## History
 
+- 2026-11-21: step 2, first part. One vocabulary (`triggers/`: `Trigger`, `ChanceInSlots`, `BeforePhrase`,
+  `PartPause`); the count-in, the crossed mallets and the idles are on it; straightening up is a skill on the three
+  string players' sheets. Twenty-one stills before and after agree. Open: eye contact and straightening up keep
+  their own chance formulas until the maintainer decides whether their moments may change (the shared formula
+  draws its rolls in another order).
 - 2026-11-21: step 1 done. The cast, the stage plot and the drum's tags are data (`Score`, `Cast`, `StagePlot`,
   `DrumTags`); Der Schmetterling's score is `scores/DerSchmetterling.kt`; the `refactorme` folders are gone. Twelve
   stills before and after agree. Left for later steps, as tables about this band on this plot: the camera's `LOOKS`,

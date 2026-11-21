@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.band.skills
 
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 import kotlin.math.floor
 import kotlin.math.min
 
@@ -27,15 +28,16 @@ import kotlin.math.min
  * there were skills, and it stands first on every sheet that has it.
  *
  * Not every skill is timed: the crossed mallets ([CrossedMallets]) and the count in ([CountIn]) go by the member's
- * part, an idle skill ([IdleSkill]) by chance within the pauses of the part. The idle ones rank among themselves in
- * the sheet's order.
+ * part, an idle skill ([IdleSkill]) by chance within the pauses of the part, the straightening up ([Straighten]) by a
+ * chance of its own. The idle ones rank among themselves in the sheet's order. When a skill happens is said in one
+ * vocabulary (see `Trigger`).
  */
 sealed interface Skill
 
-/** A skill used now and then by chance, at the moments its [timing] gives (see [SkillTiming]). */
+/** A skill used now and then by chance, at the moments its [timing] gives (see [ChanceInSlots]). */
 sealed interface TimedSkill : Skill {
     /** When it is used, and how much. */
-    val timing: SkillTiming
+    val timing: ChanceInSlots
 
     /**
      * Where its rolls are taken from: added to every index it asks the member's chance for (see [own]). Each kind
@@ -56,7 +58,7 @@ data object EyeContact : Skill
 /**
  * A quick look at the camera, there and back, at the moments its [timing] gives. Only where the camera is in sight.
  */
-data class CameraGlance(override val timing: SkillTiming) : TimedSkill {
+data class CameraGlance(override val timing: ChanceInSlots) : TimedSkill {
     /** The member's own rolls, unmoved: those the glance took before it was a skill (Klaue's picture stays as it was). */
     override val rolls: Double get() = 0.0
 }
@@ -65,7 +67,7 @@ data class CameraGlance(override val timing: SkillTiming) : TimedSkill {
  * A long, still look at the camera, at the moments its [timing] gives: the head turns to it and stays, and the
  * body's nodding and wandering calm down while it lasts. Only where the camera is in sight.
  */
-data class CameraStare(override val timing: SkillTiming) : TimedSkill {
+data class CameraStare(override val timing: ChanceInSlots) : TimedSkill {
     override val rolls: Double get() = 1000.0
 }
 
@@ -74,7 +76,7 @@ data class CameraStare(override val timing: SkillTiming) : TimedSkill {
  * Whom, the roll chooses for each use (see [whom]). The head turns as far as a head can, also to one who stands
  * behind, over the shoulder; not to one straight behind (see `overShoulder`).
  */
-data class BandGlance(override val timing: SkillTiming) : TimedSkill {
+data class BandGlance(override val timing: ChanceInSlots) : TimedSkill {
     override val rolls: Double get() = 2000.0
 
     /**
@@ -94,7 +96,7 @@ data class BandGlance(override val timing: SkillTiming) : TimedSkill {
  * head a little down and aside, at the moments its [timing] gives. The body's nodding and wandering calm down
  * while it lasts, as in a [CameraStare].
  */
-data class InwardStare(override val timing: SkillTiming) : TimedSkill {
+data class InwardStare(override val timing: ChanceInSlots) : TimedSkill {
     override val rolls: Double get() = 4000.0
 }
 
@@ -103,7 +105,7 @@ data class SkillInUse(val skill: TimedSkill, val share: Double)
 
 /**
  * Every one of [skills] that is in use at [t], with how much, in the sheet's order: the rank (see [Skill]). Empty
- * where none is. Only timed skills are asked. [roll]: the member's own chance (see [SkillTiming.inUse]); each skill
+ * where none is. Only timed skills are asked. [roll]: the member's own chance (see [ChanceInSlots.inUse]); each skill
  * takes its rolls from its own place in it ([TimedSkill.rolls]).
  */
 fun usesAt(skills: List<Skill>, t: Double, roll: (Double) -> Double): List<SkillInUse> {

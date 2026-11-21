@@ -11,9 +11,10 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 private val GLANCE = BandGlance(
-    SkillTiming(
+    ChanceInSlots(
         every = 14.0, chance = 0.5, least = 1.2, most = 2.2, earliest = 0.5, reserve = 3.5, rise = 0.5, fall = 0.5,
     ),
 )

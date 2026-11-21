@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Timed
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /** A note of a part, for the idle skills: only when it begins. */
 private class IdlePlay(override val t: Double) : Timed
@@ -20,7 +21,7 @@ class IdleSkillSpec : StringSpec({
 
     // every roll one half: the use of slot 0 begins at 1 + 0.5 * (10 - 4) = 4 s and holds 2 s, so it is over at
     // 6.5 s; the pause must then reach from 3 s to 7.5 s
-    val timing = SkillTiming(every = 10.0, chance = 1.0, least = 2.0, most = 2.0, earliest = 1.0, reserve = 4.0, rise = 0.5, fall = 0.5)
+    val timing = ChanceInSlots(every = 10.0, chance = 1.0, least = 2.0, most = 2.0, earliest = 1.0, reserve = 4.0, rise = 0.5, fall = 0.5)
     val half = { _: Double -> 0.5 }
     val scratch = HeadScratch(timing)
 

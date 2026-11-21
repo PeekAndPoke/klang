@@ -13,7 +13,8 @@ import io.peekandpoke.klang.viz.liveact.band.skills.CountIn
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.NeckStretch
-import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
+import io.peekandpoke.klang.viz.liveact.triggers.BeforePhrase
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * Rune's sheet: the riddle of the band, with Medusa's snakes in her shadow (see [Dress.shadowSnakes]). Before she
@@ -48,9 +49,9 @@ val RUNE: Member = Member(
     skills = listOf(
         EyeContact,
         CrossedMallets(hold = 1.5, move = 1.2),
-        CountIn(pause = 2.0),
+        CountIn(BeforePhrase(pause = 2.0)),
         NeckStretch(
-            SkillTiming(
+            ChanceInSlots(
                 every = 29.0,
                 chance = 0.45,
                 cooldown = 0.0,

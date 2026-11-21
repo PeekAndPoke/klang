@@ -25,6 +25,7 @@ import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.band.skills.IDLE_MARGIN
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleInUse
 import io.peekandpoke.klang.viz.liveact.band.skills.NeckStretch
+import io.peekandpoke.klang.viz.liveact.band.skills.Skill
 import io.peekandpoke.klang.viz.liveact.beyond
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.smooth
@@ -68,10 +69,11 @@ private class MalletHit(
  * mallets as they need (which hand plays which: [planMarimba]). She moves with the music by her [traits], her chance
  * drawn under [seed].
  *
- * [crossing]: where her sheet has the skill, she crosses her mallets below her head for a moment before a phrase and
- * after it (see [CrossedMallets]); without it, never. [arrives]: when she is at her place (her walk-in's end): before
- * her first note the mallets cross only from then on. [counting]: where her sheet has the skill, her head counts in
- * the last bar before a phrase (see [CountIn]); without it, never. [idles]: the member's idle skills in use at a time
+ * [skills]: the member's skills, as their sheet equips them (none unless given): of them the pose itself acts two,
+ * each only where the sheet has it. She crosses her mallets below her head for a moment before a phrase and after it
+ * ([CrossedMallets]), and her head counts in the last bar before a phrase ([CountIn]). [arrives]: when she is at her
+ * place (her walk-in's end): before her first note the mallets cross and the head counts only from then on.
+ * [idles]: the member's idle skills in use at a time
  * (see `idlesAt`; none unless given): of them she shows a stretch of the neck ([NeckStretch]). Her idle skills keep
  * clear of the crossed mallets and the rise to play (see [idleMargin]).
  */
@@ -81,11 +83,16 @@ class MarimbaPlayer(
     private val part: Part<Note>,
     traits: Traits,
     seed: Double = 2.0,
-    private val crossing: CrossedMallets? = null,
+    skills: List<Skill> = emptyList(),
     private val arrives: Double = Double.NEGATIVE_INFINITY,
-    private val counting: CountIn? = null,
     private val idles: (Double) -> List<IdleInUse> = { emptyList() },
 ) {
+    /** Her crossed mallets, where her sheet has them. */
+    private val crossing: CrossedMallets? = crossingOf(skills)
+
+    /** Her count in, where her sheet has it. */
+    private val counting: CountIn? = skills.filterIsInstance<CountIn>().firstOrNull()
+
     private val mover = Mover(show = show, seed = seed, traits = traits)
     private val s: Double = rig.s
 
@@ -384,15 +391,19 @@ class MarimbaPlayer(
     }
 
     companion object {
+        /** The crossed mallets of [skills] (a member's), where they have them; null where not. */
+        private fun crossingOf(skills: List<Skill>): CrossedMallets? = skills.filterIsInstance<CrossedMallets>().firstOrNull()
+
         /**
-         * How far from her notes an idle skill's use keeps (see `idleAt`), at [bpm] beats a minute, where she crosses
-         * her mallets with [crossing] (null: she does not): clear of the rise to play before a phrase and the fall
-         * after it, of the crossing on top of them, and the common margin past them; but never more than
-         * [IDLE_MARGIN_MOST]. The cap gives up a little: at a slow tempo (below about 136 beats a minute) a use may
-         * run into the start of the crossing or the rise. It keeps a use within what a song played live is known
+         * How far from her notes an idle skill's use keeps (see `idleAt`), at [bpm] beats a minute, where her
+         * [skills] (her sheet's) have her cross her mallets ([CrossedMallets]): clear of the rise to play before a
+         * phrase and the fall after it, of the crossing on top of them, and the common margin past them; but never
+         * more than [IDLE_MARGIN_MOST]. The cap gives up a little: at a slow tempo (below about 136 beats a minute) a
+         * use may run into the start of the crossing or the rise. It keeps a use within what a song played live is known
          * around now (see `IdleSkill`), so that no use is cut off halfway.
          */
-        fun idleMargin(bpm: Double, crossing: CrossedMallets?): Double {
+        fun idleMargin(bpm: Double, skills: List<Skill>): Double {
+            val crossing = crossingOf(skills)
             val crossed = if (crossing != null) crossing.hold + crossing.move else 0.0
             val before = (READY + RISE) * 240 / bpm + crossed
             val after = DONE + FALL + crossed

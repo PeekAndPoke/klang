@@ -14,7 +14,7 @@ import io.peekandpoke.klang.viz.liveact.band.skills.CameraStare
 import io.peekandpoke.klang.viz.liveact.band.skills.CrowdGaze
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.InwardStare
-import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * Sirene's sheet: the frontwoman. Between her phrases she looks about (the maintainer, 2026-11-17: "look around in
@@ -52,7 +52,7 @@ val SIRENE: Member = Member(
     skills = listOf(
         EyeContact,
         CameraStare(
-            SkillTiming(
+            ChanceInSlots(
                 every = 23.0,
                 chance = 0.34,
                 cooldown = 30.0,
@@ -65,7 +65,7 @@ val SIRENE: Member = Member(
             ),
         ),
         BandGlance(
-            SkillTiming(
+            ChanceInSlots(
                 every = 14.0,
                 chance = 0.5,
                 cooldown = 0.0,
@@ -78,7 +78,7 @@ val SIRENE: Member = Member(
             ),
         ),
         InwardStare(
-            SkillTiming(
+            ChanceInSlots(
                 every = 19.0,
                 chance = 0.5,
                 cooldown = 0.0,
@@ -91,7 +91,7 @@ val SIRENE: Member = Member(
             ),
         ),
         CrowdGaze(
-            timing = SkillTiming(
+            timing = ChanceInSlots(
                 every = 9.0,
                 chance = 0.75,
                 cooldown = 0.0,

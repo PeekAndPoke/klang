@@ -11,8 +11,9 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.HeadScratch
-import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
 import io.peekandpoke.klang.viz.liveact.band.skills.Slouch
+import io.peekandpoke.klang.viz.liveact.band.skills.Straighten
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * Beben's sheet: tall and thin. Where his part pauses he mostly slouches ([Slouch]), long and calm, and now and
@@ -42,7 +43,7 @@ val BEBEN: Member = Member(
     skills = listOf(
         EyeContact,
         HeadScratch(
-            SkillTiming(
+            ChanceInSlots(
                 every = 19.0,
                 chance = 0.4,
                 cooldown = 0.0,
@@ -55,7 +56,7 @@ val BEBEN: Member = Member(
             ),
         ),
         Slouch(
-            SkillTiming(
+            ChanceInSlots(
                 every = 12.0,
                 chance = 0.7,
                 cooldown = 0.0,
@@ -67,5 +68,7 @@ val BEBEN: Member = Member(
                 fall = 1.2,
             ),
         ),
+        // now and then he straightens up from his instrument: a chance every 21 s, a little over half of them taken
+        Straighten(every = 21.0, chance = 0.55),
     ),
 )

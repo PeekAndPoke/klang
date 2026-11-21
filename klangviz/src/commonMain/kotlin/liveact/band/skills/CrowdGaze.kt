@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.skills
 
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdLight
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
@@ -20,7 +21,7 @@ import kotlin.math.sin
  * Only where the spot is in sight: with the back to the crowd, the member does not gaze at it.
  */
 data class CrowdGaze(
-    override val timing: SkillTiming,
+    override val timing: ChanceInSlots,
     val spotLeast: Double,
     val spotMost: Double,
     val move: Double,

@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.viz.liveact.band.skills
+package io.peekandpoke.klang.viz.liveact.triggers
 
 import io.peekandpoke.klang.viz.liveact.smooth
 import kotlin.math.floor
 
 /**
- * When a timed skill is used, and how much: what every timed skill is equipped with (see [inUse]).
+ * By chance, in slots of time: a [Trigger], and how much what it triggers is in use (see [inUse]). The looks and the
+ * idle skills on the members' sheets are equipped with it.
  *
  * The show's time is cut into slots of [every] seconds, and each slot is one chance, of which [chance] (0 to 1) are
  * taken. A use begins at the earliest [earliest] seconds into its slot; the starts spread over the slot but for
@@ -24,7 +25,7 @@ import kotlin.math.floor
  * so a cool-down near the length of a slot leaves fewer uses than one after each rest. With a cool-down of 0 no
  * earlier slot is looked at.
  */
-data class SkillTiming(
+data class ChanceInSlots(
     val every: Double,
     val chance: Double,
     val cooldown: Double = 0.0,
@@ -34,7 +35,7 @@ data class SkillTiming(
     val reserve: Double,
     val rise: Double,
     val fall: Double,
-) {
+) : Trigger {
     init {
         require(every > 0 && rise > 0 && fall > 0) { "a slot, a rise and a fall take time: $every s, $rise s, $fall s" }
         require(chance in 0.0..1.0) { "a chance is from 0 to 1: $chance" }
@@ -53,7 +54,7 @@ data class SkillTiming(
      */
     fun slotOf(t: Double): Double = floor(t / every)
 
-    /** One use: when it [start]s and how long it [hold]s (see [SkillTiming]). */
+    /** One use: when it [start]s and how long it [hold]s (see [ChanceInSlots]). */
     private class Use(val start: Double, val hold: Double)
 
     /**

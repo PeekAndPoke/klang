@@ -18,13 +18,14 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
 private val GAZE = CrowdGaze(
-    timing = SkillTiming(
+    timing = ChanceInSlots(
         every = 9.0, chance = 0.75, least = 4.0, most = 6.0, earliest = 0.5, reserve = 7.5, rise = 0.9, fall = 1.0,
     ),
     spotLeast = 1.5,

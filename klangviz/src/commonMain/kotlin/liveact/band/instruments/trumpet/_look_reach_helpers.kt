@@ -19,7 +19,7 @@ import kotlin.math.roundToInt
 /**
  * How far the head still takes a look at [t] (seconds) that it may take [now] (0 to 1) and took as far as
  * [before] says a moment ago: as far as it may now, or, where it took it further, letting go of that over [fall]
- * seconds, eased as a look's fall is (see `SkillTiming`). So a look that goes out of reach at once still goes back
+ * seconds, eased as a look's fall is (see `ChanceInSlots`). So a look that goes out of reach at once still goes back
  * over [fall] seconds; one that comes into reach is taken at once. [before]: the moments before [t], each when
  * (seconds) and how far (0 to 1); those older than [fall], or after [t], count for nothing. With moments at fixed
  * times (a grid, not a step back from [t]) the answer moves smoothly with [t].

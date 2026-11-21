@@ -34,8 +34,6 @@ import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
 import io.peekandpoke.klang.viz.liveact.band.members.Members
-import io.peekandpoke.klang.viz.liveact.band.skills.CountIn
-import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.band.skills.IDLE_MARGIN
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleInUse
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleSkill
@@ -260,23 +258,18 @@ class Notstrom private constructor(
      */
     private val tails: List<HairTail> = Player.entries.mapNotNull { player -> HairTail.of(rig(player)) }
 
-    /** The marimba player's crossed mallets, where their sheet has them. */
-    private val crossing: CrossedMallets? =
-        Members.of(cast.marimba.player).skills.filterIsInstance<CrossedMallets>().firstOrNull()
-
     val marimba = MarimbaPlayer(
         show = show,
         rig = rig(cast.marimba.player),
         part = tunePart(tag = cast.marimba.tag, test = ::testTune),
         traits = character(cast.marimba.player).traits,
         seed = character(cast.marimba.player).seed,
-        crossing = crossing,
+        skills = Members.of(cast.marimba.player).skills,
         arrives = plot.entrances.getValue(cast.marimba.player).end,
-        counting = Members.of(cast.marimba.player).skills.filterIsInstance<CountIn>().firstOrNull(),
         idles = idlesOf(
             player = cast.marimba.player,
             part = tunePart(tag = cast.marimba.tag, test = ::testTune),
-            margin = MarimbaPlayer.idleMargin(bpm = show.bpm, crossing = crossing),
+            margin = MarimbaPlayer.idleMargin(bpm = show.bpm, skills = Members.of(cast.marimba.player).skills),
         ),
     )
 
@@ -316,6 +309,7 @@ class Notstrom private constructor(
             outline = seat.outline ?: seat.design.outline,
             looks = headLooksOf(seat.player),
             idles = idlesOf(player = seat.player, part = stringPart(seat)),
+            skills = Members.of(seat.player).skills,
         )
     }
 

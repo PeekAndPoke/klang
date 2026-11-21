@@ -11,8 +11,8 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.NeckScratch
-import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
 import io.peekandpoke.klang.viz.liveact.band.skills.StickTwirl
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * Wucht's sheet: the muscular one. Where his part pauses he twirls a stick, showing off ([StickTwirl]), and scratches
@@ -43,7 +43,7 @@ val WUCHT: Member = Member(
     skills = listOf(
         EyeContact,
         StickTwirl(
-            SkillTiming(
+            ChanceInSlots(
                 every = 17.0,
                 chance = 0.55,
                 cooldown = 0.0,
@@ -56,7 +56,7 @@ val WUCHT: Member = Member(
             ),
         ),
         NeckScratch(
-            SkillTiming(
+            ChanceInSlots(
                 every = 22.0,
                 chance = 0.55,
                 cooldown = 0.0,

@@ -6,20 +6,20 @@
 package io.peekandpoke.klang.viz.liveact.band.skills
 
 import io.peekandpoke.klang.viz.liveact.Timed
-import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.triggers.BeforePhrase
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.round
 
 /**
  * Counting in: in the last bar before a phrase of the member's part begins, the head counts its four beats, a small
- * clear nod on each, the last one beat before the phrase. Not by chance: by the part (see [at]). A phrase begins at a
- * note after a pause of at least [pause] bars, and no less than [LEAST_PAUSE].
+ * clear nod on each, the last one beat before the phrase. Not by chance: by the part, before a phrase ([timing], see
+ * [at]), whose pause is no less than [LEAST_PAUSE] bars.
  */
-data class CountIn(val pause: Double = 2.0) : Mannerism {
+data class CountIn(val timing: BeforePhrase = BeforePhrase(pause = 2.0)) : Mannerism {
     init {
-        require(pause >= LEAST_PAUSE) {
-            "a phrase begins after a pause of at least the bar counted in and the half beat before it: $pause bars"
+        require(timing.pause >= LEAST_PAUSE) {
+            "a phrase begins after a pause of at least the bar counted in and the half beat before it: ${timing.pause} bars"
         }
     }
 
@@ -33,20 +33,12 @@ data class CountIn(val pause: Double = 2.0) : Mannerism {
      * member is at their place).
      */
     fun at(t: Double, plays: List<Timed>, beat: Double, arrives: Double): Double {
-        val (last, next) = plays.around(t)
-
-        if (next == null) {
-            return 0.0
-        }
-
         val bar = 4 * beat
-        val from = next.t - bar
+        // none between the notes of a phrase, and not where the counted bar would begin before the member is there
+        val next = timing.phraseAfter(t = t, plays = plays, bar = bar, lead = bar, arrives = arrives) ?: return 0.0
+        val from = next - bar
 
-        // a phrase begins after a pause: none between the notes of a phrase, and not where the counted bar would
-        // begin before the member is at their place
-        val begins = if (last != null) next.t - last.t >= pause * bar else from >= arrives
-
-        if (!begins || t < from - beat / 2) {
+        if (t < from - beat / 2) {
             return 0.0
         }
 

@@ -12,6 +12,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.Timed
+import io.peekandpoke.klang.viz.liveact.triggers.BeforePhrase
 
 /** A note of a part, for the count in: only when it begins. */
 private class CountPlay(override val t: Double) : Timed
@@ -21,7 +22,7 @@ private fun notes(from: Double, until: Double): List<CountPlay> = (0..((until - 
 
 class CountInSpec : StringSpec({
 
-    val count = CountIn(pause = 2.0)
+    val count = CountIn(BeforePhrase(pause = 2.0))
 
     // a beat of half a second, so a bar of two: the phrase from 10 s is counted in from 8 s, on 8, 8.5, 9 and 9.5
     fun at(t: Double, plays: List<Timed>, arrives: Double = -100.0): Double =
@@ -75,8 +76,8 @@ class CountInSpec : StringSpec({
     }
 
     "a pause shorter than the bar counted in and the half beat before it is refused" {
-        shouldThrow<IllegalArgumentException> { CountIn(pause = 1.1) }
-        CountIn(pause = CountIn.LEAST_PAUSE).pause shouldBe CountIn.LEAST_PAUSE
+        shouldThrow<IllegalArgumentException> { CountIn(BeforePhrase(pause = 1.1)) }
+        CountIn(BeforePhrase(pause = CountIn.LEAST_PAUSE)).timing.pause shouldBe CountIn.LEAST_PAUSE
     }
 
     "before the first note, only where the counted bar begins once the member is at their place" {

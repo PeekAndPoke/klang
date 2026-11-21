@@ -6,15 +6,15 @@
 package io.peekandpoke.klang.viz.liveact.band.skills
 
 import io.peekandpoke.klang.viz.liveact.Timed
-import io.peekandpoke.klang.viz.liveact.around
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.triggers.PartPause
 
 /**
  * The mallets crossed below the head for a moment, like a skull and bones: as the member gets ready to play a phrase
  * of their part, and again when it is done (the maintainer, 2026-11-18: "before she starts playing and when she is
  * done she needs to briefly cross her arms before her chest", and then: "Let her only cross the mallets below her
- * head, so that it looks like a skull and bones"). Not by chance: by the part, at every pause long enough that the
- * arms hang in it anyway (see [at]). Held all the way for [hold] seconds; [move] seconds from hanging into the pose,
+ * head, so that it looks like a skull and bones"). Not by chance: by the part, at every pause ([PartPause]) long
+ * enough that the arms hang in it anyway (see [at]). Held all the way for [hold] seconds; [move] seconds from hanging into the pose,
  * and out of it again. How the pose looks is the player's own.
  */
 data class CrossedMallets(val hold: Double = 1.5, val move: Double = 1.2) : Skill {
@@ -36,9 +36,9 @@ data class CrossedMallets(val hold: Double = 1.5, val move: Double = 1.2) : Skil
      * only where they begin to after it. After the last note they cross once more. None where there are no notes.
      */
     fun at(t: Double, plays: List<Timed>, rises: Double, falls: Double, arrives: Double): Double {
-        val (last, next) = plays.around(t)
-        val before = last?.t
-        val after = next?.t
+        val pause = PartPause.at(plays = plays, t = t)
+        val before = pause.from
+        val after = pause.until
 
         if (before == null && after == null) {
             return 0.0

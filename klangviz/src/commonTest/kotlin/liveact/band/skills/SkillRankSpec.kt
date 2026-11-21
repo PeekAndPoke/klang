@@ -11,10 +11,11 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 class SkillRankSpec : StringSpec({
 
-    fun timing(every: Double) = SkillTiming(
+    fun timing(every: Double) = ChanceInSlots(
         every = every, chance = 1.0, least = 2.0, most = 3.0, earliest = 0.5, reserve = 5.0, rise = 0.5, fall = 0.5,
     )
 

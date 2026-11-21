@@ -9,12 +9,13 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 class EyeContactSpec : StringSpec({
 
     "each of the two turns only with the skill: one without it does not answer, the other still turns" {
         val glance = CameraGlance(
-            SkillTiming(
+            ChanceInSlots(
                 every = 11.0, chance = 0.5, least = 2.2, most = 4.2, earliest = 0.8, reserve = 6.0, rise = 0.7, fall = 0.9,
             ),
         )
