@@ -77,7 +77,7 @@ class Notstrom private constructor(
 ) {
     companion object {
         /** The band's name, as it stands on the bass drum. */
-        const val NAME = "NOTSTROM"
+        const val NAME = "MØRTSTØN"
 
         /** How long the drummer takes to sit down once he is at the stool, in seconds. */
         private const val SIT = 1.6
