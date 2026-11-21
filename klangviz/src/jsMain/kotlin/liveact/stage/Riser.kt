@@ -55,16 +55,16 @@ class Riser(scene: Scene) {
     init {
         val stone = Three.addon.createMeshStandardMaterial(jsObject {
             color = 0x08090c
-            roughness = 0.42
-            metalness = 0.25
+            roughness = STONE_ROUGH
+            metalness = 0.0
         })
         // six flat sides, each shaded as one plane
         stone.asDynamic().flatShading = true
 
         val sides = Three.addon.createMeshStandardMaterial(jsObject {
             color = 0x08090c
-            roughness = 0.42
-            metalness = 0.25
+            roughness = STONE_ROUGH
+            metalness = 0.0
         })
         sides.asDynamic().flatShading = true
         sides.onBeforeCompile("riser-gold-lines") { shader: CompiledShader ->
@@ -76,8 +76,8 @@ class Riser(scene: Scene) {
                 .replaceFirst("#include <common>", "#include <common>\nvarying vec2 vRiser;\nuniform float uRiserLines;\n$GOLD_LINES")
                 .replaceFirst("#include <color_fragment>", "#include <color_fragment>\nfloat riserLine = riserLineAt(vRiser);\n" +
                     "diffuseColor.rgb = mix(diffuseColor.rgb, vec3($GOLD), riserLine);")
-                .replaceFirst("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.3, riserLine);")
-                .replaceFirst("#include <metalnessmap_fragment>", "#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, 1.0, riserLine);")
+                .replaceFirst("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.55, riserLine);")
+                .replaceFirst("#include <metalnessmap_fragment>", "#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, 0.6, riserLine);")
                 .replaceFirst(
                     "#include <emissivemap_fragment>",
                     "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3($GOLD) * ${LINE_LIGHT.toFixed(3)} * riserLine * uRiserLines;",
@@ -189,25 +189,35 @@ class Riser(scene: Scene) {
 
         /** The glow's colour; how bright it is in the gap between two hits, against 1 at a hit. */
         const val GLOW_COLOR = 0xff9a3c
-        const val GAP_REST = 0.5
+        const val GAP_REST = 0.3
+
+        /**
+         * How rough the stone is: matt, so a lamp that shines on a side straight on (the low front lamp) does not
+         * turn the whole side into one bright plate (the maintainer, 2026-11-21: "It looks as if the riser is
+         * self-illuminating ... we have to make sure that it does not fight Sirene's dress when she walks around").
+         */
+        const val STONE_ROUGH = 0.9
 
         /** The glow on the floor: how far it reaches around the plinth (metres), how bright at rest and at a hit. */
         const val REACH = 0.9
-        const val POOL_REST = 0.10
-        const val POOL_BEAT = 0.24
+        const val POOL_REST = 0.04
+        const val POOL_BEAT = 0.14
         const val POOL_Y = 0.006
 
         /** How fast a hit's light goes, in seconds to 1/e. */
         const val BEAT_FADE = 0.14
 
-        /** The gold of the lines (linear red, green, blue), and how bright their own faint light is. */
-        private const val GOLD = "0.83, 0.60, 0.22"
-        private const val LINE_LIGHT = 0.05
+        /**
+         * The gold of the lines (linear red, green, blue): an old, dull gold, quieter than the lines on the band, which
+         * stand right before it; and how bright their own light is: none, they show only where a lamp finds them.
+         */
+        private const val GOLD = "0.42, 0.29, 0.10"
+        private const val LINE_LIGHT = 0.0
 
         /**
          * The gold lines on a side, 0 to 1, from the side's own coordinates (x: round the plinth, 0 to 1 over its six
          * sides; y: up the side, 0 to 1): a line near the foot, one near the top, and between them a zigzag, two
-         * peaks to a side. The lines are some 2 cm wide; where one gets thinner than a pixel it goes, so nothing
+         * peaks to a side. The lines are some 1.4 cm wide; where one gets thinner than a pixel it goes, so nothing
          * flickers from afar.
          */
         private val GOLD_LINES = """
@@ -219,7 +229,7 @@ float riserLineAt(vec2 at) {
   float zig = 0.07 + (high - 0.14) * abs(2.0 * fract(f * 2.0) - 1.0);
   float slope = (high - 0.14) * 4.0 / wide;
   float d = min(min(abs(y - 0.035), abs(y - (high - 0.035))), abs(y - zig) / sqrt(1.0 + slope * slope));
-  float w = 0.010;
+  float w = 0.007;
   float aa = max(fwidth(d), 1e-5);
   return (1.0 - smoothstep(w - aa, w + aa, d)) * clamp(w / aa, 0.0, 1.0);
 }
