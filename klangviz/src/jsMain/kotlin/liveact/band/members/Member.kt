@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Gait
+import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.Skill
 
@@ -22,7 +23,8 @@ import io.peekandpoke.klang.viz.liveact.band.skills.Skill
  * wears (and has: the snakes in a shadow are dress). [character]: how they move with the music. [bearing]: how they
  * carry themselves over an instrument on a strap; null where they have no bearing of their own. [skills]: what they
  * can do on their own, beyond playing and moving with the beat, in the order of rank (see [Skill]); one without a
- * skill simply does not do it.
+ * skill simply does not do it. [hand]: the hand they lead with, the right unless the sheet says the left: a string
+ * player strums with it and frets with the other, on an instrument built for that hand (see `StringPlayer`).
  */
 data class Member(
     val player: Player,
@@ -30,6 +32,7 @@ data class Member(
     val character: Character,
     val bearing: Bearing?,
     val skills: List<Skill>,
+    val hand: Side = Side.R,
 ) {
     /** Their name, as the band calls them: the player's. */
     val name: String get() = player.name

@@ -310,6 +310,7 @@ class Notstrom private constructor(
             looks = headLooksOf(seat.player),
             idles = idlesOf(player = seat.player, part = stringPart(seat)),
             skills = Members.of(seat.player).skills,
+            hand = Members.of(seat.player).hand,
         )
     }
 

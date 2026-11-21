@@ -14,6 +14,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleSkill
 import io.peekandpoke.klang.viz.liveact.band.skills.Mannerism
@@ -39,6 +40,11 @@ class MembersSpec : StringSpec({
     "a sheet's name is the member's own, as the band calls them" {
         Members.of(Player.Sirene).name shouldBe "Sirene"
         Members.of(Player.Wucht).name shouldBe "Wucht"
+    }
+
+    "Klaue plays left-handed, everyone else right-handed" {
+        // the maintainer, 2026-11-21: "Can we make the manager left-handed?"
+        Player.entries.filter { Members.of(it).hand == Side.L } shouldBe listOf(Player.Klaue)
     }
 
     "a sheet's figure is the file the figure script writes for its player" {

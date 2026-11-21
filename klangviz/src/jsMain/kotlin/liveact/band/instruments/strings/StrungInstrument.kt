@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.strings
 
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
+import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.workshop.threejs.clone
 import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
@@ -76,17 +77,26 @@ internal object StringMaterials {
  * (the design's own unless the player has another; the design's gold lies where its own outline is). Its strings
  * light up as they are played ([light]).
  *
+ * [hand]: the hand that strums it. For a right-handed player ([Side.R]) it is as the design draws it; for a
+ * left-handed one it is its mirror across the neck, as a left-handed instrument is built: the body's outline, the head,
+ * the hardware and the gold the other way round, and the strings in the other order, so that the lowest is still the
+ * upper one as it is played. The [group] is mirrored for it (three.js draws a mirrored mesh's faces the right way
+ * round).
+ *
  * Its meshes: the body, the neck and the head (only these three throw a shadow), the hardware (the pickups, the
  * bridge, the knobs and the tuners, one mesh of each metal), and the strings, one each (each lights up on its own).
  */
-class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline) {
+class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline, hand: Side = Side.R) {
     private val s = rig.s
 
     /** Where the strings end at the bridge, along the neck from the instrument's middle, and where at the nut. */
     val bridge = -0.10 * s
     val nut = bridge + design.scale * s
 
-    /** The instrument, in its own space: x along the neck toward the head, y across the strings (up), z out of its face. */
+    /**
+     * The instrument, in its own space: x along the neck toward the head, y across the strings (up), z out of its
+     * face. A left-handed player's is mirrored in y (see [StrungInstrument]).
+     */
     val group: Group = Three.addon.createGroup()
 
     /** A string each, the lowest first, lit on its own when it is the one played. */
@@ -196,6 +206,11 @@ class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline) {
         // all but a centimetre of it, and a string's is thinner than a point of the shadow's map
         for (part in listOf(body, neck, head)) {
             part.castShadow = true
+        }
+
+        if (hand == Side.L) {
+            // a left-handed instrument: the right-handed one's mirror across its neck
+            g.scale.y = -1.0
         }
 
         (rig.root.parent ?: error("The figure stands in no scene")).add(g)

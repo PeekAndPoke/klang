@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.members
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.figure.Gait
+import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.skills.BrowWipe
 import io.peekandpoke.klang.viz.liveact.band.skills.CameraGlance
@@ -42,6 +43,9 @@ val KLAUE: Member = Member(
     ),
     // he dances from one leg to the other (the maintainer, 2026-11-17)
     bearing = Bearing(lean = 0.10, bang = 0.24, bounce = 0.028, step = 0.6),
+    // left-handed: he strums with his left hand, the neck of his guitar to his right (the maintainer, 2026-11-21: "Can
+    // we make the manager left-handed?")
+    hand = Side.L,
     // he answers a look, and looks at the camera every now and then: a chance every eleven seconds, half of them
     // taken, each look held for two to four seconds. Where his part pauses: a tug at the cap (a chance every 10 s, a
     // little over half of them taken, held a second or two) and a wipe of the brow (every 17 s, the same share)
