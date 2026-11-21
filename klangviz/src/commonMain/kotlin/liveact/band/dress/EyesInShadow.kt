@@ -34,11 +34,13 @@ object EyesInShadow {
 
     /**
      * She looks a way while her face points no more than [TOWARD] off it, and no more once it points more than
-     * [AWAY] off it, both in radians (50 and 65 degrees), seen from above; between the two it stays as it was, so
-     * the eyes do not flutter where she stands at the edge.
+     * [AWAY] off it, both in radians (75 and 88 degrees), seen from above; between the two it stays as it was, so
+     * the eyes do not flutter where she stands at the edge. Wide on purpose: she looks away from the surface behind
+     * her wherever she does not look toward it (they were 50 and 65 while the rule went by the camera, and the eyes
+     * came only sometimes).
      */
-    const val TOWARD = 50 * PI / 180
-    const val AWAY = 65 * PI / 180
+    const val TOWARD = 75 * PI / 180
+    const val AWAY = 88 * PI / 180
 
     /**
      * Whether she looks a given way (for the eyes: straight away from the surface behind her): her face points along

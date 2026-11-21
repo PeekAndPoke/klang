@@ -17,6 +17,7 @@ import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
+import io.peekandpoke.klang.viz.liveact.lights.WorldLight
 import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
@@ -571,6 +572,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 front = now.stage.front,
                 lamp = now.stage.frontLamp,
                 planeZ = now.stage.shadowsAt,
+                ghosts = WorldLight.ghostShare(now.stage.world),
             )
         }
 

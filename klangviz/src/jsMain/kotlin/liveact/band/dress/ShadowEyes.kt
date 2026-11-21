@@ -121,6 +121,8 @@ class ShadowEyes private constructor(
     private val half = uniform(0.0)
     private val eye = Three.addon.createVector2()
     private val glow = vec()
+    /** How far the eyes take the ghost's own light away around them, 0 (a shadow: none) to 1 (in a ghost). */
+    private val cover = uniform(0.0)
 
     private val material: ShaderMaterial
     private val mesh: Mesh
@@ -182,13 +184,18 @@ class ShadowEyes private constructor(
                 "uHalf" to half,
                 "uEye" to uniform(eye),
                 "uGlow" to uniform(glow),
+                "uCover" to cover,
             )
             vertexShader = VERTEX
             fragmentShader = FRAGMENT
             transparent = true
             depthWrite = false
-            blending = Blending.AdditiveBlending
+            blending = Blending.NormalBlending
         })
+        // their light is added to what is behind (the alpha they give is 0), and in a ghost they first take the
+        // ghost's own light away around them (the alpha is the socket's share, see FRAGMENT): the colour is
+        // multiplied in already, so the surface behind is dimmed by one minus the alpha and the light laid on it
+        material.asDynamic().premultipliedAlpha = true
         // their light goes to the screen as it is, as her own eyes' does (see Rig)
         material.toneMapped = false
         mesh = Three.addon.createMesh(Three.addon.createPlaneGeometry(1.0, 1.0), material)
@@ -200,11 +207,13 @@ class ShadowEyes private constructor(
 
     /**
      * The eyes for this frame: the front lamp at [front], standing at [lamp], throws the band's shadows onto the
-     * surface at [planeZ] (along z, in metres).
+     * surface at [planeZ] (along z, in metres). [ghosts]: how far the shadows show as ghosts whatever the lamp does
+     * (0 to 1, `WorldLight.ghostShare`): the eyes are in her ghost as they are in her shadow (the maintainer,
+     * 2026-11-21: "the eyes appear in the shadows / ghosts").
      * Call it after her eyes' glow is set for the frame: it takes their light from her face as far as they have
      * crossed.
      */
-    fun update(front: FrontLight, lamp: Vector3, planeZ: Double) {
+    fun update(front: FrontLight, lamp: Vector3, planeZ: Double, ghosts: Double = 0.0) {
         val eyes = rig.eyes ?: return
         val nowMs = window.performance.now()
         val dt = if (updatedAt.isNaN()) 0.0 else ((nowMs - updatedAt) / 1000).coerceIn(0.0, 0.25)
@@ -223,11 +232,16 @@ class ShadowEyes private constructor(
             toZ = axisNow.z - planeZ,
         )
 
-        val share = crossing.follow(target = if (facing) FrontFade.on(front) else 0.0, dt = dt)
+        val inGhost = if (ghosts >= 0.5) 1.0 else 0.0
+        val shown = max(FrontFade.on(front), inGhost)
+        val share = crossing.follow(target = if (facing) shown else 0.0, dt = dt)
         val onWall = EyesInShadow.wall(share)
 
         // her eyes' light as it is set this frame, before it leaves her face
         glow.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b).multiplyScalar(eyes.emissiveIntensity * onWall * GLOW)
+        cover.value = ghosts.coerceIn(0.0, 1.0) * onWall
+        // in a ghost the eyes are drawn after the haze behind the fence, whose glowing veil would wash them out
+        mesh.renderOrder = if (cover.value > 0.0) ORDER_IN_GHOST else ORDER
         faceFull = eyes.emissiveIntensity
         eyes.emissiveIntensity *= EyesInShadow.face(share)
         faceShown = eyes.emissiveIntensity
@@ -360,6 +374,9 @@ class ShadowEyes private constructor(
         /** Their place among what is drawn see-through: before the haze behind the fence (from some -102 on). */
         private const val ORDER = -200
 
+        /** Their place in a ghost: after the haze behind the fence, right before the fence's mesh (-50). */
+        private const val ORDER_IN_GHOST = -51
+
         /**
          * Sirene's eyes in her shadow, for her [rig] in [scene]; null where the figure has no eyes of their own or
          * no head bone they hang on (every figure of the band has both).
@@ -403,6 +420,14 @@ class ShadowEyes private constructor(
   uniform float uHalf;
   uniform vec2 uEye;
   uniform vec3 uGlow;
+  uniform float uCover;
+
+  // how dark the socket around an eye is in a ghost, 0 to 1: a ghost is pale light, and an eye of light would be
+  // lost in it, so the eye sits in a dark hollow there
+  float socketAt(vec2 p) {
+    float r = length(p / vec2(uEye.x * 2.6, uEye.x * 1.9));
+    return exp(-r * r * 0.7);
+  }
 
   float eyeAt(vec2 p) {
     float d = length(p / uEye);
@@ -414,7 +439,8 @@ class ShadowEyes private constructor(
   void main() {
     vec2 p = (vUv - 0.5) * uSize;
     float light = eyeAt(p - vec2(uHalf, 0.0)) + eyeAt(p + vec2(uHalf, 0.0));
-    gl_FragColor = vec4(uGlow * light, 1.0);
+    float socket = clamp(socketAt(p - vec2(uHalf, 0.0)) + socketAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
+    gl_FragColor = vec4(uGlow * light * (1.0 + 0.8 * uCover), 0.92 * uCover * socket);
     #include <colorspace_fragment>
   }"""
     }

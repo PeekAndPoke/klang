@@ -39,7 +39,7 @@ class EyesInShadowSpec : StringSpec({
         EyesInShadow.scale(lampZ = 8.6, eyeZ = Double.NaN, planeZ = -8.0).shouldBeNull()
     }
 
-    "she looks a way within 50 degrees of it, no more beyond 65, and between the two it stays as it was" {
+    "she looks a way within 75 degrees of it, no more beyond 88, and between the two it stays as it was" {
         fun at(degrees: Double, was: Boolean): Boolean {
             val a = degrees * PI / 180
 
@@ -49,14 +49,14 @@ class EyesInShadowSpec : StringSpec({
 
         for (was in listOf(false, true)) {
             at(degrees = 0.0, was = was) shouldBe true
-            at(degrees = 49.0, was = was) shouldBe true
-            at(degrees = -49.0, was = was) shouldBe true
-            at(degrees = 66.0, was = was) shouldBe false
-            at(degrees = -66.0, was = was) shouldBe false
+            at(degrees = 74.0, was = was) shouldBe true
+            at(degrees = -74.0, was = was) shouldBe true
+            at(degrees = 89.0, was = was) shouldBe false
+            at(degrees = -89.0, was = was) shouldBe false
             at(degrees = 180.0, was = was) shouldBe false
             // between the two: as it was
-            at(degrees = 57.0, was = was) shouldBe was
-            at(degrees = -57.0, was = was) shouldBe was
+            at(degrees = 81.0, was = was) shouldBe was
+            at(degrees = -81.0, was = was) shouldBe was
         }
     }
 
