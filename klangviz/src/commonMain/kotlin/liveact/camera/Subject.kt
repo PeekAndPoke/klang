@@ -89,6 +89,14 @@ val ANGLES: List<Placement> = listOf(
     Placement(pos = Triple(7.0, 1.4, 5.2), at = Triple(0.0, 1.0, 0.6), fov = 40.0),         // from the right
     Placement(pos = Triple(0.0, 0.45, 6.6), at = Triple(0.0, 1.5, 0.0), fov = 44.0),        // from the floor
     STADIUM,                                                                                // from far back in the audience
+    // more from the floor (the maintainer, 2026-11-21: "we could have more and different floor-shots"), a hand's
+    // breadth over the mirror floor, so half the picture is the band's reflection; all of them stand outside where the
+    // trumpet player strolls (her big loop comes to 4.75 m before the stage's middle and 3.6 m to either side). After
+    // the ones above, which the keys and the looks' pinned choices know by their place in the list.
+    Placement(pos = Triple(-5.2, 0.30, 6.2), at = Triple(0.4, 1.3, 0.8), fov = 42.0),       // from the floor, front left
+    Placement(pos = Triple(5.0, 0.30, 6.0), at = Triple(-0.6, 1.3, 0.8), fov = 42.0),       // from the floor, front right
+    Placement(pos = Triple(0.6, 0.25, 10.5), at = Triple(0.0, 1.1, 0.0), fov = 34.0),       // from the floor, far and wide
+    Placement(pos = Triple(-1.4, 0.20, 6.0), at = Triple(0.3, 1.7, 0.0), fov = 50.0),       // from the floor, looking up steeply
 )
 
 /** The players in the order the camera tries them, and the keys 1 to 6 choose them. */
