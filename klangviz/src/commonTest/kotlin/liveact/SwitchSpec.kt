@@ -22,7 +22,7 @@ class SwitchSpec : StringSpec({
     // The keys are in page addresses the maintainer and the test plans use: a renamed or dropped switch is noticed here.
     "the keys are the ones the addresses use" {
         Switch.entries.map { it.key } shouldBe listOf(
-            "seed", "t", "test",
+            "seed", "t", "test", "meet",
             "nohud", "oversample", "sharp", "shadows", "reflections",
             "still", "move", "view", "cam", "at", "head", "from", "down", "far", "outline",
             "warm", "snakes", "nosnakes", "straight", "eyes", "skin",

@@ -44,6 +44,14 @@ enum class Switch(val key: String) {
     /** `?test`: the demo page plays the test notes instead of the recorded song. */
     Test("test"),
 
+    /**
+     * `?meet=rune`: the demo page shows "Meet the Band" instead of the show: the band round a hexagon of fence panels,
+     * one member at a time at the front in the light of a lamp on the floor, their true self in the shadow behind; a
+     * member's name (`sirene`, `rune`, ...) brings them to the front first, any other value, or none, Sirene. The left
+     * and right arrow keys turn the carousel to the member before or after.
+     */
+    Meet("meet"),
+
     // The picture
 
     /** `?nohud`: the line of text at the top left (what the camera does) is hidden and not written. */

@@ -92,13 +92,8 @@ class Fence(private val scene: Scene) {
         val sunAtUniform = uniform(sunAt)
 
         // the wire mesh: one plane, the wires worked out on it, the gaps between them see-through
-        val meshMaterial = Three.addon.createMeshStandardMaterial(jsObject {
-            color = 0x5a4430
-            roughness = 0.34
-            metalness = 0.75
-            transparent = true
-        })
-        meshMaterial.fog = false
+        val meshMaterial = wireMaterial()
+
         meshMaterial.onBeforeCompile("fence-chain-link") { shader: CompiledShader ->
             shader.uniforms["uSunGlow"] = glowUniform
             shader.uniforms["uSunAt"] = sunAtUniform
@@ -131,12 +126,7 @@ class Fence(private val scene: Scene) {
         scene.add(mesh)
 
         // the posts the mesh hangs on, a little in front of it; the front lamp throws their shadows onto the back
-        val postMaterial = Three.addon.createMeshStandardMaterial(jsObject {
-            color = 0x2a2724
-            roughness = 0.45
-            metalness = 0.7
-        })
-        postMaterial.fog = false
+        val steel = postMaterial()
         val post = Three.addon.createCylinderGeometry(
             radiusTop = POST_RADIUS,
             radiusBottom = POST_RADIUS,
@@ -147,7 +137,7 @@ class Fence(private val scene: Scene) {
             thetaStart = 0.0,
             thetaLength = 2 * PI,
         )
-        val posts = Three.addon.createInstancedMesh(geometry = post, material = postMaterial, count = POSTS)
+        val posts = Three.addon.createInstancedMesh(geometry = post, material = steel, count = POSTS)
         val upright = quat()
         val asBuilt = vec(1.0, 1.0, 1.0)
 
@@ -163,11 +153,7 @@ class Fence(private val scene: Scene) {
         scene.add(posts)
 
         // the surface behind: dark, stained, the sun glowing on it low behind the drummer
-        backMaterial = Three.addon.createMeshStandardMaterial(jsObject {
-            color = 0x000000
-            roughness = 0.9
-        })
-        backMaterial.fog = false
+        backMaterial = surfaceMaterial()
         backMaterial.onBeforeCompile("fence-back-stains-sun-beyond") { shader: CompiledShader ->
             shader.uniforms["uSunGlow"] = glowUniform
             shader.uniforms["uSunAt"] = sunAtUniform
@@ -252,7 +238,7 @@ class Fence(private val scene: Scene) {
      * in [sun] at [level] (from 0), [size] times as large as made, its middle [height] metres up the surface.
      */
     fun light(front: Double, sun: Color, level: Double, size: Double = 1.0, height: Double = SUN_Y) {
-        backMaterial.color.setHex(0x8a8f9c).scale(front)
+        backMaterial.color.setHex(LIT).scale(front)
         glow.set(sun.r, sun.g, sun.b).multiplyScalar(level * GLOW)
         sunSize.value = size
         sunAt.set(SUN_X, height)
@@ -323,7 +309,52 @@ class Fence(private val scene: Scene) {
         /** The posts: how many, how far apart, how thick. */
         private const val POSTS = 18
         private const val POST_EVERY = 3.2
-        private const val POST_RADIUS = 0.045
+        internal const val POST_RADIUS = 0.045
+
+        /** The surface behind's colour where a lamp is on in full ([light]): the lamp's light makes it warm or cold. */
+        internal const val LIT = 0x8a8f9c
+
+        /**
+         * The wires' material before the chain link goes into its shader ([CHAIN_LINK]): dark bronze, polished metal,
+         * see-through where the wires leave gaps; no distance fog. Also the panels of "Meet the Band" (`HexFence`).
+         */
+        internal fun wireMaterial(): MeshStandardMaterial {
+            val material = Three.addon.createMeshStandardMaterial(jsObject {
+                color = 0x5a4430
+                roughness = 0.34
+                metalness = 0.75
+                transparent = true
+            })
+
+            material.fog = false
+
+            return material
+        }
+
+        /** The posts' material: dark steel, no distance fog. */
+        internal fun postMaterial(): MeshStandardMaterial {
+            val material = Three.addon.createMeshStandardMaterial(jsObject {
+                color = 0x2a2724
+                roughness = 0.45
+                metalness = 0.7
+            })
+
+            material.fog = false
+
+            return material
+        }
+
+        /** The surface behind's material: black until a lamp's light is set on it ([LIT]), rough; no distance fog. */
+        internal fun surfaceMaterial(): MeshStandardMaterial {
+            val material = Three.addon.createMeshStandardMaterial(jsObject {
+                color = 0x000000
+                roughness = 0.9
+            })
+
+            material.fog = false
+
+            return material
+        }
 
         /** A vertex shader that also hands on where each point is in the world (`vWorld`). */
         private fun String.withWorld(): String = this
@@ -334,7 +365,7 @@ class Fence(private val scene: Scene) {
          * The sun on the surface at a place (x, y): a close glow, a wider one and a faint wide one, a little flatter
          * than round, its middle at about 1 at its brightest; its middle at `uSunAt`, `uSunSize` times as large as made.
          */
-        private val SUN_GLOW = """
+        internal val SUN_GLOW = """
 uniform vec3 uSunGlow;
 uniform vec2 uSunAt;
 uniform float uSunSize;
@@ -352,7 +383,7 @@ float sunGlow(vec2 p) {
          * crossings bows a little out and in, as the woven wire does), how near its edge the pixel is, and a dirt of
          * its own for each diamond.
          */
-        private val CHAIN_LINK = """
+        internal val CHAIN_LINK = """
 const vec2 CELL = vec2(0.22, 0.26);
 const float WIRE = 0.0075;
 void chainLink(vec2 p, out float cover, out vec3 n, out float rim, out float shade) {
@@ -462,7 +493,7 @@ vec3 beyond(vec3 world) {
          * The surface's stains, at a place (x, y) in metres: large soft patches and runs down it, about 0 to 1, 0.5 on
          * the mean.
          */
-        private val STAINS = """
+        internal val STAINS = """
 float stains(vec2 p) {
   float patches = sin(p.x * 1.3 + 2.0 * sin(p.y * 0.7)) * sin(p.y * 1.1 + p.x * 0.4);
   float finer = sin(p.x * 3.7 - p.y * 2.9) * sin(p.y * 4.3 + p.x * 0.8);

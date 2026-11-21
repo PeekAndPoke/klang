@@ -10,6 +10,7 @@ import io.peekandpoke.klang.viz.liveact.LiveAct
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
+import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
 import io.peekandpoke.klang.viz.liveact.sound.Loudness
@@ -25,8 +26,8 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
-// The demo: the live act alone on a page, playing a recording and its recorded events.
-// The page's switches (`?seed=7&t=62.1&still`) are the show's: see Switch for the list of them all.
+// The demo: the live act alone on a page, playing a recording and its recorded events; or, with `?meet`, "Meet the
+// Band" alone (MeetPage). The page's switches (`?seed=7&t=62.1&still`) are the show's: see Switch for the list of them all.
 
 /** Where the recording lies, beside the page (git-ignored: see resources/recording/README.md). */
 private const val RECORDING = "recording/schmetterling"
@@ -53,6 +54,15 @@ private suspend fun textAt(url: String): String? {
 
 fun main() {
     val switches = Switches.parse(window.location.search)
+
+    if (switches.has(Switch.Meet)) {
+        kraft.mount(selector = "#app", engine = PreactVDomEngine()) {
+            // the demo serves its figures fresh from the build: its version is a fixed word
+            MeetPage(first = Player.of(switches[Switch.Meet]) ?: Player.Sirene, models = MODELS, version = "dev")
+        }
+
+        return
+    }
 
     // Another performance every time the page is opened: one seed for all of the choreography. A frozen time
     // without a seed takes seed 0, so stills stay comparable.

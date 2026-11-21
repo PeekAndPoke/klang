@@ -108,23 +108,7 @@ class Notstrom private constructor(
             viewer: Vector3,
             arrived: (count: Int, of: Int) -> Unit = { _, _ -> },
         ): Notstrom {
-            val loader = Three.addon.gltfLoader()
-            val query = "?v=" + js("encodeURIComponent")(version).unsafeCast<String>()
-            var count = 0
-
-            arrived(0, Player.entries.size)
-
-            val loaded: List<Gltf> = coroutineScope {
-                Player.entries.map { player ->
-                    async {
-                        loader.load("$models${Members.of(player).figure}$query").also {
-                            count++
-                            arrived(count, Player.entries.size)
-                        }
-                    }
-                }.awaitAll()
-            }
-
+            val loaded = fetch(models = models, version = version, arrived = arrived)
             val rigs = linkedMapOf<Player, Rig>()
             val bodies = mutableListOf<DressedBody>()
 
@@ -137,39 +121,75 @@ class Notstrom private constructor(
                 scene.add(figure)
 
                 val rig = Rig(figure)
-                val dress = Members.of(player).dress
                 rigs[player] = rig
 
-                figure.traverse { o ->
-                    val mesh = o.asSkinnedMesh ?: return@traverse
+                bodies.addAll(dress(player = player, rig = rig))
+            }
 
-                    mesh.materials.forEach { m ->
-                        // a pattern goes into a standard material's shader: every material of the figures is one
-                        val material = m.asMeshStandardMaterial ?: return@forEach
+            return Notstrom(show = show, rigs = rigs, bodies = bodies, viewer = viewer)
+        }
 
-                        if (m.name.endsWith("_hair")) {
-                            pattern(material = material, kind = ClothPattern.Strands, gloss = 0.07, matt = 0.62, hair = null, glitter = 0.05)
-                            bodies.add(DressedBody(mesh = mesh, material = material, cloth = ClothPattern.Strands, hair = null))
+        /**
+         * Fetches the six figures' files from [models] (a folder's address ending in a slash), all together, each
+         * asked for with the release [version] (`<key>.glb?v=<version>`); gives them in the players' order.
+         * [arrived] is told how many of how many files have arrived, as each one does. Also for "Meet the Band".
+         */
+        internal suspend fun fetch(models: String, version: String, arrived: (count: Int, of: Int) -> Unit): List<Gltf> {
+            val loader = Three.addon.gltfLoader()
+            val query = "?v=" + js("encodeURIComponent")(version).unsafeCast<String>()
+            var count = 0
+
+            arrived(0, Player.entries.size)
+
+            return coroutineScope {
+                Player.entries.map { player ->
+                    async {
+                        loader.load("$models${Members.of(player).figure}$query").also {
+                            count++
+                            arrived(count, Player.entries.size)
                         }
+                    }
+                }.awaitAll()
+            }
+        }
 
-                        if (m.name.endsWith("_dark")) {
-                            val hair = if (dress.combedBack) hairOf(rig) else null
+        /**
+         * Dresses [player]'s figure, held by [rig], as their sheet says ([Members]): the hair and the dark skin each
+         * get their pattern; gives the parts so dressed (what the lacquer re-dresses). Also for "Meet the Band".
+         */
+        internal fun dress(player: Player, rig: Rig): List<DressedBody> {
+            val dress = Members.of(player).dress
+            val bodies = mutableListOf<DressedBody>()
 
-                            pattern(
-                                material = material,
-                                kind = dress.cloth,
-                                gloss = 0.12,
-                                matt = 0.85,
-                                hair = hair,
-                                glitter = dress.glitter,
-                            )
-                            bodies.add(DressedBody(mesh = mesh, material = material, cloth = dress.cloth, hair = hair))
-                        }
+            rig.root.traverse { o ->
+                val mesh = o.asSkinnedMesh ?: return@traverse
+
+                mesh.materials.forEach { m ->
+                    // a pattern goes into a standard material's shader: every material of the figures is one
+                    val material = m.asMeshStandardMaterial ?: return@forEach
+
+                    if (m.name.endsWith("_hair")) {
+                        pattern(material = material, kind = ClothPattern.Strands, gloss = 0.07, matt = 0.62, hair = null, glitter = 0.05)
+                        bodies.add(DressedBody(mesh = mesh, material = material, cloth = ClothPattern.Strands, hair = null))
+                    }
+
+                    if (m.name.endsWith("_dark")) {
+                        val hair = if (dress.combedBack) hairOf(rig) else null
+
+                        pattern(
+                            material = material,
+                            kind = dress.cloth,
+                            gloss = 0.12,
+                            matt = 0.85,
+                            hair = hair,
+                            glitter = dress.glitter,
+                        )
+                        bodies.add(DressedBody(mesh = mesh, material = material, cloth = dress.cloth, hair = hair))
                     }
                 }
             }
 
-            return Notstrom(show = show, rigs = rigs, bodies = bodies, viewer = viewer)
+            return bodies
         }
     }
 

@@ -185,10 +185,15 @@ fun eyesWarm(rigs: Map<Player, Rig>, warmth: (Player) -> Double) {
  * is set this frame, so it runs once a frame, after [eyesWarm].
  */
 fun eyesWaver(show: Show, rigs: Map<Player, Rig>, t: Double) {
+    eyesWaver(seed = show.seed, rigs = rigs, t = t)
+}
+
+/** The eyes' waver as [eyesWaver] of a show has it, by the chance of [seed] (a show's seed) alone. */
+fun eyesWaver(seed: Int, rigs: Map<Player, Rig>, t: Double) {
     inOrder(rigs).forEachIndexed { i, rig ->
         val eyes = rig.eyes ?: return@forEachIndexed
 
-        fun noise(x: Double, own: Int): Double = valueNoise(x) { k -> hash01((k + own * 57.3) * 12.9898 + show.seed * 0.6180339) }
+        fun noise(x: Double, own: Int): Double = valueNoise(x) { k -> hash01((k + own * 57.3) * 12.9898 + seed * 0.6180339) }
 
         val waver = 0.62 * noise(t * 0.7, i + 1) + 0.38 * noise(t * 2.9, i + 11)
 
@@ -201,8 +206,13 @@ fun eyesWaver(show: Show, rigs: Map<Player, Rig>, t: Double) {
  * the band is loud ([slow]: the sound's energy). Last of all that moves bones: it widens them.
  */
 fun breathing(show: Show, rigs: Map<Player, Rig>, t: Double, slow: Double) {
+    breathing(seed = show.seed, rigs = rigs, t = t, slow = slow)
+}
+
+/** The breath as [breathing] of a show has it, by the chance of [seed] (a show's seed) alone. */
+fun breathing(seed: Int, rigs: Map<Player, Rig>, t: Double, slow: Double) {
     inOrder(rigs).forEachIndexed { i, rig ->
-        val phase = 2 * PI * (0.23 + 0.016 * ((i * 7) % 6)) * t + i * 1.9 + show.seed * 0.7
+        val phase = 2 * PI * (0.23 + 0.016 * ((i * 7) % 6)) * t + i * 1.9 + seed * 0.7
         val breath = 0.5 + 0.5 * sin(phase + 0.45 * sin(phase))
 
         rig.breathe(breath, 0.045 * (0.7 + 0.6 * slow))

@@ -361,6 +361,13 @@ class Lacquer private constructor(
         }
 
         /**
+         * The band in lacquer without instruments ("Meet the Band"): [bodies] (the band's dressed parts) re-dressed,
+         * the room made with [renderer]; no instrument's material is touched.
+         */
+        fun bodiesOnly(renderer: WebGLRenderer, bodies: List<DressedBody>): Lacquer =
+            Lacquer(bodies = bodies, polished = emptyList(), room = Room(renderer))
+
+        /**
          * The lacquer a body wears whose suit was [name] (`sirene_dark`): its pattern [cloth] as gold in the colour
          * [gold] holds, its hair combed back where [hair] says, mirroring [room] (none: nothing is mirrored).
          */
