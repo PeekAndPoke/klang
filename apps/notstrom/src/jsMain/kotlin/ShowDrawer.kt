@@ -40,8 +40,8 @@ import org.w3c.dom.events.KeyboardEvent
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (Double) -> Unit) = comp(
-    ShowDrawer.Props(picture = picture, release = release, dev = dev, onVolume = onVolume)
+fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (Double) -> Unit, onBack: () -> Unit) = comp(
+    ShowDrawer.Props(picture = picture, release = release, dev = dev, onVolume = onVolume, onBack = onBack)
 ) {
     ShowDrawer(it)
 }
@@ -61,8 +61,9 @@ fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (D
  * state (the test's choice, the keys o and g, the live act's own step down), where a choice is the visitor's and
  * holds ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
  * nothing while it is hidden).
- * The second: a button for fullscreen, whose label follows the page's real state (also when fullscreen was entered by
- * the choice before the show, or left with Esc); the volume, 0 to 100 percent, full at first and not kept
+ * The second: the way back to the start page ([Props.onBack]: the show ends there, as its stage goes; the maintainer,
+ * 2026-11-21: "a button in the drawer that goes back to the start page"); a button for fullscreen, whose label follows
+ * the page's real state (also when fullscreen was entered by the choice before the show, or left with Esc); the volume, 0 to 100 percent, full at first and not kept
  * ([Props.onVolume] is told a gain from 0 to 1); and at its end, small and quiet, the [Props.release]. On a narrow
  * window a row wraps within itself, a group of buttons too, so nothing runs past the window's edge.
  *
@@ -86,7 +87,13 @@ fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (D
  */
 class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
 
-    data class Props(val picture: Picture, val release: String, val dev: Boolean, val onVolume: (Double) -> Unit)
+    data class Props(
+        val picture: Picture,
+        val release: String,
+        val dev: Boolean,
+        val onVolume: (Double) -> Unit,
+        val onBack: () -> Unit,
+    )
 
     private var shown: Boolean by value(false)
 
@@ -340,8 +347,10 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 }
             }
 
-            // the window and the sound
+            // the way back, the window and the sound
             row {
+                plainButton(text = "Back to start", primary = false) { props.onBack() }
+
                 plainButton(text = if (fullscreen) "Leave fullscreen" else "Enter fullscreen", primary = false) {
                     if (fullscreen) {
                         leaveFullscreen()

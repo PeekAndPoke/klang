@@ -98,8 +98,8 @@ fun Tag.NotstromApp(query: String) = comp(
  * night (`opening=night`, [showSwitches]) that turns to the look's own world when the song begins; the tests' phases
  * have no fade. The live act steps
  * the oversampling down by itself where the frames stay slow. While the show plays, a moving mouse brings up a
- * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, the shadows, the reflections, fullscreen, the
- * volume). What fails on the way is said on the start screen, in plain words.
+ * drawer at the bottom ([ShowDrawer]: the oversampling, the fog, the shadows, the reflections, the way back to the
+ * start screen, fullscreen, the volume). What fails on the way is said on the start screen, in plain words.
  *
  * The address's switches are the live act's ([Switch]: `?seed=7`, `?still`, `?oversample=2`, `?fog=low` and the rest);
  * `?nostrobe` presets the choice for the stroboscope. The line of text at the top is hidden for visitors; `?dev` shows
@@ -414,6 +414,21 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         preparing = null
         this.problem = problem
         phase = Phase.Start
+    }
+
+    /**
+     * The drawer's way back while the show plays: the show ends (its stage goes, and with it its song stops:
+     * the live act's clock lets go of the music), the page leaves fullscreen, and the start screen is there again,
+     * from where the show can be started anew. The volume is full again, as the next show's drawer shows it.
+     */
+    private fun backToStart() {
+        if (phase != Phase.Playing) {
+            return
+        }
+
+        leaveFullscreen()
+        stop(problem = null)
+        player?.setOutputVolume(1.0)
     }
 
     /**
@@ -870,6 +885,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                         release = release,
                         dev = showsDev(props.query),
                         onVolume = { gain -> player?.setOutputVolume(gain) },
+                        onBack = { backToStart() },
                     )
                 }
             }
