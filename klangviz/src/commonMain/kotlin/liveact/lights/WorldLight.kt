@@ -43,7 +43,7 @@ import kotlin.math.exp
 object WorldLight {
     /** How far the front lamp creeps toward the band in the ghosts, in metres, and in how many seconds to 1/e. */
     const val GHOST_APPROACH = 0.9
-    const val GHOST_APPROACH_SECONDS = 7.0
+    const val GHOST_APPROACH_SECONDS = 3.0
 
     /** How long a round of the drift takes, in seconds: day to night and back in about four minutes. */
     const val DRIFT_PERIOD = 240.0
@@ -274,7 +274,8 @@ object WorldLight {
      * 2026-11-21: "Can we make it that the ghosts 'grow' ever so slightly", "meaning the lamp needs to slowly get
      * closer to the band"): the ghosts are the band's shadows by that lamp, so as it creeps closer they grow, the
      * ones of who stands nearest to it the most. It comes [GHOST_APPROACH] at most, most of it in the first quarter
-     * minute (it was the first half: "the ghosts have to be growing faster"), and ever slower. No time, or none yet: not at all.
+     * minute, the first seconds the fastest (it took four times as long at first: "the ghosts have to be growing
+     * faster", "even faster"), and ever slower. No time, or none yet: not at all.
      */
     fun ghostApproach(since: Double): Double {
         // NaN-guard: no time is no way

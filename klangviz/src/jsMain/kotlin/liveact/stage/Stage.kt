@@ -563,7 +563,8 @@ class Stage(
         val ghosts = WorldLight.ghostShare(world)
 
         ghostsSince = if (ghosts > 0.0) ghostsSince + dt else 0.0
-        lights.approach(by = WorldLight.ghostApproach(ghostsSince) * ghosts)
+        // (the way is the lamp's whole once the ghosts are a third there: it is not held back by their slow coming)
+        lights.approach(by = WorldLight.ghostApproach(ghostsSince) * min(1.0, ghosts * 3))
 
         this.front = front
         this.world = world
