@@ -7,7 +7,7 @@ import bmesh
 
 from mathutils import Vector
 
-from figure import Figure, PICK_HAND, draw_chin
+from figure import Figure, PICK_HAND, draw_chin, relax, smooth, soften_joint
 
 # How upright he stands: the head's way ahead of the hips (the frame's "stoop"). It was 0.11, a stooped figure; an
 # athlete stands upright, and a trace of it is left as his character (the maintainer, 2026-11-21).
@@ -151,69 +151,6 @@ def refine(body, top, longest):
                 body.vertex_groups[g].add([v.index], x / total, 'REPLACE')
 
 
-def soften_joint(body, centre, reach, times):
-    """The bones' weights within [reach] of [centre], each point's averaged with its neighbours' [times] over (most
-    at the middle, fading to nothing at the edge), so the skin bends over a longer stretch round the joint. A point
-    keeps four bones at most."""
-    mesh = body.data
-    near = {}
-    for e in mesh.edges:
-        a, b = e.vertices
-        near.setdefault(a, []).append(b)
-        near.setdefault(b, []).append(a)
-    inside = {v.index: 1.0 - (v.co - centre).length / reach for v in mesh.vertices if (v.co - centre).length < reach}
-    weights = {i: {g.group: g.weight for g in mesh.vertices[i].groups}
-               for i in set(inside) | {j for i in inside for j in near[i]}}
-    for _ in range(times):
-        mixed = {}
-        for i, share in inside.items():
-            total = dict(weights[i])
-            for j in near[i]:
-                for g, x in weights[j].items():
-                    total[g] = total.get(g, 0.0) + x
-            k = min(1.0, 2.0 * share)
-            mixed[i] = {g: weights[i].get(g, 0.0) * (1.0 - k) + x / (1 + len(near[i])) * k for g, x in total.items()}
-        weights.update(mixed)
-
-    for i in inside:
-        best = sorted(weights[i].items(), key=lambda x: -x[1])[:4]
-        total = sum(x for _, x in best)
-        for g in mesh.vertices[i].groups:
-            if g.group not in dict(best):
-                body.vertex_groups[g.group].remove([i])
-
-        for g, x in best:
-            body.vertex_groups[g].add([i], x / total, 'REPLACE')
-
-
-def relax(skin, times, trunk=False):
-    """Evens the skin below the neck's foot, [times] over: each point goes half the way to the middle of its
-    neighbours. All of it: and then as far back out again, so thin limbs do not shrink (this takes out the small
-    folds the mesh's uneven faces leave). The [trunk] alone, from the hips up: without the way back, a real
-    smoothing (the trunk is thick enough to lose nothing by it)."""
-    mesh = skin.body.data
-    near = [[] for _ in mesh.vertices]
-    for e in mesh.edges:
-        a, b = e.vertices
-        near[a].append(b); near[b].append(a)
-    low = skin.P["hips"].pos.z
-    inside = []
-    for v in mesh.vertices:
-        share = skin.below_neck(v)
-        if trunk:
-            share *= (1.0 - skin.arms(v.index)) * smooth((v.co.z - low) / 0.06)
-
-        if share > 0.0:
-            inside.append((v.index, share))
-
-    for _ in range(times):
-        for step in ((0.5,) if trunk else (0.5, -0.53)):
-            moved = [(i, mesh.vertices[i].co + (sum((mesh.vertices[j].co for j in near[i]), Vector()) / len(near[i])
-                                                - mesh.vertices[i].co) * (step * share)) for i, share in inside]
-            for i, co in moved:
-                mesh.vertices[i].co = co
-
-
 class Skin:
     """The body's skin while it is shaped: its points, and how much of each belongs to an arm or a leg (by the bones'
     weights), so that a muscle of the arm moves no skin of the trunk beside it, and the head and the neck stay."""
@@ -236,11 +173,6 @@ class Skin:
     def below_neck(self, v):
         # nothing above the neck's foot moves: the skin fades out of reach over the last 3 cm under it
         return smooth((self.top - v.co.z) / 0.03)
-
-
-def smooth(x):
-    x = min(1.0, max(0.0, x))
-    return x * x * (3 - 2 * x)
 
 
 def shape_trunk(skin, profile):

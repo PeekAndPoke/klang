@@ -6,7 +6,7 @@
 # only; and the steps a character shapes its body with. Every figure has this one skeleton, so every motion of the
 # show fits everyone. What makes a character is in its own file (sirene.py, skalpell.py, ...): its measures on this
 # skeleton and its own shaping, written out step by step.
-import bpy, math
+import bmesh, bpy, heapq, math
 from mathutils import Vector
 
 # The base figure, a man of 1.78 m looking along -Y, Z up; the left side (x > 0), the right is mirrored.
@@ -323,6 +323,380 @@ def soften_weights(body):
                 body.vertex_groups[g].add([i], x / total, 'REPLACE')
 
 
+def smooth(x):
+    x = min(1.0, max(0.0, x))
+    return x * x * (3 - 2 * x)
+
+
+def mend_weights(body, P):
+    """Takes a limb's bones off skin that is not that limb's. The skin's pieces meet at the hips and at the chest,
+    and there the shared weights give skin to the wrong limb: on the rhythm guitarist a patch of the lower belly on
+    his right moved with the left thigh (a third of it), the upper back between the shoulders with both upper arms.
+    A thigh that swung forward folded the groin of the other side, an arm that reached ahead wrinkled the back. Here
+    a limb's bones lose the skin across the figure's middle (fading over 4 cm to each side of it), and the arm's
+    bones the skin further in than 9 cm from the shoulder joint (fading over 5 cm); what is left is made whole again.
+    (For a character's sculpt(), before it shapes by the bones' weights; fit_limbs() mends every figure at the end.)"""
+    groups = {g.index: g.name for g in body.vertex_groups}
+    limbs = ("shoulder", "elbow", "wrist", "hand", "hip", "knee", "ankle", "toe")
+    arm_from = P["shoulderL"].pos.x - 0.14
+    mended = []
+    for v in body.data.vertices:
+        kept, changed = {}, False
+        for g in v.groups:
+            name, share = groups[g.group], 1.0
+            if name[:-1] in limbs and name[-1] in "LR":
+                out = v.co.x if name[-1] == "L" else -v.co.x
+                share = smooth((out + 0.04) / 0.08)
+                if name[:-1] in ("elbow", "wrist", "hand"):
+                    share *= smooth((out - arm_from) / 0.05)
+            changed = changed or share < 1.0
+            kept[g.group] = g.weight * share
+        total = sum(kept.values())
+        if not changed or total < 0.2:
+            continue
+
+        mended.append(v.index)
+        for g, x in kept.items():
+            if x / total < 0.005:
+                body.vertex_groups[g].remove([v.index])
+            else:
+                body.vertex_groups[g].add([v.index], x / total, 'REPLACE')
+    # which points: fit_limbs() evens how the trunk's share is split there (what a limb's share leaves behind is
+    # ragged: behind the neck's foot, where both arms had a share, the neck's bone was cut by the four-bone limit)
+    body["mended"] = mended
+
+
+def soften_joint(body, centre, reach, times):
+    """The bones' weights within [reach] of [centre], each point's averaged with its neighbours' [times] over (most
+    at the middle, fading to nothing at the edge), so the skin bends over a longer stretch round the joint. A point
+    keeps four bones at most. (For a character's sculpt(), where it shapes a limb by the bones' weights and wants
+    that shape to run out softly; how the skin bends at the shoulders and the hips is set by fit_limbs() at the end.)"""
+    mesh = body.data
+    near = {}
+    for e in mesh.edges:
+        a, b = e.vertices
+        near.setdefault(a, []).append(b)
+        near.setdefault(b, []).append(a)
+    # (only points that are part of the skin: its mesh may hold a few loose ones, inside the body)
+    inside = {v.index: 1.0 - (v.co - centre).length / reach for v in mesh.vertices
+              if v.index in near and (v.co - centre).length < reach}
+    weights = {i: {g.group: g.weight for g in mesh.vertices[i].groups}
+               for i in set(inside) | {j for i in inside for j in near[i]}}
+    for _ in range(times):
+        mixed = {}
+        for i, share in inside.items():
+            total = dict(weights[i])
+            for j in near[i]:
+                for g, x in weights[j].items():
+                    total[g] = total.get(g, 0.0) + x
+            k = min(1.0, 2.0 * share)
+            mixed[i] = {g: weights[i].get(g, 0.0) * (1.0 - k) + x / (1 + len(near[i])) * k for g, x in total.items()}
+        weights.update(mixed)
+
+    for i in inside:
+        best = sorted(weights[i].items(), key=lambda x: -x[1])[:4]
+        total = sum(x for _, x in best)
+        # (the list first: taking a point out of a group changes the point's groups under the loop)
+        for g in [g.group for g in mesh.vertices[i].groups if g.group not in dict(best)]:
+            body.vertex_groups[g].remove([i])
+
+        for g, x in best:
+            body.vertex_groups[g].add([i], x / total, 'REPLACE')
+
+
+def relax(skin, times, trunk=False):
+    """Evens the skin a character shapes, [times] over: each point goes half the way to the middle of its
+    neighbours. All of it: and then as far back out again, so thin limbs do not shrink (this takes out the small
+    folds the mesh's uneven faces leave). The [trunk] alone, from the hips up: without the way back, a real
+    smoothing (the trunk is thick enough to lose nothing by it). [skin] is the character's own view of its skin
+    while it shapes it: its `body` and `P`, `below_neck(v)` (how much of a point may move), `arms(i)` (how much of
+    a point is an arm's) and, where it has them, `ends` (the hands' and the feet's shares by point: they stay)."""
+    mesh = skin.body.data
+    near = [[] for _ in mesh.vertices]
+    for e in mesh.edges:
+        a, b = e.vertices
+        near[a].append(b); near[b].append(a)
+    low = skin.P["hips"].pos.z
+    ends = getattr(skin, "ends", None)
+    inside = []
+    for v in mesh.vertices:
+        share = skin.below_neck(v)
+        if ends is not None:
+            share *= 1.0 - smooth(2.0 * ends.get(v.index, 0.0))
+
+        if trunk:
+            share *= (1.0 - skin.arms(v.index)) * smooth((v.co.z - low) / 0.06)
+
+        # (a loose point, of which the skin's mesh may hold a few inside the body, has no neighbours)
+        if share > 0.0 and near[v.index]:
+            inside.append((v.index, share))
+
+    for _ in range(times):
+        for step in ((0.5,) if trunk else (0.5, -0.53)):
+            moved = [(i, mesh.vertices[i].co + (sum((mesh.vertices[j].co for j in near[i]), Vector()) / len(near[i])
+                                                - mesh.vertices[i].co) * (step * share)) for i, share in inside]
+            for i, co in moved:
+                mesh.vertices[i].co = co
+
+
+# How a limb's skin meets the trunk's (fit_limbs()): the limb's bones, the joint it turns about, the point that
+# gives the joint's size, and the bone that takes the trunk's share where a point has no trunk bone yet.
+#   reach: over how far to either side of the border the skin goes from the trunk's to the limb's, in the joint's
+#          radius; tilt: the border above an arm's joint, see fit_limbs(); fine: no edge of the skin round the joint
+#          is left longer than this, in the joint's radius
+LIMB_FIT = [
+    dict(bones=("elbow", "wrist", "hand"), joint="shoulder", trunk="shoulder", reach=2.0, tilt=30.0, fine=0.4),
+    dict(bones=("knee", "ankle", "toe"), joint="hip", trunk="hip", reach=1.5, tilt=None, fine=0.4),
+]
+# Bones that never turn against each other in the show (Rig.kt turns no shoulder and no hip bone): where a point has
+# more than four bones, such a pair is counted as one before the weakest is dropped.
+AS_ONE = {"shoulderL": "chest", "shoulderR": "chest", "hipL": "hips", "hipR": "hips"}
+
+
+def fit_limbs(body, P, fits=LIMB_FIT):
+    """
+    How the skin is shared between the trunk and each limb, round the shoulder and the hip joints: set anew on the
+    finished body, the last step before the rig, so it changes no shape. What soften_weights() (and a character's
+    own soften_joint()) leave there goes by the mesh's edges, not by distance: on a big figure with a coarse skin
+    the whole upper arm was half the trunk's (the drummer: from 15 cm above the joint to 20 cm below it), far from
+    the joint skin kept a share of a limb it has nothing to do with (the upper back up to 0.4 of each arm, the
+    lower belly of the other side's thigh), and the border lay level through the joint, so the shoulder's cap
+    stayed behind when the arm went up. A raised arm then thinned to a pipe, drew a flat web out of the back and
+    left the cap standing off the chest as a shell.
+
+    Here each point is first wholly the limb's or the trunk's: the limb's where the limb's bones had more than half
+    of it; and above an arm's joint by place: the limb's on the outer side of a plane through the joint that leans
+    outward by [tilt] degrees (the cap goes with the arm, the shoulder's top toward the neck stays: a raglan
+    sleeve's line). Then the border is made soft over the same distance everywhere, [reach] joint's radii to each
+    side, measured along the skin (so a hanging arm takes none of the flank beside it), and a limb gets nothing
+    across the figure's middle. The limb's share is split between its bones as it was, the trunk's between the
+    trunk's (evened where a limb's share was taken away, see even() below).
+
+    For this the skin round the four joints is cut finer first, each long edge in two, twice at most: no point that
+    was there moves, the new ones lie on the faces as the model's file had them, and each faces the light as its
+    place did, so the figure at rest is the same surface and looks the same. Measured on the six figures
+    (2026-11-21, KLANG-00478): the skin that shrinks to under 0.6 of its area with both arms straight up fell to
+    about half (the drummer: 2134 to 1100 cm2), the web behind the raised arms and the crumpled groin of a step
+    are gone. What is left: far overhead (from about 120 degrees) the armpit still creases and the shoulder's top
+    sinks a little; two bones blended in a straight line cannot do more there.
+    """
+    mesh = body.data
+    # the skin round the joints first made fine enough to carry a soft border: the skin's own faces are up to 10 cm
+    # long where a chest meets an arm. A long edge is cut in two, its new point on the edge (no point that was there
+    # moves; a face is only cut into smaller ones), and takes its bones from the edge's two ends
+    # (and the light falls on the skin as before: each point keeps the direction its skin faced, a new point gets
+    # the mean of its edge's two ends'; left to themselves the new points would face as their flat faces do, and
+    # the large faces of a chest would show)
+    facing = mesh.attributes.new("facing", 'FLOAT_VECTOR', 'POINT')
+    facing.data.foreach_set("vector", [x for n in mesh.vertex_normals for x in n.vector])
+    mesh.calc_loop_triangles()
+    cut = {}                                      # a four-sided face -> the two points its file's triangles share
+    for t in mesh.loop_triangles:
+        if len(mesh.polygons[t.polygon_index].vertices) == 4:
+            cut[t.polygon_index] = sorted(set(cut.get(t.polygon_index, t.vertices)) & set(t.vertices))
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+
+    def round_a_joint(co):
+        return any((co - P[fit["joint"] + side].pos).length < (2.2 + fit["reach"]) * P[fit["joint"] + side].radius
+                   for fit in fits for side in ("L", "R"))
+
+    # (the faces there as triangles first, cut the way the model's file cuts them: a four-sided face of the skin is
+    # not flat, and cut into smaller faces any other way its surface would lie up to 7 mm from where it was)
+    bm.verts.ensure_lookup_table()
+    for f in [f for f in bm.faces if f.material_index == 0 and len(f.verts) == 4 and all(round_a_joint(v.co) for v in f.verts)]:
+        a, b = cut[f.index]
+        bmesh.utils.face_split(f, bm.verts[a], bm.verts[b])
+    faces = [f for f in bm.faces if f.material_index == 0 and len(f.verts) > 3 and all(round_a_joint(v.co) for v in f.verts)]
+    bmesh.ops.triangulate(bm, faces=faces, quad_method='FIXED', ngon_method='EAR_CLIP')
+    for _ in range(2):
+        bm.edges.index_update()
+        edges = set()
+        for fit in fits:
+            for side in ("L", "R"):
+                joint = P[fit["joint"] + side]
+                far = (2.2 + fit["reach"]) * joint.radius
+                edges.update(e for e in bm.edges if e.calc_length() > fit["fine"] * joint.radius
+                             and all((v.co - joint.pos).length < far for v in e.verts)
+                             and e.link_faces and all(f.material_index == 0 and len(f.verts) == 3 for f in e.link_faces))
+        if edges:
+            # (in the mesh's own order: a set's order differs from run to run, and with it the new points')
+            bmesh.ops.subdivide_edges(bm, edges=sorted(edges, key=lambda e: e.index), cuts=1,
+                                      use_grid_fill=True, use_single_edge=True, smooth=0.0)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+    facing = mesh.attributes["facing"]
+    ways = [Vector(d.vector) for d in facing.data]
+    mesh.attributes.remove(facing)
+    ways = [w.normalized() if w.length > 1e-6 else Vector((0.0, 0.0, 1.0)) for w in ways]
+    # (a face that is not smooth, an eye's, keeps facing its own way)
+    mesh.normals_split_custom_set([tuple(ways[v]) if f.use_smooth else tuple(f.normal) for f in mesh.polygons for v in f.vertices])
+
+    count = len(mesh.vertices)
+    names = {g.index: g.name for g in body.vertex_groups}
+    index = {g.name: g.index for g in body.vertex_groups}
+    weights = [{g.group: g.weight for g in v.groups} for v in mesh.vertices]
+    place = [v.co.copy() for v in mesh.vertices]
+
+    # the ways along the skin: its edges, and across its four-sided faces
+    near = [[] for _ in range(count)]
+    pairs = {tuple(sorted(e.vertices)) for e in mesh.edges}
+    for f in mesh.polygons:
+        if len(f.vertices) == 4:
+            pairs.add(tuple(sorted((f.vertices[0], f.vertices[2]))))
+            pairs.add(tuple(sorted((f.vertices[1], f.vertices[3]))))
+    for a, b in sorted(pairs):
+        d = (place[a] - place[b]).length
+        near[a].append((b, d)); near[b].append((a, d))
+
+    def within(starts, limit):
+        """The points within [limit] of [starts] along the skin, with how far."""
+        far = {i: 0.0 for i in starts}
+        heap = [(0.0, i) for i in starts]
+        while heap:
+            d, i = heapq.heappop(heap)
+            if d > far[i]:
+                continue
+            for j, step in near[i]:
+                nd = d + step
+                if nd < limit and nd < far.get(j, limit):
+                    far[j] = nd
+                    heapq.heappush(heap, (nd, j))
+        return far
+
+    all_limbs = {index[b + side] for fit in fits for b in fit["bones"] for side in ("L", "R") if b + side in index}
+    split = {}                                    # point -> the trunk's bones' shares among themselves, evened
+    shares = {}                                   # (the limb's first bone's name) -> the limb's new share by point
+
+    def even(i, ball, reach):
+        """How the trunk's share of the point [i] is split between the trunk's bones: evened over half the [reach]
+        ([ball]: the points round it along the skin, with how far), each point counting by how much of it was the
+        trunk's. Under a limb's large share the split was left ragged by the four-bone limit (behind the neck's
+        foot, where both arms had a share, the neck's bone was cut), and it shows once the limb's share is gone."""
+        if i in split:
+            return
+        mixed = {}
+        for j, d in ball.items():
+            k = 1.0 - 2.0 * d / reach
+            if k > 0.0:
+                for g, x in weights[j].items():
+                    if g not in all_limbs:
+                        mixed[g] = mixed.get(g, 0.0) + k * x
+        split[i] = mixed
+
+    for fit in fits:
+        for side, sx in (("L", 1.0), ("R", -1.0)):
+            bones = [index[b + side] for b in fit["bones"] if b + side in index]
+            if not bones:
+                continue
+            joint = P[fit["joint"] + side]
+            first = P[fit["bones"][0] + side].pos
+            along = (first - joint.pos).normalized()
+            had = [sum(w.get(b, 0.0) for b in bones) for w in weights]
+            own = [1.0 if x > 0.5 else 0.0 for x in had]
+            if fit["tilt"] is not None:
+                out = Vector((sx, 0.0, 0.0))
+                out = (out - along * out.dot(along)).normalized()
+                tilt = math.radians(fit["tilt"])
+                normal = along * math.cos(tilt) + out * math.sin(tilt)
+                for i in range(count):
+                    d = place[i] - joint.pos
+                    if d.dot(along) < 0.0 and d.length < 2.2 * joint.radius and sx * place[i].x > 0.0 and near[i]:
+                        own[i] = 1.0 if d.dot(normal) > 0.0 else 0.0
+
+            reach = fit["reach"] * joint.radius
+            border = {i for i in range(count) for j, _ in near[i] if own[i] != own[j]}
+            new = list(own)
+            for i in within(border, reach):
+                ball = within([i], reach)
+                total = sum(1.0 - d / reach for d in ball.values())
+                new[i] = sum((1.0 - d / reach) * own[j] for j, d in ball.items()) / total
+                even(i, ball, reach)
+            # nothing of a limb across the figure's middle
+            for i in range(count):
+                if new[i] > 0.0:
+                    new[i] *= smooth((sx * place[i].x + 0.04) / 0.08)
+                # (skin far from the border that loses a limb's share: its trunk's split is evened as well)
+                if i not in split and had[i] - new[i] > 0.02 and near[i]:
+                    even(i, within([i], 0.5 * reach), reach)
+            shares[fit["bones"][0] + side] = (bones, had, new, index.get(fit["trunk"] + side))
+
+    # the points a character's own mend_weights() took a limb's share from (their numbers hold: new points come last)
+    mended = {i for i in body.get("mended", []) if i < count and near[i]}
+    # (and the points beside them: the new ones cut into their edges above took their bones from them)
+    for _ in range(2):
+        mended |= {j for i in mended for j, _ in near[i]}
+    if "mended" in body:
+        del body["mended"]
+    if mended and fits:
+        reach = fits[0]["reach"] * P[fits[0]["joint"] + "L"].radius
+        for i in mended:
+            even(i, within([i], 0.5 * reach), reach)
+
+    limb_bones = {b for bones, _, _, _ in shares.values() for b in bones}
+    changed = 0
+    for i in range(count):
+        if i not in mended and not any(abs(new[i] - had[i]) > 1e-4 for _, had, new, _ in shares.values()):
+            continue
+        old = weights[i]
+        limbs = sum(new[i] for _, _, new, _ in shares.values())
+        scale = 1.0 / limbs if limbs > 1.0 else 1.0
+        fresh = {}
+        trunk_bone = None
+        for bones, had, new, trunk in shares.values():
+            share = new[i] * scale
+            if share <= 0.0:
+                continue
+            trunk_bone = trunk_bone if trunk_bone is not None else trunk
+            if had[i] > 1e-6:
+                for b in bones:
+                    if old.get(b, 0.0) > 0.0:
+                        fresh[b] = old[b] / had[i] * share
+            else:
+                fresh[bones[0]] = share
+        rest = max(0.0, 1.0 - sum(fresh.values()))
+        if rest > 0.0:
+            trunk = {g: x for g, x in old.items() if g not in limb_bones}
+            total = sum(trunk.values())
+            evened = split.get(i)
+            if evened:
+                # the evened split takes over as far as the point was a limb's: skin that was all the trunk's
+                # keeps its own (a neck's foot, a waist)
+                k = 1.0 if total <= 1e-6 or i in mended else smooth(2.0 * (1.0 - total))
+                whole = sum(evened.values())
+                trunk = {g: (trunk.get(g, 0.0) / total * (1.0 - k) if total > 1e-6 else 0.0) + evened.get(g, 0.0) / whole * k
+                         for g in set(trunk) | set(evened)}
+                total = sum(trunk.values())
+            if total > 1e-6:
+                for g, x in trunk.items():
+                    fresh[g] = fresh.get(g, 0.0) + x / total * rest
+            else:
+                # (a point that was all a limb's: the trunk's share goes to the bone the limb hangs on)
+                near_trunk = next((t for b, _, new, t in shares.values() if new[i] > 0.0 and t is not None), trunk_bone)
+                fresh[near_trunk] = fresh.get(near_trunk, 0.0) + rest
+
+        fresh = {g: x for g, x in fresh.items() if x > 0.002}
+        # four bones at most: bones that never turn against each other count as one before the weakest goes
+        while len(fresh) > 4:
+            pair = next(((g, index[AS_ONE[names[g]]]) for g in sorted(fresh, key=fresh.get)
+                         if names[g] in AS_ONE and AS_ONE[names[g]] in index and index[AS_ONE[names[g]]] in fresh), None)
+            if pair:
+                fresh[pair[1]] += fresh.pop(pair[0])
+            else:
+                fresh.pop(min(fresh, key=fresh.get))
+
+        total = sum(fresh.values())
+        for g in old:
+            if g not in fresh:
+                body.vertex_groups[g].remove([i])
+
+        for g, x in fresh.items():
+            body.vertex_groups[g].add([i], x / total, 'REPLACE')
+        changed += 1
+    return changed
+
+
 def draw_chin(body, head, hs, strength, drop=1.0, fore=1.0):
     # The chin is no added piece but the head's own skin, drawn out: the point of the real surface under the front of
     # the face is found, and the skin round it is pulled forward and down, most at that point and fading smoothly
@@ -594,6 +968,8 @@ class Figure:
         if back:
             join_into(body, back)
         self.hair(w)
+        # last, on the finished body: how the skin is shared between the trunk and the limbs (it moves no point)
+        fit_limbs(body, P)
 
         rig = make_rig(key, P, names, body)
         missing = [g.name for g in body.vertex_groups if g.name not in rig.data.bones]
