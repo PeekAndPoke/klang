@@ -1,7 +1,6 @@
 # KLANG-00479: Live act: small building blocks to orchestrate a show per song
 
-> **Status (2026-11-21): DESIGNED.** A plan, not started. The maintainer reads it first; the open decisions at its
-> end are his.
+> **Status (2026-11-21): IN PROGRESS.** The four decisions are taken; step 1 (the song and the cast leave the code) begins.
 >
 > **Part of:** KLANG-00447 (Live act: a band on a stage, played by the song)
 
@@ -123,17 +122,15 @@ that and can be taken in any order, or side by side. Step 9 can begin thin right
   second band needs it, not before.
 - The Meet page reading the same sheets (it already reads name, instrument and wildness).
 
-## Decide before implementing
+## Decided (the maintainer, 2026-11-21)
 
-1. **Where it lives.** The maintainer wants notstrom out of this public repo ("a private project on top of the
-   open-source project"). That fits this plan's cut: the machinery (performers, skills, triggers, the board, the
-   stage's parts) could stay open in `klangviz`, and the band (members, figures, concept art), the scores and the
-   app go private. Or all of it goes. The cut decides module boundaries, so it comes before step 1.
-2. **Is the score written by hand only**, or should a song's mood also be drawn (seed plus weights per song)? The plan
-   assumes: by hand, with the seed varying the performance inside the score's limits, as today.
-3. **How far step 3 goes**: all four instruments at once, or strings and trumpet first (they already take looks).
-4. **Whether camera and lamps should start to listen to the energy** as part of this, or stay as they are until the
-   blocks exist.
+1. **Where it lives:** "i will decide later how we do the split, for now we stay in this repo". The steps keep the
+   cut in view all the same: the machinery apart from the band, the scores and the app, so the split stays cheap.
+2. **Moods:** "we keep the mood selection as it currently is": chosen by the seed inside what the score allows.
+3. **How far the tidying goes:** "tidy up as much as you can. I want to get things in order so a review round has an
+   easier job": step 3 covers all four instruments, and each step leaves its area in order (no half-moved code).
+4. **The energy for camera and lamps:** "No not now, but it needs to be kept in mind while factoring": the trigger
+   vocabulary has its place for it ("by what sounds"), nothing reads it yet.
 
 ## Acceptance
 
@@ -145,3 +142,4 @@ that and can be taken in any order, or side by side. Step 9 can begin thin right
 ## History
 
 - 2026-11-21: created, from the inventory of the same day.
+- 2026-11-21: IN PROGRESS. The four decisions are taken; step 1 (the song and the cast leave the code) begins.
