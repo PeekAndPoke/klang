@@ -286,12 +286,12 @@ let marimba = (() => {
 
 export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).adsrOff()
   .velocity(guitarDyna(0)).body(material = "steel", wet = 0.2)
-  .hpf(550, 0.7).lpf(7500, 0.7)
+  .hpf(250, 0.7).lpf(7500, 0.7)
   .pan(0.05).superimpose(pan(0.95)) // . solo()
   .clip(0.80)
 
 export lead_arrange = x => x.cylinder(0) //  .mute()
-  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.30))
+  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.23))
   .velocity("<1.1 0.95 1.00 0.95>*4")
   .shuffle("<1!64  1!17 4!14 1!1 1!32  1!7 4!8 1!1  1!64>")
   .mute(   "<1!64  0!32          1!32  0!32         1!64>")
@@ -319,7 +319,7 @@ let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
   .gain(1.0)
   .body(material = "spruce", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.33)
+  .katp("gain.gain", 0.30)
 
 export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
@@ -330,8 +330,8 @@ export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 
 // Guitar 2  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar2_pat =
-  `<[4 4 6 8  7 7 9 10]  [11 11 [13 11] 8   7  4 5  6]
-    [4 4 6 8  7 7 7  8]  [11 11 [13 9]  4   7  4 2  3]
+  `<[4 4 6 8  7 7 9 10]  [11 11 [12 11] 7   7  4 5  6]
+    [4 4 6 8  7 7 7  8]  [ 9 11 [10 9]  0   7  4 2  3]
     [4 4 6 8  4 4 5  6]  [4 4 6 8          11 11 9 10]
     [4 4 3 6  4 4 2  3]  [7 11 [3 7] [6 7] [4 4 6 4]!2 [0 2 4 7] 8]>/4`
 
@@ -349,7 +349,7 @@ let rhythmBus = x => x.cylinder(2).katalyst(rhythmAmp)
   // One amp, one wood: the maintainer's by ear. Maple was guitar 2's, mahogany guitar 3's.
   .body(material = "maple", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.28)
+  .katp("gain.gain", 0.29)
 
 export guitar2_arrange = x => x.apply(rhythmBus)  // . solo()
   .scale("<e2:minor>").mute("<0!128 1!16 0!16>") // .mute()
@@ -432,27 +432,17 @@ let trumpet2 = (() => {
 
 export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3@2 -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2@2 1 0]>`
 
-export trumpet_shape = x => x.sound(trumpet).adsrOff() //  .solo()
-  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "brass", wet = 0.3)
-  .tremolo(rate = 25, depth = 0.3)
-  .vibrato(rate = beatRate(0.25), semitones = 0.1)
-  .hpf(250).lpf("5500".add(perlin(-100, 100).fast(4))).clip(0.7) 
-  .apply(
-    x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
-    x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
-  )
-
 export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
-  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "steel", wet = 0.10)
+  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "brass", wet = 0.10)
   .vibrato(rate = 5.5, semitones = 0.15)
-  .hpf(250).lpf("5500".add(perlin(-300, 300).fast(4))).clip(0.85)
+  .hpf(250).lpf("5500".add(perlin(-300, 300).fast(4))).clip(0.9)
   .apply(
     x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
     x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
   )
 
 export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
-  .scale("e5:minor").gain(0.15)
+  .scale("e5:minor").gain(0.10)
   .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
 export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
@@ -469,7 +459,7 @@ let metalKick = (() => {
     .adsr(0.0005, 0.25, 0.0, 0.05)
     .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(1.5)
+  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(1.8)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
@@ -538,7 +528,7 @@ let metalSnare = (() => {
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.sound(metalKick).adsrOff().note("e1").transpose(transposition).gain(0.37).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+export kick_shape = x => x.sound(metalKick).adsrOff().note("e1").transpose(transposition).gain(0.36).velocity("0.98 0.94 0.96 0.94").pan(0.5)
 export kick_arrange = x => x.cylinder(6).mute("<0!128 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick") //  . solo()
 
@@ -606,8 +596,8 @@ export song = stack(
     .mul(0.80) // the "brightness" knob
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.100, "soft").mul(0.95)).cut(5500)
-      .band(low => low.distort(0.001, "soft").mul(1.05))
+      .band(mid => mid.distort(0.100, "soft").mul(0.95)).cut(5100)
+      .band(low => low.distort(0.001, "soft").mul(1.08))
     ) // the glue on the mids only: the kick and the hats stay clean
     .mul(5.00)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)

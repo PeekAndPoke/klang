@@ -46,12 +46,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4700, 3.2)                              // the peak, up high and narrow
+  .lowpass(4700, 3.3)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3000, 1.6)                              // the peak, low and wide
+  .lowpass(2800, 2.4)                              // the peak, low and wide
   .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -85,7 +85,7 @@ let pedalFuzz = Kat.fn(x => x
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
 let pedalBoost = Kat.fn(x => x.parallel(
   clean => clean, 
-  dirt => dirt.highpass(300).mul(1.4)
+  dirt => dirt.highpass(720).mul(1.4)
 ).mul(0.6))
 
 // Guitar rig - Pre-Amps  ---------------------------------------------------------------------------------------------------------------------------
@@ -106,17 +106,17 @@ let preampCrunch = Kat.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
   .distort(0.18, "asym").highpass(100)
-  .lowpass(5500)
+  .lowpass(5800)
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.15, "tube").highpass(120)
-  .distort(0.09, "asym").highpass(100)
-  .distort(0.45, "soft")
-  .lowpass(4800)                                   // the fizz
-  .mul(0.64))                                      // volume
+  .distort(0.35, "tube").highpass(120)
+  .distort(0.45, "hard").highpass(100)
+  .distort(0.35, "soft")
+  .lowpass(5500)                                   // the fizz
+  .mul(0.65))                                      // volume
 
 // Guitar rig - Power Amps  --------------------------------------------------------------------------------------------------------------------------
 
@@ -144,8 +144,8 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
     .band(freq =  160, q = 0.6, db =  3.80)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.5, db =  4.50)        // roar:  low mids
-    .band(freq = 2700, q = 1.9, db =  1.80)        // bark:  the upper-mid speaker peak
+    .band(freq =  800, q = 0.5, db =  4.60)        // roar:  low mids
+    .band(freq = 2700, q = 1.9, db =  2.10)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
@@ -268,14 +268,14 @@ let chimeAmp  = makeAmp(cleanStages,  noCuts)                                   
 let metalKick = (() => {
   let thump = Ign.sine()
     .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
-    .adsr(0.0005, 0.22, 0.0, 0.05)
+    .adsr(0.0005, 0.25, 0.0, 0.05)
     .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.015, 0.0, 0.02).mul(3.0)
+  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(1.8)
 
   return thump.plus(crack)
     .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
-    .oversampleAtLeast(2, y => y.shape("soft"))
+    .shape("soft")
     .classic()
 })()
 
@@ -408,11 +408,11 @@ let beatBus = x => x.cylinder(3).katalyst(beatAmp)
 // 0.40 the gain of chug. Chug keeps that ratio as how hard it hits the amp (0.73 = 0.40 / 0.55).
 let heavyBus = x => x.cylinder(4).katalyst(heavyAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.40 * heavyTrim)
+  .katp("gain.gain", 0.42 * heavyTrim)
 
 let strikeBus = x => x.cylinder(5).katalyst(strikeAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.33 * strikeTrim)
+  .katp("gain.gain", 0.35 * strikeTrim)
 
 let soarBus = x => x.cylinder(6).katalyst(soarAmp)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
@@ -481,7 +481,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.90 0.85 0.90 0.93".sub(perlin(0.0, 0.2).seed(2)))
-  .gain(0.6).late(perlin(0.0005, 0.0010).seed(2)).apply(
+  .pregain(0.5).gain(1.0).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.50),
     // x => x.pan(0.10),
   ).apply(heavyBus)
@@ -492,7 +492,7 @@ export wings = chords => n(chords).ply(16)
   .ignp("attack", perlin(0.004, 0.005).seed(1))
   .ignp("decay", "[5.0 4.8]*8").clip(1)
   .velocity("1.0 0.85 0.90 0.85  0.92 0.85 0.90 0.94".sub(perlin(0.0, 0.2).seed(3)))
-  .gain(0.5).late(perlin(0.0010, 0.0015).seed(3)).apply(
+  .pregain(0.5).gain(1.0).late(perlin(0.0010, 0.0015).seed(3)).apply(
     x => x.pan(0.95),
     x => x.pan(0.05),
   )
@@ -539,7 +539,7 @@ export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.39).pan(0.575)
   .lpf(freq = "13000".add(saw(0, 1200).slow(12)), q = 0.5)
-  .delay(0.33, pure(4/65).div(cps), 0.875, 24) // Snare needs it own cylinder for the dalay!
+  .delay(0.33, pure(4/65).div(cps), 0.85, 24) // Snare needs it own cylinder for the dalay!
   .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
 
 export hats = pat => sound(pat)
@@ -616,7 +616,7 @@ let breakingOpen = stack(
 // The melody steps aside and the cocoon's own thread unravels over the heavy wall: the arpeggio an octave up, leading,
 // in the centre between the wings.
 let unravelling = stack(
-  spin(cocoonArp.add(7)).ply(2).katp("gain.gain", 0.30 * spinTrim).pregain(1.0).gain(0.8).hpf(220).superimpose(
+  spin(cocoonArp.add(7)).ply(2).katp("gain.gain", 0.40 * spinTrim).pregain(1.0).gain(0.8).hpf(500, 0.6).superimpose(
     pan(0.25).transpose(12),
     pan(0.75).transpose(12),
   ),
@@ -711,13 +711,13 @@ export song = stack(
  
   , master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 7.5, 7500)     
-    .mul(0.25)
+    .mul(0.30)
     .bands(b => b
       .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
       .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(4800)
       .band(low => low.distort(0.001, "soft").mul(1.05))
     ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.4)
+    .mul(4.6)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
   )))
 )
