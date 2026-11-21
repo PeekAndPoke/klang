@@ -45,8 +45,7 @@ object MeetLayout {
 
     /**
      * From the middle to the dark surface behind the mesh, which takes the shadows: 1.25 m behind the mesh, so 1.6 m
-     * behind the member. With the lamp 2.8 m before them ([LAMP]) their shadow on it is a little over one and a half
-     * times their size.
+     * behind the member. With the lamp 2 m before them ([LAMP]) their shadow on it is 1.8 times their size.
      */
     const val BACK: Double = 3.35
 
@@ -57,15 +56,20 @@ object MeetLayout {
     const val FIXTURE: Double = 5.65
 
     /**
-     * From the middle to the lamp that casts the shadows, low before the front place: 2.8 m before the member. Nearer,
+     * From the middle to the lamp that casts the shadows, low before the front place: 2 m before the member. Nearer,
      * the shadow grows and stretches up steeply (a low lamp close by throws what is high far higher); farther, it
-     * shrinks. It was 1.6 m before the member, the shadow twice the figure (the maintainer, 2026-11-21: "the shadows
-     * a bit too large, meaning the light is too close. Not the light visible on the floor but the rendering light").
+     * shrinks. Tuned by the maintainer's eye, 2026-11-21: at 1.6 m, the shadow twice the figure, "the shadows a bit too
+     * large, meaning the light is too close. Not the light visible on the floor but the rendering light"; at 2.8 m,
+     * a little over one and a half times, "the shadows in the carussel should be bigger ... moving the light closer
+     * and a bit higher".
      */
-    const val LAMP: Double = 7.75
+    const val LAMP: Double = 6.95
 
-    /** How high the lamp that casts the shadows shines from: as low as a fixture's glowing top, in metres. */
-    const val LAMP_HIGH: Double = 0.2
+    /**
+     * How high the lamp that casts the shadows shines from, in metres: a little above a fixture's glowing top (it
+     * was as low as that, 0.2), so the shadow stretches up less steeply.
+     */
+    const val LAMP_HIGH: Double = 0.45
 
     /** Where the hexagon's middle stands along z: the front member at the world's origin. */
     const val MIDDLE_Z: Double = -PLACE

@@ -30,6 +30,7 @@ import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
 import kotlin.math.PI
+import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -185,13 +186,14 @@ class MeetStage(scene: Scene, renderer: WebGLRenderer) {
 
         /**
          * The lamp: its colour, its light at full, how wide its cone is (radians, from its axis), its shadow map. The
-         * light and the cone go with the lamp's distance ([MeetLayout.LAMP]): the circle it lights on the surface
-         * behind stays some 1.75 m wide each way and as bright, wherever the lamp stands (they were 10 and 0.5 with
-         * the lamp 1.6 m before the member).
+         * light and the cone go with how far the lamp stands from the surface behind ([REACH]), so the circle it
+         * lights there stays [CIRCLE] wide each way and as bright wherever the lamp stands.
          */
         const val LAMP_COLOR = 0xffa45a
-        const val LAMP_LIGHT = 13.75
-        const val LAMP_ANGLE = 0.38
+        const val REACH = MeetLayout.LAMP - MeetLayout.BACK
+        const val CIRCLE = 1.75
+        const val LAMP_LIGHT = 3.125 * REACH
+        val LAMP_ANGLE = atan(CIRCLE / REACH)
         const val SHADOW_MAP = 2048
 
         /** The faint light everywhere: its colour and how bright (the show's). */
@@ -199,7 +201,7 @@ class MeetStage(scene: Scene, renderer: WebGLRenderer) {
         const val AMBIENT = 0.05
 
         /** How high on the surface behind the front member the lamp is aimed, in metres. */
-        const val AIM_HIGH = 2.0
+        const val AIM_HIGH = 2.1
 
         /** A fixture: its foot's height, its top's size and colour, how bright it glows at the front and at the least. */
         const val FOOT = 0.12
