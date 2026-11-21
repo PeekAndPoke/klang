@@ -11,6 +11,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
@@ -29,6 +30,10 @@ class MembersSpec : StringSpec({
             Members.of(player).player shouldBe player
             Members.of(player).name shouldBe player.name
         }
+    }
+
+    "one member at most has their eyes in their shadow: the show makes one pair of them, for the first who has them" {
+        Members.ALL.values.count { it.dress.shadowEyes } shouldBeLessThanOrEqual 1
     }
 
     "a sheet's name is the member's own, as the band calls them" {

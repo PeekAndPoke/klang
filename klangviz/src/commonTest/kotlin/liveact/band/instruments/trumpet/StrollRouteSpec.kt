@@ -41,12 +41,12 @@ private val CLOSEST = Offset(x = 0.71, z = 5.94)
 /** The rounds sampled. */
 private const val ROUNDS = 8
 
-/** Sirene's place in the stage plot (`StagePlot`), in metres, and her size in metres (her rig's scale). */
+/** Sirene's place in Der Schmetterling's stage plot (`DER_SCHMETTERLING`), in metres, and her size in metres (her rig's scale). */
 private const val PLACE_X = -0.7
 private const val PLACE_Z = 2.2
 private const val SIZE = 0.98
 
-/** The others' places in the stage plot (`StagePlot`), in metres. */
+/** The others' places in Der Schmetterling's stage plot (`DER_SCHMETTERLING`), in metres. */
 private val OTHERS: Map<Player, Pair<Double, Double>> = mapOf(
     Player.Beben to (-2.15 to 0.4),
     Player.Skalpell to (-3.0 to 1.7),

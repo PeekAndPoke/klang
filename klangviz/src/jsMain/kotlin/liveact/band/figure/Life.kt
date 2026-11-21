@@ -12,7 +12,6 @@ import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.Skill
 import io.peekandpoke.klang.viz.liveact.band.skills.turning
 import io.peekandpoke.klang.viz.liveact.hash01
-import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.valueNoise
 import io.peekandpoke.klang.viz.liveact.vec
@@ -67,8 +66,11 @@ private class Contact(
     val nodSecond: Double,
 )
 
-/** Who looks at whom at [t], and how far each head has turned; null when nobody does. [herNotes]: when the frontwoman plays. */
-private fun contactAt(show: Show, t: Double, herNotes: List<Double>): Contact? {
+/**
+ * Who looks at whom at [t], and how far each head has turned; null when nobody does. [her]: the trumpet player, who
+ * looks at nobody while she plays; [herNotes]: when she plays.
+ */
+private fun contactAt(show: Show, t: Double, her: Player, herNotes: List<Double>): Contact? {
     if (t < 1) {
         return null
     }
@@ -91,8 +93,7 @@ private fun contactAt(show: Show, t: Double, herNotes: List<Double>): Contact? {
     val away = meet + hold                         // when the first one looks away again
 
     // she does not look away while she plays: the trumpet is at her lips
-    // (into refactorme: who holds the trumpet, the cast says)
-    val hers = pair.first == SchmetterlingCast.TRUMPET || pair.second == SchmetterlingCast.TRUMPET
+    val hers = pair.first == her || pair.second == her
 
     if (hers && herNotes.any { x -> x > start - 3 && x < start + away + 3 }) {
         return null
@@ -125,10 +126,18 @@ private fun contactAt(show: Show, t: Double, herNotes: List<Double>): Contact? {
 
 /**
  * Turns the heads of the two who look at each other at [t], each only where their [skills] give them [EyeContact]
- * (see [turning]). [herNotes]: when the frontwoman plays.
+ * (see [turning]). [her]: the trumpet player (the cast's), who looks at nobody while she plays; [herNotes]: when she
+ * plays.
  */
-fun eyeContact(show: Show, rigs: Map<Player, Rig>, herNotes: List<Double>, t: Double, skills: (Player) -> List<Skill>) {
-    val contact = contactAt(show, t, herNotes)
+fun eyeContact(
+    show: Show,
+    rigs: Map<Player, Rig>,
+    her: Player,
+    herNotes: List<Double>,
+    t: Double,
+    skills: (Player) -> List<Skill>,
+) {
+    val contact = contactAt(show = show, t = t, her = her, herNotes = herNotes)
 
     if (contact == null || (contact.wFirst <= 0 && contact.wSecond <= 0)) {
         return

@@ -31,12 +31,13 @@ import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
  * instrument. Each stands at its place round the hexagon as the carousel turns ([pose]): at rest, the arms hanging,
  * breathing; the one at the front looks at the camera; everyone's eyes glow as in the show at rest, wavering.
  *
- * The true selves in the shadows come along where they exist ([shadowShapesOf]): Rune's snakes; and Sirene's eyes move
- * from her face into her shadow while she stands at the front ([ShadowEyes]).
+ * The true selves in the shadows come along where they exist ([shadowShapesOf]): Rune's snakes; and the eyes of the
+ * one whose dress has them in the shadow (Sirene's, see `Members.shadowEyed`) move from her face into her shadow
+ * while she stands at the front ([ShadowEyes]).
  *
  * The figures stand in the scene itself, not in the carousel: the shapes seen only in a shadow are placed in the
  * world, and so are the figures, each frame, by the carousel's turn. [dispose] gives the bodies their suits back and
- * frees the lacquer and Sirene's eyes in her shadow; the figures are in the scene and are freed with it.
+ * frees the lacquer and the eyes in the shadow; the figures are in the scene and are freed with it.
  */
 class MeetBand private constructor(
     private val rigs: Map<Player, Rig>,
@@ -44,7 +45,9 @@ class MeetBand private constructor(
     /** The shapes seen only in a member's shadow, each set for a time once its figure is posed. */
     private val shadowShapes: List<(Double) -> Unit>,
     private val tails: List<HairTail>,
-    private val sirenesEyes: ShadowEyes?,
+    /** Who has their eyes in their shadow, and those eyes; null where nobody has. */
+    private val shadowEyed: Player?,
+    private val shadowEyes: ShadowEyes?,
 ) {
     companion object {
         /** How far the front member's face turns to the camera: most of the way, as a person looks. */
@@ -97,7 +100,8 @@ class MeetBand private constructor(
                 lacquer = lacquer,
                 shadowShapes = Player.entries.flatMap { player -> shadowShapesOf(player = player, rig = rigs.getValue(player)) },
                 tails = Player.entries.mapNotNull { player -> HairTail.of(rigs.getValue(player)) },
-                sirenesEyes = ShadowEyes.of(scene = scene, rig = rigs.getValue(Player.Sirene)),
+                shadowEyed = Members.shadowEyed,
+                shadowEyes = Members.shadowEyed?.let { ShadowEyes.of(scene = scene, rig = rigs.getValue(it)) },
             )
         }
 
@@ -139,7 +143,7 @@ class MeetBand private constructor(
 
     /**
      * Everyone for the carousel at [turn] and the time [t] (seconds): at their place, standing and breathing, the front
-     * member looking at the [camera]; the eyes' glow; the true selves in the shadows; Sirene's eyes in her shadow while
+     * member looking at the [camera]; the eyes' glow; the true selves in the shadows; the eyes in the shadow while
      * she stands at the front and the carousel is [settled] (no turn under way), thrown from [lamp] onto the surface at
      * [surfaceZ] (along z) behind her. They are thrown onto that plane alone, the front surface's as it stands at
      * rest: so they cross back into her face as soon as a turn begins, and out again once she has arrived.
@@ -175,16 +179,18 @@ class MeetBand private constructor(
 
         breathing(seed = 0, rigs = rigs, t = t, slow = QUIET)
 
-        sirenesEyes?.update(
-            front = FrontLight(level = if (settled) MeetLayout.glowOf(player = Player.Sirene, turn = turn) else 0.0, strobing = false),
-            lamp = lamp,
-            planeZ = surfaceZ,
-        )
+        if (shadowEyed != null) {
+            shadowEyes?.update(
+                front = FrontLight(level = if (settled) MeetLayout.glowOf(player = shadowEyed, turn = turn) else 0.0, strobing = false),
+                lamp = lamp,
+                planeZ = surfaceZ,
+            )
+        }
     }
 
-    /** Gives the bodies their suits back and frees the lacquer and Sirene's eyes in her shadow. Call it once. */
+    /** Gives the bodies their suits back and frees the lacquer and the eyes in the shadow. Call it once. */
     fun dispose() {
-        sirenesEyes?.dispose()
+        shadowEyes?.dispose()
         lacquer.dispose()
     }
 }

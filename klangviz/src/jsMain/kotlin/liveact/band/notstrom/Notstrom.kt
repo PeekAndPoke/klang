@@ -10,8 +10,10 @@ import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.Timed
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
+import io.peekandpoke.klang.viz.liveact.band.Cast
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.StagePlot
+import io.peekandpoke.klang.viz.liveact.band.StringSeat
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.dress.DressedBody
 import io.peekandpoke.klang.viz.liveact.band.dress.HairPart
@@ -42,9 +44,15 @@ import io.peekandpoke.klang.viz.liveact.band.skills.LookPlaces
 import io.peekandpoke.klang.viz.liveact.band.skills.crowdSpots
 import io.peekandpoke.klang.viz.liveact.band.skills.idlesAt
 import io.peekandpoke.klang.viz.liveact.band.skills.lookAt
-import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.song.DrumHit
+import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.song.Part
+import io.peekandpoke.klang.viz.liveact.song.Strum
+import io.peekandpoke.klang.viz.liveact.song.testBeat
+import io.peekandpoke.klang.viz.liveact.song.testCall
+import io.peekandpoke.klang.viz.liveact.song.testRiff
+import io.peekandpoke.klang.viz.liveact.song.testTune
 import io.peekandpoke.klang.viz.liveact.theatre.CrowdPlaces
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.Gltf
@@ -64,11 +72,14 @@ import kotlinx.coroutines.coroutineScope
 
 /**
  * Notstrom, the band: it loads the six figures by their sheets (see [Members]), dresses them, places them by the
- * stage plot ([StagePlot]), and gives each the instrument and the part the cast names ([SchmetterlingCast]); then it
- * moves them, every frame, from the walk-in on.
+ * stage [plot], and gives each the instrument and the part the [cast] names (both the song's score's); then it moves
+ * them, every frame, from the walk-in on. Where the show has no song, each plays the test notes in its place
+ * (`testBeat` and the others).
  */
 class Notstrom private constructor(
     private val show: Show,
+    private val cast: Cast,
+    private val plot: StagePlot,
     /** Every player's rig, in the players' order. */
     val rigs: Map<Player, Rig>,
     /** The figures' dressed parts (the dark skin, the hair), each with its pattern: what the lacquer look re-dresses. */
@@ -92,7 +103,8 @@ class Notstrom private constructor(
 
         /**
          * Loads the six figures (from [models], a folder's address ending in a slash) into [scene], each at its
-         * place, and casts the band: every figure gets its instrument and its part of the song.
+         * place in the stage [plot], and casts the band as [cast] says: every figure gets its instrument and its part
+         * of the song.
          *
          * The files are fetched together, but the figures enter the scene in the players' order: what is made first
          * is drawn first. [viewer]: where the camera is (who looks at the viewer looks there); it is read every
@@ -102,6 +114,8 @@ class Notstrom private constructor(
          */
         suspend fun load(
             show: Show,
+            cast: Cast,
+            plot: StagePlot,
             scene: Scene,
             models: String,
             version: String,
@@ -113,7 +127,7 @@ class Notstrom private constructor(
             val bodies = mutableListOf<DressedBody>()
 
             Player.entries.forEachIndexed { index, player ->
-                val place = StagePlot.PLACES.getValue(player)
+                val place = plot.places.getValue(player)
                 val figure = loaded[index].scene
 
                 figure.position.set(place.x, place.y, place.z)
@@ -126,7 +140,7 @@ class Notstrom private constructor(
                 bodies.addAll(dress(player = player, rig = rig))
             }
 
-            return Notstrom(show = show, rigs = rigs, bodies = bodies, viewer = viewer)
+            return Notstrom(show = show, cast = cast, plot = plot, rigs = rigs, bodies = bodies, viewer = viewer)
         }
 
         /**
@@ -197,21 +211,34 @@ class Notstrom private constructor(
 
     private fun rig(player: Player) = rigs.getValue(player)
 
-    /** When [player] begins a note, sorted, as far as the song is known: what the camera and the eyes go by. */
-    fun playsAt(player: Player): List<Double> = SchmetterlingCast.playsAt(show = show, player = player)
+    /**
+     * When [player] begins a note, sorted, as far as the song is known: what the camera and the eyes go by. By the tags
+     * the cast gives them (see [Cast.tagsOf]).
+     */
+    fun playsAt(player: Player): List<Double> = show.times(*cast.tagsOf(player).toTypedArray())
+
+    /** The drummer's hits: the song's drums (see `Song.drumHits`), else the test beat. */
+    private fun drumPart(): Part<DrumHit> = show.song?.part { drumHits(cast.drums.kit) } ?: Part.fixed(testBeat(64, show.bpm))
+
+    /** The notes of a tune with the song's [tag], else the [test] notes. */
+    private fun tunePart(tag: String, test: () -> List<Note>): Part<Note> = show.song?.part { notesOf(tag) } ?: Part.fixed(test())
+
+    /** What the string player in [seat] plays: the song's events with their tags, else their test riff. */
+    private fun stringPart(seat: StringSeat): Part<Strum> =
+        show.song?.part { strumsOf(seat.tags) } ?: Part.fixed(testRiff(step = seat.riffStep, low = seat.riffLow))
 
     val drummer = Drummer(
         show = show,
-        rig = rig(SchmetterlingCast.DRUMS),
-        hits = SchmetterlingCast.drumHits(show),
-        traits = character(SchmetterlingCast.DRUMS).traits,
-        seed = character(SchmetterlingCast.DRUMS).seed,
+        rig = rig(cast.drums.player),
+        hits = drumPart(),
+        traits = character(cast.drums.player).traits,
+        seed = character(cast.drums.player).seed,
         name = NAME,
         // only once he sits: he sits down over the first SIT seconds after he is at the stool (see [play])
         idles = idlesOf(
-            player = SchmetterlingCast.DRUMS,
-            part = SchmetterlingCast.drumHits(show),
-            arrives = StagePlot.ENTRANCES.getValue(SchmetterlingCast.DRUMS).end + SIT,
+            player = cast.drums.player,
+            part = drumPart(),
+            arrives = plot.entrances.getValue(cast.drums.player).end + SIT,
         ),
     )
 
@@ -233,23 +260,23 @@ class Notstrom private constructor(
      */
     private val tails: List<HairTail> = Player.entries.mapNotNull { player -> HairTail.of(rig(player)) }
 
-    /** The marimba player's crossed mallets, where her sheet has them. */
-    private val runeCrossing: CrossedMallets? =
-        Members.of(SchmetterlingCast.MARIMBA).skills.filterIsInstance<CrossedMallets>().firstOrNull()
+    /** The marimba player's crossed mallets, where their sheet has them. */
+    private val crossing: CrossedMallets? =
+        Members.of(cast.marimba.player).skills.filterIsInstance<CrossedMallets>().firstOrNull()
 
     val marimba = MarimbaPlayer(
         show = show,
-        rig = rig(SchmetterlingCast.MARIMBA),
-        part = SchmetterlingCast.marimbaNotes(show),
-        traits = character(SchmetterlingCast.MARIMBA).traits,
-        seed = character(SchmetterlingCast.MARIMBA).seed,
-        crossing = runeCrossing,
-        arrives = StagePlot.ENTRANCES.getValue(SchmetterlingCast.MARIMBA).end,
-        counting = Members.of(SchmetterlingCast.MARIMBA).skills.filterIsInstance<CountIn>().firstOrNull(),
+        rig = rig(cast.marimba.player),
+        part = tunePart(tag = cast.marimba.tag, test = ::testTune),
+        traits = character(cast.marimba.player).traits,
+        seed = character(cast.marimba.player).seed,
+        crossing = crossing,
+        arrives = plot.entrances.getValue(cast.marimba.player).end,
+        counting = Members.of(cast.marimba.player).skills.filterIsInstance<CountIn>().firstOrNull(),
         idles = idlesOf(
-            player = SchmetterlingCast.MARIMBA,
-            part = SchmetterlingCast.marimbaNotes(show),
-            margin = MarimbaPlayer.idleMargin(bpm = show.bpm, crossing = runeCrossing),
+            player = cast.marimba.player,
+            part = tunePart(tag = cast.marimba.tag, test = ::testTune),
+            margin = MarimbaPlayer.idleMargin(bpm = show.bpm, crossing = crossing),
         ),
     )
 
@@ -267,27 +294,28 @@ class Notstrom private constructor(
 
     val frontwoman = TrumpetPlayer(
         show = show,
-        rig = rig(SchmetterlingCast.TRUMPET),
-        part = SchmetterlingCast.trumpetNotes(show),
-        traits = character(SchmetterlingCast.TRUMPET).traits,
-        seed = character(SchmetterlingCast.TRUMPET).seed,
-        looks = headLooksOf(SchmetterlingCast.TRUMPET),
-        gait = character(SchmetterlingCast.TRUMPET).gait,
+        rig = rig(cast.trumpet.player),
+        part = tunePart(tag = cast.trumpet.tag, test = ::testCall),
+        traits = character(cast.trumpet.player).traits,
+        seed = character(cast.trumpet.player).seed,
+        looks = headLooksOf(cast.trumpet.player),
+        gait = character(cast.trumpet.player).gait,
+        others = plot.places.filterKeys { it != cast.trumpet.player },
     )
 
     /** The string players, in the order they are moved each frame. */
-    val strings: List<Pair<Player, StringPlayer>> = SchmetterlingCast.STRINGS.map { cast ->
-        cast.player to StringPlayer(
+    val strings: List<Pair<Player, StringPlayer>> = cast.strings.map { seat ->
+        seat.player to StringPlayer(
             show = show,
-            rig = rig(cast.player),
-            design = cast.design,
-            part = cast.part(show),
-            traits = character(cast.player).traits,
-            seed = character(cast.player).seed,
-            bearing = Members.of(cast.player).bearing,
-            outline = cast.outline ?: cast.design.outline,
-            looks = headLooksOf(cast.player),
-            idles = idlesOf(player = cast.player, part = cast.part(show)),
+            rig = rig(seat.player),
+            design = seat.design,
+            part = stringPart(seat),
+            traits = character(seat.player).traits,
+            seed = character(seat.player).seed,
+            bearing = Members.of(seat.player).bearing,
+            outline = seat.outline ?: seat.design.outline,
+            looks = headLooksOf(seat.player),
+            idles = idlesOf(player = seat.player, part = stringPart(seat)),
         )
     }
 
@@ -307,12 +335,12 @@ class Notstrom private constructor(
      * chance (as for [headLooksOf]), within the pauses of [part] (their part of the song, read on its own: it is
      * refreshed here, apart from the one they play from), keeping [margin] seconds from a note (see [idlesAt]), and
      * only from [arrives] on (by default once they are at their place, not on their walk-in: see
-     * [StagePlot.ENTRANCES]). None ever where the sheet has no idle skill.
+     * [StagePlot.entrances]). None ever where the sheet has no idle skill.
      */
     private fun idlesOf(
         player: Player,
         part: Part<out Timed>,
-        arrives: Double = StagePlot.ENTRANCES.getValue(player).end,
+        arrives: Double = plot.entrances.getValue(player).end,
         margin: Double = IDLE_MARGIN,
     ): (Double) -> List<IdleInUse> {
         val member = Members.of(player)
@@ -353,8 +381,8 @@ class Notstrom private constructor(
 
     /** The band at [t]: everyone where their walk-in has them, playing; the legs of those who walk step. */
     fun play(t: Double) {
-        val walks = StagePlot.ENTRANCES.mapValues { (player, entrance) ->
-            enter(rig = rig(player), entrance = entrance, home = StagePlot.PLACES.getValue(player), t = t)
+        val walks = plot.entrances.mapValues { (player, entrance) ->
+            enter(rig = rig(player), entrance = entrance, home = plot.places.getValue(player), t = t)
         }
 
         // the string players and the marimba player walk as they stand, the legs stepping and the hips moving as each
@@ -364,23 +392,23 @@ class Notstrom private constructor(
             stepLegs(rig(player), walks.getValue(player))
         }
 
-        val marimbaRig = rig(SchmetterlingCast.MARIMBA)
-        val marimbaWalk = walks.getValue(SchmetterlingCast.MARIMBA)
+        val marimbaRig = rig(cast.marimba.player)
+        val marimbaWalk = walks.getValue(cast.marimba.player)
 
-        marimba.update(t, hips = walkInHips(rig = marimbaRig, walk = marimbaWalk, gait = character(SchmetterlingCast.MARIMBA).gait))
+        marimba.update(t, hips = walkInHips(rig = marimbaRig, walk = marimbaWalk, gait = character(cast.marimba.player).gait))
         stepLegs(marimbaRig, marimbaWalk)
 
         // the drummer walks in with the sticks in his hands, and sits down once he is at the stool
         drummer.update(t)
 
-        val drumRig = rig(SchmetterlingCast.DRUMS)
-        val drumWalk = walks.getValue(SchmetterlingCast.DRUMS)
+        val drumRig = rig(cast.drums.player)
+        val drumWalk = walks.getValue(cast.drums.player)
         val sit = smooth(drumWalk.since / SIT)
 
         if (sit < 1) {
             val seated = capture(drumRig)
 
-            walkPose(rig = drumRig, walk = drumWalk, gait = character(SchmetterlingCast.DRUMS).gait)
+            walkPose(rig = drumRig, walk = drumWalk, gait = character(cast.drums.player).gait)
             blend(rig = drumRig, a = capture(drumRig), b = seated, w = sit)
 
             for (side in Side.entries) {
@@ -394,15 +422,19 @@ class Notstrom private constructor(
 
         // the frontwoman, last: her looks may go to the others' eyes, as they are posed in this frame. Put where her
         // walk-in has her; once there she is her own (her place, her strolls)
-        val herRig = rig(SchmetterlingCast.TRUMPET)
-        val herWalk = walks.getValue(SchmetterlingCast.TRUMPET)
+        val herRig = rig(cast.trumpet.player)
+        val herWalk = walks.getValue(cast.trumpet.player)
         val her = if (herWalk.since < 0) {
             TrumpetPlayer.Walk(at = herRig.root.position.clone(), turn = herRig.root.rotation.y, speed = 0.0, going = 0.0)
         } else {
             null
         }
 
-        frontwoman.update(t, put = her, hips = her?.let { walkInHips(rig = herRig, walk = herWalk, gait = character(SchmetterlingCast.TRUMPET).gait) })
+        frontwoman.update(
+            t,
+            put = her,
+            hips = her?.let { walkInHips(rig = herRig, walk = herWalk, gait = character(cast.trumpet.player).gait) },
+        )
         stepLegs(herRig, herWalk)
     }
 }

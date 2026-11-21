@@ -12,12 +12,16 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.song.Drum
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
+import io.peekandpoke.klang.viz.liveact.song.DrumTags
 import io.peekandpoke.klang.viz.liveact.song.Limb
 import io.peekandpoke.klang.viz.liveact.song.RecordedEvent
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
 
 private fun hit(t: Double, drum: Drum, limb: Limb) = DrumHit(t = t, drum = drum, limb = limb, v = 1.0)
+
+/** Which tags the drummer plays, as [beat] names them. */
+private val KIT = DrumTags(kick = "kick", snare = "snare", cymbals = listOf("hats"))
 
 /** When the [k]th sixteenth of [beat] is, at 120 beats a minute. */
 private fun sixteenth(k: Int) = 0.5 + k * 0.125
@@ -107,7 +111,7 @@ class DrumPlanSpec : StringSpec({
 
     "a song that grows and forgets is played as the whole song: every hit known keeps its limb's list as it was" {
         val events = beat()
-        val whole = planDrums(hits = Song(Recording(rpm = 30.0, events = events)).drumHits(), before = emptyMap())
+        val whole = planDrums(hits = Song(Recording(rpm = 30.0, events = events)).drumHits(KIT), before = emptyMap())
         val song = Song(rpm = 30.0)
         var planned: DrumPlan? = null
         var until = 0.0
@@ -117,7 +121,7 @@ class DrumPlanSpec : StringSpec({
         // as the drummer does it whenever the song has changed: plan anew from what the last plan carries on. [how]:
         // what changed the song since the last plan
         fun step(how: String) {
-            val hits = song.drumHits()
+            val hits = song.drumHits(KIT)
             val from = hits.firstOrNull()?.t ?: Double.POSITIVE_INFINITY
             val next = planDrums(hits = hits, before = planned?.carryOn(from = from) ?: emptyMap())
 

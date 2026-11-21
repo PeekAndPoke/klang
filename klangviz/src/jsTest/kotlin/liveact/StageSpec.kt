@@ -111,6 +111,9 @@ private fun listenersLeft(type: String, block: (left: List<dynamic>) -> Unit): L
     return left
 }
 
+/** The kick's tag, as the stages here are given it (their shows have no song). */
+private const val KICK = "kick"
+
 /**
  * The stage built on real three.js with a stand-in renderer. The whole live act cannot be mounted here: its
  * component needs a WebGL context, which the test browser does not give.
@@ -125,7 +128,7 @@ class StageSpec : StringSpec({
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
 
             val left = listenersLeft("keydown") { left ->
-                val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+                val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
 
                 left.size shouldBe 1
                 stage.dispose()
@@ -142,7 +145,7 @@ class StageSpec : StringSpec({
             val scene = three.createScene()
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val renderer = standInRenderer()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer)
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer, kick = KICK)
 
             try {
                 camera.fov shouldBe 35.0
@@ -198,7 +201,7 @@ class StageSpec : StringSpec({
             r.render = { _: dynamic, _: dynamic -> drawnInto.add(target) }
 
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer)
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer, kick = KICK)
             var freed = 0
 
             try {
@@ -228,7 +231,7 @@ class StageSpec : StringSpec({
             drawnInto.clear()
 
             val show = Show(seed = 1, switches = Switches.parse("?fullfog"))
-            val other = Stage(show = show, scene = three.createScene(), camera = camera, renderer = renderer)
+            val other = Stage(show = show, scene = three.createScene(), camera = camera, renderer = renderer, kick = KICK)
 
             try {
                 other.light(t = 62.0, house = 1.0, waiting = false)
@@ -241,7 +244,7 @@ class StageSpec : StringSpec({
             r.extensions = js("({ has: function () { return false } })")
 
             val plain = three.createScene()
-            val third = Stage(show = Show(seed = 1), scene = plain, camera = camera, renderer = renderer)
+            val third = Stage(show = Show(seed = 1), scene = plain, camera = camera, renderer = renderer, kick = KICK)
 
             try {
                 third.light(t = 62.0, house = 1.0, waiting = false)
@@ -262,7 +265,7 @@ class StageSpec : StringSpec({
             for ((query, sheets) in listOf("?fog=low" to 4, "?fog=high" to 8, "?fog=xhigh" to 8, "?nofog" to 0, "?fog=off" to 0, "" to 8)) {
                 val scene = three.createScene()
                 val show = Show(seed = 1, switches = Switches.parse(query))
-                val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+                val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
 
                 try {
                     sheetsOf(scene).size shouldBe sheets
@@ -289,7 +292,7 @@ class StageSpec : StringSpec({
             r.render = { _: dynamic, _: dynamic -> Unit }
 
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer)
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = renderer, kick = KICK)
 
             try {
                 val high = sheetsOf(scene)
@@ -346,7 +349,7 @@ class StageSpec : StringSpec({
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
             var freed = 0
 
             try {
@@ -368,7 +371,7 @@ class StageSpec : StringSpec({
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
             val spots = scene.children.filter { it.asDynamic().isSpotLight == true }.map { it.asDynamic() }
 
             /** The lamps that cast, by the size of their maps. */
@@ -419,7 +422,7 @@ class StageSpec : StringSpec({
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
             val freed = mutableListOf<String>()
 
             try {
@@ -487,7 +490,7 @@ class StageSpec : StringSpec({
 
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
             var freed = 0
 
             try {
@@ -571,7 +574,7 @@ class StageSpec : StringSpec({
             }
 
             val show = Show(seed = 1, switches = Switches.parse("?floor=mirror"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer, kick = KICK)
 
             try {
                 val floor: dynamic = scene.children.first()
@@ -650,7 +653,7 @@ class StageSpec : StringSpec({
             }
 
             val show = Show(seed = 1, switches = Switches.parse("?floor=mirror&fog=low"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer, kick = KICK)
 
             try {
                 val floor: dynamic = scene.children.first()
@@ -684,7 +687,7 @@ class StageSpec : StringSpec({
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
             val show = Show(seed = 1, switches = Switches.parse("?floor=mirror&reflections=off"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
 
             try {
                 val floor: dynamic = scene.children.first()
@@ -725,7 +728,7 @@ class StageSpec : StringSpec({
             r.render = { _: dynamic, _: dynamic -> drawn.add(target) }
 
             val show = Show(seed = 1, switches = Switches.parse("?floor=mirror"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer, kick = KICK)
             val floor: dynamic = scene.children.first()
 
             fun frame(lookAt: Triple<Double, Double, Double>) {
@@ -779,7 +782,7 @@ class StageSpec : StringSpec({
             r.render = { what: dynamic, _: dynamic -> drawn.add(Pair(target, what)) }
 
             val show = Show(seed = 1, switches = Switches.parse("?floor=mirror"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer)
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = renderer, kick = KICK)
             val floor: dynamic = scene.children.first()
 
             fun frame() {
@@ -862,7 +865,7 @@ class StageSpec : StringSpec({
             val camera = three.createPerspectiveCamera(fov = 75.0, aspect = 1.5, near = 1.0, far = 1000.0)
             val scene = three.createScene()
             val show = Show(seed = 1, switches = Switches.parse("?shadows=low"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
 
             try {
                 val spots = scene.children.filter { it.asDynamic().isSpotLight == true }.map { it.asDynamic() }
@@ -882,7 +885,7 @@ class StageSpec : StringSpec({
             val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
             val scene = three.createScene()
             val show = Show(seed = 1, switches = Switches.parse("?stage=mesh&haze=parts&front=1"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
             val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
 
             /** How far each sheet of the haze has drawn back. */
@@ -932,7 +935,7 @@ class StageSpec : StringSpec({
             val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
             val scene = three.createScene()
             val show = Show(seed = 1, switches = Switches.parse("?stage=mesh&haze=parts&front=1"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
             val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
 
             /** Whether three.js would draw the front lamp's shadow this frame. */
@@ -974,18 +977,21 @@ class StageSpec : StringSpec({
                 scene = three.createScene(),
                 camera = camera,
                 renderer = standInRenderer(),
+                kick = KICK,
             )
             val plain = Stage(
                 show = Show(seed = 1, switches = Switches.parse("?underworld=on")),
                 scene = three.createScene(),
                 camera = camera,
                 renderer = standInRenderer(),
+                kick = KICK,
             )
             val unreflected = Stage(
                 show = Show(seed = 1, switches = Switches.parse("?floor=mirror&underworld=on&reflections=off")),
                 scene = three.createScene(),
                 camera = camera,
                 renderer = standInRenderer(),
+                kick = KICK,
             )
 
             try {
@@ -1027,7 +1033,7 @@ class StageSpec : StringSpec({
 
             val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
             val scene = three.createScene()
-            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = Show(seed = 1), scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
 
             try {
                 val floor: dynamic = scene.children.first()
@@ -1059,7 +1065,7 @@ class StageSpec : StringSpec({
                 val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
                 val scene = three.createScene()
                 val show = Show(seed = 1, switches = Switches.parse(query))
-                val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+                val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
                 val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
 
                 try {
@@ -1084,7 +1090,7 @@ class StageSpec : StringSpec({
             val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
             val scene = three.createScene()
             val show = Show(seed = 1, switches = Switches.parse("?stage=mesh&front=1"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
             val front: dynamic = scene.children.single { it.asDynamic().isSpotLight == true && it.position.z == 8.6 }
 
             /** What each sheet of the haze reads as the lamp's map. */
@@ -1119,7 +1125,7 @@ class StageSpec : StringSpec({
             val camera = three.createPerspectiveCamera(fov = 35.0, aspect = 1.6, near = 0.1, far = 110.0)
             val scene = three.createScene()
             val show = Show(seed = 1, switches = Switches.parse("?front=1"))
-            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer())
+            val stage = Stage(show = show, scene = scene, camera = camera, renderer = standInRenderer(), kick = KICK)
 
             try {
                 stage.shadowsAt shouldBe -8.0

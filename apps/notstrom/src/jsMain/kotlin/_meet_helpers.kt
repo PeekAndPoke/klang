@@ -20,17 +20,10 @@ const val MEET_FAILED = "The band could not be met (their figures did not load).
 const val WILDNESS = "Wildness"
 
 /**
- * What [player] plays in the band, in the page's words. It is the cast's (Der Schmetterling's, `SchmetterlingCast`),
- * not the member's sheet: who plays what is the cast's to say, and the spec keeps the two in step.
+ * What [player] plays in the band, in the page's words: what the show's cast says ([SHOW_SCORE]), not the member's
+ * sheet, as who plays what is the cast's to say. Nothing where the cast gives them no seat.
  */
-fun playsIn(player: Player): String = when (player) {
-    Player.Wucht -> "Drums"
-    Player.Beben -> "Bass"
-    Player.Skalpell -> "Lead guitar"
-    Player.Sirene -> "Trumpet"
-    Player.Rune -> "Marimba"
-    Player.Klaue -> "Rhythm guitar"
-}
+fun playsIn(player: Player): String = SHOW_SCORE.cast.playsOf(player).orEmpty()
 
 /** How far a finger must travel across the screen for a swipe, in CSS pixels. */
 const val SWIPE_LEAST = 40.0

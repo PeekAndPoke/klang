@@ -3,18 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-package io.peekandpoke.klang.viz.liveact.refactorme
+package io.peekandpoke.klang.viz.liveact.song
 
-import io.peekandpoke.klang.viz.liveact.song.Drum
-import io.peekandpoke.klang.viz.liveact.song.DrumHit
-import io.peekandpoke.klang.viz.liveact.song.Limb
-import io.peekandpoke.klang.viz.liveact.song.Note
-import io.peekandpoke.klang.viz.liveact.song.Strum
 import kotlin.math.floor
 
-// The test notes: what the band plays on a page without the recording (`?test`), one stand-in for each part the cast
-// gives out (see SchmetterlingCast). A bridge between a song and the stage would have each instrument say what it
-// plays where it is given nothing, or the band stand still.
+// The test notes: what the band plays where the show has no song (the demo's `?test`), one stand-in for each part a
+// cast gives out (see `Cast`).
 
 /**
  * A test beat for [bars] bars at [bpm], for the page without the recording: hats in eighths, kick and snare, and

@@ -7,19 +7,25 @@ package io.peekandpoke.klang.notstrom
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 
 class MeetHelpersSpec : StringSpec({
 
-    "what each one plays is what the cast gives them" {
-        playsIn(SchmetterlingCast.DRUMS) shouldBe "Drums"
-        playsIn(SchmetterlingCast.TRUMPET) shouldBe "Trumpet"
-        playsIn(SchmetterlingCast.MARIMBA) shouldBe "Marimba"
-        SchmetterlingCast.STRINGS.map { it.player } shouldBe listOf(Player.Beben, Player.Skalpell, Player.Klaue)
+    "what each one plays is what the show's cast gives them" {
+        playsIn(SHOW_SCORE.cast.drums.player) shouldBe "Drums"
+        playsIn(SHOW_SCORE.cast.trumpet.player) shouldBe "Trumpet"
+        playsIn(SHOW_SCORE.cast.marimba.player) shouldBe "Marimba"
+        SHOW_SCORE.cast.strings.map { it.player } shouldBe listOf(Player.Beben, Player.Skalpell, Player.Klaue)
         playsIn(Player.Beben) shouldBe "Bass"
         playsIn(Player.Skalpell) shouldBe "Lead guitar"
         playsIn(Player.Klaue) shouldBe "Rhythm guitar"
+    }
+
+    "everyone in the band plays something in the show" {
+        for (player in Player.entries) {
+            playsIn(player) shouldNotBe ""
+        }
     }
 
     "a flat swipe to the left is the next member, to the right the one before" {

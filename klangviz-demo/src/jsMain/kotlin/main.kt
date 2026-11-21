@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
 import io.peekandpoke.klang.viz.liveact.sound.Loudness
@@ -26,8 +27,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
-// The demo: the live act alone on a page, playing a recording and its recorded events; or, with `?meet`, "Meet the
-// Band" alone (MeetPage). The page's switches (`?seed=7&t=62.1&still`) are the show's: see Switch for the list of them all.
+// The demo: the live act alone on a page, playing a recording of Der Schmetterling and its recorded events by the
+// song's score (with `?test`: the test notes in their place); or, with `?meet`, "Meet the Band" alone (MeetPage).
+// The page's switches (`?seed=7&t=62.1&still`) are the show's: see Switch for the list of them all.
 
 /** Where the recording lies, beside the page (git-ignored: see resources/recording/README.md). */
 private const val RECORDING = "recording/schmetterling"
@@ -83,7 +85,7 @@ fun main() {
 
         kraft.mount(selector = "#app", engine = PreactVDomEngine()) {
             // the demo serves its figures fresh from the build: its version is a fixed word
-            LiveAct(show = show, models = MODELS, version = "dev")
+            LiveAct(show = show, score = DER_SCHMETTERLING, models = MODELS, version = "dev")
         }
     }
 }

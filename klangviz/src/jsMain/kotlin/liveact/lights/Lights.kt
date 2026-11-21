@@ -31,7 +31,8 @@ class Lamp(val light: SpotLight, val base: Double, val seed: Double, val group: 
 
 /**
  * The stage's lamps: the back light (two main lamps behind and one between them), a faint fill from the front, the
- * low front lamp, and the stroboscope it becomes while the bass drum runs fast. Adds them to [scene]. Of the three
+ * low front lamp, and the stroboscope it becomes while the bass drum runs fast (the song's tag [kick]: see
+ * [LightPlan]). Adds them to [scene]. Of the three
  * behind not all are always on (see [BackRig]).
  *
  * The lamps are analog: old stage lamps on a tired supply. Each one's brightness wanders slowly on its own,
@@ -43,12 +44,12 @@ class Lamp(val light: SpotLight, val base: Double, val seed: Double, val group: 
  *
  * Listens for the key f on the window (trying the front lamp's colours): [dispose] stops that.
  */
-class Lights(show: Show, scene: Scene, shadows: ShadowQuality = ShadowQuality.High) {
+class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = ShadowQuality.High) {
 
     /** One of the two main lamps behind: its place as built, and which side of a mood it takes. */
     private class MainLamp(val lamp: Lamp, val home: Vector3, val side: (Mood) -> MoodLamp)
 
-    private val plan = LightPlan(show)
+    private val plan = LightPlan(show = show, kick = kick)
 
     /** Every lamp: the two main ones behind first, then the one between them, the fill, and the front lamp last. */
     val lamps: List<Lamp>

@@ -141,5 +141,9 @@ that and can be taken in any order, or side by side. Step 9 can begin thin right
 
 ## History
 
+- 2026-11-21: step 1 done. The cast, the stage plot and the drum's tags are data (`Score`, `Cast`, `StagePlot`,
+  `DrumTags`); Der Schmetterling's score is `scores/DerSchmetterling.kt`; the `refactorme` folders are gone. Twelve
+  stills before and after agree. Left for later steps, as tables about this band on this plot: the camera's `LOOKS`,
+  `ARCS` and `ORDER`, the stroll's `VISIT_*`, the eye contact's `PAIRS`, the Meet page's `ORDER`.
 - 2026-11-21: created, from the inventory of the same day.
 - 2026-11-21: IN PROGRESS. The four decisions are taken; step 1 (the song and the cast leave the code) begins.

@@ -14,4 +14,10 @@ object Members {
 
     /** The sheet of [player]. */
     fun of(player: Player): Member = ALL.getValue(player)
+
+    /**
+     * Who has their eyes in their shadow (see [Dress.shadowEyes]): the first in the players' order whose dress has
+     * them; null where nobody's does.
+     */
+    val shadowEyed: Player? get() = ALL.values.firstOrNull { it.dress.shadowEyes }?.player
 }

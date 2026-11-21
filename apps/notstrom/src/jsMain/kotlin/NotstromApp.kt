@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.notstrom
 
 import io.peekandpoke.klang.apps.common.BrowserCheck
-import io.peekandpoke.klang.apps.common.BuiltInSongs
 import io.peekandpoke.klang.apps.common.FrameStats
 import io.peekandpoke.klang.apps.common.MachineScore
 import io.peekandpoke.klang.apps.common.PictureQuality
@@ -730,7 +729,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             delay(SCREEN_WAIT_MS)
         }
 
-        val song = BuiltInSongs.derSchmetterling
+        val song = SHOW_SONG
         val pattern = compile(code = song.code)
         // made now and started after the walk-in: it answers its cycles before it sounds, so the band reads the very
         // notes that will sound (KLANG-00450). Its tempo is set first: the cycles are read at the tempo it starts at.
@@ -881,10 +880,18 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                     }
 
                     if (now.test) {
-                        LiveAct(show = now.show, models = MODELS, version = release, frameTimes = onFrame, picture = now.picture)
+                        LiveAct(
+                            show = now.show,
+                            score = SHOW_SCORE,
+                            models = MODELS,
+                            version = release,
+                            frameTimes = onFrame,
+                            picture = now.picture,
+                        )
                     } else {
                         LiveAct(
                             show = now.show,
+                            score = SHOW_SCORE,
                             models = MODELS,
                             version = release,
                             walkInAtOnce = true,
@@ -1013,7 +1020,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                 return@notstromScreen
             }
 
-            leadLine("$DEMO - ${BuiltInSongs.derSchmetterling.title}")
+            leadLine("$DEMO - ${SHOW_SONG.title}")
             bodyText { +"The show has sound, and fast flashing lights (a stroboscope)." }
 
             // without the tests, the choices for the show come right before its start

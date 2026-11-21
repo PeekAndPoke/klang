@@ -41,7 +41,9 @@ import kotlin.math.min
 
 /**
  * Places [camera] for each frame ([look]): a fixed look where the show's switches ask for one, else the
- * choreography (when the song is there; `?still`: the wide view only), else the total.
+ * choreography (when the song is there; `?still`: the wide view only), else the total. The choreography goes by
+ * where each player stands ([homes], the stage plot's), when they play ([activity]), and who plays seldom and who
+ * strolls ([seldom], [strolls], the cast's): see [Choreography].
  *
  * The camera by hand: a key takes it over from the choreography, until 0 or Escape gives it back (where Esc
  * also closes what the live act is shown in, as in the app, only 0 is of use).
@@ -62,6 +64,8 @@ class View(
     private val rigs: Map<Player, Rig>,
     homes: Map<Player, Place>,
     activity: (Player) -> List<Double>,
+    seldom: List<Player>,
+    strolls: Player,
 ) {
     private val switches = show.switches
 
@@ -78,6 +82,8 @@ class View(
             rigs = rigs,
             looks = looks,
             activity = activity,
+            seldom = seldom,
+            strolls = strolls,
             force = forcedKind(switches[Switch.Move]),
         )
     } else {

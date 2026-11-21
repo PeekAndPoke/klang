@@ -43,13 +43,16 @@ data class Member(
  * spangles in the skin (everyone glitters; the two women a little more). [combedBack]: the hair is worn as a pattern
  * in the light, combed straight back. [shadowSnakes]: hair seen only as a shadow, Medusa's snakes on the head (see
  * `ShadowHair`). The band makes them and sets them every frame, once the head is held at last. None with
- * `?nosnakes`; drawn as well, to look at them, with `?snakes`.
+ * `?nosnakes`; drawn as well, to look at them, with `?snakes`. [shadowEyes]: under the front lamp the eyes leave the
+ * face and glow in the shadow instead, where the look asks for it (`?eyes=shadow`, see `ShadowEyes`); one member at
+ * a time has them (see [Members.shadowEyed]).
  */
 data class Dress(
     val cloth: ClothPattern,
     val glitter: Double,
     val combedBack: Boolean = false,
     val shadowSnakes: Boolean = false,
+    val shadowEyes: Boolean = false,
 )
 
 /**

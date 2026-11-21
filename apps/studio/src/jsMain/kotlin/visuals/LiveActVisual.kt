@@ -15,6 +15,7 @@ import io.peekandpoke.klang.studio.spine.spine
 import io.peekandpoke.klang.studio.version
 import io.peekandpoke.klang.viz.liveact.LiveAct
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -43,6 +44,8 @@ fun Tag.LiveActVisual() = comp {
  * ([SongReading], which says how far and its limits): the band plays the notes that sound (KLANG-00450). The band is
  * there as soon as the first stretch is read, and plans on as the song grows. The music itself is the app's: the live act follows the playback's time ([FollowedPlayback]) and starts and
  * stops nothing, so there is no walk-in here. Its loudness is read from the player's analyser ([PlayingMusic]).
+ * Every song is played by Der Schmetterling's score ([DER_SCHMETTERLING]): each member plays the parts with that
+ * score's tags, and one whose tags a song lacks stands still.
  *
  * A change of the code while it plays reaches the band with the sound: the band plays on, and what it read ahead is
  * read anew ([SongReading]). Known limits of the studio's, for now (the reading's own are [SongReading]'s). After a
@@ -138,7 +141,7 @@ class LiveActVisual(ctx: NoProps) : PureComponent(ctx) {
                         put("inset", "0")
                     }
 
-                    LiveAct(show = now.show, models = MODELS, version = figuresVersion())
+                    LiveAct(show = now.show, score = DER_SCHMETTERLING, models = MODELS, version = figuresVersion())
                 }
             } else {
                 div {

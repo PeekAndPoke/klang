@@ -10,7 +10,6 @@ import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
-import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.smoother
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
@@ -99,26 +98,27 @@ private const val OVERHEAD = 2.1
  * from where, in which order, when, and how it comes back).
  *
  * [rigs]: the players' figures. [looks]: the looks at each player (see [looksOn]). [activity]: the times a player plays a note, sorted, as far as the song is known
- * (asked at every look). [force]: makes every round that kind (to see one; else the seed decides).
+ * (asked at every look). [seldom]: the players who play seldom, and [strolls]: the one who strolls (both the cast's,
+ * see [Rounds]). [force]: makes every round that kind (to see one; else the seed decides).
  */
 class Choreography(
     show: Show,
     private val rigs: Map<Player, Rig>,
     looks: Map<Player, List<Placement>>,
     private val activity: (Player) -> List<Double>,
+    seldom: List<Player>,
+    strolls: Player,
     force: RoundKind? = null,
 ) {
     private val cycle: Double = show.bar
 
-    /** The rounds, and what the choice of a look goes by: the cast's two players who play seldom, and who strolls. */
+    /** The rounds, and what the choice of a look goes by: the players who play seldom, and who strolls. */
     private val rounds = Rounds(
         seed = show.seed,
         bar = cycle,
         looks = looks,
-        // (into refactorme: that they play seldom is the song's arrangement, who plays them is its cast; the one
-        // who strolls is the trumpet player)
-        seldom = listOf(SchmetterlingCast.MARIMBA, SchmetterlingCast.TRUMPET),
-        strolls = SchmetterlingCast.TRUMPET,
+        seldom = seldom,
+        strolls = strolls,
         force = force,
     )
     private val round: Double = rounds.length

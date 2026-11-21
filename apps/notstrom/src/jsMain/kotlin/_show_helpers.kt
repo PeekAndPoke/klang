@@ -5,10 +5,23 @@
 
 package io.peekandpoke.klang.notstrom
 
+import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.Song
+import io.peekandpoke.klang.viz.liveact.Score
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
+import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
+
+/** The song the show plays: Der Schmetterling, the built-in song, played by its score ([SHOW_SCORE]). */
+val SHOW_SONG: Song = BuiltInSongs.derSchmetterling
+
+/**
+ * The score the band plays [SHOW_SONG] by: Der Schmetterling's cast and stage plot. The page "Meet the band" says
+ * what each one plays by its cast ([playsIn]).
+ */
+val SHOW_SCORE: Score = DER_SCHMETTERLING
 
 /**
  * The live act's switches for a show: those of the page's address ([query], `?seed=7&still`), with the stroboscope

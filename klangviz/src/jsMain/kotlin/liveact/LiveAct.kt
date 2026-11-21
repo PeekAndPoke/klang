@@ -5,8 +5,6 @@
 
 package io.peekandpoke.klang.viz.liveact
 
-import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.band.dress.EyeWarmth
 import io.peekandpoke.klang.viz.liveact.band.dress.Lacquer
 import io.peekandpoke.klang.viz.liveact.band.dress.ShadowEyes
@@ -19,7 +17,6 @@ import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.View
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
-import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingCast
 import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
@@ -59,7 +56,8 @@ import org.w3c.dom.events.KeyboardEvent
 import kotlin.math.sqrt
 
 /**
- * The live act: the band Notstrom on its stage, playing [show]'s song.
+ * The live act: the band Notstrom on its stage, playing [show]'s song by its [score] (who plays what, and where each
+ * one stands).
  *
  * [models] is the address of the folder that holds the figures (ending in a slash); [version] the figures' release,
  * asked for with each file (a release's figures may be cached for long, and a new release asks anew). The music is
@@ -71,6 +69,7 @@ import kotlin.math.sqrt
 @Suppress("FunctionName")
 fun Tag.LiveAct(
     show: Show,
+    score: Score,
     models: String,
     version: String,
     walkInAtOnce: Boolean = false,
@@ -80,6 +79,7 @@ fun Tag.LiveAct(
 ) = comp(
     LiveAct.Props(
         show = show,
+        score = score,
         models = models,
         version = version,
         walkInAtOnce = walkInAtOnce,
@@ -128,6 +128,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
     data class Props(
         val show: Show,
+        /** The song's score: the band is cast and placed by it, and the camera, the lights and the eye contact go by it. */
+        val score: Score,
         val models: String,
         /** The figures' release (see [LiveAct]): every page that shows the live act names its own. */
         val version: String,
@@ -268,8 +270,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         get() = look.shown
 
     /**
-     * Sirene's eyes in her shadow, made the first time they are chosen (`?eyes=shadow`, the key i) once the band
-     * stands, and kept resting while they are not.
+     * The eyes in the shadow of the one whose dress has them there (Sirene's, see [Members.shadowEyed]), made the
+     * first time they are chosen (`?eyes=shadow`, the key i) once the band stands, and kept resting while they are not.
      */
     private var shadowEyes: ShadowEyes? = null
 
@@ -438,6 +440,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     /** Builds the stage at once, and the rest once the figures are there. */
     private fun build(ctx: ThreeJsContext) {
         val show = props.show
+        val score = props.score
         val lens = ctx.camera.asPerspectiveCamera ?: error("The live act's camera is not a perspective camera")
 
         renderer = ctx.renderer
@@ -452,6 +455,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             scene = ctx.scene,
             camera = lens,
             renderer = ctx.renderer,
+            kick = score.cast.drums.kit.kick,
             fog = fog,
             shadows = shadows,
             reflections = reflections,
@@ -476,6 +480,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             val band = try {
                 Notstrom.load(
                     show = show,
+                    cast = score.cast,
+                    plot = score.plot,
                     scene = ctx.scene,
                     models = props.models,
                     version = props.version,
@@ -500,15 +506,17 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 scene = ctx.scene,
                 camera = lens,
                 rigs = band.rigs,
-                homes = StagePlot.PLACES,
+                homes = score.plot.places,
                 activity = band::playsAt,
+                seldom = score.cast.seldom,
+                strolls = score.cast.strolls,
             )
             // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
             // fail before it is kept (and with it given up on unmount)
             val clock = ShowClock(
                 show = show,
                 notice = element(NOTICE_ID),
-                intro = StagePlot.INTRO,
+                intro = score.plot.intro,
                 begun = props.walkInAtOnce,
                 opens = WorldLook.opens(show.switches),
             )
@@ -534,11 +542,15 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         show.energy = energy
         now.band.play(t)
-        // (into refactorme: her notes are the trumpet player's, and who that is, the cast says)
+
+        // she who plays the trumpet looks at nobody while she plays
+        val her = props.score.cast.trumpet.player
+
         eyeContact(
             show = show,
             rigs = now.band.rigs,
-            herNotes = now.band.playsAt(SchmetterlingCast.TRUMPET),
+            her = her,
+            herNotes = now.band.playsAt(her),
             t = t,
             skills = { player -> Members.of(player).skills },
         )
@@ -731,13 +743,13 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     }
 
     /**
-     * Sirene's eyes as [variants] say: in her shadow ([ShadowEyes]) where it is chosen and the band stands, made where
-     * there are none; resting where they are not chosen (her face's eyes are hers again from the next frame on), kept
-     * for the next time.
+     * The eyes of the one whose dress has them in the shadow ([Members.shadowEyed]: Sirene's) as [variants] say: in
+     * her shadow ([ShadowEyes]) where it is chosen and the band stands, made where there are none; resting where they
+     * are not chosen (her face's eyes are hers again from the next frame on), kept for the next time.
      */
     private fun eyesAsChosen() {
         val wanted = variants.eyes == EyesLook.Shadow
-        val rig = running?.band?.rigs?.get(Player.Sirene)
+        val rig = Members.shadowEyed?.let { running?.band?.rigs?.get(it) }
         val into = scene
 
         if (wanted && shadowEyes == null && rig != null && into != null) {

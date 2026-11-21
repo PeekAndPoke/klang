@@ -8,7 +8,6 @@ package io.peekandpoke.klang.viz.liveact.lights
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.hash01
-import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingTags
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.stage.WorldLook
 import kotlin.math.PI
@@ -180,8 +179,11 @@ fun lampFlicker(t: Double, own: Double): Double {
     return 1 + wander + shiver - sag
 }
 
-/** The lights' plan for one [show]: the moods, the front lamp, the stroboscope. */
-class LightPlan(private val show: Show) {
+/**
+ * The lights' plan for one [show]: the moods, the front lamp, the stroboscope. [kick]: the song's tag of the kick (the
+ * score's, see `DrumTags`): where it runs fast, the stroboscope flashes.
+ */
+class LightPlan(private val show: Show, private val kick: String) {
 
     /** Whether the show opens (`?opening=night`, [WorldLook.opens]): then the front lamp lights the walk-in ([frontAt]). */
     private val opens: Boolean = WorldLook.opens(show.switches)
@@ -189,7 +191,7 @@ class LightPlan(private val show: Show) {
     /** Where the bass drum runs fast: the stroboscope's stretches. */
     val runs: List<Run>
         get() {
-            val kicks = show.times(SchmetterlingTags.KICK)
+            val kicks = show.times(kick)
 
             // the same list as long as the song has not grown
             if (kicks !== runsOf) {

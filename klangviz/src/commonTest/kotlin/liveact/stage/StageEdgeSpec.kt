@@ -50,7 +50,7 @@ class StageEdgeSpec : StringSpec({
     }
 
     "the band stands on the stage, the audience off it" {
-        // the stage plot's places, the drummer and the outermost guitarists (StagePlot)
+        // Der Schmetterling's stage plot's places, the drummer and the outermost guitarists (DER_SCHMETTERLING)
         listOf(0.1 to -2.1, -3.0 to 1.7, 3.0 to 1.7, -0.7 to 2.2).forEach { (x, z) ->
             StageEdge.distance(x = x, z = z) shouldBeGreaterThan 3.0
         }

@@ -12,13 +12,13 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.camera.CLEAR
 import io.peekandpoke.klang.viz.liveact.camera.Ground
 import io.peekandpoke.klang.viz.liveact.camera.TOTAL_FROM
 import io.peekandpoke.klang.viz.liveact.camera.arcOf
 import io.peekandpoke.klang.viz.liveact.camera.looksOf
 import io.peekandpoke.klang.viz.liveact.camera.looksOn
+import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -26,10 +26,13 @@ import kotlin.math.sin
 /** How far the line from an arc's camera to its player stays from where every other one stands, in metres. */
 private const val SIGHT = 0.6
 
-/** The band's own looks against the band's own places: a check for the future, for whoever moves a player or sets a look. */
+/**
+ * The band's own looks against the band's own places (Der Schmetterling's stage plot, the only one so far): a check for
+ * the future, for whoever moves a player or sets a look.
+ */
 class LooksSpec : StringSpec({
 
-    val homes = StagePlot.PLACES
+    val homes = DER_SCHMETTERLING.plot.places
     val looks = looksOn(homes)
 
     "every player has their looks, as many as are set" {

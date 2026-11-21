@@ -64,7 +64,8 @@ import kotlin.math.min
  * with `?opening=ember` the show opens in that world before its song, and turns slowly to its own when the song begins
  * ([WorldCourse]); with `?underworld=on` ([UnderworldLook]) the mirror floor shows the other world. The look as [variants] says
  * (the address's, without them), the fog at [fog]'s quality, the lamps' shadows at [shadows]', the mirror floor's
- * reflections as [reflections] say (`?reflections=off`: the mirror floor drawn plain). Sets on [renderer],
+ * reflections as [reflections] say (`?reflections=off`: the mirror floor drawn plain); the stroboscope on the song's
+ * tag [kick] (see [Lights]). Sets on [renderer],
  * [scene] and [camera] what the show needs of them: the shadows, the tone mapping, the dark and the distance fog, the
  * camera's lens.
  *
@@ -84,6 +85,7 @@ class Stage(
     private val scene: Scene,
     private val camera: PerspectiveCamera,
     private val renderer: WebGLRenderer,
+    kick: String,
     fog: FogQuality = FogQuality.of(show.switches),
     shadows: ShadowQuality = ShadowQuality.of(show.switches),
     reflections: ReflectionQuality = ReflectionQuality.of(show.switches),
@@ -250,7 +252,7 @@ class Stage(
 
         buildBack()
 
-        lights = Lights(show = show, scene = scene, shadows = shadows)
+        lights = Lights(show = show, scene = scene, kick = kick, shadows = shadows)
 
         riser = Three.addon.createMesh(
             Three.addon.createBoxGeometry(2.9, RISER, 2.2),

@@ -25,7 +25,7 @@ import io.peekandpoke.klang.viz.liveact.band.skills.SkillTiming
  */
 val SIRENE: Member = Member(
     player = Player.Sirene,
-    dress = Dress(cloth = ClothPattern.Braid, glitter = 0.21),
+    dress = Dress(cloth = ClothPattern.Braid, glitter = 0.21, shadowEyes = true),
     // the frontwoman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
     character = Character(
         seed = 67.0,

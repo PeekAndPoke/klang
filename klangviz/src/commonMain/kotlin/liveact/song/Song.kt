@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.viz.liveact.song
 
 import io.peekandpoke.klang.viz.liveact.Timed
-import io.peekandpoke.klang.viz.liveact.refactorme.SchmetterlingTags
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
@@ -116,7 +115,8 @@ class Part<T>(val grows: Boolean, private val version: () -> Int, private val re
  *
  * A song played live for long also forgets ([forget]): what lies well behind what is heard is dropped, so the song
  * stays as small as the stretch the band looks at. The readings then begin where the song still knows itself, and
- * what remains reads as it did before: which foot and which hand hits a drum goes on from the last hits forgotten.
+ * what remains reads as it did before: which foot and which hand hits a drum goes on from the last hits forgotten
+ * (for each kit of drum tags read before the song forgot, see [drumHits]).
  * Only an event longer than the stretch kept is forgotten while it still sounds (it goes by its start).
  *
  * An event with several tags has a strength for each of them. (The prototype this was ported from kept one for the
@@ -142,17 +142,22 @@ class Song(rpm: Double, val grows: Boolean = true) {
     private val loudest = mutableMapOf<String, Double>()
 
     private var tagged: Map<String, List<SongEvent>>? = null
-    private var hits: List<DrumHit>? = null
+    private val hits = mutableMapOf<DrumTags, List<DrumHit>>()
     private val notes = mutableMapOf<String, List<Note>>()
     private val strums = mutableMapOf<List<String>, List<Strum>>()
     private val starts = mutableMapOf<List<String>, List<Double>>()
 
-    /** The last kick and the last hit on the snare that were forgotten: the feet and the hands go on from them. */
-    private var kickBefore: DrumHit? = null
-    private var snareBefore: DrumHit? = null
+    /**
+     * What the drummer hit last of what was forgotten ([forget]), for each kit read so far ([drumHits]): the feet and
+     * the hands go on from it. A kit is remembered from its first reading on.
+     */
+    private val forgottenHits = mutableMapOf<DrumTags, ForgottenHits>()
 
-    /** What the hands hit last of what was forgotten, as far back as a hand is busy with it ([BUSY] seconds). */
-    private var handsBefore: List<DrumHit> = emptyList()
+    /**
+     * What a drummer hit last of what the song forgot: the last [kick] and the last hit on the [snare] (the feet and
+     * the hands go on from them), and what the [hands] hit, as far back as a hand is busy with it ([BUSY] seconds).
+     */
+    private class ForgottenHits(val kick: DrumHit? = null, val snare: DrumHit? = null, val hands: List<DrumHit> = emptyList())
 
     /** More of the song: [events], in any order. */
     fun add(events: List<RecordedEvent>) {
@@ -209,12 +214,16 @@ class Song(rpm: Double, val grows: Boolean = true) {
             return
         }
 
-        // which foot and which hand hit last, of the hits that go
-        val gone = drumHits().filter { it.t < cut }
+        // which foot and which hand hit last, of the hits that go, on every kit read so far
+        for ((kit, before) in forgottenHits.toList()) {
+            val gone = drumHits(kit).filter { it.t < cut }
 
-        kickBefore = gone.lastOrNull { it.drum == Drum.Kick } ?: kickBefore
-        snareBefore = gone.lastOrNull { it.drum == Drum.Snare } ?: snareBefore
-        handsBefore = (handsBefore + gone).filter { it.drum != Drum.Kick && it.t >= cut - BUSY }
+            forgottenHits[kit] = ForgottenHits(
+                kick = gone.lastOrNull { it.drum == Drum.Kick } ?: before.kick,
+                snare = gone.lastOrNull { it.drum == Drum.Snare } ?: before.snare,
+                hands = (before.hands + gone).filter { it.drum != Drum.Kick && it.t >= cut - BUSY },
+            )
+        }
 
         for (list in known.values) {
             list.removeAll { it.t < cut }
@@ -244,7 +253,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
     private fun changed() {
         version++
         tagged = null
-        hits = null
+        hits.clear()
         notes.clear()
         strums.clear()
         starts.clear()
@@ -268,24 +277,25 @@ class Song(rpm: Double, val grows: Boolean = true) {
      * The drummer's hits. The kick with both feet: the right one leads, and in a run the two take turns. A fast run
      * on the snare is played by both hands in turn. The right hand keeps the hat and the ride going; a crash or the
      * open hat between them is the left hand's when it is free (no snare just then), so no hand has to jump between
-     * two cymbals.
+     * two cymbals. Which of the song's tags are the kick, the snare and the cymbals, the [kit] says (the score's).
      */
-    fun drumHits(): List<DrumHit> = hits ?: readDrumHits().also { hits = it }
+    fun drumHits(kit: DrumTags): List<DrumHit> = hits.getOrPut(kit) { readDrumHits(kit) }
 
-    private fun readDrumHits(): List<DrumHit> {
+    private fun readDrumHits(kit: DrumTags): List<DrumHit> {
+        val forgotten = forgottenHits.getOrPut(kit) { ForgottenHits() }
         val hits = mutableListOf<DrumHit>()
         // when each hand hits, sorted: the snare's hits come in order, and so do the cymbals' after them
         val snares = mapOf(Limb.L to mutableListOf<Double>(), Limb.R to mutableListOf())
         val cymbalHits = mapOf(Limb.L to mutableListOf<Double>(), Limb.R to mutableListOf())
 
         // (what the hands hit last of what was forgotten still keeps them busy)
-        for (h in handsBefore) {
+        for (h in forgotten.hands) {
             (if (h.drum == Drum.Snare) snares else cymbalHits).getValue(h.limb).add(h.t)
         }
 
-        var foot: DrumHit? = kickBefore
+        var foot: DrumHit? = forgotten.kick
 
-        for (e in merged(tagged(SchmetterlingTags.KICK)) { "k" }) {
+        for (e in merged(tagged(kit.kick)) { "k" }) {
             val before = foot
             val run = before != null && e.t - before.t < 0.45
             val limb = if (run && before.limb == Limb.KickR) Limb.KickL else Limb.KickR
@@ -293,9 +303,9 @@ class Song(rpm: Double, val grows: Boolean = true) {
             foot = DrumHit(t = e.t, drum = Drum.Kick, limb = limb, v = e.v).also { hits.add(it) }
         }
 
-        var previous: DrumHit? = snareBefore
+        var previous: DrumHit? = forgotten.snare
 
-        for (e in merged(tagged(SchmetterlingTags.SNARE)) { "s" }) {
+        for (e in merged(tagged(kit.snare)) { "s" }) {
             val before = previous
             val fast = before != null && e.t - before.t < 0.22
             val limb = if (fast && before.limb == Limb.L) Limb.R else Limb.L
@@ -309,7 +319,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
                 near(times = cymbalHits.getValue(limb), t = t, within = within)
         }
 
-        val cymbals = (tagged(SchmetterlingTags.HATS) + tagged(SchmetterlingTags.COUNT_IN)).sortedBy { it.t }
+        val cymbals = kit.cymbals.flatMap { tagged(it) }.sortedBy { it.t }
 
         for (e in merged(cymbals) { it.sound.orEmpty() }) {
             val drum = cymbalOf(e)

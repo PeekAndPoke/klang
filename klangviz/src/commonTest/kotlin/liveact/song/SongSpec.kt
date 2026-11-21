@@ -13,6 +13,9 @@ private fun event(t: Double, tag: String, sound: String? = null, note: String? =
 
 private fun song(vararg events: RecordedEvent) = Song(Recording(rpm = 30.0, events = events.toList()))
 
+/** Which tags the drummer plays, as the songs here name them. */
+private val KIT = DrumTags(kick = "kick", snare = "snare", cymbals = listOf("hats", "countin"))
+
 class SongSpec : StringSpec({
 
     "a recording is read from its JSON, fields it does not know left aside" {
@@ -44,19 +47,19 @@ class SongSpec : StringSpec({
         val s = song(event(1.0, "kick"), event(1.004, "kick"), event(1.031, "kick"), event(2.0, "kick"))
 
         // 1.031 follows 1.004 by 27 ms and is left out too: each is measured against the one before it
-        s.drumHits().map { it.t } shouldBe listOf(1.0, 2.0)
+        s.drumHits(KIT).map { it.t } shouldBe listOf(1.0, 2.0)
     }
 
     "the kick is played with both feet: the right one leads, and in a run the two take turns" {
         val s = song(event(1.0, "kick"), event(1.2, "kick"), event(1.4, "kick"), event(2.0, "kick"), event(2.44, "kick"))
 
-        s.drumHits().map { it.limb } shouldBe listOf(Limb.KickR, Limb.KickL, Limb.KickR, Limb.KickR, Limb.KickL)
+        s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.KickR, Limb.KickL, Limb.KickR, Limb.KickR, Limb.KickL)
     }
 
     "a fast run on the snare is played by both hands in turn, a slow one by the left" {
         val s = song(event(1.0, "snare"), event(1.1, "snare"), event(1.2, "snare"), event(2.0, "snare"), event(2.3, "snare"))
 
-        s.drumHits().map { it.limb } shouldBe listOf(Limb.L, Limb.R, Limb.L, Limb.L, Limb.L)
+        s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.L, Limb.R, Limb.L, Limb.L, Limb.L)
     }
 
     "the hats: which cymbal by the sound's name, the right hand's, a crash the left hand's when it is free" {
@@ -66,7 +69,7 @@ class SongSpec : StringSpec({
             // a snare just then: the left hand is not free, the crash is the right hand's
             event(6.0, "snare"), event(6.1, "hats", sound = "cr"),
         )
-        val hits = s.drumHits().filter { it.drum != Drum.Snare }
+        val hits = s.drumHits(KIT).filter { it.drum != Drum.Snare }
 
         hits.map { it.drum } shouldBe listOf(Drum.Hat, Drum.Hat2, Drum.Crash, Drum.Ride, Drum.Hat2, Drum.Crash)
         hits.map { it.limb } shouldBe listOf(Limb.R, Limb.L, Limb.L, Limb.R, Limb.L, Limb.R)
@@ -76,7 +79,7 @@ class SongSpec : StringSpec({
         val s = song(event(1.0, "hats", sound = "hh"), event(1.1, "hats", sound = "rd"), event(1.2, "hats", sound = "rd"))
 
         // the ride at 1.1 comes 100 ms after the hat, on the same hand: left out; the one at 1.2 is played
-        s.drumHits().map { it.t } shouldBe listOf(1.0, 1.2)
+        s.drumHits(KIT).map { it.t } shouldBe listOf(1.0, 1.2)
     }
 
     "a player's notes: those of its tag with a pitch, doubles of the same pitch merged" {
@@ -122,7 +125,7 @@ class SongSpec : StringSpec({
         grown.add(events.filter { it.t >= 1.0 && it.t < 2.0 })
         grown.add(events.filter { it.t >= 2.0 })
 
-        grown.drumHits() shouldBe whole.drumHits()
+        grown.drumHits(KIT) shouldBe whole.drumHits(KIT)
         grown.notesOf("lead") shouldBe whole.notesOf("lead")
         grown.strumsOf(listOf("bass")) shouldBe whole.strumsOf(listOf("bass"))
         grown.times(listOf("kick", "snare")) shouldBe whole.times(listOf("kick", "snare"))
@@ -134,7 +137,7 @@ class SongSpec : StringSpec({
 
         s.version shouldBe 0
         s.notesOf("lead") shouldBe emptyList()
-        s.drumHits() shouldBe emptyList()
+        s.drumHits(KIT) shouldBe emptyList()
         s.strumsOf(listOf("lead")) shouldBe emptyList()
 
         s.add(listOf(event(1.0, "lead", note = "c4")))
@@ -149,7 +152,7 @@ class SongSpec : StringSpec({
         s.version shouldBe 2
         s.notesOf("lead").map { it.midi } shouldBe listOf(60, 64)
         s.times(listOf("lead")) shouldBe listOf(1.0, 2.0)
-        s.drumHits().map { it.t } shouldBe listOf(2.0)
+        s.drumHits(KIT).map { it.t } shouldBe listOf(2.0)
         s.strumsOf(listOf("lead")).map { it.midi } shouldBe listOf(60, 64)
     }
 
@@ -174,7 +177,7 @@ class SongSpec : StringSpec({
         fixed.refresh() shouldBe true
         fixed.events shouldBe listOf(1, 2)
         fixed.refresh() shouldBe false
-        Song(Recording(rpm = 30.0, events = emptyList())).part { drumHits() }.grows shouldBe false
+        Song(Recording(rpm = 30.0, events = emptyList())).part { drumHits(KIT) }.grows shouldBe false
     }
 
     "a hand is busy with what it plays within the given time, whatever it plays before and after" {
@@ -183,14 +186,14 @@ class SongSpec : StringSpec({
         val crashes = listOf(event(25.1, "hats", sound = "cr"), event(60.0, "hats", sound = "cr"))
         val s = song(*(snares + crashes).toTypedArray())
 
-        s.drumHits().filter { it.drum == Drum.Crash }.map { it.limb } shouldBe listOf(Limb.R, Limb.L)
+        s.drumHits(KIT).filter { it.drum == Drum.Crash }.map { it.limb } shouldBe listOf(Limb.R, Limb.L)
     }
 
     "a hand is busy up to the given time and not at it, measured as the difference of the two moments" {
         // 1.5599999999999998 - 1.44 is a little under 0.12 as a floating number: the hand is still busy
         val s = song(event(1.44, "hats", sound = "hh"), event(1.5599999999999998, "hats", sound = "hh"))
 
-        s.drumHits().map { it.t } shouldBe listOf(1.44)
+        s.drumHits(KIT).map { it.t } shouldBe listOf(1.44)
     }
 
     "how hard an event is played stays as it was when a louder one is added later" {
@@ -213,7 +216,7 @@ class SongSpec : StringSpec({
         s.version shouldBe 2
         s.notesOf("lead").map { it.midi } shouldBe listOf(60)
         s.times(listOf("lead", "kick")) shouldBe listOf(1.0)
-        s.drumHits() shouldBe emptyList()
+        s.drumHits(KIT) shouldBe emptyList()
     }
 
     "a song forgets what starts before a moment, and is read anew only where something went" {
@@ -231,26 +234,28 @@ class SongSpec : StringSpec({
         s.forget(before = 9.0)
         s.version shouldBe 3
         s.times(listOf("lead", "kick")) shouldBe emptyList()
-        s.drumHits() shouldBe emptyList()
+        s.drumHits(KIT) shouldBe emptyList()
     }
 
     "what a song still knows reads as before when it forgets: the feet and the hands go on from the last hit forgotten" {
         // a run on the kick and a fast run on the snare, both across the moment forgotten
         val events = (0 until 9).map { event(1.0 + it * 0.2, "kick") } + (0 until 9).map { event(1.05 + it * 0.1, "snare") }
-        val whole = Song(Recording(rpm = 30.0, events = events)).drumHits()
+        val whole = Song(Recording(rpm = 30.0, events = events)).drumHits(KIT)
         val s = Song(rpm = 30.0)
 
         s.add(events)
+        // read as the drummer reads it, before it forgets: a kit is remembered from its first reading on
+        s.drumHits(KIT)
         s.forget(before = 1.5)
-        s.drumHits() shouldBe whole.filter { it.t >= 1.5 }
+        s.drumHits(KIT) shouldBe whole.filter { it.t >= 1.5 }
 
         // and again, where nothing of the drums goes in between: the last hit forgotten is still the one before
         s.add(listOf(event(0.2, "lead", note = "c4")))
         s.forget(before = 1.52)
-        s.drumHits() shouldBe whole.filter { it.t >= 1.5 }
+        s.drumHits(KIT) shouldBe whole.filter { it.t >= 1.5 }
 
         s.forget(before = 2.0)
-        s.drumHits() shouldBe whole.filter { it.t >= 2.0 }
+        s.drumHits(KIT) shouldBe whole.filter { it.t >= 2.0 }
         // (both in the middle of their run: begun anew there, the snare would be the left hand's and the kick the right foot's)
         whole.filter { it.t >= 1.5 }.take(2).map { it.limb } shouldBe listOf(Limb.R, Limb.KickL)
     }
@@ -269,14 +274,14 @@ class SongSpec : StringSpec({
         // a kick doubled across the moment asked for (1.499 and 1.501), then a run: cut between the two, the second
         // would be a hit of its own and every foot after it the other one
         val events = listOf(event(1.0, "kick"), event(1.499, "kick"), event(1.501, "kick")) + (1..6).map { event(1.5 + it * 0.2, "kick") }
-        val whole = Song(Recording(rpm = 30.0, events = events)).drumHits()
+        val whole = Song(Recording(rpm = 30.0, events = events)).drumHits(KIT)
         val s = Song(rpm = 30.0)
 
         s.add(events)
         s.forget(before = 1.5)
 
         // the double stays whole, and goes whole: 1.0 is forgotten, 1.499 is not
-        s.drumHits() shouldBe whole.filter { it.t >= 1.499 }
+        s.drumHits(KIT) shouldBe whole.filter { it.t >= 1.499 }
         s.times(listOf("kick")).first() shouldBe 1.499
 
         // a chain of events each within 30 ms of the next goes back as far as it reaches, and no further
@@ -294,32 +299,35 @@ class SongSpec : StringSpec({
     "cymbals closer than a hand can play read as before when the song forgets" {
         // every second hat is left out; begun anew after the cut, it would be the other ones
         val hats = (0 until 12).map { event(1.0 + it * 0.1, "hats", sound = "hh") }
-        val whole = Song(Recording(rpm = 30.0, events = hats)).drumHits()
+        val whole = Song(Recording(rpm = 30.0, events = hats)).drumHits(KIT)
         val s = Song(rpm = 30.0)
 
         s.add(hats)
+        // (read before it forgets, as the drummer reads it)
+        s.drumHits(KIT)
         s.forget(before = 1.05)
-        s.drumHits() shouldBe whole.filter { it.t >= 1.05 }
-        s.drumHits().first().t shouldBe 1.2
+        s.drumHits(KIT) shouldBe whole.filter { it.t >= 1.05 }
+        s.drumHits(KIT).first().t shouldBe 1.2
 
         // and again, where only a hat that was left out goes: nothing changes
         s.forget(before = 1.15)
-        s.drumHits() shouldBe whole.filter { it.t >= 1.15 }
+        s.drumHits(KIT) shouldBe whole.filter { it.t >= 1.15 }
 
         // open hats 0.15 s apart go from hand to hand; and a crash right after a snare forgotten is the right hand's
         val open = (0 until 8).map { event(1.0 + it * 0.15, "hats", sound = "oh") } +
             listOf(event(3.0, "snare"), event(3.1, "hats", sound = "cr"))
-        val wholeOpen = Song(Recording(rpm = 30.0, events = open)).drumHits()
+        val wholeOpen = Song(Recording(rpm = 30.0, events = open)).drumHits(KIT)
         val o = Song(rpm = 30.0)
 
         o.add(open)
+        o.drumHits(KIT)
         // the hat at 1.15 is the right hand's only because the left is still busy with the one forgotten at 1.0
         o.forget(before = 1.14)
-        o.drumHits() shouldBe wholeOpen.filter { it.t >= 1.14 }
-        o.drumHits().first().limb shouldBe Limb.R
+        o.drumHits(KIT) shouldBe wholeOpen.filter { it.t >= 1.14 }
+        o.drumHits(KIT).first().limb shouldBe Limb.R
         o.forget(before = 3.05)
-        o.drumHits() shouldBe wholeOpen.filter { it.t >= 3.05 }
-        o.drumHits().single().limb shouldBe Limb.R
+        o.drumHits(KIT) shouldBe wholeOpen.filter { it.t >= 3.05 }
+        o.drumHits(KIT).single().limb shouldBe Limb.R
         wholeOpen.take(4).map { it.limb } shouldBe listOf(Limb.L, Limb.R, Limb.L, Limb.R)
     }
 
@@ -333,12 +341,14 @@ class SongSpec : StringSpec({
                 event(1.15, "hats", sound = "cr"), event(2.0, "hats", sound = "cr"),
             )
         )
+        // (read before it forgets, as the drummer reads it)
+        s.drumHits(KIT)
         s.forget(before = 1.04)
-        s.drumHits().map { it.limb } shouldBe listOf(Limb.R, Limb.L)
+        s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.R, Limb.L)
 
         s.forget(before = 1.1)
         s.notesOf("lead") shouldBe emptyList()
-        s.drumHits().map { it.limb } shouldBe listOf(Limb.R, Limb.L)
+        s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.R, Limb.L)
     }
 
     "the cut goes back over an event exactly 30 ms before it, as such two are one hit" {
@@ -349,5 +359,42 @@ class SongSpec : StringSpec({
 
         s.version shouldBe 1
         s.times(listOf("kick")) shouldBe listOf(0.0, 0.03, 0.4)
+    }
+
+    "the drummer's hits are read by the tags the kit names: a song that names its parts otherwise reads alike" {
+        val named = song(
+            event(1.0, "bd"), event(1.2, "bd"), event(2.0, "sd"), event(3.0, "cy", sound = "cr"), event(3.5, "cy", sound = "hh"),
+        )
+        val usual = song(
+            event(1.0, "kick"), event(1.2, "kick"), event(2.0, "snare"), event(3.0, "hats", sound = "cr"), event(3.5, "hats", sound = "hh"),
+        )
+
+        named.drumHits(DrumTags(kick = "bd", snare = "sd", cymbals = listOf("cy"))) shouldBe usual.drumHits(KIT)
+        named.drumHits(KIT) shouldBe emptyList()
+    }
+
+    "a kit first read after the song forgot begins anew: what was forgotten before is not known to it" {
+        val s = Song(rpm = 30.0)
+
+        s.add((0 until 4).map { event(1.0 + it * 0.2, "kick") })
+        s.forget(before = 1.5)
+
+        // read before the forget, the kick at 1.6 would be the left foot's, the run's fourth
+        s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.KickR)
+    }
+
+    "after a forget, each kit read before goes on from its own last hits" {
+        val s = Song(rpm = 30.0)
+        val other = DrumTags(kick = "bd", snare = "sd", cymbals = emptyList())
+
+        // the kick in a run, right, left, right, left; the other kit's two kicks far apart, each the right foot's
+        s.add((0 until 4).map { event(1.0 + it * 0.2, "kick") } + listOf(event(1.0, "bd"), event(1.6, "bd")))
+        s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.KickR, Limb.KickL, Limb.KickR, Limb.KickL)
+        s.drumHits(other).map { it.limb } shouldBe listOf(Limb.KickR, Limb.KickR)
+
+        s.forget(before = 1.5)
+
+        s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.KickL)
+        s.drumHits(other).map { it.limb } shouldBe listOf(Limb.KickR)
     }
 })

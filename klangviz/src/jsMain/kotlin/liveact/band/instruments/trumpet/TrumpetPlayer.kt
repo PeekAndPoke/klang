@@ -10,8 +10,8 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.band.figure.Gait
 import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
@@ -82,7 +82,8 @@ private object Raise {
  * sight. [camera]: where the camera is (a live vector the show keeps, as her skills' looks at it have it; where it
  * is not given, where the total stands): on a stroll to it she stares at it (see [StrollHome.stareAt]), over all her
  * other looks. [gait]: how she walks, how much her hips move (see [Gait]; as her stroll had them before there were
- * gaits unless given), on each kind of walk as much as its modifier says (see [StrollHome.hipsAt]).
+ * gaits unless given), on each kind of walk as much as its modifier says (see [StrollHome.hipsAt]). [others]: where
+ * the others stand in the stage plot: she visits them on some strolls (see [StrollRoute]).
  */
 class TrumpetPlayer(
     private val show: Show,
@@ -93,6 +94,7 @@ class TrumpetPlayer(
     private val looks: (Double) -> List<Look> = { emptyList() },
     private val camera: Vector3 = HOME.pos.clone(),
     private val gait: Gait = Gait(hips = 1.0),
+    others: Map<Player, Place>,
 ) {
     /**
      * Where she is and how she walks: [at] her place on the stage, [turn] which way she faces, [speed] how fast she
@@ -157,9 +159,9 @@ class TrumpetPlayer(
 
     /**
      * Where the others' eyes are, about, for her look at one she visits ([visitLook]): over their place in the stage
-     * plot (the rigs of the others are not hers to read), at [EYES], or [SEATED_EYES] over the riser.
+     * plot ([others]; the rigs of the others are not hers to read), at [EYES], or [SEATED_EYES] over the riser.
      */
-    private val heads: Map<Player, Vector3> = StagePlot.PLACES.mapValues { (_, place) ->
+    private val heads: Map<Player, Vector3> = others.mapValues { (_, place) ->
         vec(place.x, place.y + (if (place.y > 0.0) SEATED_EYES else EYES), place.z)
     }
 
@@ -210,7 +212,7 @@ class TrumpetPlayer(
             restTurn = homeTurn,
             closest = closestToCamera(chin = rig.bone("head").getWorldPosition(vec()).y),
             // the others' places in the stage plot, off hers, in her sizes: she visits them on some rounds
-            others = StagePlot.PLACES.filterKeys { it != Player.Sirene }.mapValues { (_, place) ->
+            others = others.mapValues { (_, place) ->
                 StrollRoute.Offset(x = (place.x - home.x) / s, z = (place.z - home.z) / s)
             },
         )
