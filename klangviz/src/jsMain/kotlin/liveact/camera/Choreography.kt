@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.smoother
+import io.peekandpoke.klang.viz.liveact.theatre.Sky
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.cross
@@ -90,6 +91,14 @@ fun looksOn(homes: Map<Player, Place>): Map<Player, List<Placement>> = homes.map
 /** How far a camera that looks at one player stays from where every other one stands, in metres: clear of a guitar's neck and head. */
 const val CLEAR = 1.3
 
+/**
+ * The look at the moon from behind the band: how far along the way to the moon the look's aim lies (metres: about
+ * as far as the band is), how much of the way to it the look rises, and the lens there.
+ */
+private const val MOON_REACH = 7.0
+private const val MOON_SHARE = 0.8
+private const val MOON_FOV = 30.0
+
 /** From this height on a camera is above the players' heads and passes over them. */
 private const val OVERHEAD = 2.1
 
@@ -158,20 +167,28 @@ class Choreography(
     }
 
     /**
-     * The flight round the whole band, [u] of the way (0 to 1): once round, from the start position and back to it.
+     * The flight round the whole band at [u] of its time (0 to 1): once round, from the start position and back to it.
      * Behind the band it comes closer (the wall is there) and a little higher. [home]: the total as it drifts now.
      */
     private fun circle(n: Int, u: Double, home: Shot): Shot {
         return circleBy(way = if (chance(n, 0, 8) < 0.5) 1 else -1, u = u, home = home)
     }
 
-    /** The flight round the band, [u] of the way, to the left ([way] 1) or to the right (-1). */
+    /**
+     * The flight round the band at [u] of its time (0 to 1), to the left ([way] 1) or to the right (-1). Half way,
+     * behind the band, it rests and looks up at the moon over the audience (see [MoonStop]).
+     */
     fun circleBy(way: Int, u: Double, home: Shot): Shot {
-        val angle = way * 2 * PI * u
+        val angle = way * 2 * PI * MoonStop.travel(u)
         val far = 8.1 + 1.6 * cos(angle)
         val pos = vec(8.5 * sin(angle), HOME.pos.y + 0.45 * (1 - cos(angle)), -0.3 + far * cos(angle))
+            .add(home.pos)
+            .sub(HOME.pos)
+        // the look rises most of the way to the moon, so the band's heads stay in the picture below it
+        val moon = MoonStop.look(u)
+        val sky = pos.clone().addScaledVector(vec(Sky.MOON.x, Sky.MOON.y, Sky.MOON.z), MOON_REACH)
 
-        return Shot(pos = pos.add(home.pos).sub(HOME.pos), at = home.at, fov = home.fov)
+        return Shot(pos = pos, at = home.at.clone().lerp(sky, moon * MOON_SHARE), fov = home.fov + (MOON_FOV - home.fov) * moon)
     }
 
     /**
@@ -316,7 +333,7 @@ class Choreography(
 
             label = "circle round the band"
 
-            return circle(n, smoother((x - CIRCLE) / (ROUND - CIRCLE)), home)
+            return circle(n, (x - CIRCLE) / (ROUND - CIRCLE), home)
         }
 
         if (roundKind == RoundKind.Flight) {

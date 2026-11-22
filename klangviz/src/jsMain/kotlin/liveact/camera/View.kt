@@ -260,7 +260,7 @@ class View(
             }
 
             is Hand.Circle -> if (u < HAND_CIRCLE * bar) {
-                return choreography.circleBy(way = now.way, u = smoother(u / (HAND_CIRCLE * bar)), home = home)
+                return choreography.circleBy(way = now.way, u = u / (HAND_CIRCLE * bar), home = home)
             }
 
             is Hand.Arc -> return choreography.arcBy(player = now.player, way = now.way, u = min(1.0, u / (9 * bar)))
