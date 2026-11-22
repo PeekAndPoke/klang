@@ -531,8 +531,11 @@ class StageSpec : StringSpec({
 
                 fun shown(): Double = left.asDynamic().material.uniforms.uShow.value.unsafeCast<Double>()
 
-                for (part in listOf(left, far)) {
-                    part.asDynamic().material.uniforms.uMap.value.addEventListener("dispose") { _: dynamic -> freed.add("picture") }
+                // beside the stage the near rows and the ones further back, and the horizon
+                val sides: dynamic = left.asDynamic().material.uniforms
+
+                for (picture in listOf(sides.uNear.value, sides.uDeep.value, far.asDynamic().material.uniforms.uMap.value)) {
+                    picture.addEventListener("dispose") { _: dynamic -> freed.add("picture") }
                 }
 
                 // the ruins, held: their channel, there in full; before the wall the sides are hidden, the horizon is not
@@ -559,8 +562,8 @@ class StageSpec : StringSpec({
                 stage.dispose()
             }
 
-            // both pictures freed, and the group out of the scene
-            freed shouldBe listOf("picture", "picture")
+            // the three pictures freed, and the group out of the scene
+            freed shouldBe listOf("picture", "picture", "picture")
             groups(scene) shouldBe emptyList()
         }
     }

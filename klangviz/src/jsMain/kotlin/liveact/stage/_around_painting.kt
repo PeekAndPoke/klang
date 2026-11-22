@@ -47,31 +47,39 @@ internal class Dice(private val salt: Double) {
     fun between(from: Double, to: Double): Double = from + (to - from) * roll()
 }
 
-/** The picture of the shapes left and right of the stage (see [Around]): the audience's left in its left half. */
-internal fun paintSides(): HTMLCanvasElement = packed(
-    width = Around.SIDES_PIXELS_WIDE,
-    height = Around.SIDES_PIXELS_HIGH,
-) { g, surrounding ->
-    val wide = Around.SIDE_TO - Around.SIDE_FROM
-    val perX = Around.SIDES_PIXELS_WIDE / 2 / wide
-    val perY = Around.SIDES_PIXELS_HIGH / Around.SIDE_HIGH
-    val half = Around.SIDES_PIXELS_WIDE / 2.0
+/** A row of the shapes beside the stage: the near ones, or the ones further back. Each has a picture of its own. */
+internal enum class Row { Near, Deep }
+
+/** Where the shapes beside the stage are drawn from and to, in the painter's metres: its picture's inner and outer edge. */
+private const val DRAWN_FROM = 4.0
+private const val DRAWN_TO = DRAWN_FROM + Around.SIDE_TO - Around.SIDE_FROM
+
+/**
+ * A picture of the shapes left and right of the stage (see [Around]), [width] by [height] pixels: the audience's left
+ * in its left half; of the shapes only those of [row], drawn whole and at full strength (the other row's are rolled
+ * as well, so both pictures are of the same place).
+ */
+internal fun paintSides(row: Row, width: Int, height: Int): HTMLCanvasElement = packed(width = width, height = height) { g, surrounding ->
+    val wide = DRAWN_TO - DRAWN_FROM
+    val perX = width / 2 / wide
+    val perY = height / Around.SIDE_HIGH
+    val half = width / 2.0
 
     for (way in listOf(-1, 1)) {
         g.save()
         g.setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
         g.beginPath()
-        g.rect(if (way < 0) 0.0 else half, 0.0, half, Around.SIDES_PIXELS_HIGH.toDouble())
+        g.rect(if (way < 0) 0.0 else half, 0.0, half, height.toDouble())
         g.clip()
-        // drawn in metres outward from the stage's middle (d) and up from the floor (y): on the audience's right as it
+        // drawn in metres outward (d, from DRAWN_FROM at the picture's inner edge) and up from the floor (y): on the audience's right as it
         // is, on its left mirrored, both toward the stage at the picture's middle
         if (way < 0) {
-            g.setTransform(-perX, 0.0, 0.0, -perY, Around.SIDE_TO * perX, Around.SIDES_PIXELS_HIGH.toDouble())
+            g.setTransform(-perX, 0.0, 0.0, -perY, DRAWN_TO * perX, height.toDouble())
         } else {
-            g.setTransform(perX, 0.0, 0.0, -perY, half - Around.SIDE_FROM * perX, Around.SIDES_PIXELS_HIGH.toDouble())
+            g.setTransform(perX, 0.0, 0.0, -perY, half - DRAWN_FROM * perX, height.toDouble())
         }
 
-        val painter = Painter(g = g, dice = Dice(salt = 11.0 * (surrounding.ordinal + 1) + 3.0 * way), pixels = min(perX, perY))
+        val painter = Painter(g = g, dice = Dice(salt = 11.0 * (surrounding.ordinal + 1) + 3.0 * way), pixels = min(perX, perY), only = row)
 
         when (surrounding) {
             Surrounding.Forest -> painter.forestBeside()
@@ -202,12 +210,28 @@ private class Horizon(val reach: Double) {
 
 /**
  * Draws shapes onto [g] in metres, by the numbers of [dice]; [pixels] is how many of the picture's pixels a metre is at
- * least, so the finest limbs stay some pixels wide.
+ * least, so the finest limbs stay some pixels wide. With [only], just that row's shapes are drawn, the far ones then
+ * whole and at full strength; the other row's leave no mark.
  */
-private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixels: Double) {
+private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixels: Double, val only: Row? = null) {
+    /** Whether the shapes drawn just now leave no mark. */
+    private var unseen = false
+
+    /** Shapes from now on leave no mark: nothing drawn behind what is there, whatever strength a shape sets. */
+    private fun none() {
+        unseen = true
+        g.globalCompositeOperation = "destination-over"
+        g.globalAlpha = 1.0
+        g.fillStyle = "rgba(0,0,0,0)"
+    }
 
     /** Shapes from now on near: white, over what is there. */
     fun near() {
+        if (only == Row.Deep) {
+            return none()
+        }
+
+        unseen = false
         g.globalCompositeOperation = "source-over"
         g.globalAlpha = 1.0
         g.fillStyle = "#ffffff"
@@ -215,13 +239,29 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
 
     /** Shapes from now on further back: grey, and only behind what is there already. */
     fun far() {
-        g.globalCompositeOperation = "destination-over"
+        if (only == Row.Near) {
+            return none()
+        }
+
+        unseen = false
         g.globalAlpha = 1.0
-        g.fillStyle = FAR
+
+        if (only == Row.Deep) {
+            // a picture of its own: whole, at full strength
+            g.globalCompositeOperation = "source-over"
+            g.fillStyle = "#ffffff"
+        } else {
+            g.globalCompositeOperation = "destination-over"
+            g.fillStyle = FAR
+        }
     }
 
     /** Shapes from now on cut out of what is there (an arch's opening). */
     fun cut() {
+        if (unseen) {
+            return
+        }
+
         g.globalCompositeOperation = "destination-out"
         g.globalAlpha = 1.0
         g.fillStyle = "#ffffff"
@@ -449,9 +489,9 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
     fun forestBeside() {
         near()
 
-        var d = Around.SIDE_FROM + dice.between(1.0, 1.8)
+        var d = DRAWN_FROM + dice.between(1.0, 1.8)
 
-        while (d < Around.SIDE_TO + 1.0) {
+        while (d < DRAWN_TO + 1.0) {
             val young = dice.roll() < 0.3
 
             if (young) {
@@ -464,9 +504,9 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         }
 
         far()
-        d = Around.SIDE_FROM + dice.between(2.0, 3.0)
+        d = DRAWN_FROM + dice.between(2.0, 3.0)
 
-        while (d < Around.SIDE_TO + 2.0) {
+        while (d < DRAWN_TO + 2.0) {
             pine(x = d, base = 0.0, height = dice.between(9.0, 15.0), width = dice.between(3.0, 4.6))
             d += dice.between(1.8, 3.0)
         }
@@ -487,8 +527,8 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         val pier = 2.0
         var left = from
 
-        while (left < Around.SIDE_TO + 1.0) {
-            val share = (left - from) / (Around.SIDE_TO - from)
+        while (left < DRAWN_TO + 1.0) {
+            val share = (left - from) / (DRAWN_TO - from)
             // the lower tier's arches stand (their crowns at 6.8 m), unless the bay has fallen in
             val fallen = left > from && dice.roll() < 0.22
             val top = if (fallen) dice.between(3.8, 5.8) else (8.6 + 6.0 * share + dice.between(-1.0, 1.2)).coerceIn(7.9, 14.6)
@@ -510,7 +550,7 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
 
         // blocks fallen from it
         for (i in 0 until 4) {
-            val x = dice.between(Around.SIDE_FROM + 0.8, Around.SIDE_TO)
+            val x = dice.between(DRAWN_FROM + 0.8, DRAWN_TO)
             val w = dice.between(0.9, 1.8)
             val h = dice.between(0.5, 1.0)
 
@@ -522,7 +562,7 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         g.beginPath()
 
         val wallFrom = 12.5
-        val wallTo = Around.SIDE_TO + 2.0
+        val wallTo = DRAWN_TO + 2.0
 
         g.moveTo(wallFrom, -0.3)
 
@@ -577,7 +617,7 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
 
         for (i in 0 until 5) {
             monolith(
-                x = dice.between(Around.SIDE_FROM + 1.0, Around.SIDE_TO),
+                x = dice.between(DRAWN_FROM + 1.0, DRAWN_TO),
                 base = -0.3,
                 width = dice.between(0.9, 1.5),
                 height = dice.between(0.8, 1.4),
@@ -587,9 +627,9 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
 
         far()
 
-        var d = Around.SIDE_FROM + dice.between(2.0, 3.0)
+        var d = DRAWN_FROM + dice.between(2.0, 3.0)
 
-        while (d < Around.SIDE_TO + 2.0) {
+        while (d < DRAWN_TO + 2.0) {
             monolith(x = d, base = -0.3, width = dice.between(1.2, 2.0), height = dice.between(2.8, 5.8), lean = dice.between(-0.04, 0.04))
             d += dice.between(2.2, 3.4)
         }

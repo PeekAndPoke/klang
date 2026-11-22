@@ -33,7 +33,10 @@ import org.w3c.dom.HTMLCanvasElement
  *
  * - **Beside the stage:** two upright planes, [SIDE_FROM] to [SIDE_TO] m out to either side of the stage's middle and
  *   [SIDE_HIGH] m high, just before the dark surface behind the fence ([Fence.BACK_Z]), behind its haze; where the fence
- *   runs on past the band, the forest (or the ruins, or the stones) presses against the mesh. The middle behind the
+ *   runs on past the band, the forest (or the ruins, or the stones) presses against the mesh. Each plane shows four
+ *   rows of shapes behind one another, as far as 26 m behind it, each where the look through the plane meets it: they
+ *   shift against one another as the camera moves, and none of it stands behind the surface, which would hide it. Their
+ *   feet sink into the dark ([SIDE_SINK]). The middle behind the
  *   drummer stays free for the sun and the band's shadows. Only while the fence stands ([sides]): the wall hides them.
  * - **Round the audience:** a band of a ring [FAR_RADIUS] m round the stage's middle, behind the audience's last row,
  *   from [FAR_BASE] to [FAR_BASE] + [FAR_HIGH] m up, [FAR_WRAP] radians to either side of straight ahead: silhouettes
@@ -43,7 +46,8 @@ import org.w3c.dom.HTMLCanvasElement
  * What they show is drawn once, as the stage is built ([paintSides], [paintFar]): two pictures, each surrounding in
  * its own colour channel, so a turn from one to another is a uniform ([light]). The beside picture is
  * [SIDES_PIXELS_WIDE] by [SIDES_PIXELS_HIGH] (the audience's left in its left half), the round one [FAR_PIXELS_WIDE] by
- * [FAR_PIXELS_HIGH]; with their smaller copies some 21 MB on the graphics card. Three draws a frame, two more in the mirror
+ * [FAR_PIXELS_HIGH], the rows further back beside the stage [DEEP_PIXELS_WIDE] by [DEEP_PIXELS_HIGH]; with their smaller
+ * copies some 24 MB on the graphics card. Three draws a frame, two more in the mirror
  * floor where it sees the sides (the round band is hidden while the mirror draws, [hideFar]: it is never seen there);
  * no shadows, no light of their own on anything else.
  *
@@ -56,8 +60,9 @@ import org.w3c.dom.HTMLCanvasElement
 class Around(private val scene: Scene) {
     private val group: Group = Three.addon.createGroup()
 
-    /** The two pictures. */
-    private val sidesPicture: CanvasTexture = picture(paintSides())
+    /** The pictures: beside the stage the near shapes and the ones further back, and the horizon. */
+    private val sidesPicture: CanvasTexture = picture(paintSides(row = Row.Near, width = SIDES_PIXELS_WIDE, height = SIDES_PIXELS_HIGH))
+    private val deepPicture: CanvasTexture = picture(paintSides(row = Row.Deep, width = DEEP_PIXELS_WIDE, height = DEEP_PIXELS_HIGH))
     private val farPicture: CanvasTexture = picture(paintFar())
 
     /** Which surrounding is shown: one of the channels, 1. */
@@ -135,30 +140,43 @@ class Around(private val scene: Scene) {
         group.disposeTree()
         // the pictures are the materials' uniforms, which the tree does not see
         sidesPicture.dispose()
+        deepPicture.dispose()
         farPicture.dispose()
     }
 
-    /** The plane on the audience's left ([way] -1) or right (1). */
+    /** The plane on the audience's left ([way] -1) or right (1): the rows of shapes behind one another are seen in it. */
     private fun side(way: Int): Mesh {
         val wide = SIDE_TO - SIDE_FROM
+        val uniforms = uniformsOf(
+            "uNear" to uniform(sidesPicture),
+            "uDeep" to uniform(deepPicture),
+            "uWay" to uniform(way.toDouble()),
+            "uReach" to uniform(Three.addon.createVector2(x = SIDE_FROM, y = wide)),
+            "uHigh" to uniform(SIDE_HIGH),
+            "uEdge" to uniform(EDGE),
+            "uPick" to uniform(pick),
+            "uShow" to shown,
+            "uCold" to uniform(cold),
+            "uWarm" to uniform(warm),
+            "uFall" to uniform(SIDE_FALL),
+            "uGain" to uniform(SIDE_GAIN),
+            "uHides" to uniform(SIDE_HIDES),
+            "uSink" to uniform(SIDE_SINK),
+        )
         val mesh = Three.addon.createMesh(
             Three.addon.createPlaneGeometry(wide, SIDE_HIGH),
-            material(
-                picture = sidesPicture,
-                from = if (way < 0) 0.0 else 0.5,
-                across = 0.5,
-                below = EDGE / SIDE_HIGH,
-                // toward the stage: on the left plane further along its picture, on the right back
-                inward = -way * EDGE / wide * 0.5,
-                foot = 0.0,
-                fall = SIDE_FALL,
-                gain = SIDE_GAIN,
-                hides = SIDE_HIDES,
-                // each plane is all on one side
-                spread = 1.0,
-                depthWrite = false,
-                side = MaterialSide.FrontSide,
-            ),
+            Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
+                this.uniforms = uniforms
+                vertexShader = VERTEX
+                fragmentShader = SIDE_FRAGMENT
+                transparent = true
+                depthWrite = false
+                side = MaterialSide.FrontSide
+                // the light added, what is behind hidden as far as the shapes hide it
+                blending = Blending.CustomBlending
+                blendSrc = BlendFactor.OneFactor
+                blendDst = BlendFactor.OneMinusSrcAlphaFactor
+            }),
         )
 
         mesh.position.set(way * (SIDE_FROM + wide / 2), SIDE_HIGH / 2, SIDE_Z)
@@ -267,7 +285,9 @@ class Around(private val scene: Scene) {
 
     companion object {
         /** Beside the stage: from and to how far out from its middle, how high, and where along z. */
-        const val SIDE_FROM = 4.0
+        // from where the haze behind the mesh still stands (it ends 12 m out), so that their inner edge is behind
+        // it; the total (about 11 m to either side at 16:9) sees only that edge (the maintainer, 2026-11-22)
+        const val SIDE_FROM = 8.0
         const val SIDE_TO = 30.0
         const val SIDE_HIGH = 18.0
         const val SIDE_Z = Fence.BACK_Z + 0.15
@@ -280,9 +300,16 @@ class Around(private val scene: Scene) {
         const val SIDE_GAIN = 0.22
         const val SIDE_HIDES = 0.85
 
+        /** Over how many metres from the ground they sink into the haze (the maintainer, 2026-11-22: no sharp foot). */
+        const val SIDE_SINK = 4.5
+
         /** The beside picture's size, in pixels: the left half for the audience's left, the right half for its right. */
         const val SIDES_PIXELS_WIDE = 2048
         const val SIDES_PIXELS_HIGH = 1024
+
+        /** The picture of the shapes further back beside the stage, laid out as the near one: they are dim and far. */
+        const val DEEP_PIXELS_WIDE = 1024
+        const val DEEP_PIXELS_HIGH = 512
 
         /** Round the audience: the ring's radius, how far it goes round to either side, from where and how high. */
         const val FAR_RADIUS = 85.0
@@ -323,7 +350,58 @@ class Around(private val scene: Scene) {
     gl_Position = projectionMatrix * viewMatrix * world;
   }"""
 
-        // A shape is its channel of the picture: 1 near, under a half further back. Its light rises from its foot and
+        // The planes beside the stage: four rows of shapes behind one another, each seen where the look through the
+        // plane meets it (so they shift against one another as the camera moves, as a deep forest does): the near
+        // picture on the plane, the same picture mirrored some metres behind it, the deep picture further back, and
+        // mirrored further still. A row goes on outward by its picture turned over and over. The further back, the
+        // dimmer. Each row's light rises from the ground and fades upward; an edge with nothing below it or toward
+        // the stage catches more; over its lowest metres a row sinks into the haze on the ground, light and shape
+        // alike, so nothing ends in a hard foot. The colour leans cold on the audience's left, warm on its right.
+        private val SIDE_FRAGMENT = """
+  uniform sampler2D uNear, uDeep;
+  uniform vec3 uPick, uCold, uWarm;
+  uniform vec2 uReach;
+  uniform float uWay, uHigh, uEdge, uShow, uFall, uGain, uHides, uSink;
+  varying vec3 vWorld;
+  float shapeAt(sampler2D map, float along, float up) {
+    // turned over and over outward: 0 to 1, back to 0, ...
+    float u = clamp(abs(mod(along + 1.0, 2.0) - 1.0), 0.002, 0.998);
+    return dot(texture2D(map, vec2(uWay < 0.0 ? 0.5 - 0.5 * u : 0.5 + 0.5 * u, up)).rgb, uPick);
+  }
+  // A row [back] metres behind the plane, its picture slid [slide] of its width: its light and how much it hides.
+  vec4 row(sampler2D map, vec3 ray, float back, float slide, float dim) {
+    vec3 at = vWorld + ray * (back / max(-ray.z, 0.05));
+    float out_ = uWay * at.x;
+    float up = at.y / uHigh;
+    if (out_ < uReach.x || up <= 0.0 || up >= 1.0) return vec4(0.0);
+    float along = (out_ - uReach.x) / uReach.y + slide;
+    float v = shapeAt(map, along, up);
+    float below = shapeAt(map, along, up - uEdge / uHigh);
+    float inward = shapeAt(map, along - uEdge / uReach.y, up);
+    float glow = exp(-max(at.y, 0.0) / uFall);
+    float rim = max(v - below, 0.0) + 0.6 * max(v - inward, 0.0);
+    float stands = smoothstep(0.0, uSink, at.y);
+    float lit = (v * v * (0.01 + glow) + rim * (0.02 + 0.9 * glow)) * dim * stands;
+    return vec4(vec3(lit), clamp(v * 2.2, 0.0, 1.0) * uHides * stands);
+  }
+  void main() {
+    if (uShow <= 0.0) discard;
+    vec3 ray = normalize(vWorld - cameraPosition);
+    vec4 seen = row(uNear, ray, 0.0, 0.0, 1.0);
+    vec4 next = row(uNear, ray, 6.0, 0.37, 0.5);
+    seen += (1.0 - seen.a) * next;
+    next = row(uDeep, ray, 14.0, 0.0, 0.24);
+    seen += (1.0 - seen.a) * next;
+    next = row(uDeep, ray, 26.0, 0.61, 0.11);
+    seen += (1.0 - seen.a) * next;
+    if (seen.a < 0.003) discard;
+    vec3 light = mix(uCold, uWarm, step(0.0, uWay));
+    gl_FragColor = vec4(light * seen.rgb * uGain * uShow, seen.a * uShow);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }"""
+
+        // The horizon. A shape is its channel of the picture: 1 near, under a half further back. Its light rises from its foot and
         // fades upward; an edge with nothing below it or toward the stage catches more. The colour leans cold on the
         // audience's left, warm on its right.
         private val FRAGMENT = """
