@@ -184,6 +184,28 @@ object WorldLight {
     fun lampTint(world: WorldTime): Int =
         colorAt(world, day = DAY_TINT, night = NIGHT_TINT, ember = EMBER_TINT, ghosts = world.ghostLight.rim)
 
+    /**
+     * The colour of a main lamp behind in its mood ([lamp]) at the time [world]: by day the mood's daylight, by
+     * night its night light, half way between them its twilight (the sets of lamps of `LightPlan.MOODS`); at ember
+     * the twilight's again, which the lean toward red then takes ([backLean]); the stage as made keeps the mood's
+     * own colour ([WorldTime.on]). The ghosts change nothing here: the lamps are all but dark then ([backScale]).
+     */
+    fun moodColor(world: WorldTime, lamp: MoodLamp): Int {
+        // NaN-guard: a time of no number is the day
+        val night = if (world.night != world.night) 0.0 else world.night.coerceIn(0.0, 1.0)
+        val time = if (night < 0.5) {
+            Sun.mix(from = lamp.day, to = lamp.twilight, share = night * 2)
+        } else {
+            Sun.mix(from = lamp.twilight, to = lamp.night, share = night * 2 - 1)
+        }
+        val own = Sun.mix(from = time, to = lamp.twilight, share = share(world.ember) * night)
+
+        return Sun.mix(from = lamp.color, to = own, share = share(world.on))
+    }
+
+    /** [x] as a share, 0 to 1. NaN-guard: what is no number is none. */
+    private fun share(x: Double): Double = if (x != x) 0.0 else x.coerceIn(0.0, 1.0)
+
     /** How far the lamps behind lean toward [lampTint]: as made 0, by day 0.35, by night 0.4, at ember 0.55. */
     fun backLean(world: WorldTime): Double = blend(world, made = 0.0, day = 0.35, night = 0.4, ember = 0.55, ghosts = 1.0)
 

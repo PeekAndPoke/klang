@@ -18,6 +18,8 @@ import io.peekandpoke.klang.viz.liveact.lights.WorldTime
  * through the band's shadows ([WorldLight]). [word] is its name in the address and in the line at the top.
  * - [Off]: the stage as it was made; the time of day changes nothing.
  * - [Day]: a big, low, warm sun, a warm lit haze, the band's shadows soft and faint.
+ * - [Twilight]: half way from the day to the night, held: the dusk, with the lamps' twilight colours
+ *   ([WorldLight.moodColor]).
  * - [Night]: a small, cold moon, a thinner cold haze, the shadows large and hard, each a window into the cold world.
  * - [Ember]: the night's other side, good and evil: a deep red furnace in place of the moon, red smoke.
  * - [Ghosts]: the stage and the band almost fully dark, a thin rim of colour on their edges, their eyes the bright
@@ -34,6 +36,7 @@ import io.peekandpoke.klang.viz.liveact.lights.WorldTime
 enum class WorldLook(val word: String) {
     Off("off"),
     Day("day"),
+    Twilight("twilight"),
     Night("night"),
     Ember("ember"),
     Ghosts("ghosts"),
@@ -47,6 +50,7 @@ enum class WorldLook(val word: String) {
     fun target(t: Double, period: Double = WorldLight.DRIFT_PERIOD, ghost: GhostLight = GhostLight.Cold): WorldTime = when (this) {
         Off -> WorldTime.OFF.copy(ghostLight = ghost)
         Day -> WorldTime(on = 1.0, night = 0.0, ember = 0.0, ghostLight = ghost)
+        Twilight -> WorldTime(on = 1.0, night = 0.5, ember = 0.0, ghostLight = ghost)
         Night -> WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghostLight = ghost)
         Ember -> WorldTime(on = 1.0, night = 1.0, ember = 1.0, ghostLight = ghost)
         Ghosts -> WorldTime(on = 1.0, night = 1.0, ember = 0.0, ghosts = 1.0, ghostLight = ghost)
@@ -55,7 +59,7 @@ enum class WorldLook(val word: String) {
 
     companion object {
         /**
-         * The look the address asks for: `?world=day`, `night`, `ember`, `ghosts` or `drift`; any other value, or
+         * The look the address asks for: `?world=day`, `twilight`, `night`, `ember`, `ghosts` or `drift`; any other value, or
          * none, [Off].
          */
         fun of(switches: Switches): WorldLook = entries.firstOrNull { it.word == switches[Switch.World] } ?: Off

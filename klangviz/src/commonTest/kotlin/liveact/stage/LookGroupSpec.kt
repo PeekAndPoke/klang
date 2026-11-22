@@ -39,7 +39,7 @@ class LookGroupSpec : StringSpec({
             listOf("Whole", "Parts"),
             listOf("Face", "Shadow"),
             listOf("Suit", "Lacquer"),
-            listOf("Off", "Day", "Night", "Ember", "Ghosts", "Drift"),
+            listOf("Off", "Day", "Twilight", "Night", "Ember", "Ghosts", "Drift"),
             listOf("Cold", "Red", "Green"),
             listOf("Off", "On"),
             listOf("None", "Faint", "Gentle", "Strong"),

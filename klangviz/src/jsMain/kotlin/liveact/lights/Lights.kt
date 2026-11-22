@@ -192,15 +192,18 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
         window.addEventListener("keydown", onKey)
     }
 
-    /** The two main lamps behind in the mood of [t]: their colours and where they hang. */
-    fun mood(t: Double) {
+    /**
+     * The two main lamps behind in the mood of [t]: their colours, as the time of day [world] has them
+     * ([WorldLight.moodColor]; off: the mood's own), and where they hang.
+     */
+    fun mood(t: Double, world: WorldTime = WorldTime.OFF) {
         val mix = plan.moodAt(t)
         val u = mix.share
 
         for (main in mains) {
             val a = main.side(mix.from)
             val b = main.side(mix.to)
-            main.lamp.light.color.setHex(a.color).lerp(hue.setHex(b.color), u)
+            main.lamp.light.color.setHex(WorldLight.moodColor(world, a)).lerp(hue.setHex(WorldLight.moodColor(world, b)), u)
 
             val from = a.offset
             val to = b.offset

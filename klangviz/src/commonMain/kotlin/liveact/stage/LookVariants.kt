@@ -54,7 +54,7 @@ data class LookVariants(
     /** The other of the bodies' skins. */
     fun nextSkin(): LookVariants = copy(skin = SkinLook.entries[(skin.ordinal + 1) % SkinLook.entries.size])
 
-    /** The next time of day (off, day, night, ember, ghosts, drift), after the last off again. */
+    /** The next time of day (off, day, twilight, night, ember, ghosts, drift), after the last off again. */
     fun nextWorld(): LookVariants = copy(world = WorldLook.entries[(world.ordinal + 1) % WorldLook.entries.size])
 
     /** The other of the mirror's worlds: the stage, or the underworld. */

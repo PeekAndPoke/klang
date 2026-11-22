@@ -576,7 +576,6 @@ class Stage(
         val dt = if (lightAt.isNaN()) 0.0 else ((nowMs - lightAt) / 1000).coerceIn(0.0, 0.25)
 
         lightAt = nowMs
-        lights.mood(t)
 
         val front = lights.frontAt(t, waiting)
 
@@ -626,6 +625,8 @@ class Stage(
         wall?.world(world)
         fence?.world(world = world, level = glow)
         dressLevel = min(1.0, front.level)
+        // the mood first: the two main lamps behind take its colour for this time of day, and shine leans them on
+        lights.mood(t = t, world = world)
         lights.shine(t = t, house = house, front = front, world = world)
 
         // the cold world through the shadows opens with the front lamp, as far as the time of day lets it; in the ghosts

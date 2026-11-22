@@ -110,7 +110,7 @@ fun Tag.LiveAct(
  * oversampling, g through the fog; m turns over what stands behind the band (wall or fence), p the floor (plain or
  * mirror), h the haze behind the fence (whole, or giving way to the band's shadows), i Sirene's eyes under the
  * front lamp (in her face, or in her shadow), l the band's skin (the suit, or black lacquer with gold), n the two
- * worlds' time of day (off, day, night, ember, or a drift from day to night and back), v the underworld in the
+ * worlds' time of day (off, day, twilight, night, ember, or a drift from day to night and back), v the underworld in the
  * mirror floor (off, or on: the other world, cold, for a moment of a show), b how uneven the mirror floor's stone is
  * (none, faint, gentle or strong), c how blurred its reflection is (crisp, soft or stone), k its stone (plain or
  * marble) and j the stage's outline, a working aid (off or on) ([LookVariants]); x flips the whole look between today

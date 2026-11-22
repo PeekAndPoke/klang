@@ -121,7 +121,14 @@ object FrontColors {
  * One of the two main lamps behind in a mood: its [color], and where it seems to hang, off its first place ([offset]:
  * x, y, z in metres).
  */
-data class MoodLamp(val color: Int, val offset: Triple<Double, Double, Double>)
+data class MoodLamp(
+    val color: Int,
+    val offset: Triple<Double, Double, Double>,
+    /** Its colour under a time of day ([WorldLight.moodColor]): by day, at twilight, by night. */
+    val day: Int = color,
+    val twilight: Int = color,
+    val night: Int = color,
+)
 
 /** A mood: the two main lamps behind, the [left] one and the [right] one. */
 data class Mood(val left: MoodLamp, val right: MoodLamp)
@@ -426,20 +433,44 @@ class LightPlan(private val show: Show, private val kick: String) {
          * hang, off its first place (x, y, z in metres): as if other lamps of the rig had been turned on, so the
          * shadows lie a little differently. A mood's round is [ROUND] bars; over its last bars it goes over into
          * another, the seed's choice, never the same again at once. The show opens in the first.
+         *
+         * Under a time of day each mood has three more pairs of colours, a set of lamps for each time (the
+         * maintainer, 2026-11-23: with the day's orange light behind the fog "we need lights on the stage that also
+         * signal daylight. I think we need three sets: daylight, night, twilight"): by day the pale, warm light of a
+         * sun (straw, cream, amber, a pale sky), at twilight the dusk's (orange and rose against indigo and violet),
+         * by night cold ones (blues, a teal, a violet, once a touch of magenta). The stage as made keeps its own.
          */
         val MOODS: List<Mood> = listOf(
             // cold against hot
-            mood(left = 0x3070ff, right = 0xff3070, l = Triple(0.0, 0.0, 0.0), r = Triple(0.0, 0.0, 0.0)),
+            mood(
+                left = 0x3070ff, right = 0xff3070, l = Triple(0.0, 0.0, 0.0), r = Triple(0.0, 0.0, 0.0),
+                day = 0xffe2b0 to 0xfff4dc, twilight = 0xff7a4a to 0x6a5cff, night = 0x3070ff to 0x8a5cff,
+            ),
             // violet and amber
-            mood(left = 0x7a3cff, right = 0xff9030, l = Triple(1.2, 0.5, 0.6), r = Triple(-0.8, -0.4, 0.3)),
+            mood(
+                left = 0x7a3cff, right = 0xff9030, l = Triple(1.2, 0.5, 0.6), r = Triple(-0.8, -0.4, 0.3),
+                day = 0xfff0d0 to 0xffc878, twilight = 0x9a50ff to 0xff6a3a, night = 0x7a3cff to 0x30a0ff,
+            ),
             // teal and magenta
-            mood(left = 0x18b8c0, right = 0xe030c0, l = Triple(-1.0, -0.5, 0.9), r = Triple(1.1, 0.6, -0.4)),
+            mood(
+                left = 0x18b8c0, right = 0xe030c0, l = Triple(-1.0, -0.5, 0.9), r = Triple(1.1, 0.6, -0.4),
+                day = 0xbfe0ff to 0xffd9a0, twilight = 0xff5a8a to 0xffa040, night = 0x18b8c0 to 0x5a50ff,
+            ),
             // cold all over
-            mood(left = 0x2038ff, right = 0x3c98ff, l = Triple(0.8, 0.8, -0.5), r = Triple(-1.3, 0.3, 0.8)),
+            mood(
+                left = 0x2038ff, right = 0x3c98ff, l = Triple(0.8, 0.8, -0.5), r = Triple(-1.3, 0.3, 0.8),
+                day = 0xcfe8ff to 0xfff1d6, twilight = 0x4a6aff to 0xc060e0, night = 0x2038ff to 0x3c98ff,
+            ),
             // hot all over
-            mood(left = 0xff2a2a, right = 0xff7a20, l = Triple(-0.7, -0.6, 0.4), r = Triple(0.9, -0.5, 0.7)),
+            mood(
+                left = 0xff2a2a, right = 0xff7a20, l = Triple(-0.7, -0.6, 0.4), r = Triple(0.9, -0.5, 0.7),
+                day = 0xffb45a to 0xffe0a8, twilight = 0xff4a3a to 0xff8a30, night = 0x4060ff to 0xd040c0,
+            ),
             // the first, the sides swapped
-            mood(left = 0xff3070, right = 0x3070ff, l = Triple(1.4, 0.2, 0.2), r = Triple(-1.4, 0.2, 0.2)),
+            mood(
+                left = 0xff3070, right = 0x3070ff, l = Triple(1.4, 0.2, 0.2), r = Triple(-1.4, 0.2, 0.2),
+                day = 0xfff4dc to 0xffe2b0, twilight = 0x6a5cff to 0xff7a4a, night = 0x8a5cff to 0x3070ff,
+            ),
         )
 
         private fun mood(
@@ -447,6 +478,12 @@ class LightPlan(private val show: Show, private val kick: String) {
             right: Int,
             l: Triple<Double, Double, Double>,
             r: Triple<Double, Double, Double>,
-        ): Mood = Mood(left = MoodLamp(color = left, offset = l), right = MoodLamp(color = right, offset = r))
+            day: Pair<Int, Int>,
+            twilight: Pair<Int, Int>,
+            night: Pair<Int, Int>,
+        ): Mood = Mood(
+            left = MoodLamp(color = left, offset = l, day = day.first, twilight = twilight.first, night = night.first),
+            right = MoodLamp(color = right, offset = r, day = day.second, twilight = twilight.second, night = night.second),
+        )
     }
 }

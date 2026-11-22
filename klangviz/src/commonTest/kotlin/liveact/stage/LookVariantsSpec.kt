@@ -73,12 +73,13 @@ class LookVariantsSpec : StringSpec({
         LookVariants.of(Switches.parse("?stage=mesh&world=ember")) shouldBe LookVariants(stage = StageLook.Mesh, world = WorldLook.Ember)
     }
 
-    "the key n steps through off, day, night, ember, ghosts and drift, and back to off; it leaves the rest; its line says it" {
+    "the key n steps through off, day, twilight, night, ember, ghosts and drift, and back to off; it leaves the rest; its line says it" {
         val start = LookVariants(stage = StageLook.Mesh, skin = SkinLook.Lacquer)
-        val seen = generateSequence(start) { it.nextWorld() }.take(7).map { it.world }.toList()
+        val seen = generateSequence(start) { it.nextWorld() }.take(8).map { it.world }.toList()
 
         seen shouldBe listOf(
-            WorldLook.Off, WorldLook.Day, WorldLook.Night, WorldLook.Ember, WorldLook.Ghosts, WorldLook.Drift, WorldLook.Off,
+            WorldLook.Off, WorldLook.Day, WorldLook.Twilight, WorldLook.Night, WorldLook.Ember, WorldLook.Ghosts,
+            WorldLook.Drift, WorldLook.Off,
         )
         start.nextWorld() shouldBe start.copy(world = WorldLook.Day)
         start.nextWorld().worldLine() shouldBe "world: day"
@@ -123,6 +124,7 @@ class LookVariantsSpec : StringSpec({
     "what time of day each look asks for: off none, day, night, ember, and the drift by the show's time" {
         WorldLook.Off.target(t = 10.0) shouldBe WorldTime.OFF
         WorldLook.Day.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 0.0, ember = 0.0)
+        WorldLook.Twilight.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 0.5, ember = 0.0)
         WorldLook.Night.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 1.0, ember = 0.0)
         WorldLook.Ember.target(t = 10.0) shouldBe WorldTime(on = 1.0, night = 1.0, ember = 1.0)
         WorldLook.Drift.target(t = 0.0) shouldBe WorldTime(on = 1.0, night = 0.0, ember = 0.0)

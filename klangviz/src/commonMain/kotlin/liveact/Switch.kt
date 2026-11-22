@@ -218,7 +218,7 @@ enum class Switch(val key: String) {
     Haze("haze"),
 
     /**
-     * `?world=night`: the two worlds' time of day ([WorldLook]): day, night, ember, ghosts (the stage dark, all the
+     * `?world=night`: the two worlds' time of day ([WorldLook]): day, twilight, night, ember, ghosts (the stage dark, all the
      * light in the haze behind the fence, the band's shadows pale figures in it; its colour: [Ghosts]) or drift (from
      * day to night and back on its own, a round in about four minutes); it drives the sun behind the drummer, the
      * haze, the lamps, the lacquer and, behind the fence, a cold world seen through the band's shadows. Any other value, or none, off: the

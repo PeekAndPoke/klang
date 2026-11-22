@@ -233,6 +233,24 @@ class WorldLightSpec : StringSpec({
         WorldLight.ghostCreep(from = Double.NaN, coming = false, dt = 1.0) shouldBe 0.0
     }
 
+    "a main lamp's mood has a set of colours for each time of day, and its own on the stage as made" {
+        val lamp = MoodLamp(color = 0x102030, offset = Triple(0.0, 0.0, 0.0), day = 0xff0000, twilight = 0x00ff00, night = 0x0000ff)
+
+        WorldLight.moodColor(WorldTime.OFF, lamp) shouldBe 0x102030
+        WorldLight.moodColor(WorldTime(on = 1.0, night = 0.0, ember = 0.0), lamp) shouldBe 0xff0000
+        WorldLight.moodColor(WorldTime(on = 1.0, night = 0.5, ember = 0.0), lamp) shouldBe 0x00ff00
+        WorldLight.moodColor(WorldTime(on = 1.0, night = 1.0, ember = 0.0), lamp) shouldBe 0x0000ff
+        // between two of them, a mix of just those two
+        WorldLight.moodColor(WorldTime(on = 1.0, night = 0.25, ember = 0.0), lamp) shouldBe 0x808000
+        WorldLight.moodColor(WorldTime(on = 1.0, night = 0.75, ember = 0.0), lamp) shouldBe 0x008080
+        // at ember the twilight's again; half on, half the stage's own
+        WorldLight.moodColor(WorldTime(on = 1.0, night = 1.0, ember = 1.0), lamp) shouldBe 0x00ff00
+        WorldLight.moodColor(WorldTime(on = 0.5, night = 0.0, ember = 0.0), lamp) shouldBe 0x881018
+        // what is no number: the day, or the stage as made
+        WorldLight.moodColor(WorldTime(on = 1.0, night = Double.NaN, ember = 0.0), lamp) shouldBe 0xff0000
+        WorldLight.moodColor(WorldTime(on = Double.NaN, night = 1.0, ember = 0.0), lamp) shouldBe 0x102030
+    }
+
     "the camera goes back as far as keeps the ghosts their size in the picture" {
         // a lamp 8 m before the band, the surface 10 m behind it, the camera 10 m before it
         fun shadowSeen(creep: Double, pull: Double): Double = ((8.0 - creep + 10.0) / (8.0 - creep)) / (10.0 + pull + 10.0)
