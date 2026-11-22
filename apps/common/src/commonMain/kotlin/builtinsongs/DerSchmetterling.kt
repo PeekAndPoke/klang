@@ -20,7 +20,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =   10    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =   12    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -1    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  214    // Where does the snare cut through?
@@ -37,7 +37,7 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3200, 2.3)                              // the peak, low and wide
+  .lowpass(3300, 2.4)                              // the peak, low and wide
   .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -92,17 +92,17 @@ let preampCrunch = Kat.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
   .distort(0.18, "asym").highpass(100)
-  .lowpass(5800)
+  .lowpass(5500)
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.35, "tube").highpass(120)
-  .distort(0.45, "hard").highpass(100)
-  .distort(0.35, "soft")
-  .lowpass(5500)                                   // the fizz
-  .mul(0.65))                                      // volume
+  .distort(0.10, "tube").highpass(120)
+  .distort(0.15, "softsat").highpass(100)
+  .distort(0.75, "soft")
+  .lowpass(5200)                                   // the fizz
+  .mul(0.75))                                      // volume
 
 // Guitar rig - Power Amps  --------------------------------------------------------------------------------------------------------------------------
 
@@ -129,8 +129,8 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  160, q = 0.6, db =  3.70)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.5, db =  4.60)        // roar:  low mids
+    .band(freq =  160, q = 0.6, db =  4.00)        // thump: closed-back box resonance
+    .band(freq =  800, q = 0.5, db =  4.70)        // roar:  low mids
     .band(freq = 2700, q = 1.9, db =  2.40)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
@@ -425,7 +425,7 @@ let trumpet2 = (() => {
     .oversampleAtLeast(4, y => y.distort(0.45, "asym"))      // the lips: one-sided, before the bell
     .plus(breath)
     .eq(e => e.band(1200, 1.2, 4.0).band(2800, 1.5, 3.0))    // the bell's two peaks
-    .mul(0.13)
+    .mul(0.25)
     .shape("soft")
     .classic()
 })()
@@ -434,7 +434,7 @@ export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3@2 -1 0] [~ 0 -1 0  ~ 0 ~
 
 export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
   .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "brass", wet = 0.10)
-  .vibrato(rate = 5.5, semitones = 0.15)
+  .vibrato(rate = 5.5, semitones = 0.135)
   .hpf(240).lpf("5500".add(perlin(-300, 300).fast(4))).clip(0.9)
   .apply(
     x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
@@ -442,7 +442,7 @@ export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
   )
 
 export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
-  .scale("e5:minor").gain(0.10)
+  .scale("e5:minor").gain(0.05)
   .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
 
 export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
@@ -539,8 +539,8 @@ export snare_arrange = x => x.cylinder(7).mute("<0!128 1!32>").late(berlin(0.005
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat = `<[hh hh hh hh]!16 [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
-export hats_shape = x => x.gain(0.20).pan(0.425)
-  .hpf(800).lpf(freq = "14000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 2.0)
+export hats_shape = x => x.gain(0.17).pan(0.425)
+  .hpf(650).lpf(freq = "14000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 2.0)
 export hats_arrange = x => x.cylinder(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
@@ -603,6 +603,7 @@ export song = stack(
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   )))
 )
+
 
 
     """,

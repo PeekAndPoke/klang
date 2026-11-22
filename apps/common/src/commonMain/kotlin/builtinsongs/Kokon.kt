@@ -33,7 +33,7 @@ import * from "sprudel"
 //   parts  lines played together; a part starts on its own first cycle
 //   song   arrange(): which part, for how many cycles (3 s each), in which order
 
-let feel      =  10        // analog drift of the guitars, as in Der Schmetterling
+let feel      =  12        // analog drift of the guitars, as in Der Schmetterling
 let drunk     =   1        // two guitarists, sober this time, mostly
 let snareHz   = 400        // where does the snare sit?
 let songScale = "c3:minor" // which scale to play the song in
@@ -51,8 +51,8 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3300, 2.5)                              // the peak, low and wide
-  .mul(1.2))                                       // hot output
+  .lowpass(3300, 2.4)                              // the peak, low and wide
+  .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
 let pickupNeck = Ign.fn(x => x
@@ -106,17 +106,17 @@ let preampCrunch = Kat.fn(x => x
   .highpass(120)
   .distort(0.35, "tube").highpass(120)
   .distort(0.18, "asym").highpass(100)
-  .lowpass(5800)
+  .lowpass(5500)
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Kat.fn(x => x
   .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.35, "tube").highpass(120)
-  .distort(0.45, "hard").highpass(100)
-  .distort(0.35, "soft")
-  .lowpass(5500)                                   // the fizz
-  .mul(0.65))                                      // volume
+  .distort(0.10, "tube").highpass(120)
+  .distort(0.15, "softsat").highpass(100)
+  .distort(0.75, "soft")
+  .lowpass(5200)                                   // the fizz
+  .mul(0.75))                                      // volume
 
 // Guitar rig - Power Amps  --------------------------------------------------------------------------------------------------------------------------
 
@@ -143,9 +143,9 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  160, q = 0.6, db =  3.80)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.5, db =  4.60)        // roar:  low mids
-    .band(freq = 2700, q = 1.9, db =  2.10)        // bark:  the upper-mid speaker peak
+    .band(freq =  160, q = 0.6, db =  4.00)        // thump: closed-back box resonance
+    .band(freq =  800, q = 0.5, db =  4.70)        // roar:  low mids
+    .band(freq = 2700, q = 1.9, db =  2.40)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
