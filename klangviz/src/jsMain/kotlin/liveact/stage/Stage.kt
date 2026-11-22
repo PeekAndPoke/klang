@@ -610,7 +610,7 @@ class Stage(
             coming = look == WorldLook.Ghosts && variants.stage == StageLook.Mesh,
             dt = dt,
         )
-        lights.approach(by = ghostCreep)
+        lights.approach(by = ghostCreep, surface = shadowsAt, wider = Fence.POST_EVERY)
 
         this.front = front
         this.world = world

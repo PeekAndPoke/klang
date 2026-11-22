@@ -7,8 +7,10 @@ package io.peekandpoke.klang.viz.liveact.lights
 
 import io.peekandpoke.klang.viz.liveact.stage.GhostLight
 import kotlin.math.PI
+import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.tan
 
 /**
  * What the time of day of the two worlds ([WorldTime]) does to the light (KLANG-00478, to be judged by eye; the
@@ -49,6 +51,9 @@ object WorldLight {
      */
     const val GHOST_APPROACH = 3.0
     const val GHOST_APPROACH_SECONDS = GhostVisits.HOLD
+
+    /** The widest the front lamp's cone opens for the ghosts, half its opening in radians ([ghostCone]). */
+    const val GHOST_CONE_MOST = 1.2
     const val GHOST_RETREAT_SECONDS = GhostVisits.TURN_SECONDS
 
     /** How long a round of the drift takes, in seconds: day to night and back in about four minutes. */
@@ -316,6 +321,28 @@ object WorldLight {
         val pace = if (coming) GHOST_APPROACH / GHOST_APPROACH_SECONDS else -GHOST_APPROACH / GHOST_RETREAT_SECONDS
 
         return (was + pace * dt).coerceIn(0.0, GHOST_APPROACH)
+    }
+
+    /**
+     * How wide the front lamp's cone is (half its opening, in radians) while it has crept [creep] metres toward the
+     * band: wide enough that it still lights, and so throws shadows on, as much of the surface at [wall] as it does
+     * from where it stands with its cone as made ([angle]), and [wider] metres more to either side when it has come
+     * all its way. Without that the cone, coming closer, covers less and less of the surface while the ghosts on it
+     * grow, and the outer ones are cut off left and right (the maintainer, 2026-11-23: "they disappear on the
+     * backwall left and right, so the shadow area should probably wider, about one fence piece"). [lamp], [wall]:
+     * places along z, in metres.
+     */
+    fun ghostCone(creep: Double, lamp: Double, wall: Double, angle: Double, wider: Double): Double {
+        val near = lamp - creep
+
+        // NaN-guard: no number, or a lamp that is not before the surface, leaves the cone as made
+        if (!(creep > 0.0) || !(near > wall) || !(lamp > wall) || !(angle > 0.0) || wider != wider) {
+            return angle
+        }
+
+        val covered = (lamp - wall) * tan(angle) + wider * (creep / GHOST_APPROACH).coerceIn(0.0, 1.0)
+
+        return atan(covered / (near - wall)).coerceIn(angle, GHOST_CONE_MOST)
     }
 
     /**

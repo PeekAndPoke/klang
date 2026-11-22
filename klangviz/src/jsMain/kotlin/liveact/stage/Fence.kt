@@ -320,7 +320,7 @@ class Fence(private val scene: Scene) {
 
         /** The posts: how many, how far apart, how thick. */
         private const val POSTS = 18
-        private const val POST_EVERY = 3.2
+        internal const val POST_EVERY = 3.2
         internal const val POST_RADIUS = 0.045
 
         /** The surface behind's colour where a lamp is on in full ([light]): the lamp's light makes it warm or cold. */

@@ -166,7 +166,7 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
         // lamp, the band's shadows all stood nearly 2 m left of the band, the outermost on the left half out of the
         // picture (the maintainer, 2026-11-21: "the shadows and ghosts are all shifted a bit to the left")
         val low = Three.addon.createSpotLight(
-            color = 0xff8420, intensity = 95.0, distance = 40.0, angle = 0.62, penumbra = 0.5, decay = 1.0,
+            color = 0xff8420, intensity = 95.0, distance = 40.0, angle = FRONT_ANGLE, penumbra = 0.5, decay = 1.0,
         )
         low.position.set(0.0, 0.25, FRONT_Z)
         low.target.position.set(0.0, 2.6, -8.0)
@@ -236,10 +236,13 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
 
     /**
      * The front lamp [by] metres nearer to the band than it stands (0: where it stands): what it throws on the
-     * surface behind grows with it (the ghosts, [WorldLight.ghostCreep]).
+     * surface behind grows with it (the ghosts, [WorldLight.ghostCreep]). Its cone opens as it comes, so it still
+     * covers the surface at [surface] (a place along z) and [wider] metres more to either side
+     * ([WorldLight.ghostCone]).
      */
-    fun approach(by: Double) {
+    fun approach(by: Double, surface: Double, wider: Double) {
         front.light.position.z = FRONT_Z - by
+        front.light.asDynamic().angle = WorldLight.ghostCone(creep = by, lamp = FRONT_Z, wall = surface, angle = FRONT_ANGLE, wider = wider)
     }
 
     /** How much the front lamp is on at [t], and whether it strobes; [waiting]: before the click. */
@@ -358,6 +361,9 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
     private companion object {
         /** Where the front lamp stands along z, in metres: on the floor before the stage. */
         const val FRONT_Z = 8.6
+
+        /** The front lamp's cone as made: half its opening, in radians. */
+        const val FRONT_ANGLE = 0.62
 
         /** How bright the faint light everywhere is. */
         const val AMBIENT = 0.05

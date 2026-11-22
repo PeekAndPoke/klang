@@ -11,6 +11,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.stage.GhostLight
+import kotlin.math.tan
 
 private fun near(x: Double) = x plusOrMinus 1e-9
 
@@ -249,6 +250,27 @@ class WorldLightSpec : StringSpec({
         // what is no number: the day, or the stage as made
         WorldLight.moodColor(WorldTime(on = 1.0, night = Double.NaN, ember = 0.0), lamp) shouldBe 0xff0000
         WorldLight.moodColor(WorldTime(on = Double.NaN, night = 1.0, ember = 0.0), lamp) shouldBe 0x102030
+    }
+
+    "the front lamp's cone opens as it creeps, so it covers the surface as before and one piece more at the end" {
+        // a lamp 8 m before the band, the surface 10 m behind it, a cone of 0.6
+        fun covered(creep: Double, angle: Double): Double = (8.0 - creep + 10.0) * tan(angle)
+
+        val made = covered(creep = 0.0, angle = 0.6)
+
+        WorldLight.ghostCone(creep = 0.0, lamp = 8.0, wall = -10.0, angle = 0.6, wider = 3.0) shouldBe 0.6
+
+        val half = WorldLight.GHOST_APPROACH / 2
+        val all = WorldLight.GHOST_APPROACH
+
+        covered(creep = half, angle = WorldLight.ghostCone(creep = half, lamp = 8.0, wall = -10.0, angle = 0.6, wider = 3.0)) shouldBe
+            (made + 1.5 plusOrMinus 1e-9)
+        covered(creep = all, angle = WorldLight.ghostCone(creep = all, lamp = 8.0, wall = -10.0, angle = 0.6, wider = 3.0)) shouldBe
+            (made + 3.0 plusOrMinus 1e-9)
+        // what is no number, or a lamp behind the surface, leaves the cone as made
+        WorldLight.ghostCone(creep = Double.NaN, lamp = 8.0, wall = -10.0, angle = 0.6, wider = 3.0) shouldBe 0.6
+        WorldLight.ghostCone(creep = 19.0, lamp = 8.0, wall = -10.0, angle = 0.6, wider = 3.0) shouldBe 0.6
+        WorldLight.ghostCone(creep = 1.0, lamp = 8.0, wall = -10.0, angle = 0.6, wider = Double.NaN) shouldBe 0.6
     }
 
     "the camera goes back as far as keeps the ghosts their size in the picture" {
