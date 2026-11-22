@@ -50,6 +50,7 @@ import kotlin.math.min
  * ```
  *   q the total    w the stadium shot    e from the left    r from above    t from the right    y (or z) from the floor
  *   u the reverse total, from behind the drummer (hovering)
+ *   9 the next of all the stage's angles, one after the other (the keys above have only some of them)
  *   1 to 6 a player (drums, lead guitar, frontwoman, bass, rhythm guitar, marimba); the same key again: their next look
  *   a a flight round the whole band (again: the other way round)    s a slow way round the last player chosen
  *   d a dolly zoom back to the total from wherever the camera is; a plain cut where the camera looks away from the
@@ -123,6 +124,9 @@ class View(
     private var player: Player = Player.Skalpell
     private val lookOf: MutableMap<Player, Int> = mutableMapOf()
     private var way: Int = 1
+
+    /** Which of the stage's angles the key 9 showed last; none yet. */
+    private var angleAt: Int = -1
 
     private val keyListener: ((Event) -> Unit)? = if (choreography != null) ({ event: Event -> onKey(event) }) else null
 
@@ -200,6 +204,11 @@ class View(
             k == "q" -> hand = Hand.Home
 
             angle != null -> hand = Hand.Fixed(Subject.Angle(angle))
+
+            k == "9" -> {
+                angleAt = (angleAt + 1) % ANGLES.size
+                hand = Hand.Fixed(Subject.Angle(ANGLES[angleAt]))
+            }
 
             k >= "1" && k <= "6" -> {
                 val chosen = ORDER[k.first().digitToInt() - 1]
