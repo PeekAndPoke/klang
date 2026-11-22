@@ -68,7 +68,7 @@ class StringDesignSpec : StringSpec({
         DESIGNS.map { it.name } shouldBe listOf("E-Guitar A", "E-Guitar B", "E-Guitar C", "Bass A", "Bass B")
     }
 
-    "every model's pickups, bridge and knobs lie on its body, and its quake's trace across it" {
+    "every model's pickups, bridge and knobs lie on its body, and its quake's trace and its claw's scratches across it" {
         for (design in DESIGNS) {
             val body = design.outline.contour(steps = 3)
             val bridge = -0.10
@@ -77,8 +77,9 @@ class StringDesignSpec : StringSpec({
             val trace = design.ornaments.quake?.let { q ->
                 listOf(q.from to q.y + q.bow, q.to to q.y + q.bow, q.at to q.y + q.height, q.at to q.y - q.height)
             }.orEmpty()
+            val claws = design.ornaments.claws.flatMap { listOf(it.from, it.to) }
 
-            for (p in onBody + trace) {
+            for (p in onBody + trace + claws) {
                 withClue("${design.name}: $p") {
                     inside(body, p) shouldBe true
                 }

@@ -45,18 +45,26 @@ class QuakeTrace(
 )
 
 /**
+ * A scratch of a claw across an instrument's body (Klaue's: his name means claw), in the body's own measure: from
+ * [from] to [to] (x and y), bent by [bow] to its left on the way. It begins broad, where the claw dug in, and runs
+ * out to a point.
+ */
+class ClawMark(val from: Pair<Double, Double>, val to: Pair<Double, Double>, val bow: Double)
+
+/**
  * The gold an instrument wears: a thin line along the body's [edge] (on its rounded edge, just off the face), dots
- * on the fretboard ([markers], with its frets as fine lines), a [quake]'s trace across the body, and [goldHardware]
- * (the bridge, the knobs and the tuners) in place of the steel.
+ * on the fretboard ([markers], with its frets as fine lines), a [quake]'s trace across the body, the scratches of
+ * [claws] across it, and [goldHardware] (the bridge, the knobs and the tuners) in place of the steel.
  */
 class Ornaments(
     val edge: Boolean = false,
     val markers: Boolean = false,
     val quake: QuakeTrace? = null,
+    val claws: List<ClawMark> = emptyList(),
     val goldHardware: Boolean = false,
 ) {
     /** Whether the body is drawn with gold: it then wears a material of its own (see `StrungInstrument`). */
-    val onBody: Boolean get() = edge || quake != null
+    val onBody: Boolean get() = edge || quake != null || claws.isNotEmpty()
 
     companion object {
         /** No gold at all: today's instruments. */
@@ -80,6 +88,9 @@ private const val EDGE_HALF = 0.00035
 /** The quake's trace: its half width. */
 private const val QUAKE_HALF = 0.0016
 
+/** A claw's scratch: its half width where it is broadest. Bold, as the quake's trace is: a fine line would flicker. */
+private const val CLAW_HALF = 0.0034
+
 /**
  * Draws the body's gold ([ornaments]) onto [material], a body's (its outline cut from a slab, in the body's own
  * measure: the face at [top] along z). [key] names the program (the design's name: its gold lies where its outline
@@ -95,9 +106,19 @@ internal fun ornamentBody(material: MeshStandardMaterial, ornaments: Ornaments, 
         if (trace != null) {
             add("step(${(top - 0.0005).toFixed(5)}, p.z) * klLine(klQuakeDistance(p.xy), ${QUAKE_HALF.toFixed(5)})")
         }
+
+        for (claw in ornaments.claws) {
+            val (ax, ay) = claw.from
+            val (bx, by) = claw.to
+
+            add(
+                "step(${(top - 0.0005).toFixed(5)}, p.z) * klClaw(p.xy, vec2(${ax.toFixed(5)}, ${ay.toFixed(5)}), " +
+                    "vec2(${bx.toFixed(5)}, ${by.toFixed(5)}), ${claw.bow.toFixed(5)})"
+            )
+        }
     }
     val gold = lines.fold("0.0") { all, line -> "max($all, $line)" }
-    val functions = INLAY_GLSL + "\n" + (trace?.let { quakeGlsl(it) } ?: "") +
+    val functions = INLAY_GLSL + "\n" + (trace?.let { quakeGlsl(it) } ?: "") + (if (ornaments.claws.isEmpty()) "" else CLAW_GLSL) +
         "\nfloat klOrnament(vec3 p) { return $gold; }"
 
     material.onBeforeCompile("strung-body-$key") { shader: CompiledShader ->
@@ -111,6 +132,21 @@ internal fun ornamentBody(material: MeshStandardMaterial, ornaments: Ornaments, 
         )
     }
 }
+
+/**
+ * A claw's scratch as GLSL: `klClaw(p, a, b, bow)`, how much of the place `p` (the body's x and y) is the scratch from
+ * `a` to `b`: a bent stroke, broad soon after its start and running out to a point.
+ */
+private val CLAW_GLSL = """
+float klClaw(vec2 p, vec2 a, vec2 b, float bow) {
+  vec2 ab = b - a;
+  float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+  vec2 n = normalize(vec2(-ab.y, ab.x));
+  vec2 c = a + ab * t + n * bow * 4.0 * t * (1.0 - t);
+  float wide = ${CLAW_HALF.toFixed(5)} * smoothstep(0.0, 0.12, t) * pow(1.0 - t, 0.7);
+  return wide < 0.0002 ? 0.0 : klLine(length(p - c), wide);
+}
+"""
 
 /**
  * The quake's trace as GLSL: `klQuakeDistance(p)`, how far the place `p` (the body's x and y) is from the trace. The

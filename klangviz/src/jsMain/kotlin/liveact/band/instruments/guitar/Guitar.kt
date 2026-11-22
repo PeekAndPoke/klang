@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.band.instruments.guitar
 
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.BodyOutline
+import io.peekandpoke.klang.viz.liveact.band.instruments.strings.ClawMark
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Ornaments
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringDesign
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.Tuning
@@ -75,8 +76,25 @@ object Guitar {
     /** E-Guitar B: two horns, no gold (the band's guitar before the models had names). */
     val B: StringDesign = guitar(name = "E-Guitar B", outline = DOUBLE_CUTAWAY, head = ROUND_HEAD)
 
-    /** E-Guitar C: one horn, no gold (Klaue's rhythm guitar). */
-    val C: StringDesign = guitar(name = "E-Guitar C", outline = SINGLE_CUTAWAY, head = ROUND_HEAD)
+    /**
+     * E-Guitar C, Klaue's rhythm guitar (KLANG-00478; the maintainer, 2026-11-22: "I like the shape of Klaue's guitar,
+     * it needs some makeup"): one horn, and across its lower half, which his arm leaves free, three scratches of a claw in
+     * gold (his name means claw), raked from the strings toward the edge; gold dots on the fretboard and gold hardware.
+     */
+    val C: StringDesign = guitar(
+        name = "E-Guitar C",
+        outline = SINGLE_CUTAWAY,
+        head = ROUND_HEAD,
+        ornaments = Ornaments(
+            markers = true,
+            goldHardware = true,
+            claws = listOf(
+                ClawMark(from = 0.090 to -0.052, to = -0.020 to -0.105, bow = -0.006),
+                ClawMark(from = 0.052 to -0.042, to = -0.070 to -0.130, bow = -0.007),
+                ClawMark(from = 0.012 to -0.040, to = -0.112 to -0.140, bow = -0.006),
+            ),
+        ),
+    )
 
     /** A guitar of the model [name]: what the string player reads of it. */
     private fun guitar(
