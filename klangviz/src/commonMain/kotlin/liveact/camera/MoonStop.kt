@@ -18,8 +18,12 @@ object MoonStop {
     const val FROM = 0.42
     const val TO = 0.58
 
-    /** How long the look takes to rise to the moon before the camera rests, and to sink back after it. */
-    const val TURN = 0.10
+    /**
+     * How long the look takes to rise to the moon before the camera rests, and to sink back after it: long, so it
+     * turns upward while the camera still flies and nobody sees where it began (at 0.10 it was "too sudden": the
+     * maintainer, 2026-11-22).
+     */
+    const val TURN = 0.26
 
     /** How far round the band the camera is (0 to 1) at [u] of the flight's time: it eases into its rest and out of it. */
     fun travel(u: Double): Double = when {

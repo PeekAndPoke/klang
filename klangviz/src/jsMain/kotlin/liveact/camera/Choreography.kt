@@ -96,7 +96,7 @@ const val CLEAR = 1.3
  * as far as the band is), how much of the way to it the look rises, and the lens there.
  */
 private const val MOON_REACH = 7.0
-private const val MOON_SHARE = 0.8
+private const val MOON_SHARE = 0.62
 private const val MOON_FOV = 30.0
 
 /** From this height on a camera is above the players' heads and passes over them. */
