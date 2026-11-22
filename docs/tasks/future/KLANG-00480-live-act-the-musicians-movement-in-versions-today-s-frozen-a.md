@@ -14,7 +14,30 @@ So the way the band moves gets versions. Today's is the first and is never chang
 versions beside it, and the show can turn from one to another: by a switch, and perhaps by itself, as a look back at
 how they once moved.
 
-## A proposal (Klang-Research, 2026-11-22; nothing of it is decided)
+## The direction (the maintainer, 2026-11-23)
+
+"If we can express the movements, like nodding, swaying left right etc. as skills then we can easily version them
+like NoddV2."
+
+So a version is not a copy of the whole band's players: it is a skill with a name. Today's nod is the skill `Nod`
+and stays as it is; a better one is `NodV2` beside it, and a member's sheet says which one they have. That is the
+plan of KLANG-00479 already (skills are equipped on the sheet), carried on to the movements that are not skills yet.
+
+What it asks for:
+
+- **The movements have to become skills first.** Today the looks and the idle moves are skills (`CameraStare`,
+  `CrowdGaze`, `StickTwirl` and the rest). The nod, the sway, the breath and the walk are not: they live in the
+  figure's own code (`Life`, `Mover`), and the playing itself in each instrument's player. KLANG-00479 step 3 (one
+  pose contract: channels a skill claims) is the step that makes them skills.
+- **The first version is today's, taken out without changing it.** Each movement that becomes a skill moves as it
+  moved before; a recording of the poses before and after guards that (point 1 of the first proposal below, kept).
+- **Switching** is then a choice of sheets: a member with `Nod` or with `NodV2`, one member at a time or the whole
+  band by a named set ("as in November 2026").
+
+Still open: whether the playing at the instruments (a strum, a stroke, the mallets) becomes skills with versions as
+well, or stays the player's own; and whether the show itself turns between sets in the middle of a song.
+
+## The first proposal (Klang-Research, 2026-11-22; replaced by the direction above, kept for its reasons)
 
 1. **Record today's movement as data first, before anything is refactored.** For a fixed song and a few seeds, the
    pose of every member (each bone's turn, where they stand) at sampled moments, written by today's code into a file
@@ -61,3 +84,4 @@ To be planned once the four points are decided.
 ## History
 
 - 2026-11-22: created.
+- 2026-11-23: the direction: movements become skills, a version is a skill with a name (`NodV2`).
