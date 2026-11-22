@@ -536,7 +536,7 @@ class StageSpec : StringSpec({
 
                 val round: dynamic = far.asDynamic().material.uniforms
 
-                for (picture in listOf(sides.uNear.value, sides.uDeep.value, round.uMap.value, round.uDeep.value)) {
+                for (picture in listOf(sides.uNear.value, sides.uDeep.value, round.uMap.value, round.uDeep.value, round.uRelief.value)) {
                     picture.addEventListener("dispose") { _: dynamic -> freed.add("picture") }
                 }
 
@@ -565,7 +565,7 @@ class StageSpec : StringSpec({
             }
 
             // the four pictures freed, and the group out of the scene
-            freed shouldBe listOf("picture", "picture", "picture", "picture")
+            freed shouldBe listOf("picture", "picture", "picture", "picture", "picture")
             groups(scene) shouldBe emptyList()
         }
     }

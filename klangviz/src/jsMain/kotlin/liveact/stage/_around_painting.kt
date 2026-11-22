@@ -17,6 +17,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -95,7 +96,24 @@ internal fun paintSides(row: Row, width: Int, height: Int): HTMLCanvasElement = 
  * A picture of the horizon round the audience (see [Around]), [width] by [height] pixels: along the ring from one end
  * to the other; of the shapes only those of [row], as [paintSides] draws them.
  */
-internal fun paintFar(row: Row, width: Int, height: Int): HTMLCanvasElement = packed(width = width, height = height) { g, surrounding ->
+internal fun paintFar(row: Row, width: Int, height: Int): HTMLCanvasElement =
+    far(row = row, relief = false, width = width, height = height)
+
+/**
+ * The relief of the horizon's near shapes, a picture laid out as [paintFar]'s: how far a shape's surface stands out,
+ * place by place, from 0 (deep in a joint) to 1, [LEVEL] where it is plain and where nothing is. Painted, not worked
+ * out (the maintainer, 2026-11-22: "painted maps would be better"): a wall's courses of blocks and the stones round
+ * its arches, a column's flutes, a pine's tiers each over the next, a limb round, a standing stone in facets with
+ * cracks.
+ */
+internal fun paintFarRelief(width: Int, height: Int): HTMLCanvasElement =
+    far(row = Row.Near, relief = true, width = width, height = height)
+
+private fun far(row: Row, relief: Boolean, width: Int, height: Int): HTMLCanvasElement = packed(
+    width = width,
+    height = height,
+    ground = if (relief) grey(LEVEL) else "#000000",
+) { g, surrounding ->
     val reach = Around.FAR_WRAP * Around.FAR_RADIUS
     val perX = width / (2 * reach)
     val perY = height / Around.FAR_HIGH
@@ -103,7 +121,13 @@ internal fun paintFar(row: Row, width: Int, height: Int): HTMLCanvasElement = pa
     // drawn in metres along the ring (s, 0 straight ahead of the band, to the audience's right for more) and up (y)
     g.setTransform(perX, 0.0, 0.0, -perY, reach * perX, height + Around.FAR_BASE * perY)
 
-    val painter = Painter(g = g, dice = Dice(salt = 101.0 * (surrounding.ordinal + 1)), pixels = min(perX, perY), only = row)
+    val painter = Painter(
+        g = g,
+        dice = Dice(salt = 101.0 * (surrounding.ordinal + 1)),
+        pixels = min(perX, perY),
+        only = row,
+        relief = relief,
+    )
     val horizon = Horizon(reach = reach)
 
     when (surrounding) {
@@ -115,9 +139,14 @@ internal fun paintFar(row: Row, width: Int, height: Int): HTMLCanvasElement = pa
 
 /**
  * A picture of [width] by [height] pixels with each surrounding drawn by [paint] in its own channel: each is drawn
- * white (near) and grey (far) on a clear canvas, put on black, turned to its channel's colour and added.
+ * white (near) and grey (far) on a clear canvas, put on [ground], turned to its channel's colour and added.
  */
-private fun packed(width: Int, height: Int, paint: (CanvasRenderingContext2D, Surrounding) -> Unit): HTMLCanvasElement {
+private fun packed(
+    width: Int,
+    height: Int,
+    ground: String = "#000000",
+    paint: (CanvasRenderingContext2D, Surrounding) -> Unit,
+): HTMLCanvasElement {
     val w = width.toDouble()
     val h = height.toDouble()
     val out = canvas(width = width, height = height)
@@ -138,7 +167,7 @@ private fun packed(width: Int, height: Int, paint: (CanvasRenderingContext2D, Su
         g.setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
         g.globalAlpha = 1.0
         g.globalCompositeOperation = "destination-over"
-        g.fillStyle = "#000000"
+        g.fillStyle = ground
         g.fillRect(0.0, 0.0, w, h)
         g.globalCompositeOperation = "multiply"
         g.fillStyle = CHANNELS[surrounding.ordinal]
@@ -159,6 +188,16 @@ private fun canvas(width: Int, height: Int): HTMLCanvasElement {
     canvas.height = height
 
     return canvas
+}
+
+/** A relief's level where a surface is plain, 0 to 1: room to stand out from it and to sink into it. */
+private const val LEVEL = 0.5
+
+/** The grey of [level] (0 to 1), as a canvas's colour. */
+private fun grey(level: Double): String {
+    val n = (level.coerceIn(0.0, 1.0) * 255).toInt()
+
+    return "rgb($n,$n,$n)"
 }
 
 /** The channel of each surrounding, by its place. */
@@ -214,11 +253,55 @@ private class Horizon(val reach: Double) {
 /**
  * Draws shapes onto [g] in metres, by the numbers of [dice]; [pixels] is how many of the picture's pixels a metre is at
  * least, so the finest limbs stay some pixels wide. With [only], just that row's shapes are drawn, the far ones then
- * whole and at full strength; the other row's leave no mark.
+ * whole and at full strength; the other row's leave no mark. With [relief], not the shapes are drawn but how far their
+ * surfaces stand out (see [paintFarRelief]): the same shapes at the same places, plain at [LEVEL], their detail on them.
  */
-private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixels: Double, val only: Row? = null) {
+private class Painter(
+    val g: CanvasRenderingContext2D,
+    val dice: Dice,
+    val pixels: Double,
+    val only: Row? = null,
+    val relief: Boolean = false,
+) {
     /** Whether the shapes drawn just now leave no mark. */
     private var unseen = false
+
+    /** The numbers of a relief's detail: its own, so the shapes are the same with and without it. */
+    private val detail = Dice(salt = 977.0)
+
+    /** Whether a relief's detail is drawn now. */
+    private val carving: Boolean get() = relief && !unseen
+
+    /** Draws [draw] within the shape through [xy] alone, and only onto what is there: a relief's detail on a shape. */
+    private fun within(xy: List<Double>, draw: () -> Unit) {
+        if (!carving) {
+            return
+        }
+
+        g.save()
+        g.beginPath()
+        g.moveTo(xy[0], xy[1])
+
+        for (i in 2 until xy.size step 2) {
+            g.lineTo(xy[i], xy[i + 1])
+        }
+
+        g.closePath()
+        g.clip()
+        g.globalCompositeOperation = "source-atop"
+        g.globalAlpha = 1.0
+        draw()
+        g.restore()
+    }
+
+    /** A fill that runs from the grey [from] at ([x0], [y0]) to the grey [to] at ([x1], [y1]): a surface that leans. */
+    private fun lean(x0: Double, y0: Double, from: Double, x1: Double, y1: Double, to: Double) {
+        val fill = g.createLinearGradient(x0, y0, x1, y1)
+
+        fill.addColorStop(0.0, grey(from))
+        fill.addColorStop(1.0, grey(to))
+        g.fillStyle = fill
+    }
 
     /** Shapes from now on leave no mark: nothing drawn behind what is there, whatever strength a shape sets. */
     private fun none() {
@@ -237,7 +320,7 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         unseen = false
         g.globalCompositeOperation = "source-over"
         g.globalAlpha = 1.0
-        g.fillStyle = "#ffffff"
+        g.fillStyle = if (relief) grey(LEVEL) else "#ffffff"
     }
 
     /** Shapes from now on further back: grey, and only behind what is there already. */
@@ -296,6 +379,41 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         g.fillRect(left, bottom, right - left, spring - bottom)
         disc(x = (left + right) / 2, y = spring, radius = (right - left) / 2)
         near()
+
+        if (!carving) {
+            return
+        }
+
+        // the relief: the arch's stones stand out round it, a joint between each two
+        val x = (left + right) / 2
+        val radius = (right - left) / 2
+        val deep = min(0.8, radius * 0.4)
+
+        g.save()
+        g.globalCompositeOperation = "source-atop"
+        g.lineWidth = deep
+        g.strokeStyle = grey(0.72)
+        g.beginPath()
+        g.arc(x, spring, radius + deep / 2, 0.0, PI)
+        g.stroke()
+        g.fillStyle = grey(0.72)
+        g.fillRect(left - deep, bottom, deep, spring - bottom)
+        g.fillRect(right, bottom, deep, spring - bottom)
+        g.lineWidth = JOINT
+        g.strokeStyle = grey(0.18)
+
+        val stones = max(5, (PI * radius / 0.8).toInt())
+
+        for (i in 0..stones) {
+            val a = PI * i / stones
+
+            g.beginPath()
+            g.moveTo(x + cos(a) * radius, spring + sin(a) * radius)
+            g.lineTo(x + cos(a) * (radius + deep), spring + sin(a) * (radius + deep))
+            g.stroke()
+        }
+
+        g.restore()
     }
 
     /**
@@ -316,6 +434,31 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
 
         xy += listOf(right, bottom)
         polygon(xy)
+
+        // the relief: courses of blocks, each a little further out or in than the next, a joint between them; the
+        // same courses along the whole ring, so one piece of wall goes on in the next
+        within(xy) {
+            var course = floor((bottom - Around.FAR_BASE) / COURSE).toInt()
+
+            while (Around.FAR_BASE + course * COURSE < top + rough) {
+                val y = Around.FAR_BASE + course * COURSE
+                val shift = if (course % 2 == 0) 0.0 else BLOCK / 2
+                var block = floor((left - shift) / BLOCK).toInt()
+
+                while (shift + block * BLOCK < right) {
+                    val x = shift + block * BLOCK
+
+                    g.fillStyle = grey(0.4 + 0.24 * hash01(course * 17.3 + block * 3.1))
+                    g.fillRect(x, y, BLOCK, COURSE)
+                    g.fillStyle = grey(0.16)
+                    g.fillRect(x, y, BLOCK, JOINT)
+                    g.fillRect(x, y, JOINT * 1.3, COURSE)
+                    block++
+                }
+
+                course++
+            }
+        }
     }
 
     /**
@@ -385,6 +528,27 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
             )
         )
         disc(x = x1, y = y1, radius = w1 / 2)
+
+        if (!carving) {
+            return
+        }
+
+        // the relief: round, highest along its middle
+        val plain = g.fillStyle
+
+        for ((share, level) in listOf(0.62 to 0.64, 0.28 to 0.78)) {
+            g.fillStyle = grey(level)
+            polygon(
+                listOf(
+                    x0 + nx * w0 / 2 * share, y0 + ny * w0 / 2 * share,
+                    x1 + nx * w1 / 2 * share, y1 + ny * w1 / 2 * share,
+                    x1 - nx * w1 / 2 * share, y1 - ny * w1 / 2 * share,
+                    x0 - nx * w0 / 2 * share, y0 - ny * w0 / 2 * share,
+                )
+            )
+        }
+
+        g.fillStyle = plain
     }
 
     /** A bare old tree at [x], its foot at [base]: a trunk [width] thick at the foot that forks, about [height] tall. */
@@ -434,6 +598,27 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         }
 
         polygon(xy)
+
+        // the relief: each tier of branches hangs out over the one below it, and the whole is round
+        within(xy) {
+            var above = base + height
+
+            for (i in 1..tiers) {
+                val y = base + height * (1.0 - 0.86 * i / tiers) - height * 0.025
+
+                lean(x0 = 0.0, y0 = above, from = 0.26, x1 = 0.0, y1 = y, to = 0.78)
+                g.fillRect(x - width, y, width * 2, above - y)
+                above = y
+            }
+
+            val round = g.createLinearGradient(x - width / 2, 0.0, x + width / 2, 0.0)
+
+            round.addColorStop(0.0, "rgba(0,0,0,0.4)")
+            round.addColorStop(0.5, "rgba(0,0,0,0)")
+            round.addColorStop(1.0, "rgba(0,0,0,0.4)")
+            g.fillStyle = round
+            g.fillRect(x - width, base, width * 2, height)
+        }
     }
 
     /**
@@ -446,16 +631,54 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         // rough-hewn: nearly straight sides, a little narrower up high, a broken shoulder at the top
         fun at(across: Double, up: Double): List<Double> = listOf(x + across + lean * up * height, base + up * height)
 
-        polygon(
-            at(-half, 0.0) +
-                at(-half * dice.between(0.9, 1.0), dice.between(0.35, 0.55)) +
-                at(-half * dice.between(0.78, 0.9), dice.between(0.8, 0.88)) +
-                at(-half * dice.between(0.3, 0.5), dice.between(0.98, 1.03)) +
-                at(half * dice.between(0.1, 0.4), dice.between(0.9, 1.0)) +
-                at(half * dice.between(0.75, 0.88), dice.between(0.72, 0.84)) +
-                at(half * dice.between(0.9, 1.0), dice.between(0.3, 0.5)) +
-                at(half, 0.0)
-        )
+        val xy = at(-half, 0.0) +
+            at(-half * dice.between(0.9, 1.0), dice.between(0.35, 0.55)) +
+            at(-half * dice.between(0.78, 0.9), dice.between(0.8, 0.88)) +
+            at(-half * dice.between(0.3, 0.5), dice.between(0.98, 1.03)) +
+            at(half * dice.between(0.1, 0.4), dice.between(0.9, 1.0)) +
+            at(half * dice.between(0.75, 0.88), dice.between(0.72, 0.84)) +
+            at(half * dice.between(0.9, 1.0), dice.between(0.3, 0.5)) +
+            at(half, 0.0)
+
+        polygon(xy)
+
+        // the relief: hewn in a few large faces, each leaning its own way, and a crack or two down it
+        within(xy) {
+            lean(x0 = x - half, y0 = base, from = detail.between(0.3, 0.5), x1 = x + half, y1 = base + height * 0.3, to = detail.between(0.55, 0.75))
+            g.fillRect(x - width, base, width * 2, height * 1.1)
+
+            repeat(4) {
+                val up = detail.between(0.05, 0.85)
+                val across = detail.between(-0.5, 0.5) * width
+                val wide = detail.between(0.5, 0.9) * width
+                val high = detail.between(0.15, 0.3) * height
+                val (ax, ay) = at(across, up)
+
+                lean(
+                    x0 = ax, y0 = ay, from = detail.between(0.25, 0.75),
+                    x1 = ax + wide * detail.between(-1.0, 1.0), y1 = ay + high, to = detail.between(0.25, 0.75),
+                )
+                polygon(listOf(ax, ay, ax + wide, ay + high * detail.between(0.1, 0.5), ax + wide * 0.6, ay + high, ax - wide * 0.3, ay + high * 0.7))
+            }
+
+            g.strokeStyle = grey(0.12)
+            g.lineWidth = JOINT
+
+            repeat(2) {
+                var (cx, cy) = at(detail.between(-0.35, 0.35) * width, detail.between(0.5, 1.0))
+
+                g.beginPath()
+                g.moveTo(cx, cy)
+
+                repeat(5) {
+                    cx += detail.between(-0.18, 0.18) * width
+                    cy -= detail.between(0.04, 0.12) * height
+                    g.lineTo(cx, cy)
+                }
+
+                g.stroke()
+            }
+        }
     }
 
     /**
@@ -466,8 +689,27 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
         // its base block
         g.fillRect(x - width * 0.7, base - 0.3, width * 1.4, width * 0.55 + 0.3)
 
+        // the relief of its shaft: round, and fluted
+        fun fluted(xy: List<Double>) = within(xy) {
+            val round = g.createLinearGradient(x - width / 2, 0.0, x + width / 2, 0.0)
+
+            round.addColorStop(0.0, grey(0.25))
+            round.addColorStop(0.5, grey(0.8))
+            round.addColorStop(1.0, grey(0.25))
+            g.fillStyle = round
+            g.fillRect(x - width, base, width * 2, height + width)
+            g.fillStyle = "rgba(0,0,0,0.45)"
+
+            for (i in 1..5) {
+                g.fillRect(x - width / 2 + width * i / 6 - JOINT / 2, base, JOINT, height + width)
+            }
+        }
+
         if (whole) {
-            polygon(listOf(x - width / 2, base, x - width * 0.42, base + height, x + width * 0.42, base + height, x + width / 2, base))
+            val shaft = listOf(x - width / 2, base, x - width * 0.42, base + height, x + width * 0.42, base + height, x + width / 2, base)
+
+            polygon(shaft)
+            fluted(shaft)
             g.fillRect(x - width * 0.62, base + height, width * 1.24, width * 0.35)
             g.fillRect(x - width * 0.8, base + height + width * 0.35, width * 1.6, width * 0.4)
 
@@ -476,16 +718,17 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
 
         val slant = dice.between(-0.25, 0.25) * width
 
-        polygon(
-            listOf(
-                x - width / 2, base,
-                x - width * 0.44, base + height - slant,
-                x - width * 0.15, base + height + dice.between(-0.4, 0.2) * width,
-                x + width * 0.1, base + height - dice.between(0.1, 0.5) * width,
-                x + width * 0.44, base + height + slant,
-                x + width / 2, base,
-            )
+        val shaft = listOf(
+            x - width / 2, base,
+            x - width * 0.44, base + height - slant,
+            x - width * 0.15, base + height + dice.between(-0.4, 0.2) * width,
+            x + width * 0.1, base + height - dice.between(0.1, 0.5) * width,
+            x + width * 0.44, base + height + slant,
+            x + width / 2, base,
         )
+
+        polygon(shaft)
+        fluted(shaft)
     }
 
     /** The forest beside the stage: bare giants and a few young trees before dark pines further back. */
@@ -778,6 +1021,11 @@ private class Painter(val g: CanvasRenderingContext2D, val dice: Dice, val pixel
 
         /** A limb thinner than this many pixels forks no further. */
         const val FINEST = 1.5
+
+        /** A wall's relief: how high a course of its blocks is, how long a block, and how wide a joint, in metres. */
+        const val COURSE = 0.95
+        const val BLOCK = 2.1
+        const val JOINT = 0.13
 
         /** The standing stones beside the stage: where, how wide and how tall, in metres out from its middle. */
         val STONES = listOf(

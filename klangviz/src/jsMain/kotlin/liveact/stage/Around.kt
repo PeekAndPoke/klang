@@ -47,7 +47,7 @@ import org.w3c.dom.HTMLCanvasElement
  * its own colour channel, so a turn from one to another is a uniform ([light]). The beside picture is
  * [SIDES_PIXELS_WIDE] by [SIDES_PIXELS_HIGH] (the audience's left in its left half), the round one [FAR_PIXELS_WIDE] by
  * [FAR_PIXELS_HIGH], the rows further back beside the stage [DEEP_PIXELS_WIDE] by [DEEP_PIXELS_HIGH]; with their smaller
- * copies some 24 MB on the graphics card. Three draws a frame, two more in the mirror
+ * copies, and the relief of the horizon's near shapes (as large as their picture), some 35 MB on the graphics card. Three draws a frame, two more in the mirror
  * floor where it sees the sides (the round band is hidden while the mirror draws, [hideFar]: it is never seen there);
  * no shadows, no light of their own on anything else.
  *
@@ -66,6 +66,9 @@ class Around(private val scene: Scene) {
     private val deepPicture: CanvasTexture = picture(paintSides(row = Row.Deep, width = DEEP_PIXELS_WIDE, height = DEEP_PIXELS_HIGH))
     private val farPicture: CanvasTexture = picture(paintFar(row = Row.Near, width = FAR_PIXELS_WIDE, height = FAR_PIXELS_HIGH))
     private val farDeepPicture: CanvasTexture = picture(paintFar(row = Row.Deep, width = FAR_DEEP_PIXELS_WIDE, height = FAR_DEEP_PIXELS_HIGH))
+
+    /** The relief of the horizon's near shapes (see [paintFarRelief]). */
+    private val farReliefPicture: CanvasTexture = picture(paintFarRelief(width = FAR_PIXELS_WIDE, height = FAR_PIXELS_HIGH))
 
     /** Which surrounding is shown: one of the channels, 1. */
     private val pick = vec(1.0, 0.0, 0.0)
@@ -150,6 +153,7 @@ class Around(private val scene: Scene) {
         deepPicture.dispose()
         farPicture.dispose()
         farDeepPicture.dispose()
+        farReliefPicture.dispose()
     }
 
     /** The plane on the audience's left ([way] -1) or right (1): the rows of shapes behind one another are seen in it. */
@@ -273,6 +277,9 @@ class Around(private val scene: Scene) {
             "uGrain" to uniform(grain),
             "uRound" to uniform(FAR_ROUND),
             "uRough" to uniform(FAR_ROUGH),
+            "uRelief" to uniform(farReliefPicture),
+            "uTexel" to uniform(Three.addon.createVector2(x = 1.0 / FAR_PIXELS_WIDE, y = 1.0 / FAR_PIXELS_HIGH)),
+            "uCarve" to uniform(FAR_CARVE),
         )
 
         return Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
@@ -357,13 +364,16 @@ class Around(private val scene: Scene) {
 
         /**
          * The horizon's relief (the maintainer, 2026-11-22: "in order to make them not appear that flat we need to
-         * apply some normal maps on the surfaces"). No picture of its own: a shape's surface leans as its picture,
-         * read blurred, rises from its edge to its middle (how far it bulges, in metres: [FAR_ROUND]), and as a grain
-         * of bumps rises and falls on it ([FAR_ROUGH] metres deep, [FAR_GRAINS] bumps to a metre along and up: bark
-         * runs upward, a wall is laid in courses, a standing stone is rough every way).
+         * apply some normal maps on the surfaces"). A shape's surface leans as its picture, read blurred, rises from
+         * its edge to its middle (how far it bulges, in metres: [FAR_ROUND]). On that the near shapes wear a painted
+         * relief ([FAR_CARVE]); the dim ones behind them only a grain of bumps ([FAR_ROUGH] metres deep, [FAR_GRAINS]
+         * bumps to a metre along and up: bark runs upward, a wall is laid in courses, a stone is rough every way).
          */
         const val FAR_ROUND = 0.9
         const val FAR_ROUGH = 0.8
+
+        /** How deep the near shapes' painted relief is from its lowest to its highest, in metres (see [paintFarRelief]). */
+        const val FAR_CARVE = 0.7
         val FAR_GRAINS: Map<Surrounding, Pair<Double, Double>> = mapOf(
             Surrounding.Forest to (1.7 to 0.22),
             Surrounding.Ruins to (0.35 to 0.9),
@@ -443,10 +453,10 @@ class Around(private val scene: Scene) {
         // upward; an edge with nothing below it or toward the stage catches more. The colour leans cold on the
         // audience's left, warm on its right.
         private val FRAGMENT = """
-  uniform sampler2D uMap, uDeep;
+  uniform sampler2D uMap, uDeep, uRelief;
   uniform vec3 uPick, uCold, uWarm;
-  uniform vec2 uMetres, uGrain;
-  uniform float uBelow, uInward, uShow, uFoot, uFall, uGain, uHides, uSpread, uRound, uRough;
+  uniform vec2 uMetres, uGrain, uTexel;
+  uniform float uBelow, uInward, uShow, uFoot, uFall, uGain, uHides, uSpread, uRound, uRough, uCarve;
   varying vec2 vUv;
   varying vec3 vWorld;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -455,16 +465,19 @@ class Around(private val scene: Scene) {
     f = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
   }
-  // How high the surface of [map]'s shapes stands at [uv], in metres: bulging from a shape's edge to its middle
-  // (the picture read blurred), a grain of bumps on it.
-  float high(sampler2D map, vec2 uv, float shift) {
-    float body = dot(texture2D(map, uv, 3.0).rgb, uPick);
+  // How far a shape of [map] bulges at [uv], 0 to 1: from its edge to its middle (the picture read blurred).
+  float body(sampler2D map, vec2 uv) { return dot(texture2D(map, uv, 3.0).rgb, uPick); }
+  // A grain of bumps, 0 to 1, for the shapes that have no painted relief.
+  float rough(vec2 uv, float shift) {
     vec2 q = (uv * uMetres + shift) * uGrain;
-    return uRound * body + uRough * (0.6 * bumps(q) + 0.4 * bumps(q * 2.7 + 5.3));
+    return 0.6 * bumps(q) + 0.4 * bumps(q * 2.7 + 5.3);
   }
+  // The painted relief at [uv], 0 to 1.
+  float carved(vec2 uv) { return dot(texture2D(uRelief, uv).rgb, uPick); }
   // A row's light from the cold side (x), from the warm side (y), and how much of it is there (z); [dim] how dark
-  // it is against the near row; [shift] slides its grain; [side], [up_], [face]: along the band, up, and out of it.
-  vec3 row(sampler2D map, float dim, float glow, float shift, vec3 side, vec3 up_, vec3 face) {
+  // it is against the near row; [painted]: it wears the painted relief (1), else a grain slid by [shift]; [side],
+  // [up_], [face]: along the band, up, and out of it.
+  vec3 row(sampler2D map, float dim, float glow, float painted, float shift, vec3 side, vec3 up_, vec3 face) {
     float v = dot(texture2D(map, vUv).rgb, uPick);
     if (v < 0.003) return vec3(0.0);
     float below = dot(texture2D(map, vUv - vec2(0.0, uBelow)).rgb, uPick);
@@ -472,8 +485,19 @@ class Around(private val scene: Scene) {
     float rim = max(v - below, 0.0) + 0.6 * max(v - inward, 0.0);
     // the surface's lean, from its height a little to either side and above and below
     vec2 e = vec2(0.35) / uMetres;
-    float along = (high(map, vUv + vec2(e.x, 0.0), shift) - high(map, vUv - vec2(e.x, 0.0), shift)) / 0.7;
-    float rise = (high(map, vUv + vec2(0.0, e.y), shift) - high(map, vUv - vec2(0.0, e.y), shift)) / 0.7;
+    vec2 ex = vec2(e.x, 0.0);
+    vec2 ey = vec2(0.0, e.y);
+    float along = uRound * (body(map, vUv + ex) - body(map, vUv - ex)) / 0.7;
+    float rise = uRound * (body(map, vUv + ey) - body(map, vUv - ey)) / 0.7;
+    if (painted > 0.5) {
+      vec2 tx = vec2(uTexel.x, 0.0);
+      vec2 ty = vec2(0.0, uTexel.y);
+      along += uCarve * (carved(vUv + tx) - carved(vUv - tx)) / (2.0 * uTexel.x * uMetres.x);
+      rise += uCarve * (carved(vUv + ty) - carved(vUv - ty)) / (2.0 * uTexel.y * uMetres.y);
+    } else {
+      along += uRough * (rough(vUv + ex, shift) - rough(vUv - ex, shift)) / 0.7;
+      rise += uRough * (rough(vUv + ey, shift) - rough(vUv - ey, shift)) / 0.7;
+    }
     vec3 n = normalize(face - along * side - rise * up_);
     // lit from below and from either side; a flat face is as bright as it was without relief
     float under = max(dot(n, normalize(face - 0.9 * up_)), 0.0) / 0.743;
@@ -492,8 +516,8 @@ class Around(private val scene: Scene) {
     vec3 side = (dFdx(vWorld) * dFdy(vUv).y - dFdy(vWorld) * dFdx(vUv).y)
       * sign(dFdx(vUv).x * dFdy(vUv).y - dFdy(vUv).x * dFdx(vUv).y);
     side = normalize(side - dot(side, face) * face - dot(side, up_) * up_ + 1e-6 * cross(up_, face));
-    vec3 near = row(uMap, 1.0, glow, 0.0, side, up_, face);
-    vec3 deep = row(uDeep, 0.42, glow, 31.7, side, up_, face);
+    vec3 near = row(uMap, 1.0, glow, 1.0, 0.0, side, up_, face);
+    vec3 deep = row(uDeep, 0.42, glow, 0.0, 31.7, side, up_, face);
     float there = near.z + (1.0 - near.z) * 0.92 * deep.z;
     if (there < 0.003) discard;
     vec2 lit = near.xy + (1.0 - near.z) * deep.xy;
