@@ -74,6 +74,7 @@ class NightSky(scene: Scene) {
         )
 
         points.frustumCulled = false
+        points.renderOrder = ORDER
         sky.add(points)
 
         // the moon and the clouds that pass it: one patch of sky, turned to whoever looks
@@ -85,6 +86,7 @@ class NightSky(scene: Scene) {
 
         moon.position.set(Sky.MOON.x * FAR, Sky.MOON.y * FAR, Sky.MOON.z * FAR)
         moon.lookAt(0.0, 0.0, 0.0)
+        moon.renderOrder = ORDER
         sky.add(moon)
 
         // the shooting star: a thin streak, set where it is whenever one falls
@@ -93,6 +95,7 @@ class NightSky(scene: Scene) {
             material(vertex = PATCH_VERTEX, fragment = STREAK_FRAGMENT, uniforms = uniformsOf("uGlow" to glow, "uLevel" to level)),
         )
         streak.visible = false
+        streak.renderOrder = ORDER
         sky.add(streak)
     }
 
@@ -157,21 +160,27 @@ class NightSky(scene: Scene) {
 
     private fun Vector3.distanceTo(other: Vector3): Double = clone().sub(other).length()
 
-    private companion object {
+    companion object {
+        /**
+         * Its place among what is drawn see-through: first of all, so whatever stands before the sky is laid over it
+         * (the horizon round the audience, `Around`, with its soft edges).
+         */
+        const val ORDER = -100
+
         /**
          * How far off the sky is drawn, in metres: within what the camera sees, with room for the moon's patch,
          * whose corners lie a little further; beyond everything else.
          */
-        const val FAR = Stage.FAR - 10.0
+        private const val FAR = Stage.FAR - 10.0
 
         /** Half the width of the patch of sky round the moon, in radians: room for its glow and the clouds. */
-        const val PATCH = 0.16
+        private const val PATCH = 0.16
 
         /** How long a shooting star's tail is, as a share of its whole way, and how thin it is against the sky's distance. */
-        const val TAIL = 0.35
-        const val THIN = 0.0016
+        private const val TAIL = 0.35
+        private const val THIN = 0.0016
 
-        val STAR_VERTEX = """
+        private val STAR_VERTEX = """
   attribute float seed;
   uniform float uTime, uSize;
   varying float vGlow;
@@ -190,7 +199,7 @@ class NightSky(scene: Scene) {
     gl_PointSize = uSize * (1.0 + 1.3 * big);
   }"""
 
-        val STAR_FRAGMENT = """
+        private val STAR_FRAGMENT = """
   uniform float uLevel;
   varying float vGlow;
   varying vec3 vTint;
@@ -203,7 +212,7 @@ class NightSky(scene: Scene) {
     #include <colorspace_fragment>
   }"""
 
-        val PATCH_VERTEX = """
+        private val PATCH_VERTEX = """
   varying vec2 vAt;
   void main() {
     vAt = uv * 2.0 - 1.0;
@@ -213,7 +222,7 @@ class NightSky(scene: Scene) {
         // The moon: a pale disc with faint seas and a soft glow round it. The clouds: thin wisps drifting across the
         // patch, two layers of soft noise; where one passes the moon it dims the disc and takes its light. All of it
         // fades out to the patch's edge, so the patch itself is never seen.
-        val MOON_FRAGMENT = """
+        private val MOON_FRAGMENT = """
   uniform float uTime, uLevel;
   varying vec2 vAt;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -239,7 +248,7 @@ class NightSky(scene: Scene) {
     #include <colorspace_fragment>
   }"""
 
-        val STREAK_FRAGMENT = """
+        private val STREAK_FRAGMENT = """
   uniform float uGlow, uLevel;
   varying vec2 vAt;
   void main() {

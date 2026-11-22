@@ -47,7 +47,7 @@ internal class Dice(private val salt: Double) {
     fun between(from: Double, to: Double): Double = from + (to - from) * roll()
 }
 
-/** A row of the shapes beside the stage: the near ones, or the ones further back. Each has a picture of its own. */
+/** A row of the shapes of a picture: the near ones, or the ones further back. Each has a picture of its own. */
 internal enum class Row { Near, Deep }
 
 /** Where the shapes beside the stage are drawn from and to, in the painter's metres: its picture's inner and outer edge. */
@@ -91,16 +91,19 @@ internal fun paintSides(row: Row, width: Int, height: Int): HTMLCanvasElement = 
     }
 }
 
-/** The picture of the horizon round the audience (see [Around]): along the ring from one end to the other. */
-internal fun paintFar(): HTMLCanvasElement = packed(width = Around.FAR_PIXELS_WIDE, height = Around.FAR_PIXELS_HIGH) { g, surrounding ->
+/**
+ * A picture of the horizon round the audience (see [Around]), [width] by [height] pixels: along the ring from one end
+ * to the other; of the shapes only those of [row], as [paintSides] draws them.
+ */
+internal fun paintFar(row: Row, width: Int, height: Int): HTMLCanvasElement = packed(width = width, height = height) { g, surrounding ->
     val reach = Around.FAR_WRAP * Around.FAR_RADIUS
-    val perX = Around.FAR_PIXELS_WIDE / (2 * reach)
-    val perY = Around.FAR_PIXELS_HIGH / Around.FAR_HIGH
+    val perX = width / (2 * reach)
+    val perY = height / Around.FAR_HIGH
 
     // drawn in metres along the ring (s, 0 straight ahead of the band, to the audience's right for more) and up (y)
-    g.setTransform(perX, 0.0, 0.0, -perY, reach * perX, Around.FAR_PIXELS_HIGH + Around.FAR_BASE * perY)
+    g.setTransform(perX, 0.0, 0.0, -perY, reach * perX, height + Around.FAR_BASE * perY)
 
-    val painter = Painter(g = g, dice = Dice(salt = 101.0 * (surrounding.ordinal + 1)), pixels = min(perX, perY))
+    val painter = Painter(g = g, dice = Dice(salt = 101.0 * (surrounding.ordinal + 1)), pixels = min(perX, perY), only = row)
     val horizon = Horizon(reach = reach)
 
     when (surrounding) {

@@ -63,7 +63,8 @@ class Around(private val scene: Scene) {
     /** The pictures: beside the stage the near shapes and the ones further back, and the horizon. */
     private val sidesPicture: CanvasTexture = picture(paintSides(row = Row.Near, width = SIDES_PIXELS_WIDE, height = SIDES_PIXELS_HIGH))
     private val deepPicture: CanvasTexture = picture(paintSides(row = Row.Deep, width = DEEP_PIXELS_WIDE, height = DEEP_PIXELS_HIGH))
-    private val farPicture: CanvasTexture = picture(paintFar())
+    private val farPicture: CanvasTexture = picture(paintFar(row = Row.Near, width = FAR_PIXELS_WIDE, height = FAR_PIXELS_HIGH))
+    private val farDeepPicture: CanvasTexture = picture(paintFar(row = Row.Deep, width = FAR_DEEP_PIXELS_WIDE, height = FAR_DEEP_PIXELS_HIGH))
 
     /** Which surrounding is shown: one of the channels, 1. */
     private val pick = vec(1.0, 0.0, 0.0)
@@ -142,6 +143,7 @@ class Around(private val scene: Scene) {
         sidesPicture.dispose()
         deepPicture.dispose()
         farPicture.dispose()
+        farDeepPicture.dispose()
     }
 
     /** The plane on the audience's left ([way] -1) or right (1): the rows of shapes behind one another are seen in it. */
@@ -201,6 +203,7 @@ class Around(private val scene: Scene) {
             geometry,
             material(
                 picture = farPicture,
+                deep = farDeepPicture,
                 from = 0.0,
                 across = 1.0,
                 below = FAR_EDGE / FAR_HIGH,
@@ -210,8 +213,8 @@ class Around(private val scene: Scene) {
                 gain = FAR_GAIN,
                 hides = 1.0,
                 spread = FAR_SPREAD,
-                // it hides the stars and the moon behind it, which are drawn after it
-                depthWrite = true,
+                // laid over the stars and the moon, which are drawn before it: its soft edge stays soft against them
+                depthWrite = false,
                 // seen from inside the ring
                 side = MaterialSide.BackSide,
             ),
@@ -224,7 +227,7 @@ class Around(private val scene: Scene) {
     }
 
     /**
-     * The material of a plane or the band: it reads [picture] from [from] [across] of its width; a shape's edge is lit
+     * The material of the band: it reads [picture] (its near shapes) and [deep] (the ones behind them) from [from] [across] of its width; a shape's edge is lit
      * where the picture is empty [below] of its height under it and [inward] of its width toward the stage; the light
      * is strongest at [foot] metres up and falls to 1/e over [fall]; [gain] how strong it is; [hides] how much a shape
      * hides what is behind it (0 to 1); [spread] over how many metres to either side of the stage's middle the light
@@ -232,6 +235,7 @@ class Around(private val scene: Scene) {
      */
     private fun material(
         picture: CanvasTexture,
+        deep: CanvasTexture,
         from: Double,
         across: Double,
         below: Double,
@@ -246,6 +250,7 @@ class Around(private val scene: Scene) {
     ): ShaderMaterial {
         val uniforms = uniformsOf(
             "uMap" to uniform(picture),
+            "uDeep" to uniform(deep),
             "uSpan" to uniform(Three.addon.createVector2(x = from, y = across)),
             "uBelow" to uniform(below),
             "uInward" to uniform(inward),
@@ -318,7 +323,7 @@ class Around(private val scene: Scene) {
         const val FAR_BASE = 8.0
         const val FAR_HIGH = 30.0
 
-        /** Its place among what is drawn see-through: before the crowd's lights and the sky, which it hides. */
+        /** Its place among what is drawn see-through: after the sky (`NightSky.ORDER`), which it hides, before the crowd's lights. */
         const val FAR_ORDER = SIDE_ORDER - 10
 
         /**
@@ -335,6 +340,10 @@ class Around(private val scene: Scene) {
         /** The round picture's size, in pixels. */
         const val FAR_PIXELS_WIDE = 4096
         const val FAR_PIXELS_HIGH = 512
+
+        /** The picture of the horizon's shapes further back, laid out as the near one. */
+        const val FAR_DEEP_PIXELS_WIDE = 2048
+        const val FAR_DEEP_PIXELS_HIGH = 256
 
         /** How far below and toward the stage an edge looks for the empty dark that lights it, in metres. */
         const val EDGE = 0.15
@@ -402,27 +411,36 @@ class Around(private val scene: Scene) {
     #include <colorspace_fragment>
   }"""
 
-        // The horizon. A shape is its channel of the picture: 1 near, under a half further back. Its light rises from its foot and
-        // fades upward; an edge with nothing below it or toward the stage catches more. The colour leans cold on the
+        // The horizon. A shape is its channel of its picture, the near shapes in one, those behind them in another
+        // (dimmer, and a little see-through), so each has its whole soft edge: a picture read larger than it is drawn
+        // then shows no steps (with both in one picture, the far shapes' half strength had to be doubled, which made
+        // every edge hard; the maintainer, 2026-11-22: "pixellated outlines"). Its light rises from its foot and fades
+        // upward; an edge with nothing below it or toward the stage catches more. The colour leans cold on the
         // audience's left, warm on its right.
         private val FRAGMENT = """
-  uniform sampler2D uMap;
+  uniform sampler2D uMap, uDeep;
   uniform vec3 uPick, uCold, uWarm;
   uniform float uBelow, uInward, uShow, uFoot, uFall, uGain, uHides, uSpread;
   varying vec2 vUv;
   varying vec3 vWorld;
-  float shapeAt(vec2 at) { return dot(texture2D(uMap, at).rgb, uPick); }
-  void main() {
-    float v = shapeAt(vUv);
-    if (v < 0.003 || uShow <= 0.0) discard;
-    float below = shapeAt(vUv - vec2(0.0, uBelow));
-    float inward = shapeAt(vUv + vec2(uInward, 0.0));
-    float glow = exp(-max(vWorld.y - uFoot, 0.0) / uFall);
+  // A row's light (x) and how much of it is there (y); [dim] how dark it is against the near row.
+  vec2 row(sampler2D map, float dim, float glow) {
+    float v = dot(texture2D(map, vUv).rgb, uPick);
+    float below = dot(texture2D(map, vUv - vec2(0.0, uBelow)).rgb, uPick);
+    float inward = dot(texture2D(map, vUv + vec2(uInward, 0.0)).rgb, uPick);
     float rim = max(v - below, 0.0) + 0.6 * max(v - inward, 0.0);
-    // a shape further back (under a half) is mostly dark: it hides more than it shows
-    float lit = v * v * (0.01 + glow) + rim * (0.02 + 0.9 * glow);
+    return vec2(dim * dim * v * v * (0.01 + glow) + dim * rim * (0.02 + 0.9 * glow), v);
+  }
+  void main() {
+    if (uShow <= 0.0) discard;
+    float glow = exp(-max(vWorld.y - uFoot, 0.0) / uFall);
+    vec2 near = row(uMap, 1.0, glow);
+    vec2 deep = row(uDeep, 0.42, glow);
+    float there = near.y + (1.0 - near.y) * 0.92 * deep.y;
+    if (there < 0.003) discard;
+    float lit = near.x + (1.0 - near.y) * deep.x;
     vec3 light = mix(uCold, uWarm, smoothstep(-uSpread, uSpread, vWorld.x));
-    gl_FragColor = vec4(light * lit * uGain * uShow, clamp(v * 2.2, 0.0, 1.0) * uHides * uShow);
+    gl_FragColor = vec4(light * lit * uGain * uShow, there * uHides * uShow);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""

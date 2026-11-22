@@ -531,10 +531,12 @@ class StageSpec : StringSpec({
 
                 fun shown(): Double = left.asDynamic().material.uniforms.uShow.value.unsafeCast<Double>()
 
-                // beside the stage the near rows and the ones further back, and the horizon
+                // beside the stage and round the audience: each the near shapes and the ones further back
                 val sides: dynamic = left.asDynamic().material.uniforms
 
-                for (picture in listOf(sides.uNear.value, sides.uDeep.value, far.asDynamic().material.uniforms.uMap.value)) {
+                val round: dynamic = far.asDynamic().material.uniforms
+
+                for (picture in listOf(sides.uNear.value, sides.uDeep.value, round.uMap.value, round.uDeep.value)) {
                     picture.addEventListener("dispose") { _: dynamic -> freed.add("picture") }
                 }
 
@@ -562,8 +564,8 @@ class StageSpec : StringSpec({
                 stage.dispose()
             }
 
-            // the three pictures freed, and the group out of the scene
-            freed shouldBe listOf("picture", "picture", "picture")
+            // the four pictures freed, and the group out of the scene
+            freed shouldBe listOf("picture", "picture", "picture", "picture")
             groups(scene) shouldBe emptyList()
         }
     }
