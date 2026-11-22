@@ -285,9 +285,10 @@ class Around(private val scene: Scene) {
 
     companion object {
         /** Beside the stage: from and to how far out from its middle, how high, and where along z. */
-        // from where the haze behind the mesh still stands (it ends 12 m out), so that their inner edge is behind
-        // it; the total (about 11 m to either side at 16:9) sees only that edge (the maintainer, 2026-11-22)
-        const val SIDE_FROM = 8.0
+        // out of the total's frame (some 11 m to either side there at 16:9) and clear of the band's shadows on the
+        // surface behind, which the shapes would hide (the outer players' reach some 10 m out; the maintainer,
+        // 2026-11-22)
+        const val SIDE_FROM = 12.0
         const val SIDE_TO = 30.0
         const val SIDE_HIGH = 18.0
         const val SIDE_Z = Fence.BACK_Z + 0.15
