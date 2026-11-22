@@ -46,6 +46,12 @@ object Approaching {
         val dt = if (before == null) 0.0 else t - before.t
         val far = if (before == null) 0.0 else hypot(camX - before.x, camZ - before.z)
 
+        // the same moment again (the show is paused, or its clock ticks more coarsely than the frames come): nothing
+        // has happened, and what they have come stays
+        if (before != null && dt == 0.0) {
+            return before
+        }
+
         // NaN-guard: a time or a place that is no number begins anew (every comparison with it is false)
         if (before == null || !(dt > 0.0 && dt <= GAP) || !(far > 0.0) || x != x || z != z) {
             return Approach(t = t, x = x, z = z, come = 0.0)

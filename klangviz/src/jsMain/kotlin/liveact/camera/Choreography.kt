@@ -375,11 +375,13 @@ class Choreography(
 
             if (begins) {
                 retreated = t
-                landed = true
             }
 
             return planned
         }
+
+        // in the flight (also where the time was moved back into it): it lands on the total and waits there
+        landed = true
 
         val share = Flight.share(way = FlightWay.OutAndBack, x = Flight.OUT + bars)
 

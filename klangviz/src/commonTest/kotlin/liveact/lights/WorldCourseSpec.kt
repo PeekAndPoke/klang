@@ -79,7 +79,7 @@ class WorldCourseSpec : StringSpec({
     }
 
     "a show first seen at its song's start or later has no opening: it starts where the look asks, at once" {
-        listOf(0.0, 62.1, Double.NaN).forEach { first ->
+        listOf(0.0, 62.1, Double.NaN, Double.POSITIVE_INFINITY).forEach { first ->
             val course = WorldCourse(opening = WorldLook.Ember)
 
             course.follow(t = first, look = WorldLook.Night, dt = 0.0) shouldBe night
@@ -93,6 +93,9 @@ class WorldCourseSpec : StringSpec({
 
         course.follow(t = half, look = WorldLook.Drift, dt = 0.0) shouldBe WorldLook.Drift.target(t = half)
         (WorldLook.Drift.target(t = half) == WorldLook.Drift.target(t = 0.0)) shouldBe false
+        // a moment without an end is none: the song's start
+        WorldCourse(opening = WorldLook.Ember).follow(t = Double.POSITIVE_INFINITY, look = WorldLook.Drift, dt = 0.0) shouldBe
+            WorldLook.Drift.target(t = 0.0)
     }
 
     "a world chosen by hand during the opening wins at once, at the usual pace" {

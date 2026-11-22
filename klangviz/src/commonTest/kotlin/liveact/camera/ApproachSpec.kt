@@ -63,6 +63,16 @@ class ApproachSpec : StringSpec({
         checkNotNull(approach).come shouldBe 0.0
     }
 
+    "the same moment asked again keeps what they have come" {
+        val came = walk(x0 = 0.0, z0 = 0.0, vx = 0.0, vz = 0.8, seconds = 2.0)
+        val again = Approaching.next(before = came, t = came.t, x = came.x, z = came.z, camX = 0.0, camZ = 10.0)
+
+        again.come shouldBe came.come
+        // and the walk goes on from there
+        Approaching.next(before = again, t = came.t + 0.02, x = came.x, z = came.z + 0.016, camX = 0.0, camZ = 10.0).come shouldBe
+            (came.come + 0.016 plusOrMinus 1e-9)
+    }
+
     "standing still begins it anew" {
         val came = walk(x0 = 0.0, z0 = 0.0, vx = 0.0, vz = 0.8, seconds = 2.0)
         val stood = walk(x0 = 0.0, z0 = 1.6, vx = 0.0, vz = 0.0, seconds = 0.2, before = came, from = 2.02)

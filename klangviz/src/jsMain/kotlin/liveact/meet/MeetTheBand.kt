@@ -158,11 +158,14 @@ class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
     /** Builds the room at once, and the band once the figures are there. */
     private fun build(ctx: ThreeJsContext) {
         val lens = ctx.camera.asPerspectiveCamera ?: error("The camera of Meet the Band is not a perspective camera")
-        val room = MeetStage(scene = ctx.scene, renderer = ctx.renderer)
 
+        // kept before the room is built: whatever fails on the way, the unmount frees the scene and the context
         renderer = ctx.renderer
         camera = lens
         scene = ctx.scene
+
+        val room = MeetStage(scene = ctx.scene, renderer = ctx.renderer)
+
         stage = room
         // where it looks follows the picture's shape (resize)
         lens.position.set(0.0, MeetLayout.CAMERA_HIGH, MeetLayout.CAMERA_Z)

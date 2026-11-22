@@ -20,7 +20,7 @@ import io.peekandpoke.klang.viz.liveact.stage.WorldLook
  *
  * No opening where the look's world is off (the look as made, where the time of day changes nothing), nor in a show
  * first seen at its song's start or later (`?t=0`, `?t=62.1`, a show that follows music already running): it starts
- * where the look asks at the song's start, as without one. A world chosen by hand while the show opens ([chosen]: the
+ * where the look asks at that moment, as without one. A world chosen by hand while the show opens ([chosen]: the
  * key n, the key x, an app's controls) ends the opening at once. Where the stage starts is decided at the first
  * [follow], which knows the show's time; [period] is the drift's round ([WorldLook.period]).
  */
@@ -91,7 +91,7 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
 
     /**
      * The fade, made at the show's first time [t] with the look's [look]: in the opening's world where the show opens
-     * (seen before its song, with a look whose world is on), else where the look asks at the song's start.
+     * (seen before its song, with a look whose world is on), else where the look asks at that moment (at the song's start for a moment that is none).
      */
     private fun begin(t: Double, look: WorldLook, ghost: GhostLight): WorldFade {
         part = if (part == Part.Unseen && t < 0.0 && look != WorldLook.Off) Part.Before else Part.Over
@@ -100,8 +100,8 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
             opening.target(t = t, period = period, ghost = ghost)
         } else {
             // where the look is at this moment (a show first seen in the middle of its song is at that time of
-            // day at once); NaN-guard: before the song, or at no number, the song's start
-            look.target(t = if (t > 0.0) t else 0.0, period = period, ghost = ghost)
+            // day at once); NaN-guard: before the song, at no number or at no end, the song's start
+            look.target(t = if (t > 0.0 && t.isFinite()) t else 0.0, period = period, ghost = ghost)
         }
 
         return WorldFade(start = start).also { fade = it }
