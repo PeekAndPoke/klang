@@ -52,7 +52,8 @@ import org.w3c.dom.HTMLCanvasElement
  * no shadows, no light of their own on anything else.
  *
  * Their light: dim, from below, fading upward into the dark ([AroundLight]), with a lit edge where a shape has nothing
- * below it or toward the stage.
+ * below it or toward the stage. The horizon's shapes have a relief: rounded from their edge to their middle and rough
+ * with a grain (bark, courses of stone), lit from below and from either side ([FAR_ROUND], [FAR_ROUGH]).
  *
  * Hidden and shown again with [show] (the look turned off and on again: kept). [dispose] takes it out of the scene and
  * frees what it holds.
@@ -77,6 +78,9 @@ class Around(private val scene: Scene) {
     private val warm = vec()
 
     private val color = Three.addon.createColor(0xffffff)
+
+    /** The grain of the horizon's surfaces: how many of its bumps a metre holds, along and up (see [FAR_GRAINS]). */
+    private val grain = Three.addon.createVector2(x = 1.0, y = 1.0)
 
     private val left: Mesh
     private val right: Mesh
@@ -105,6 +109,8 @@ class Around(private val scene: Scene) {
             Surrounding.Stones -> pick.set(0.0, 0.0, 1.0)
             null -> pick.set(0.0, 0.0, 0.0)
         }
+
+        moment.surrounding?.let { FAR_GRAINS.getValue(it) }?.let { (along, up) -> grain.set(along, up) }
 
         val there = moment.presence * AroundLight.shown(world) * level
 
@@ -263,6 +269,10 @@ class Around(private val scene: Scene) {
             "uGain" to uniform(gain),
             "uHides" to uniform(hides),
             "uSpread" to uniform(spread),
+            "uMetres" to uniform(Three.addon.createVector2(x = 2 * FAR_WRAP * FAR_RADIUS * across, y = FAR_HIGH)),
+            "uGrain" to uniform(grain),
+            "uRound" to uniform(FAR_ROUND),
+            "uRough" to uniform(FAR_ROUGH),
         )
 
         return Three.addon.createShaderMaterial(jsObject<ShaderMaterialParameters> {
@@ -345,6 +355,21 @@ class Around(private val scene: Scene) {
         const val FAR_DEEP_PIXELS_WIDE = 2048
         const val FAR_DEEP_PIXELS_HIGH = 256
 
+        /**
+         * The horizon's relief (the maintainer, 2026-11-22: "in order to make them not appear that flat we need to
+         * apply some normal maps on the surfaces"). No picture of its own: a shape's surface leans as its picture,
+         * read blurred, rises from its edge to its middle (how far it bulges, in metres: [FAR_ROUND]), and as a grain
+         * of bumps rises and falls on it ([FAR_ROUGH] metres deep, [FAR_GRAINS] bumps to a metre along and up: bark
+         * runs upward, a wall is laid in courses, a standing stone is rough every way).
+         */
+        const val FAR_ROUND = 0.9
+        const val FAR_ROUGH = 0.8
+        val FAR_GRAINS: Map<Surrounding, Pair<Double, Double>> = mapOf(
+            Surrounding.Forest to (1.7 to 0.22),
+            Surrounding.Ruins to (0.35 to 0.9),
+            Surrounding.Stones to (0.45 to 0.4),
+        )
+
         /** How far below and toward the stage an edge looks for the empty dark that lights it, in metres. */
         const val EDGE = 0.15
         const val FAR_EDGE = 0.35
@@ -420,27 +445,62 @@ class Around(private val scene: Scene) {
         private val FRAGMENT = """
   uniform sampler2D uMap, uDeep;
   uniform vec3 uPick, uCold, uWarm;
-  uniform float uBelow, uInward, uShow, uFoot, uFall, uGain, uHides, uSpread;
+  uniform vec2 uMetres, uGrain;
+  uniform float uBelow, uInward, uShow, uFoot, uFall, uGain, uHides, uSpread, uRound, uRough;
   varying vec2 vUv;
   varying vec3 vWorld;
-  // A row's light (x) and how much of it is there (y); [dim] how dark it is against the near row.
-  vec2 row(sampler2D map, float dim, float glow) {
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float bumps(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+  }
+  // How high the surface of [map]'s shapes stands at [uv], in metres: bulging from a shape's edge to its middle
+  // (the picture read blurred), a grain of bumps on it.
+  float high(sampler2D map, vec2 uv, float shift) {
+    float body = dot(texture2D(map, uv, 3.0).rgb, uPick);
+    vec2 q = (uv * uMetres + shift) * uGrain;
+    return uRound * body + uRough * (0.6 * bumps(q) + 0.4 * bumps(q * 2.7 + 5.3));
+  }
+  // A row's light from the cold side (x), from the warm side (y), and how much of it is there (z); [dim] how dark
+  // it is against the near row; [shift] slides its grain; [side], [up_], [face]: along the band, up, and out of it.
+  vec3 row(sampler2D map, float dim, float glow, float shift, vec3 side, vec3 up_, vec3 face) {
     float v = dot(texture2D(map, vUv).rgb, uPick);
+    if (v < 0.003) return vec3(0.0);
     float below = dot(texture2D(map, vUv - vec2(0.0, uBelow)).rgb, uPick);
     float inward = dot(texture2D(map, vUv + vec2(uInward, 0.0)).rgb, uPick);
     float rim = max(v - below, 0.0) + 0.6 * max(v - inward, 0.0);
-    return vec2(dim * dim * v * v * (0.01 + glow) + dim * rim * (0.02 + 0.9 * glow), v);
+    // the surface's lean, from its height a little to either side and above and below
+    vec2 e = vec2(0.35) / uMetres;
+    float along = (high(map, vUv + vec2(e.x, 0.0), shift) - high(map, vUv - vec2(e.x, 0.0), shift)) / 0.7;
+    float rise = (high(map, vUv + vec2(0.0, e.y), shift) - high(map, vUv - vec2(0.0, e.y), shift)) / 0.7;
+    vec3 n = normalize(face - along * side - rise * up_);
+    // lit from below and from either side; a flat face is as bright as it was without relief
+    float under = max(dot(n, normalize(face - 0.9 * up_)), 0.0) / 0.743;
+    float cold = max(dot(n, normalize(face - vec3(1.3, 0.2, 0.0))), 0.0);
+    float warm = max(dot(n, normalize(face + vec3(1.3, -0.2, 0.0))), 0.0);
+    float body = dim * dim * v * v * (0.01 + glow) * (0.55 + 0.45 * under);
+    float edge = dim * rim * (0.02 + 0.9 * glow);
+    return vec3(body * (0.25 + cold * 1.5) + edge, body * (0.25 + warm * 1.5) + edge, v);
   }
   void main() {
     if (uShow <= 0.0) discard;
     float glow = exp(-max(vWorld.y - uFoot, 0.0) / uFall);
-    vec2 near = row(uMap, 1.0, glow);
-    vec2 deep = row(uDeep, 0.42, glow);
-    float there = near.y + (1.0 - near.y) * 0.92 * deep.y;
+    // the band stands round the stage's middle: out of it is toward the middle, along it is across that
+    vec3 face = normalize(vec3(-vWorld.x, 0.0, -vWorld.z));
+    vec3 up_ = vec3(0.0, 1.0, 0.0);
+    vec3 side = (dFdx(vWorld) * dFdy(vUv).y - dFdy(vWorld) * dFdx(vUv).y)
+      * sign(dFdx(vUv).x * dFdy(vUv).y - dFdy(vUv).x * dFdx(vUv).y);
+    side = normalize(side - dot(side, face) * face - dot(side, up_) * up_ + 1e-6 * cross(up_, face));
+    vec3 near = row(uMap, 1.0, glow, 0.0, side, up_, face);
+    vec3 deep = row(uDeep, 0.42, glow, 31.7, side, up_, face);
+    float there = near.z + (1.0 - near.z) * 0.92 * deep.z;
     if (there < 0.003) discard;
-    float lit = near.x + (1.0 - near.y) * deep.x;
-    vec3 light = mix(uCold, uWarm, smoothstep(-uSpread, uSpread, vWorld.x));
-    gl_FragColor = vec4(light * lit * uGain * uShow, there * uHides * uShow);
+    vec2 lit = near.xy + (1.0 - near.z) * deep.xy;
+    // each side's light where it stands, a little of it everywhere
+    float warmth = smoothstep(-uSpread, uSpread, vWorld.x);
+    vec3 light = uCold * lit.x * mix(1.0, 0.3, warmth) + uWarm * lit.y * mix(0.3, 1.0, warmth);
+    gl_FragColor = vec4(light * uGain * uShow, there * uHides * uShow);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""
