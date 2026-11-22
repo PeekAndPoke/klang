@@ -152,7 +152,7 @@ fun FlowContent.mark() {
                 put("margin-right", "-${NAME_SPACING}em")
                 put("color", "#e8ecf4")
             }
-            +"NOTSTROM"
+            +"MØRTSTØN"
         }
 
         div {
