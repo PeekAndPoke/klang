@@ -140,8 +140,12 @@ class View(
     private val fogDeep: Double = scene.fog?.let { it.far - it.near } ?: 0.0
     private val usual: Double = HOME.pos.distanceTo(HOME.at)
 
-    /** Places the camera for the frame at [t]. Call it after everything that moves a figure. */
-    fun look(t: Double) {
+    /**
+     * Places the camera for the frame at [t]. Call it after everything that moves a figure. [back]: how far the
+     * total stands further back than usual, in metres (for the ghosts, `Stage.ghostPull`).
+     */
+    fun look(t: Double, back: Double = 0.0) {
+        choreography?.back = back
         place(t)
 
         scene.fog?.let { fog ->

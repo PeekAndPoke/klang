@@ -148,6 +148,13 @@ class Choreography(
     /** The moment the camera was last asked for ([at]). */
     private var heard: Double = Double.NEGATIVE_INFINITY
 
+    /** How far the total stands further back than usual, in metres: set from frame to frame (the ghosts). */
+    var back: Double = 0.0
+        set(value) {
+            // NaN-guard: what is no number moves nothing
+            field = if (value != value) 0.0 else value.coerceIn(0.0, 12.0)
+        }
+
     /** The way of the one who strolls toward the camera, from frame to frame (see [Approaching]). */
     private var approach: Approach? = null
 
@@ -285,11 +292,11 @@ class Choreography(
         return far
     }
 
-    /** The total at [t]. It breathes: a slow drift, never still. */
+    /** The total at [t]. It breathes: a slow drift, never still. It stands [back] metres further back than usual. */
     fun home(t: Double): Shot {
         return Shot(
             pos = HOME.pos.clone().add(
-                vec(TOTAL_DRIFT_X * sin(t * 0.07), TOTAL_DRIFT_Y * sin(t * 0.05 + 1), TOTAL_DRIFT_Z * sin(t * 0.04)),
+                vec(TOTAL_DRIFT_X * sin(t * 0.07), TOTAL_DRIFT_Y * sin(t * 0.05 + 1), TOTAL_DRIFT_Z * sin(t * 0.04) + back),
             ),
             at = HOME.at.clone(),
             fov = HOME.fov,

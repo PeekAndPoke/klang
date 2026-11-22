@@ -233,6 +233,28 @@ class WorldLightSpec : StringSpec({
         WorldLight.ghostCreep(from = Double.NaN, coming = false, dt = 1.0) shouldBe 0.0
     }
 
+    "the camera goes back as far as keeps the ghosts their size in the picture" {
+        // a lamp 8 m before the band, the surface 10 m behind it, the camera 10 m before it
+        fun shadowSeen(creep: Double, pull: Double): Double = ((8.0 - creep + 10.0) / (8.0 - creep)) / (10.0 + pull + 10.0)
+
+        WorldLight.ghostPull(creep = 0.0, lamp = 8.0, wall = -10.0, band = 0.0, camera = 10.0) shouldBe 0.0
+
+        for (creep in listOf(0.5, 2.0, 3.0)) {
+            val pull = WorldLight.ghostPull(creep = creep, lamp = 8.0, wall = -10.0, band = 0.0, camera = 10.0)
+
+            shadowSeen(creep = creep, pull = pull) shouldBe (shadowSeen(creep = 0.0, pull = 0.0) plusOrMinus 1e-12)
+        }
+
+        // by hand: the lamp 4 m nearer, the shadow is 3.5 over 2.25 as large, the camera's 20 m become 31.1
+        WorldLight.ghostPull(creep = 4.0, lamp = 8.0, wall = -10.0, band = 0.0, camera = 10.0) shouldBe (20.0 * (3.5 / 2.25 - 1) plusOrMinus 1e-9)
+    }
+
+    "no camera moves for what is no number, or for a lamp that has passed the band" {
+        WorldLight.ghostPull(creep = Double.NaN, lamp = 8.0, wall = -10.0, band = 0.0, camera = 10.0) shouldBe 0.0
+        WorldLight.ghostPull(creep = -1.0, lamp = 8.0, wall = -10.0, band = 0.0, camera = 10.0) shouldBe 0.0
+        WorldLight.ghostPull(creep = 9.0, lamp = 8.0, wall = -10.0, band = 0.0, camera = 10.0) shouldBe 0.0
+    }
+
     "the drift at no time is the day; at no period, or none above 0, the period as made" {
         WorldLight.drift(t = Double.NaN) shouldBe near(0.0)
         WorldLight.drift(t = 60.0, period = Double.NaN) shouldBe WorldLight.drift(t = 60.0)

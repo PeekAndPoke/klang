@@ -12,6 +12,7 @@ import io.peekandpoke.klang.viz.liveact.band.dress.dressLevel
 import io.peekandpoke.klang.viz.liveact.lights.FrontFade
 import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.lights.GhostVisits
+import io.peekandpoke.klang.viz.liveact.camera.TOTAL_FROM
 import io.peekandpoke.klang.viz.liveact.lights.Lights
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.lights.WorldCourse
@@ -198,6 +199,10 @@ class Stage(
 
     /** How far the front lamp has crept toward the band for the ghosts, in metres ([WorldLight.ghostCreep]). */
     private var ghostCreep = 0.0
+
+    /** How far the total's camera goes back for the ghosts now, in metres ([WorldLight.ghostPull]). */
+    val ghostPull: Double
+        get() = WorldLight.ghostPull(creep = ghostCreep, lamp = lights.frontStands, wall = shadowsAt, band = 0.0, camera = TOTAL_FROM.z)
 
     private val crowd: Crowd
 

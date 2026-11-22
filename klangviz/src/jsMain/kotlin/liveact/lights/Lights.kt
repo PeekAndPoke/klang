@@ -228,6 +228,9 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
         }
     }
 
+    /** Where the front lamp stands along z, in metres, when it has not crept (see [approach]). */
+    val frontStands: Double get() = FRONT_Z
+
     /**
      * The front lamp [by] metres nearer to the band than it stands (0: where it stands): what it throws on the
      * surface behind grows with it (the ghosts, [WorldLight.ghostCreep]).

@@ -578,7 +578,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         }
 
         lacquer?.takeIf { it.worn }?.light(house = house, world = now.stage.world)
-        now.view.look(t)
+        now.view.look(t = t, back = now.stage.ghostPull)
         now.stage.follow()
         camera?.let { viewer.copy(it.position) }
 

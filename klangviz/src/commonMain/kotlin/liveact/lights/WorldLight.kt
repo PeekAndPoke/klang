@@ -44,9 +44,10 @@ object WorldLight {
     /**
      * How far the front lamp creeps toward the band in the ghosts, in metres (it stays well before where the trumpet
      * player strolls), in how many seconds it comes that far (a visit's length), and in how many it goes back (the
-     * stage's turn back from the ghosts).
+     * stage's turn back from the ghosts). It was 2.4 m in the same time; faster since the camera goes back with it
+     * ([ghostPull]; the maintainer, 2026-11-22: "if you do make the ghost approach faster").
      */
-    const val GHOST_APPROACH = 2.4
+    const val GHOST_APPROACH = 3.0
     const val GHOST_APPROACH_SECONDS = GhostVisits.HOLD
     const val GHOST_RETREAT_SECONDS = GhostVisits.TURN_SECONDS
 
@@ -293,6 +294,28 @@ object WorldLight {
         val pace = if (coming) GHOST_APPROACH / GHOST_APPROACH_SECONDS else -GHOST_APPROACH / GHOST_RETREAT_SECONDS
 
         return (was + pace * dt).coerceIn(0.0, GHOST_APPROACH)
+    }
+
+    /**
+     * How far the total's camera goes back, in metres, while the front lamp has crept [creep] metres toward the
+     * band: as far as it takes for the band's shadows to stay as large in the picture as they were, so the ghosts
+     * keep their size and the band shrinks before them (the maintainer, 2026-11-22: "move the camera back so that
+     * the shadows appear the same size and the band shrinks"). A shadow on the surface at [wall] of someone at
+     * [band] under a lamp at [lamp] is larger than they are by the lamp's way to the surface over its way to them;
+     * seen from [camera] it is as large as that over the camera's way to the surface (all four: places along z, in
+     * metres, the lamp and the camera before the band, the surface behind it).
+     */
+    fun ghostPull(creep: Double, lamp: Double, wall: Double, band: Double, camera: Double): Double {
+        val near = lamp - creep
+
+        // NaN-guard: no number, or a lamp that is not before the band, moves no camera
+        if (!(creep > 0.0) || !(near > band) || !(lamp > band) || !(camera > wall)) {
+            return 0.0
+        }
+
+        val grown = ((near - wall) / (near - band)) / ((lamp - wall) / (lamp - band))
+
+        return (camera - wall) * (grown - 1.0)
     }
 
     /**
