@@ -196,8 +196,8 @@ class Stage(
     /** The drummer's riser. */
     private val riser: Riser
 
-    /** How long the ghosts have been there, in seconds of the frames; 0 while there are none. */
-    private var ghostsSince = 0.0
+    /** How far the front lamp has crept toward the band for the ghosts, in metres ([WorldLight.ghostCreep]). */
+    private var ghostCreep = 0.0
 
     private val crowd: Crowd
 
@@ -582,21 +582,19 @@ class Stage(
         // stage turns to them and back slowly, and a world chosen by hand has none
         val drifts = variants.world == WorldLook.Drift
         val visited = drifts && GhostVisits.visiting(t = t, seed = show.seed)
+        val look = if (visited) WorldLook.Ghosts else variants.world
         val world = worldCourse.follow(
             t = t,
-            look = if (visited) WorldLook.Ghosts else variants.world,
+            look = look,
             dt = dt,
             ghost = if (drifts) GhostVisits.light(t = t, seed = show.seed) else variants.ghosts,
             turnSeconds = if (drifts) GhostVisits.TURN_SECONDS else WorldFade.TURN_SECONDS,
         )
 
-        // in the ghosts the front lamp creeps toward the band, so the ghosts grow ever so slightly; it goes back as
-        // they go
-        val ghosts = WorldLight.ghostShare(world)
-
-        ghostsSince = if (ghosts > 0.0) ghostsSince + dt else 0.0
-        // (the way is the lamp's whole once the ghosts are a third there: it is not held back by their slow coming)
-        lights.approach(by = WorldLight.ghostApproach(ghostsSince) * min(1.0, ghosts * 3))
+        // while the ghosts come and stay the front lamp creeps toward the band, so they grow for as long as they are
+        // seen; as they fade it goes back, and they shrink again
+        ghostCreep = WorldLight.ghostCreep(from = ghostCreep, coming = look == WorldLook.Ghosts, dt = dt)
+        lights.approach(by = ghostCreep)
 
         this.front = front
         this.world = world

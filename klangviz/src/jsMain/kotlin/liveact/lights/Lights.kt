@@ -230,7 +230,7 @@ class Lights(show: Show, scene: Scene, kick: String, shadows: ShadowQuality = Sh
 
     /**
      * The front lamp [by] metres nearer to the band than it stands (0: where it stands): what it throws on the
-     * surface behind grows with it (the ghosts, [WorldLight.ghostApproach]).
+     * surface behind grows with it (the ghosts, [WorldLight.ghostCreep]).
      */
     fun approach(by: Double) {
         front.light.position.z = FRONT_Z - by

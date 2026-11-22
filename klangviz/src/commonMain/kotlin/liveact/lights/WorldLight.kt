@@ -41,9 +41,14 @@ import kotlin.math.exp
  *   ([ghostDepth]); the light on the surfaces behind is dimmed.
  */
 object WorldLight {
-    /** How far the front lamp creeps toward the band in the ghosts, in metres, and in how many seconds to 1/e. */
-    const val GHOST_APPROACH = 0.9
-    const val GHOST_APPROACH_SECONDS = 3.0
+    /**
+     * How far the front lamp creeps toward the band in the ghosts, in metres (it stays well before where the trumpet
+     * player strolls), in how many seconds it comes that far (a visit's length), and in how many it goes back (the
+     * stage's turn back from the ghosts).
+     */
+    const val GHOST_APPROACH = 2.4
+    const val GHOST_APPROACH_SECONDS = GhostVisits.HOLD
+    const val GHOST_RETREAT_SECONDS = GhostVisits.TURN_SECONDS
 
     /** How long a round of the drift takes, in seconds: day to night and back in about four minutes. */
     const val DRIFT_PERIOD = 240.0
@@ -270,20 +275,24 @@ object WorldLight {
     fun ghostShare(world: WorldTime): Double = world.on * world.ghosts
 
     /**
-     * How far the front lamp has come toward the band, in metres, [since] seconds into the ghosts (the maintainer,
-     * 2026-11-21: "Can we make it that the ghosts 'grow' ever so slightly", "meaning the lamp needs to slowly get
-     * closer to the band"): the ghosts are the band's shadows by that lamp, so as it creeps closer they grow, the
-     * ones of who stands nearest to it the most. It comes [GHOST_APPROACH] at most, most of it in the first quarter
-     * minute, the first seconds the fastest (it took four times as long at first: "the ghosts have to be growing
-     * faster", "even faster"), and ever slower. No time, or none yet: not at all.
+     * How far the front lamp is toward the band after [dt] more seconds, in metres, when it was [from]: while the
+     * ghosts are [coming] (the stage turns to them or stays with them) it creeps closer at a steady pace, as far as
+     * [GHOST_APPROACH] over a visit's length ([GHOST_APPROACH_SECONDS]); as they go it moves back, over
+     * [GHOST_RETREAT_SECONDS] from its farthest. The ghosts are the band's shadows by that lamp: as it comes they grow
+     * for as long as they are seen, and with the band swaying they seem to come marching closer; as they fade they
+     * shrink again (the maintainer, 2026-11-22; before, the lamp came most of its shorter way in the first seconds
+     * and stayed). No time: where it was.
      */
-    fun ghostApproach(since: Double): Double {
-        // NaN-guard: no time is no way
-        if (since != since || since <= 0.0) {
-            return 0.0
+    fun ghostCreep(from: Double, coming: Boolean, dt: Double): Double {
+        // NaN-guard: no time moves nothing, and no place is the lamp's own
+        if (dt != dt || dt <= 0.0) {
+            return if (from != from) 0.0 else from.coerceIn(0.0, GHOST_APPROACH)
         }
 
-        return GHOST_APPROACH * (1.0 - exp(-since / GHOST_APPROACH_SECONDS))
+        val was = if (from != from) 0.0 else from
+        val pace = if (coming) GHOST_APPROACH / GHOST_APPROACH_SECONDS else -GHOST_APPROACH / GHOST_RETREAT_SECONDS
+
+        return (was + pace * dt).coerceIn(0.0, GHOST_APPROACH)
     }
 
     /**

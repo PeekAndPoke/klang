@@ -213,21 +213,24 @@ class WorldLightSpec : StringSpec({
         WorldLight.drift(t = 15.0, period = 30.0) shouldBe (1.0 plusOrMinus 1e-12)
     }
 
-    "in the ghosts the front lamp creeps toward the band: not at first, ever slower, never past its way" {
-        WorldLight.ghostApproach(since = 0.0) shouldBe 0.0
-        WorldLight.ghostApproach(since = -3.0) shouldBe 0.0
-        WorldLight.ghostApproach(since = Double.NaN) shouldBe 0.0
+    "in the ghosts the front lamp creeps toward the band at a steady pace for a whole visit, and goes back as they fade" {
+        val way = WorldLight.GHOST_APPROACH
 
-        val early = WorldLight.ghostApproach(since = 5.0)
-        val later = WorldLight.ghostApproach(since = 10.0)
-        val late = WorldLight.ghostApproach(since = 15.0)
+        // coming: steadily, the whole way in a visit's length, never past it
+        WorldLight.ghostCreep(from = 0.0, coming = true, dt = 1.0) shouldBe (way / WorldLight.GHOST_APPROACH_SECONDS plusOrMinus 1e-12)
+        WorldLight.ghostCreep(from = 0.0, coming = true, dt = WorldLight.GHOST_APPROACH_SECONDS / 2) shouldBe (way / 2 plusOrMinus 1e-12)
+        WorldLight.ghostCreep(from = way / 2, coming = true, dt = 1000.0) shouldBe way
 
-        early shouldBeLessThan later
-        // ever slower: the second five seconds bring less than the first
-        (late - later) shouldBeLessThan (later - early)
-        WorldLight.ghostApproach(since = 1000.0) shouldBe (WorldLight.GHOST_APPROACH plusOrMinus 1e-9)
-        WorldLight.ghostApproach(since = WorldLight.GHOST_APPROACH_SECONDS) shouldBe
-            (WorldLight.GHOST_APPROACH * (1 - kotlin.math.exp(-1.0)) plusOrMinus 1e-12)
+        // going: back from its farthest over the stage's turn back, never behind where it stands
+        WorldLight.ghostCreep(from = way, coming = false, dt = WorldLight.GHOST_RETREAT_SECONDS / 2) shouldBe (way / 2 plusOrMinus 1e-12)
+        WorldLight.ghostCreep(from = way / 3, coming = false, dt = 1000.0) shouldBe 0.0
+        WorldLight.ghostCreep(from = 0.0, coming = false, dt = 1.0) shouldBe 0.0
+
+        // no time moves nothing; no place is the lamp's own
+        WorldLight.ghostCreep(from = 1.0, coming = true, dt = 0.0) shouldBe 1.0
+        WorldLight.ghostCreep(from = 1.0, coming = true, dt = Double.NaN) shouldBe 1.0
+        WorldLight.ghostCreep(from = Double.NaN, coming = true, dt = 0.0) shouldBe 0.0
+        WorldLight.ghostCreep(from = Double.NaN, coming = false, dt = 1.0) shouldBe 0.0
     }
 
     "the drift at no time is the day; at no period, or none above 0, the period as made" {
