@@ -99,6 +99,9 @@ private const val MOON_REACH = 7.0
 private const val MOON_SHARE = 0.62
 private const val MOON_FOV = 30.0
 
+/** The camera takes off before the one who strolls at most once in this many seconds: it stays a moment to wait for. */
+private const val RETREAT_REST = 150.0
+
 /** From this height on a camera is above the players' heads and passes over them. */
 private const val OVERHEAD = 2.1
 
@@ -144,6 +147,12 @@ class Choreography(
 
     /** The moment the camera was last asked for ([at]). */
     private var heard: Double = Double.NEGATIVE_INFINITY
+
+    /** The way of the one who strolls toward the camera, from frame to frame (see [Approaching]). */
+    private var approach: Approach? = null
+
+    /** When the camera last took off before her (see [retreat]); long ago where it never has. */
+    private var retreated: Double = Double.NEGATIVE_INFINITY
 
     /** The looks that have begun (see [chooseLook]), carried on from one question to the next. */
     private var plan: LookPlan = LookPlan()
@@ -312,6 +321,52 @@ class Choreography(
     fun at(t: Double): Shot {
         val home = home(t)
 
+        return retreat(t = t, home = home, planned = planned(t = t, home = home))
+    }
+
+    /**
+     * The camera at [t] with its answer to the one who strolls: where she comes walking straight at the camera while
+     * it is on the total ([home], and [planned] is it), it takes off backward over the audience before her, stays at
+     * the mixing desk a while and flies back in, as a round with a flight does (see [Flight]); whatever the round
+     * had planned meanwhile is left out. Not more often than every [RETREAT_REST] seconds, and not where every round
+     * is made one kind (to see that kind alone).
+     */
+    private fun retreat(t: Double, home: Shot, planned: Shot): Shot {
+        val her = rigs[rounds.strolls]?.root?.position
+
+        approach = her?.let { Approaching.next(before = approach, t = t, x = it.x, z = it.z, camX = home.pos.x, camZ = home.pos.z) }
+
+        // the time went back: nothing of it has happened yet
+        if (t < retreated) {
+            retreated = Double.NEGATIVE_INFINITY
+        }
+
+        val bars = (t - retreated) / cycle
+        val length = Flight.END - Flight.OUT
+
+        if (bars >= length) {
+            val begins = rounds.force == null && t >= start && planned === home && t - retreated >= RETREAT_REST && approach?.arrived == true
+
+            if (begins) {
+                retreated = t
+            }
+
+            return planned
+        }
+
+        val share = Flight.share(way = FlightWay.OutAndBack, x = Flight.OUT + bars)
+
+        label = when {
+            share >= 1.0 -> "from the mixing desk"
+            bars < Flight.IN - Flight.OUT -> "flight out before the frontwoman"
+            else -> "flight back in over the audience"
+        }
+
+        return flight(share = share, home = home, t = t)
+    }
+
+    /** The camera at [t] as the rounds plan it; [home]: the total as it drifts now (returned itself where it is the total). */
+    private fun planned(t: Double, home: Shot): Shot {
         label = "total"
 
         if (t < start) {
