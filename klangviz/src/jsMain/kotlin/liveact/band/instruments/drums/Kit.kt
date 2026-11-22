@@ -16,12 +16,13 @@ import io.peekandpoke.klang.workshop.threejs.addScaledVector
 import io.peekandpoke.klang.workshop.threejs.clone
 import io.peekandpoke.klang.workshop.threejs.colorSpace
 import io.peekandpoke.klang.workshop.threejs.createCircleGeometry
-import io.peekandpoke.klang.workshop.threejs.createConeGeometry
 import io.peekandpoke.klang.workshop.threejs.createCylinderGeometry
+import io.peekandpoke.klang.workshop.threejs.createLatheGeometry
 import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.isMesh
 import io.peekandpoke.klang.workshop.threejs.map
+import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
@@ -40,8 +41,10 @@ import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.LEFT
 import org.w3c.dom.MIDDLE
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.sign
 import kotlin.math.sin
 
@@ -390,30 +393,86 @@ class Kit(rig: Rig, name: String) {
         )
     }
 
-    /** A cymbal [name] at [at], its [radius] and its [tilt]. */
+    /**
+     * A cymbal [name] at [at], its [radius] and its [tilt]: turned from its profile, a bell in its middle and a bow
+     * falling to its edge (the maintainer, 2026-11-22: "the drums need some love too ... especially the hats need
+     * more shape"; they were flat cones). The hats are two cymbals, the lower one turned over under the upper, on
+     * the rod that lifts the upper one, with its clutch over the bell; the others sit on their stand under a felt and
+     * a wing nut. Every stand has its three feet.
+     */
     private fun cymbal(name: Drum, at: KitSpot, radius: Double, tilt: Double) {
         val piece = Three.addon.createGroup()
+        val hat = name == Drum.Hat || name == Drum.Hat2
+        val r = radius * s
+        // a hat's cymbals are flatter, with a wider bell
+        val bow = (if (hat) 0.085 else 0.12) * r
+        val bell = (if (hat) 0.26 else 0.2) * r
+        val bellHigh = (if (hat) 0.10 else 0.085) * r
 
         piece.position.set(at.x * s, at.y * s, at.z * s)
 
-        val disc = Three.addon.createMesh(cone(radius = radius * s, height = 0.025 * s), KitMaterials.brass)
+        val disc = Three.addon.createMesh(turned(radius = r, bow = bow, bell = bell, bellHigh = bellHigh), KitMaterials.brass)
         piece.add(disc)
 
-        if (name == Drum.Hat || name == Drum.Hat2) {
-            val lower = Three.addon.createMesh(cone(radius = radius * s, height = 0.025 * s), KitMaterials.brass)
+        // what holds it, over the bell: it does not swing with the cymbal
+        val over = bow + bellHigh
+
+        if (hat) {
+            val lower = Three.addon.createMesh(turned(radius = r, bow = bow, bell = bell, bellHigh = bellHigh), KitMaterials.brass)
+            // the open one: a gap between its two cymbals; the closed one's edges all but meet
+            val gap = (if (name == Drum.Hat) 0.008 else 0.055) * s
+
             lower.rotation.x = PI
-            // the open one: a gap between its two cymbals
-            lower.position.y = (if (name == Drum.Hat) -0.03 else -0.075) * s
+            lower.position.y = -gap
             piece.add(lower)
+
+            // the rod through both, and the clutch that holds the upper one
+            val rod = Three.addon.createMesh(
+                cylinder(radiusTop = 0.004 * s, radiusBottom = 0.004 * s, height = 0.16 * s, segments = 6),
+                KitMaterials.steel,
+            )
+            rod.position.set(at.x * s, at.y * s + over + 0.05 * s, at.z * s)
+
+            val clutch = Three.addon.createMesh(
+                cylinder(radiusTop = 0.014 * s, radiusBottom = 0.018 * s, height = 0.03 * s, segments = 10),
+                KitMaterials.steel,
+            )
+            clutch.position.set(at.x * s, at.y * s + over + 0.018 * s, at.z * s)
+            group.add(rod)
+            group.add(clutch)
+        } else {
+            val nut = Three.addon.createMesh(
+                cylinder(radiusTop = 0.008 * s, radiusBottom = 0.02 * s, height = 0.028 * s, segments = 10),
+                KitMaterials.steel,
+            )
+            nut.position.set(at.x * s, at.y * s + over + 0.012 * s, at.z * s)
+            group.add(nut)
         }
 
         val stand = Three.addon.createMesh(
-            cylinder(radiusTop = 0.01 * s, radiusBottom = 0.01 * s, height = at.y * s, segments = 6),
+            cylinder(radiusTop = 0.01 * s, radiusBottom = 0.013 * s, height = at.y * s, segments = 8),
             KitMaterials.steel,
         )
         stand.position.set(at.x * s, at.y * s / 2, at.z * s)
         group.add(piece)
         group.add(stand)
+
+        // its three feet, from a hub some way up the stand out to the floor
+        val hub = vec(at.x * s, STAND_HUB * s, at.z * s)
+
+        for (i in 0 until 3) {
+            val turn = 2 * PI * i / 3 + at.x * 7
+            val foot = vec(at.x * s + STAND_REACH * s * sin(turn), 0.0, at.z * s + STAND_REACH * s * cos(turn))
+            val along = foot.clone().sub(hub)
+            val leg = Three.addon.createMesh(
+                cylinder(radiusTop = 0.007 * s, radiusBottom = 0.007 * s, height = along.length(), segments = 6),
+                KitMaterials.steel,
+            )
+
+            leg.position.copy(hub).addScaledVector(along, 0.5)
+            leg.quaternion.setFromUnitVectors(vec(0.0, 1.0, 0.0), along.normalize())
+            group.add(leg)
+        }
 
         // a cymbal is hit near its edge, the side toward the player
         val edge = vec(at.x * s, at.y * s, at.z * s)
@@ -479,8 +538,37 @@ class Kit(rig: Rig, name: String) {
                 radiusTop = radiusTop, radiusBottom = radiusBottom, height = height, radialSegments = segments,
             )
 
-        /** A cymbal's cone: open, so it is a thin shell of brass. */
-        private fun cone(radius: Double, height: Double): BufferGeometry =
-            Three.addon.createConeGeometry(radius = radius, height = height, radialSegments = 32, heightSegments = 1, openEnded = true)
+        /** How high up a stand its three feet begin, and how far out they reach on the floor, as shares of the figure's scale. */
+        private const val STAND_HUB = 0.30
+        private const val STAND_REACH = 0.20
+
+        /**
+         * A cymbal turned from its profile, a thin shell of brass with its edge at 0 and its middle up: [radius] to its
+         * edge, the [bow] it rises from the edge to the bell's foot, the [bell]'s radius and how high it stands over
+         * the bow ([bellHigh]), with the hole in its middle.
+         */
+        private fun turned(radius: Double, bow: Double, bell: Double, bellHigh: Double): BufferGeometry {
+            val profile = mutableListOf<Pair<Double, Double>>()
+
+            // the bell: a dome from its hole down to its foot
+            for (i in 0..5) {
+                val u = i / 5.0
+                val out = 0.12 * bell + (bell - 0.12 * bell) * u
+
+                profile.add(out to bow + bellHigh * cos(u * PI / 2).pow(0.7))
+            }
+
+            // the bow: from the bell's foot falling to the edge, steeper toward it
+            for (i in 1..6) {
+                val u = i / 6.0
+
+                profile.add(bell + (radius - bell) * u to bow * (1 - u.pow(1.5)))
+            }
+
+            return Three.addon.createLatheGeometry(
+                points = profile.map { (x, y) -> Three.addon.createVector2(x = x, y = y) }.toTypedArray(),
+                segments = 32,
+            )
+        }
     }
 }
