@@ -82,26 +82,30 @@ val STADIUM: Placement = Placement(pos = Triple(5.0, 11.0, 46.0), at = Triple(0.
  */
 val REVERSE: Placement = Placement(pos = Triple(1.1, 2.4, -4.6), at = Triple(-0.8, 0.6, 12.0), fov = 40.0)
 
-/** The stage from elsewhere. */
+/**
+ * The stage from elsewhere. The looks from a side stand far enough back and near enough to the middle that nobody
+ * hides another: from further out, the player at that end stood before the two behind them (the maintainer,
+ * 2026-11-22: "we need to watch out that all band members are fully visible"). Each has a twin from the floor.
+ */
 val ANGLES: List<Placement> = listOf(
-    Placement(pos = Triple(-7.2, 1.1, 5.6), at = Triple(0.0, 1.0, 0.6), fov = 40.0),        // from the left, low
+    Placement(pos = Triple(-3.8, 1.4, 9.0), at = Triple(0.3, 1.0, 0.4), fov = 40.0),        // from the left
     Placement(pos = Triple(0.0, 5.6, 7.4), at = Triple(0.0, 0.6, 0.6), fov = 38.0),         // from above
-    Placement(pos = Triple(7.0, 1.4, 5.2), at = Triple(0.0, 1.0, 0.6), fov = 40.0),         // from the right
+    Placement(pos = Triple(4.2, 1.5, 9.0), at = Triple(-0.3, 1.0, 0.4), fov = 40.0),        // from the right
     Placement(pos = Triple(0.0, 0.45, 6.6), at = Triple(0.0, 1.5, 0.0), fov = 44.0),        // from the floor
     STADIUM,                                                                                // from far back in the audience
     // more from the floor (the maintainer, 2026-11-21: "we could have more and different floor-shots"), a hand's
     // breadth over the mirror floor, so half the picture is the band's reflection; all of them stand outside where the
     // trumpet player strolls (her big loop comes to 4.75 m before the stage's middle and 3.6 m to either side). After
     // the ones above, which the keys and the looks' pinned choices know by their place in the list.
-    Placement(pos = Triple(-5.2, 0.30, 6.2), at = Triple(0.4, 1.3, 0.8), fov = 42.0),       // from the floor, front left
-    Placement(pos = Triple(5.0, 0.30, 6.0), at = Triple(-0.6, 1.3, 0.8), fov = 42.0),       // from the floor, front right
+    Placement(pos = Triple(-3.8, 0.30, 9.0), at = Triple(0.3, 1.3, 0.4), fov = 42.0),       // from the floor, from the left
+    Placement(pos = Triple(4.2, 0.30, 9.0), at = Triple(-0.3, 1.3, 0.4), fov = 42.0),       // from the floor, from the right
     Placement(pos = Triple(0.6, 0.25, 10.5), at = Triple(0.0, 1.1, 0.0), fov = 34.0),       // from the floor, far and wide
     Placement(pos = Triple(-1.4, 0.20, 6.0), at = Triple(0.3, 1.7, 0.0), fov = 50.0),       // from the floor, looking up steeply
     // from further away, so the surroundings left and right of the stage are in the picture (the maintainer,
     // 2026-11-22: "a wide total ... one angle from left ... and one from the right mirrored")
     Placement(pos = Triple(0.0, 2.6, 19.0), at = Triple(0.0, 2.2, 0.0), fov = 35.0),        // the wide total
-    Placement(pos = Triple(-9.0, 2.2, 17.0), at = Triple(3.0, 3.0, -8.0), fov = 35.0),      // wide, from the left
-    Placement(pos = Triple(9.0, 2.2, 17.0), at = Triple(-3.0, 3.0, -8.0), fov = 35.0),      // wide, from the right
+    Placement(pos = Triple(-5.5, 2.2, 18.0), at = Triple(3.0, 3.0, -8.0), fov = 35.0),      // wide, from the left
+    Placement(pos = Triple(5.5, 2.2, 18.0), at = Triple(-3.0, 3.0, -8.0), fov = 35.0),      // wide, from the right
 )
 
 /** The players in the order the camera tries them, and the keys 1 to 6 choose them. */
