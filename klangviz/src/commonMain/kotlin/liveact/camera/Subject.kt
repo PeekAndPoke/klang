@@ -97,6 +97,11 @@ val ANGLES: List<Placement> = listOf(
     Placement(pos = Triple(5.0, 0.30, 6.0), at = Triple(-0.6, 1.3, 0.8), fov = 42.0),       // from the floor, front right
     Placement(pos = Triple(0.6, 0.25, 10.5), at = Triple(0.0, 1.1, 0.0), fov = 34.0),       // from the floor, far and wide
     Placement(pos = Triple(-1.4, 0.20, 6.0), at = Triple(0.3, 1.7, 0.0), fov = 50.0),       // from the floor, looking up steeply
+    // from further away, so the surroundings left and right of the stage are in the picture (the maintainer,
+    // 2026-11-22: "a wide total ... one angle from left ... and one from the right mirrored")
+    Placement(pos = Triple(0.0, 2.6, 19.0), at = Triple(0.0, 2.2, 0.0), fov = 35.0),        // the wide total
+    Placement(pos = Triple(-9.0, 2.2, 17.0), at = Triple(3.0, 3.0, -8.0), fov = 35.0),      // wide, from the left
+    Placement(pos = Triple(9.0, 2.2, 17.0), at = Triple(-3.0, 3.0, -8.0), fov = 35.0),      // wide, from the right
 )
 
 /** The players in the order the camera tries them, and the keys 1 to 6 choose them. */

@@ -286,14 +286,14 @@ class LookPlanSpec : StringSpec({
         chosen(seed = 0) shouldBe listOf(
             "Looks: Klaue/0 Sirene/2 Beben/3 Skalpell/0 Beben/1",
             "Flight: Rune/0 Wucht/0 Skalpell/1 Skalpell/0 Klaue/3",
-            "Reverse: stage/5 stage/5 Skalpell/0 stage/0 Skalpell/1",
+            "Reverse: stage/7 stage/7 Skalpell/0 stage/0 Skalpell/1",
             "Flight: Beben/0 stage/2 Beben/3 Rune/2 Klaue/0",
         )
         chosen(seed = 7) shouldBe listOf(
-            "Circle: Sirene/2 Rune/0 stage/1 Skalpell/3 Klaue/0",
-            "Looks: Klaue/2 stage/6 stage/8 Skalpell/3 Beben/3",
-            "Reverse: Skalpell/2 stage/4 Skalpell/1 Skalpell/2 Beben/2",
-            "Looks: stage/8 Beben/2 Klaue/2 Beben/0 Klaue/2",
+            "Circle: Sirene/2 Rune/0 stage/2 Skalpell/3 Klaue/0",
+            "Looks: Klaue/2 stage/8 stage/10 Skalpell/3 Beben/3",
+            "Reverse: Skalpell/2 stage/6 Skalpell/1 Skalpell/2 Beben/2",
+            "Looks: stage/11 Beben/2 Klaue/2 Beben/0 Klaue/2",
         )
 
         // where both who play seldom play as a round begins, its first look is one of the two, by the roll, in the
