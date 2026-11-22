@@ -8,22 +8,34 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.marimba
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringMaterials
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.vec
+import io.peekandpoke.klang.workshop.threejs.ExtrudeGeometryOptions
+import io.peekandpoke.klang.workshop.threejs.colorSpace
 import io.peekandpoke.klang.workshop.threejs.createColor
+import io.peekandpoke.klang.workshop.threejs.createExtrudeGeometry
 import io.peekandpoke.klang.workshop.threejs.createInstancedMesh
 import io.peekandpoke.klang.workshop.threejs.emissive
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
+import io.peekandpoke.klang.workshop.threejs.createShape
 import io.peekandpoke.klang.workshop.threejs.isMesh
+import io.peekandpoke.klang.workshop.threejs.map
+import io.peekandpoke.klang.workshop.threejs.quaternion
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
+import io.peekandpoke.kraft.addons.threejs.js.Texture
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.utils.jsObject
+import kotlinx.browser.document
+import org.w3c.dom.CanvasRenderingContext2D
+import org.w3c.dom.HTMLCanvasElement
+import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
@@ -31,6 +43,11 @@ import kotlin.math.sin
 
 // The marimba itself: its bars from the lowest note played to the highest, the tubes below them, the frame, and
 // the four mallets. It floats above the stage where its player stands. All places are in the figure's own measures.
+//
+// Its dress (KLANG-00478; the maintainer, 2026-11-22: "currently it looks too plain, too much like pure geometric
+// figures and has no ornaments"): bars of rosewood with a line of gold let into each, tubes of brass, and on the
+// frame the diamonds of its player's suit in the instruments' old gold: a band of them along the two long sides and
+// one large one on each end, which runs down to a point like a keel.
 
 /**
  * The marimba's materials, made together and in this order the first time a marimba is built (three.js numbers its
@@ -42,8 +59,9 @@ internal object MarimbaMaterials {
         roughness = 0.5
     })
 
-    val steel: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
-        color = 0x15151a
+    /** The tubes: a dark brass. */
+    val brass: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
+        color = 0x4a3418
         roughness = 0.3
         metalness = 0.9
     })
@@ -52,6 +70,75 @@ internal object MarimbaMaterials {
         color = 0x30262a
         roughness = 0.9
     })
+
+    /** A bar's picture, one for all bars of all marimbas: rosewood with a line of gold let into it (see [rosewood]). */
+    val bar: Texture = rosewood()
+}
+
+/** The gold let into a bar: the instruments' old gold (`ORNAMENT_GOLD_RGB`) as a picture's colour. */
+private const val INLAY_GOLD = "#bba062"
+
+/**
+ * A bar's picture: rosewood, its grain running along the bar, and a fine line of gold let into its middle with a
+ * small diamond at either end. The bar is its upright; the grain is the same on every bar (drawn from fixed numbers).
+ */
+private fun rosewood(): Texture {
+    val wide = 64
+    val long = 256
+    val canvas = document.createElement("canvas") as HTMLCanvasElement
+
+    canvas.width = wide
+    canvas.height = long
+
+    val g = canvas.getContext("2d") as CanvasRenderingContext2D
+
+    g.fillStyle = "#3a1e12"
+    g.fillRect(0.0, 0.0, wide.toDouble(), long.toDouble())
+
+    // the grain: streaks along the bar, darker and lighter, from a fixed row of numbers
+    var seed = 7.0
+
+    fun next(): Double {
+        seed = (seed * 16807.0) % 2147483647.0
+
+        return seed / 2147483647.0
+    }
+
+    repeat(46) {
+        val x = next() * wide
+        val from = next() * long * 0.6
+        val length = long * (0.3 + 0.7 * next())
+
+        g.strokeStyle = if (next() < 0.6) "rgba(20,8,4,0.55)" else "rgba(98,52,28,0.45)"
+        g.lineWidth = 0.6 + 1.6 * next()
+        g.beginPath()
+        g.moveTo(x, from)
+        g.lineTo(x + (next() - 0.5) * 3.0, from + length)
+        g.stroke()
+    }
+
+    // the gold: a line down the middle, a diamond at either end
+    val middle = wide / 2.0
+
+    g.fillStyle = INLAY_GOLD
+    g.fillRect(middle - 1.5, long * 0.12, 3.0, long * 0.76)
+
+    for (y in listOf(long * 0.12, long * 0.88)) {
+        g.beginPath()
+        g.moveTo(middle, y - 9.0)
+        g.lineTo(middle + 7.0, y)
+        g.lineTo(middle, y + 9.0)
+        g.lineTo(middle - 7.0, y)
+        g.closePath()
+        g.fill()
+    }
+
+    val texture = Three.addon.createCanvasTexture(canvas)
+
+    texture.colorSpace = "srgb"
+    texture.anisotropy = 8
+
+    return texture
 }
 
 /** Which of the twelve notes of an octave are naturals (the bars of the near row), from C. */
@@ -163,8 +250,8 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
             val z = if (natural) near + length / 2 else near + 0.25 * s + length / 2
             val y = height + (if (natural) 0.0 else 0.025 * s)
             val material = Three.addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
-                color = 0x2a1a10
-                roughness = 0.45
+                map = materials.bar
+                roughness = 0.62
                 emissive = if (natural) nearGlow else farGlow
                 emissiveIntensity = 0.0
             })
@@ -198,7 +285,7 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
                 height = 1.0,
                 radialSegments = 10,
             ),
-            material = materials.steel,
+            material = materials.brass,
             count = tubes.size,
         )
         val upright = quat()
@@ -222,14 +309,42 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
             group.add(rail)
         }
 
-        // no legs: the marimba floats (the maintainer, 2026-11-15: "make the marimba fly"); short ends close the frame
-        for (x in listOf(-span / 2 - width, span / 2 + width)) {
+        // no legs: the marimba floats (the maintainer, 2026-11-15: "make the marimba fly"); an end closes the frame
+        // on either side, running down to a point below its middle like a keel
+        val endThick = 0.03 * s
+        val endFrom = near - 0.045 * s
+        val endTo = far + 0.045 * s
+        val endMiddle = (endFrom + endTo) / 2
+        val endTop = height - 0.008 * s
+        val endShoulder = height - 0.075 * s
+        val endKeel = height - 0.16 * s
+        val ends = listOf(-span / 2 - width, span / 2 + width)
+
+        for (x in ends) {
+            // drawn along z and up, then turned so that its depth lies along x
+            val outline = Three.addon.createShape()
+
+            outline.moveTo(endFrom, endTop)
+
+            for ((z, y) in listOf(endTo to endTop, endTo to endShoulder, endMiddle to endKeel, endFrom to endShoulder)) {
+                outline.asDynamic().lineTo(z, y)
+            }
+
+            outline.closePath()
+
             val end = Three.addon.createMesh(
-                Three.addon.createBoxGeometry(width = 0.03 * s, height = 0.05 * s, depth = far - near + 0.05 * s),
+                Three.addon.createExtrudeGeometry(
+                    shape = outline,
+                    options = jsObject<ExtrudeGeometryOptions> {
+                        depth = endThick
+                        bevelEnabled = false
+                    },
+                ),
                 materials.wood,
             )
 
-            end.position.set(x, height - 0.035 * s, (near + far) / 2)
+            end.rotation.y = -PI / 2
+            end.position.set(x + endThick / 2, 0.0, 0.0)
             group.add(end)
         }
 
@@ -238,6 +353,67 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
                 o.castShadow = true
             }
         }
+
+        // the gold (it throws no shadow of its own: it lies flat on the frame). On each end one large diamond, a
+        // smaller dark one within it, so that it is a diamond's outline
+        val proud = 0.002 * s
+        val aboutX = quat().setFromAxisAngle(vec(1.0, 0.0, 0.0), PI / 4)
+        val aboutZ = quat().setFromAxisAngle(vec(0.0, 0.0, 1.0), PI / 4)
+        val emblemAt = (endTop + endKeel) / 2 + 0.012 * s
+
+        for (x in ends) {
+            val out = if (x < 0) -1.0 else 1.0
+
+            for ((size, material, lift) in listOf(
+                Triple(0.062 * s, StringMaterials.gold, proud),
+                Triple(0.044 * s, materials.wood, proud * 2),
+            )) {
+                val diamond = Three.addon.createMesh(
+                    Three.addon.createBoxGeometry(width = proud * 2, height = size, depth = size),
+                    material,
+                )
+
+                diamond.position.set(x + out * (endThick / 2 + lift - proud), emblemAt, endMiddle)
+                diamond.quaternion.copy(aboutX)
+                group.add(diamond)
+            }
+        }
+
+        // along the two long sides a band of small diamonds, tip to tip, between two fine lines
+        val railHigh = 0.03 * s
+        val railY = height - 0.03 * s
+        val across = 0.017 * s
+        val long = span + width * 2
+        val count = (long / across).toInt()
+        val sides = listOf(near - 0.02 * s to -1.0, far to 1.0)
+        val band = Three.addon.createInstancedMesh(
+            geometry = Three.addon.createBoxGeometry(width = across / SQRT_2, height = across / SQRT_2, depth = proud * 2),
+            material = StringMaterials.gold,
+            count = count * sides.size,
+        )
+        val whole = vec(1.0, 1.0, 1.0)
+
+        sides.forEachIndexed { row, (z, out) ->
+            val face = z + out * (0.015 * s + proud)
+
+            for (i in 0 until count) {
+                val x = (i - (count - 1) / 2.0) * across
+
+                band.setMatrixAt(row * count + i, mat4().compose(position = vec(x, railY, face), quaternion = aboutZ, scale = whole))
+            }
+
+            for (y in listOf(railY - railHigh / 2 + proud, railY + railHigh / 2 - proud)) {
+                val line = Three.addon.createMesh(
+                    Three.addon.createBoxGeometry(width = long, height = proud * 1.5, depth = proud * 2),
+                    StringMaterials.gold,
+                )
+
+                line.position.set(0.0, y, face)
+                group.add(line)
+            }
+        }
+
+        group.add(band)
 
         fun mallet(): Group {
             val mallet = Three.addon.createGroup()
@@ -324,6 +500,9 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
     companion object {
         /** The highest bar of a marimba whose song still grows: the c three octaves above the middle one. */
         private const val GROWING_TOP = 96
+
+        /** The square root of two: a square's diagonal over its side. */
+        private const val SQRT_2 = 1.4142135623730951
 
         /** Whether the midi note [m] is a natural; none below midi 0, as in the prototype. */
         private fun isNatural(m: Int): Boolean = NATURAL.getOrElse(m % 12) { false }

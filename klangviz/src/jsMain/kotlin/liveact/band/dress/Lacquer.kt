@@ -357,7 +357,7 @@ class Lacquer private constructor(
                 Polish(material = KitMaterials.steel),
                 Polish(material = StringMaterials.metal),
                 Polish(material = StringMaterials.gold),
-                Polish(material = MarimbaMaterials.steel),
+                Polish(material = MarimbaMaterials.brass),
             ) + brass.map { Polish(material = it, color = BRASS, roughness = BRASS_ROUGH, metalness = 1.0) }
 
             return Lacquer(bodies = bodies, polished = polished, room = Room(renderer))
