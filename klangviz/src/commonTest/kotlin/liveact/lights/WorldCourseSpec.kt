@@ -87,6 +87,14 @@ class WorldCourseSpec : StringSpec({
         }
     }
 
+    "a show first seen in the middle of its song is at that moment's time of day at once" {
+        val course = WorldCourse(opening = WorldLook.Ember)
+        val half = WorldLight.DRIFT_PERIOD / 2
+
+        course.follow(t = half, look = WorldLook.Drift, dt = 0.0) shouldBe WorldLook.Drift.target(t = half)
+        (WorldLook.Drift.target(t = half) == WorldLook.Drift.target(t = 0.0)) shouldBe false
+    }
+
     "a world chosen by hand during the opening wins at once, at the usual pace" {
         val course = WorldCourse(opening = WorldLook.Ember)
 

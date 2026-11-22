@@ -161,6 +161,9 @@ class Choreography(
     /** When the camera last took off before her (see [retreat]); long ago where it never has. */
     private var retreated: Double = Double.NEGATIVE_INFINITY
 
+    /** Whether it is back from that flight and waits on the total for the round to come there too. */
+    private var landed: Boolean = false
+
     /** The looks that have begun (see [chooseLook]), carried on from one question to the next. */
     private var plan: LookPlan = LookPlan()
 
@@ -200,6 +203,11 @@ class Choreography(
         val pos = vec(8.5 * sin(angle), HOME.pos.y + 0.45 * (1 - cos(angle)), -0.3 + far * cos(angle))
             .add(home.pos)
             .sub(HOME.pos)
+
+        // it goes round the band, not round the total: where the total stands further back (the ghosts), the flight
+        // leaves from there and comes back to there, and is on its own circle behind the band
+        pos.z -= back * (1 - cos(angle)) / 2
+
         // the look rises most of the way to the moon, so the band's heads stay in the picture below it
         val moon = MoonStop.look(u)
         val sky = pos.clone().addScaledVector(vec(Sky.MOON.x, Sky.MOON.y, Sky.MOON.z), MOON_REACH)
@@ -335,7 +343,7 @@ class Choreography(
      * The camera at [t] with its answer to the one who strolls: where she comes walking straight at the camera while
      * it is on the total ([home], and [planned] is it), it takes off backward over the audience before her, stays at
      * the mixing desk a while and flies back in, as a round with a flight does (see [Flight]); whatever the round
-     * had planned meanwhile is left out. Not more often than every [RETREAT_REST] seconds, and not where every round
+     * had planned meanwhile is left out, and back on the total it waits there until the round is on it too. Not more often than every [RETREAT_REST] seconds, and not where every round
      * is made one kind (to see that kind alone).
      */
     private fun retreat(t: Double, home: Shot, planned: Shot): Shot {
@@ -346,16 +354,28 @@ class Choreography(
         // the time went back: nothing of it has happened yet
         if (t < retreated) {
             retreated = Double.NEGATIVE_INFINITY
+            landed = false
         }
 
         val bars = (t - retreated) / cycle
         val length = Flight.END - Flight.OUT
 
         if (bars >= length) {
+            // back from a flight, it stays on the total until the round is there too: it never cuts into the middle
+            // of what the round had planned meanwhile (the flight round the band, a flight of the round's own)
+            if (landed && planned !== home) {
+                label = "total"
+
+                return home
+            }
+
+            landed = false
+
             val begins = rounds.force == null && t >= start && planned === home && t - retreated >= RETREAT_REST && approach?.arrived == true
 
             if (begins) {
                 retreated = t
+                landed = true
             }
 
             return planned

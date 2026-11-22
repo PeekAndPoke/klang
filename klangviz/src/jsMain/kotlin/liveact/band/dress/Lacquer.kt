@@ -170,6 +170,9 @@ class Lacquer private constructor(
 
         private var target: WebGLRenderTarget
 
+        /** The room drawn before this one, kept for one more drawing (see [sun]). */
+        private var stale: WebGLRenderTarget? = null
+
         init {
             val dark = Three.addon.createColor(0)
 
@@ -225,16 +228,20 @@ class Lacquer private constructor(
             drawnAt = nowMs
             sunStrip.setRGB(rgb.first, rgb.second, rgb.third)
 
-            val old = target
-
+            // the room before this one is kept until the next is drawn: a material that takes the new one a frame
+            // late (an instrument's own body, which follows the shared lacquer as the band is posed, before this)
+            // would mirror a freed picture for that frame, which is no picture at all
+            stale?.dispose()
+            stale = target
             target = draw()
             texture = target.texture
-            old.dispose()
 
             return true
         }
 
         fun dispose() {
+            stale?.dispose()
+            stale = null
             target.dispose()
             generator.dispose()
             scene.disposeTree()

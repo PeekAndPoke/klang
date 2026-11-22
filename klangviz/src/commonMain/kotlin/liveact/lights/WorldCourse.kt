@@ -99,7 +99,9 @@ class WorldCourse(private val opening: WorldLook, private val period: Double = W
         val start = if (part == Part.Before) {
             opening.target(t = t, period = period, ghost = ghost)
         } else {
-            look.target(t = 0.0, period = period, ghost = ghost)
+            // where the look is at this moment (a show first seen in the middle of its song is at that time of
+            // day at once); NaN-guard: before the song, or at no number, the song's start
+            look.target(t = if (t > 0.0) t else 0.0, period = period, ghost = ghost)
         }
 
         return WorldFade(start = start).also { fade = it }

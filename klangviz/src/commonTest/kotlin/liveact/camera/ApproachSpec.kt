@@ -50,6 +50,19 @@ class ApproachSpec : StringSpec({
         walk(x0 = 0.0, z0 = 0.0, vx = 0.0, vz = 0.1, seconds = 20.0).come shouldBe 0.0
     }
 
+    "a camera that comes toward someone standing still is no walk of theirs" {
+        var approach: Approach? = null
+
+        // the total moving in again after the ghosts: from 16 m to 10 m at 0.7 m a second
+        for (i in 0..428) {
+            val t = i / 50.0
+
+            approach = Approaching.next(before = approach, t = t, x = 0.0, z = 0.0, camX = 0.0, camZ = 16.0 - 0.7 * t)
+        }
+
+        checkNotNull(approach).come shouldBe 0.0
+    }
+
     "standing still begins it anew" {
         val came = walk(x0 = 0.0, z0 = 0.0, vx = 0.0, vz = 0.8, seconds = 2.0)
         val stood = walk(x0 = 0.0, z0 = 1.6, vx = 0.0, vz = 0.0, seconds = 0.2, before = came, from = 2.02)

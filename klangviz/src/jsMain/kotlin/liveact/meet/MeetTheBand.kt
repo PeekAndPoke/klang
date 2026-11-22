@@ -75,7 +75,7 @@ fun Tag.MeetTheBand(
  *
  * Nothing is shown until the band stands. Everything it makes is freed when it goes: the band's lacquer and Sirene's
  * eyes in her shadow, the mirror's pictures, then the whole scene (shapes, materials, pictures, the lamp's shadow
- * map); the renderer, its frames and its context are Kraft's to give up ([ThreeJs]).
+ * map), and the context; the renderer and its frames are Kraft's to give up ([ThreeJs]).
  */
 class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
 
@@ -130,6 +130,11 @@ class MeetTheBand(ctx: Ctx<Props>) : Component<MeetTheBand.Props>(ctx) {
                 stage = null
                 scene?.disposeTree()
                 scene = null
+                // and the context itself, with its drawing buffer: Kraft frees the renderer's programs but keeps the
+                // context until the canvas is collected, and a browser has only a handful of them (the page is left
+                // and entered again at will)
+                renderer?.asDynamic()?.forceContextLoss()
+                renderer = null
             }
         }
     }

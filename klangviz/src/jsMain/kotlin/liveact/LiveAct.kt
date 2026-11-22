@@ -396,9 +396,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 lacquer = null
                 stage?.dispose()
                 stage = null
-                // what the scene holds on the graphics card (the renderer and its context are Kraft's to give up)
+                // what the scene holds on the graphics card
                 scene?.disposeTree()
                 scene = null
+                // and the context itself, with its drawing buffer: Kraft frees the renderer's programs but keeps the
+                // context until the canvas is collected, and a browser has only a handful of them (a show left and
+                // begun again, over and over, would lose its oldest)
+                renderer?.asDynamic()?.forceContextLoss()
+                renderer = null
             }
         }
     }
@@ -573,7 +578,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 front = now.stage.front,
                 lamp = now.stage.frontLamp,
                 planeZ = now.stage.shadowsAt,
-                ghosts = WorldLight.ghostShare(now.stage.world),
+                ghosts = now.stage.ghosts,
             )
         }
 
