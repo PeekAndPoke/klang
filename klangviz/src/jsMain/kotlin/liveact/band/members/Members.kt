@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.band.members
 
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.skills.GhostEyes
 
 /** The band's six members: a sheet each, by who they are. */
 object Members {
@@ -15,9 +16,9 @@ object Members {
     /** The sheet of [player]. */
     fun of(player: Player): Member = ALL.getValue(player)
 
-    /**
-     * Who has their eyes in their shadow (see [Dress.shadowEyes]): the first in the players' order whose dress has
-     * them; null where nobody's does.
-     */
-    val shadowEyed: Player? get() = ALL.values.firstOrNull { it.dress.shadowEyes }?.player
+    /** Who has their eyes in their shadow (the skill [GhostEyes] on their sheet), in the players' order. */
+    val ghostEyed: List<Player> get() = ALL.values.filter { GhostEyes in it.skills }.map { it.player }
+
+    /** The first of [ghostEyed]; null where nobody has them (the page "Meet the band" shows one pair). */
+    val shadowEyed: Player? get() = ghostEyed.firstOrNull()
 }

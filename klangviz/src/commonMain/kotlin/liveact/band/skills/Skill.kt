@@ -61,6 +61,15 @@ sealed interface TimedSkill : ChanceSkill
 data object EyeContact : Skill
 
 /**
+ * Ghost eyes: under the front lamp the member's eyes leave the face and glow in their shadow on the surface behind
+ * the band, and in a ghost they are dark in the pale figure (where the look asks for it, `?eyes=shadow`; see
+ * `ShadowEyes`). A skill like the others, so anyone can have it, and a song can leave it out (`Score.resting`; the
+ * maintainer, 2026-11-23: "Sirene's Ghost-Eyes needs to be a skill as well, which could be equipped by everyone. I
+ * would not equip it in Kokon"). It was a mark on Sirene's dress, for one member at most.
+ */
+data object GhostEyes : Skill
+
+/**
  * A quick look at the camera, there and back, at the moments its [timing] gives. Only where the camera is in sight.
  */
 data class CameraGlance(override val timing: ChanceInSlots) : TimedSkill {

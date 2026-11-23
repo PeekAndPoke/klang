@@ -20,6 +20,7 @@ import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.lights.WorldLight
 import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
+import io.peekandpoke.klang.viz.liveact.band.skills.GhostEyes
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
@@ -271,10 +272,11 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         get() = look.shown
 
     /**
-     * The eyes in the shadow of the one whose dress has them there (Sirene's, see [Members.shadowEyed]), made the
-     * first time they are chosen (`?eyes=shadow`, the key i) once the band stands, and kept resting while they are not.
+     * The eyes in the shadows of those who have them there (the skill `GhostEyes` on their sheet: [Members.ghostEyed];
+     * none in a song whose score leaves the skill out), made the first time they are chosen (`?eyes=shadow`, the key
+     * i) once the band stands, and kept resting while they are not.
      */
-    private var shadowEyes: ShadowEyes? = null
+    private var shadowEyes: List<ShadowEyes> = emptyList()
 
     /**
      * The band in black lacquer and gold, made the first time it is chosen (`?skin=lacquer`, the key l) once the band
@@ -389,8 +391,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     it.clock.dispose()
                 }
                 running = null
-                shadowEyes?.dispose()
-                shadowEyes = null
+                shadowEyes.forEach { it.dispose() }
+                shadowEyes = emptyList()
                 // the bodies get their suits back first: the scene frees what they wear
                 lacquer?.dispose()
                 lacquer = null
@@ -470,7 +472,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         this.stage = stage
         // while the mirror draws, Sirene's eyes in her shadow also shine in her reflection, as far as the underworld shows
-        stage.mirrorDrawing = { drawing -> shadowEyes?.inMirror(drawing = drawing, share = stage.underworld) }
+        stage.mirrorDrawing = { drawing -> shadowEyes.forEach { it.inMirror(drawing = drawing, share = stage.underworld) } }
         scene = ctx.scene
         // Nothing is shown until the band stands: Kraft draws every frame from now on, and the stage alone, fully
         // lit, seen from where the camera happens to be, is no picture of the show
@@ -575,12 +577,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         now.stage.light(t = t, house = house, waiting = now.clock.waiting())
         if (variants.eyes == EyesLook.Shadow) {
-            shadowEyes?.update(
-                front = now.stage.front,
-                lamp = now.stage.frontLamp,
-                planeZ = now.stage.shadowsAt,
-                ghosts = now.stage.ghosts,
-            )
+            for (eyes in shadowEyes) {
+                eyes.update(
+                    front = now.stage.front,
+                    lamp = now.stage.frontLamp,
+                    planeZ = now.stage.shadowsAt,
+                    ghosts = now.stage.ghosts,
+                )
+            }
         }
 
         lacquer?.takeIf { it.worn }?.light(house = house, world = now.stage.world)
@@ -752,21 +756,22 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     }
 
     /**
-     * The eyes of the one whose dress has them in the shadow ([Members.shadowEyed]: Sirene's) as [variants] say: in
-     * her shadow ([ShadowEyes]) where it is chosen and the band stands, made where there are none; resting where they
-     * are not chosen (her face's eyes are hers again from the next frame on), kept for the next time.
+     * The eyes of those who have them in their shadow ([Members.ghostEyed]: the skill `GhostEyes`, where the song's
+     * score does not leave it out) as [variants] say: in their shadows ([ShadowEyes]) where it is chosen and the band
+     * stands, made where there are none; resting where they are not chosen (their faces' eyes are theirs again from
+     * the next frame on), kept for the next time.
      */
     private fun eyesAsChosen() {
         val wanted = variants.eyes == EyesLook.Shadow
-        val rig = Members.shadowEyed?.let { running?.band?.rigs?.get(it) }
+        val rigs = running?.band?.rigs
         val into = scene
 
-        if (wanted && shadowEyes == null && rig != null && into != null) {
-            shadowEyes = ShadowEyes.of(scene = into, rig = rig)
+        if (wanted && shadowEyes.isEmpty() && rigs != null && into != null && GhostEyes !in props.score.resting) {
+            shadowEyes = Members.ghostEyed.mapNotNull { player -> rigs[player]?.let { ShadowEyes.of(scene = into, rig = it) } }
         }
 
         if (!wanted) {
-            shadowEyes?.rest()
+            shadowEyes.forEach { it.rest() }
         }
     }
 

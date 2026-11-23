@@ -13,6 +13,7 @@ import io.peekandpoke.klang.viz.liveact.band.skills.BandGlance
 import io.peekandpoke.klang.viz.liveact.band.skills.CameraStare
 import io.peekandpoke.klang.viz.liveact.band.skills.CrowdGaze
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
+import io.peekandpoke.klang.viz.liveact.band.skills.GhostEyes
 import io.peekandpoke.klang.viz.liveact.band.skills.InwardStare
 import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
@@ -25,7 +26,7 @@ import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
  */
 val SIRENE: Member = Member(
     player = Player.Sirene,
-    dress = Dress(cloth = ClothPattern.Braid, glitter = 0.21, shadowEyes = true),
+    dress = Dress(cloth = ClothPattern.Braid, glitter = 0.21),
     // the frontwoman: the balanced one. Every part takes the beat alike, on time, even, with little chance in it
     character = Character(
         seed = 67.0,
@@ -50,6 +51,7 @@ val SIRENE: Member = Member(
     // 'startled' for a moment and then comes back to normal"); the glance's hold grew by its longer fall, so it
     // stays there about as long as before. (The eye contact is no timed look: it falls as the whole band's does.)
     skills = listOf(
+        GhostEyes,
         EyeContact,
         CameraStare(
             ChanceInSlots(

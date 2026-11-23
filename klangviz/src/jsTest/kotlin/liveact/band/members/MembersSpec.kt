@@ -13,6 +13,7 @@ import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.band.skills.GhostEyes
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.skills.ChanceSkill
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
@@ -33,8 +34,9 @@ class MembersSpec : StringSpec({
         }
     }
 
-    "one member at most has their eyes in their shadow: the show makes one pair of them, for the first who has them" {
-        Members.ALL.values.count { it.dress.shadowEyes } shouldBeLessThanOrEqual 1
+    "who has ghost eyes is who has the skill on their sheet, in the players' order" {
+        Members.ghostEyed shouldBe Player.entries.filter { GhostEyes in Members.of(it).skills }
+        Members.shadowEyed shouldBe Members.ghostEyed.firstOrNull()
     }
 
     "a sheet's name is the member's own, as the band calls them" {
