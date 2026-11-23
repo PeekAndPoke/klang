@@ -401,10 +401,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 // what the scene holds on the graphics card
                 scene?.disposeTree()
                 scene = null
-                // and the context itself, with its drawing buffer: Kraft frees the renderer's programs but keeps the
-                // context until the canvas is collected, and a browser has only a handful of them (a show left and
-                // begun again, over and over, would lose its oldest)
-                renderer?.asDynamic()?.forceContextLoss()
+                // (the context itself Kraft gives up when its component stops, since Ultra 0.119.0, ULTRA-00348)
                 renderer = null
             }
         }
