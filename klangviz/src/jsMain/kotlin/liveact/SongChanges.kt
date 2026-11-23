@@ -19,7 +19,7 @@ import io.peekandpoke.klang.viz.liveact.sound.Music
  */
 class SongChanges {
     internal var clock: (() -> Double)? = null
-    internal var take: ((score: Score, music: Music, at: Double) -> Unit)? = null
+    internal var take: ((score: Score, music: Music, at: Double) -> Boolean)? = null
 
     /** The time on the show's clock, as of the last frame; null where no band stands (yet, or any more). */
     fun now(): Double? = clock?.invoke()
@@ -27,13 +27,12 @@ class SongChanges {
     /**
      * The show goes on with [score] and its [music], whose song begins [at] that moment on the show's clock: from
      * now the instruments no longer played vanish and the band goes to its new places; the new instruments appear
-     * where their players have arrived; at the moment the music starts. False where no band stands: nothing is done.
+     * where their players have arrived; at the moment the music starts. False, and nothing is done: where no band stands, while the
+     * change before is still under way, and where [at] is not after now.
      */
     fun change(score: Score, music: Music, at: Double): Boolean {
         val take = take ?: return false
 
-        take(score, music, at)
-
-        return true
+        return take(score, music, at)
     }
 }

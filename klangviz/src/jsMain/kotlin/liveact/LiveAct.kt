@@ -180,10 +180,17 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      * ([SongChanges.change]): the show and its clock take the music, the band its new seats and places, the camera
      * its new rounds; the stage and its light stay as they are.
      */
-    private fun change(next: Score, music: Music, at: Double) {
-        val now = running ?: return
+    private fun change(next: Score, music: Music, at: Double): Boolean {
+        val now = running ?: return false
         val show = props.show
         val t = lastT
+
+        // not while the change before is under way (the song it leads to has not begun, or the band is not settled
+        // in it), not to a moment that is past, and not in a frozen show.
+        // NaN-guard: a moment of no number is refused (the comparison with it is false)
+        if (show.frozen != null || t < show.songStart || !now.band.settled || !(at > t)) {
+            return false
+        }
 
         now.clock.changeTo(music = music, at = at)
         show.take(next = music, at = at)
@@ -212,6 +219,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             lacquer = null
             skinAsChosen()
         }
+
+        return true
     }
 
     /** Everything a running show holds, once its figures are loaded. */
@@ -444,6 +453,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 running?.let {
                     it.view.dispose()
                     it.clock.dispose()
+                    it.band.dispose()
                 }
                 running = null
                 shadowEyes.forEach { it.dispose() }

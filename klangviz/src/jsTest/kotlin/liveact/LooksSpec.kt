@@ -11,24 +11,26 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.camera.CLEAR
 import io.peekandpoke.klang.viz.liveact.camera.Ground
+import io.peekandpoke.klang.viz.liveact.camera.SIGHT
 import io.peekandpoke.klang.viz.liveact.camera.TOTAL_FROM
+import io.peekandpoke.klang.viz.liveact.camera.arcHasRoom
 import io.peekandpoke.klang.viz.liveact.camera.arcOf
 import io.peekandpoke.klang.viz.liveact.camera.looksOf
 import io.peekandpoke.klang.viz.liveact.camera.looksOn
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
+import io.peekandpoke.klang.viz.liveact.scores.KOKON
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/** How far the line from an arc's camera to its player stays from where every other one stands, in metres. */
-private const val SIGHT = 0.6
-
 /**
- * The band's own looks against the band's own places (Der Schmetterling's stage plot, the only one so far): a check for
- * the future, for whoever moves a player or sets a look.
+ * The band's own looks against the band's own places (Der Schmetterling's stage plot, which the looks and the arcs
+ * are set for): a check for the future, for whoever moves a player or sets a look. In another song's places an arc
+ * without room is left out by the rounds ([arcHasRoom]).
  */
 class LooksSpec : StringSpec({
 
@@ -126,6 +128,22 @@ class LooksSpec : StringSpec({
                 }
             }
         }
+    }
+
+    "an arc's room is told by the places: all have it in Der Schmetterling, and in Kokon's half circle those who have none are left out" {
+        Player.entries.filterNot { arcHasRoom(player = it, homes = homes) } shouldBe emptyList()
+
+        val kokon = KOKON.plot.places
+
+        // (only the two in the middle have room: everyone else has a neighbour within the arc)
+        Player.entries.filter { arcHasRoom(player = it, homes = kokon) }.toSet() shouldBe setOf(Player.Sirene, Player.Rune)
+        // one who stands on the line of sight, clear of the camera all along the arc, takes the room too
+        val alone = Place(x = 0.0, z = 0.0, turn = 0.0)
+
+        arcHasRoom(player = Player.Klaue, homes = mapOf(Player.Klaue to alone, Player.Beben to Place(x = 3.0, z = -3.0, turn = 0.0))) shouldBe true
+        arcHasRoom(player = Player.Klaue, homes = mapOf(Player.Klaue to alone, Player.Beben to Place(x = 0.0, z = 1.3, turn = 0.0))) shouldBe false
+        // one without a place has no arc
+        arcHasRoom(player = Player.Wucht, homes = emptyMap()) shouldBe false
     }
 
     "from an arc's end the straight way back to the total is clear of every other player, or that arc cuts back" {

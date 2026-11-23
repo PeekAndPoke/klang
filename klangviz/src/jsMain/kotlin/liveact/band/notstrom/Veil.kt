@@ -29,6 +29,9 @@ internal class Veil(prop: Object3D) {
                     val copy: dynamic = material.clone()
 
                     copy.transparent = true
+                    // (a copy does not take these along: without them a gilded body would lose its gold)
+                    copy.onBeforeCompile = material.onBeforeCompile
+                    copy.customProgramCacheKey = material.customProgramCacheKey
 
                     copy
                 }.toTypedArray()

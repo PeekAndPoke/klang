@@ -23,6 +23,7 @@ import kotlin.math.PI
 import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.tan
@@ -92,6 +93,44 @@ fun looksOn(homes: Map<Player, Place>): Map<Player, List<Placement>> = homes.map
 /** How far a camera that looks at one player stays from where every other one stands, in metres: clear of a guitar's neck and head. */
 const val CLEAR = 1.3
 
+/** How far the line from an arc's camera to its player stays from where every other one stands, in metres. */
+const val SIGHT = 0.6
+
+/**
+ * Whether the arc round [player] has room on the stage as the band is placed ([homes]): all along it the camera is
+ * [CLEAR] of where every other one stands, and its line of sight [SIGHT] of them. The arcs are set for Der
+ * Schmetterling's places; in another song's places (Kokon's close half circle) one may pass through a neighbour, and
+ * the rounds give that player no arc then (`Rounds.arcless`).
+ */
+fun arcHasRoom(player: Player, homes: Map<Player, Place>): Boolean {
+    val home = homes[player] ?: return false
+    val arc = arcOf(player, sits = home.sits)
+
+    // (a place in the player's space, on the stage)
+    fun onStage(x: Double, z: Double) =
+        Ground(x = home.x + x * cos(home.turn) + z * sin(home.turn), z = home.z - x * sin(home.turn) + z * cos(home.turn))
+
+    val target = onStage(x = arc.at.first, z = arc.at.third)
+
+    return (0..ARC_STEPS).all { step ->
+        val angle = arc.angle(way = 1, u = step / ARC_STEPS.toDouble())
+        val camera = onStage(x = arc.far * sin(angle), z = arc.far * cos(angle))
+        val dx = target.x - camera.x
+        val dz = target.z - camera.z
+
+        homes.all { (other, place) ->
+            // the nearest point to the other one on the line from the camera to what it looks at
+            val along = (((place.x - camera.x) * dx + (place.z - camera.z) * dz) / (dx * dx + dz * dz)).coerceIn(0.0, 1.0)
+
+            other == player ||
+                (hypot(camera.x - place.x, camera.z - place.z) > CLEAR && hypot(camera.x + along * dx - place.x, camera.z + along * dz - place.z) > SIGHT)
+        }
+    }
+}
+
+/** At how many steps along an arc its room is looked at ([arcHasRoom]). */
+private const val ARC_STEPS = 100
+
 /**
  * The look at the moon from behind the band: how far along the way to the moon the look's aim lies (metres: about
  * as far as the band is), how much of the way to it the look rises, and the lens there.
@@ -126,6 +165,8 @@ class Choreography(
     private val sitting: Set<Player> = emptySet(),
     /** The moment on the show's clock at which the song begins (see [Rounds]): the rounds are counted from there. */
     after: Double = 0.0,
+    /** Whose arc has no room in this song's places ([arcHasRoom]): the rounds give them none. */
+    arcless: Set<Player> = emptySet(),
 ) {
     private val cycle: Double = show.bar
 
@@ -138,6 +179,7 @@ class Choreography(
         strolls = strolls,
         force = force,
         after = after,
+        arcless = arcless,
     )
     private val round: Double = rounds.length
 
@@ -502,7 +544,7 @@ class Choreography(
         // a look that looks away from the total (over the drummer's shoulder): the dolly would swing the camera right
         // round, so it cuts. And from the frontwoman, who may stroll off and turn while the camera travels: the way
         // back hangs on her place, and would jump. And from an arc that ends behind someone (see `Orbit.cutsBack`)
-        val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == rounds.strolls
+        val strolls = roundKind != RoundKind.Arc && rounds.strolls != null && subject(n, 2).player == rounds.strolls
         val behind = roundKind == RoundKind.Arc && subject(n, 0).player?.let { arcOf(it, sits = it in sitting).cutsBack } == true
 
         if (away(shot) || strolls || behind) {

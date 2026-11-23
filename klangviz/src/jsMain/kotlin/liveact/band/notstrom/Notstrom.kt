@@ -345,6 +345,7 @@ class Notstrom private constructor(
         looks = headLooksOf(seat.player),
         gait = character(seat.player).gait,
         others = plot.places.filterKeys { it != seat.player },
+        place = plot.places.getValue(seat.player),
     )
 
     /** The string players, in the order they are moved each frame. */
@@ -392,6 +393,24 @@ class Notstrom private constructor(
     private val arriving = mutableListOf<Arriving>()
 
     /**
+     * Whether the last change of song is done with: no instrument goes or comes any more, nobody eases or turns
+     * into the next song. Until then the band takes no other change ([reseat] counts on everyone being where the
+     * song has them: one who sits really sits).
+     */
+    val settled: Boolean get() = leaving.isEmpty() && arriving.isEmpty() && eased == null && turned.isEmpty()
+
+    /**
+     * The band leaves the scene (the live act is unmounted): the instruments that go or come just now get their
+     * own materials back, so that freeing the scene frees those and not only the copies they wear ([Veil]).
+     */
+    fun dispose() {
+        leaving.forEach { it.veil?.lift() }
+        arriving.forEach { coming -> coming.veils?.forEach { it.lift() } }
+        leaving.clear()
+        arriving.clear()
+    }
+
+    /**
      * How everyone was held at the last change of song, and when it was (the show's clock): each figure eases from
      * there into what the next song has it do (one who sat gets up, one whose instrument went lets the arms come
      * down), over [EASE] seconds. Null where no change is under way.
@@ -420,6 +439,7 @@ class Notstrom private constructor(
      */
     fun reseat(cast: Cast, plot: StagePlot, idles: Double, startsAt: Double, t: Double) {
         check(cast.drums.player == this.cast.drums.player) { "A change of the drummer is not built yet" }
+        check(settled) { "The band is still in the change of song before" }
 
         val keeps = this.cast.keeps(cast)
         val beforeStrings = strings

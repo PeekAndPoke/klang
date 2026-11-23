@@ -42,14 +42,8 @@ val SHOW_SCORE: Score = PROGRAMME.first().score
  */
 fun stepSong(now: Int, by: Int, songs: Int): Int = if (songs <= 0) 0 else (now + by).mod(songs)
 
-/** The [song]'s tempo as the drawer says it: its rounds a minute, without a fraction where it has none ("35 rpm"). */
-fun tempoLine(song: Song): String {
-    val rpm = song.rpm
-    val whole = rpm.toInt()
-
-    // NaN-guard: a tempo of no number is said as it is, not as a whole one
-    return if (rpm.isFinite() && rpm == whole.toDouble()) "$whole rpm" else "$rpm rpm"
-}
+/** The [song]'s tempo as the drawer says it: its rounds a minute ("35 rpm"; the page prints a whole number without a fraction). */
+fun tempoLine(song: Song): String = "${song.rpm} rpm"
 
 /**
  * The live act's switches for a show: those of the page's address ([query], `?seed=7&still`), with the stroboscope

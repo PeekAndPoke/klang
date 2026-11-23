@@ -183,6 +183,12 @@ class ShowClock(
 
             songAt = at
             nextAt = null
+
+            // music that is not listened to (test notes) has no time of its own: the page's clock runs on
+            if (transport == null) {
+                return t
+            }
+
             freeFrom = null
             playing = true
             controls?.play()
@@ -273,6 +279,11 @@ class ShowClock(
         val transport = transport ?: return
         val controls = controls ?: return
 
+        // between two songs the next one begins at its moment: no click and no key starts it before
+        if (freeFrom != null) {
+            return
+        }
+
         if (!playing) {
             if (introAt == null) {
                 introAt = now()
@@ -291,6 +302,10 @@ class ShowClock(
         val controls = controls ?: return
 
         if (event.fromTyping()) {
+            return
+        }
+
+        if (freeFrom != null && e.code != "Space") {
             return
         }
 

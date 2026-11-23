@@ -71,6 +71,8 @@ class Rounds(
     val force: RoundKind? = null,
     /** The moment on the show's clock at which the song begins: 0 for a show's first song. */
     val after: Double = 0.0,
+    /** Whose arc has no room where the band is placed in this song: a round whose first look is theirs is no arc. */
+    val arcless: Set<Player> = emptySet(),
 ) {
     /** A round, in seconds. */
     val length: Double = ROUND * bar
@@ -139,7 +141,7 @@ fun chooseLook(
 /**
  * What kind the round [n] is: about a fifth each are a circle, an arc and a flight, about one in seven has the
  * reverse total, the rest are looks. An arc needs a player who stays at their place (the one who strolls turns
- * about: the camera would swing with her). Asks for the round's first look as [chooseLook] does, with the same
+ * about: the camera would swing with her) and whose arc has room ([Rounds.arcless]). Asks for the round's first look as [chooseLook] does, with the same
  * arguments.
  */
 fun chooseKind(
@@ -158,7 +160,7 @@ fun chooseKind(
     }
     val first = chooseLook(rounds = rounds, n = n, i = 0, now = now, playsAt = playsAt, before = before)
     val player = first.what.player
-    val arcless = kind == RoundKind.Arc && (player == null || player == rounds.strolls)
+    val arcless = kind == RoundKind.Arc && (player == null || player == rounds.strolls || player in rounds.arcless)
 
     return Chosen(what = if (arcless) RoundKind.Looks else kind, plan = first.plan)
 }

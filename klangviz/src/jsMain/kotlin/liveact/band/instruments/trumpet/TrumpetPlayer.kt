@@ -20,6 +20,8 @@ import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.figure.TALL
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.figure.WalkKind
+import io.peekandpoke.klang.viz.liveact.band.figure.blend
+import io.peekandpoke.klang.viz.liveact.band.figure.capture
 import io.peekandpoke.klang.viz.liveact.band.figure.strollHips
 import io.peekandpoke.klang.viz.liveact.band.figure.walkHips
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
@@ -95,6 +97,12 @@ class TrumpetPlayer(
     private val camera: Vector3 = HOME.pos.clone(),
     private val gait: Gait = Gait(hips = 1.0),
     others: Map<Player, Place>,
+    /**
+     * Her place in the song; unless given, where her figure stands now. At a change of song she is made while her
+     * figure is somewhere else and held some other way: what she takes from it (where she stands to play, how her
+     * head rests, how high her chin is) is taken at this place, standing at rest.
+     */
+    place: Place? = null,
 ) {
     /**
      * Where she is and how she walks: [at] her place on the stage, [turn] which way she faces, [speed] how fast she
@@ -205,15 +213,34 @@ class TrumpetPlayer(
     private var strolls: List<Stroll> = emptyList()
 
     init {
+        val held = capture(rig)
+        val stoodAt = rig.root.position.clone()
+        val stoodTurned = rig.root.rotation.y
+
+        if (place != null) {
+            rig.root.position.set(place.x, place.y, place.z)
+            rig.root.rotation.y = place.turn
+            rig.reset()
+        }
+
         rig.update()
         headRest = rig.bone("head").getWorldQuaternion(quat())
 
         home = rig.root.position.clone()
         homeTurn = rig.root.rotation.y
+        val chin = rig.bone("head").getWorldPosition(vec()).y
+
+        if (place != null) {
+            // the figure is where it was, held as it was
+            rig.root.position.copy(stoodAt)
+            rig.root.rotation.y = stoodTurned
+            blend(rig = rig, a = held, b = held, w = 0.0)
+        }
+
         route = StrollRoute(
             seed = show.seed,
             restTurn = homeTurn,
-            closest = closestToCamera(chin = rig.bone("head").getWorldPosition(vec()).y),
+            closest = closestToCamera(chin = chin),
             // the others' places in the stage plot, off hers, in her sizes: she visits them on some rounds
             others = others.mapValues { (_, place) ->
                 StrollRoute.Offset(x = (place.x - home.x) / s, z = (place.z - home.z) / s)

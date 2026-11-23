@@ -34,7 +34,7 @@ import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
  * breathing; the one at the front looks at the camera; everyone's eyes glow as in the show at rest, wavering.
  *
  * The true selves in the shadows come along where they exist ([shadowShapesOf]): Rune's snakes; and the eyes of the
- * one whose dress has them in the shadow (Sirene's, see `Members.shadowEyed`) move from her face into her shadow
+ * one who has the skill for it (`GhostEyes`: Sirene's, see `Members.shadowEyed`) move from her face into her shadow
  * while she stands at the front ([ShadowEyes]).
  *
  * The figures stand in the scene itself, not in the carousel: the shapes seen only in a shadow are placed in the

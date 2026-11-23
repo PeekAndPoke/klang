@@ -413,9 +413,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
     /**
      * The drawer's "previous song" and "next song" while the show plays: the song [by] places on in the [PROGRAMME]
-     * ([stepSong]). The show that runs ends (its stage goes, and with it its song stops), and the show of the other
-     * song gets ready and begins, with its own band on its own stage: black between them, the window and the volume
-     * as they are.
+     * ([stepSong]). The show does not end: it goes on with the other song ([goOnWith]), the stage, the window and
+     * the volume as they are. Nothing while a change is under way.
      */
     private fun changeSong(by: Int) {
         val stage = running
@@ -424,6 +423,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             return
         }
 
+        val from = playing
         val to = stepSong(now = playing, by = by, songs = PROGRAMME.size)
 
         changing = true
@@ -431,7 +431,10 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         scope.launch {
             try {
-                goOnWith(stage = stage, programmed = PROGRAMME[to])
+                // (where the stage does not take it, as the change before is still under way, the song stays)
+                if (!goOnWith(stage = stage, programmed = PROGRAMME[to])) {
+                    playing = from
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
@@ -447,12 +450,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
      * The show on [stage] goes on with [programmed], without ending (KLANG-00481): the song is compiled and read
      * while the one before still sounds; then the stage takes it ([SongChanges.change]): the sound before stops,
      * the band goes to its new places over the changeover's time, and the song begins at the moment chosen here,
-     * from which its readings are told.
+     * from which its readings are told. False where the show did not take it.
      */
-    private suspend fun goOnWith(stage: Running, programmed: Programmed) {
+    private suspend fun goOnWith(stage: Running, programmed: Programmed): Boolean {
         val player = ensurePlayer()
         val song = programmed.song
-        val now = stage.changes.now() ?: return
+        val now = stage.changes.now() ?: return false
         // the song begins once it is ready (GETS_READY at most, else the band's ways are cut short by the rest) and the
         // band has had the changeover's time
         val leaves = now + GETS_READY
@@ -475,16 +478,18 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         }
 
         if (running !== stage || !stage.changes.change(score = programmed.score, music = music, at = at)) {
-            // the show ended meanwhile: the song made for it is never heard
+            // the show ended meanwhile, or the stage does not take the change: the song made for it is never heard
             reading.close()
             playback.stop()
 
-            return
+            return false
         }
 
         // the reading of the song before ends, the next one's is followed
         beside?.cancel()
         beside = scope.launch(start = CoroutineStart.UNDISPATCHED) { reading.follow() }
+
+        return true
     }
 
     /** What is there goes, and the machine is [test]ed or the show gets ready and begins. */

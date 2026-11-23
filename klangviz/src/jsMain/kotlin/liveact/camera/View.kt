@@ -97,6 +97,7 @@ class View(
             force = forcedKind(switches[Switch.Move]),
             sitting = homes.filterValues { it.sits }.keys,
             after = after,
+            arcless = homes.keys.filterNot { arcHasRoom(player = it, homes = homes) }.toSet(),
         )
     } else {
         null

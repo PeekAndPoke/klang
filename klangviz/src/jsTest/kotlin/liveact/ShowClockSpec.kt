@@ -369,4 +369,27 @@ class ShowClockSpec : StringSpec({
         frozen.showTime() shouldBe 62.1
         frozen.dispose()
     }
+
+    "between two songs no click and no key starts the next one before its moment" {
+        val first = Asked()
+        val next = Asked()
+        val clock = ShowClock(show = Show(seed = 1, music = Counted(first)), notice = null, intro = 0.0)
+
+        try {
+            window.dispatchEvent(Event("click"))
+            clock.showTime() shouldBe 0.0
+            clock.changeTo(music = Counted(next), at = 3600.0)
+
+            press("ArrowRight")
+            press("ArrowLeft")
+            press("Space")
+            window.dispatchEvent(Event("click"))
+
+            next.calls shouldBe emptyList()
+            (clock.showTime() < 1.0) shouldBe true
+            next.calls shouldBe emptyList()
+        } finally {
+            clock.dispose()
+        }
+    }
 })

@@ -51,4 +51,24 @@ class CastSpec : StringSpec({
         CAST.strolls shouldBe Player.Beben
         CAST.players shouldBe listOf(Player.Rune, Player.Wucht, Player.Beben, Player.Sirene, Player.Skalpell)
     }
+
+    "who keeps their instrument at a change of song: the same drummer, and a strung player with the same design and outline" {
+        // the same cast keeps everyone at the drums and the strings; the marimba and the trumpet are never kept
+        CAST.keeps(CAST) shouldBe setOf(Player.Rune, Player.Sirene, Player.Skalpell)
+
+        val other = CAST.copy(
+            drums = CAST.drums.copy(player = Player.Klaue),
+            marimba = null,
+            trumpet = null,
+            strings = listOf(
+                // another design in the same hands
+                CAST.strings[0].copy(design = Bass.A),
+                // the same design in other hands
+                CAST.strings[1].copy(player = Player.Beben),
+            ),
+        )
+
+        CAST.keeps(other) shouldBe emptySet()
+        CAST.keeps(other.copy(strings = listOf(CAST.strings[1]))) shouldBe setOf(Player.Skalpell)
+    }
 })
