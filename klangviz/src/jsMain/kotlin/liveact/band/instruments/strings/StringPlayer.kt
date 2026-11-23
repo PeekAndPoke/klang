@@ -332,7 +332,9 @@ class StringPlayer(
 
         instrument.light(lit)
 
-        val playing = min(1.0, energy)
+        // how busy the player is, for the body: by the notes of the last and the next moments, never by a single
+        // stroke (see busyAt); the strings' light and the eyes go by each note as ever (energy)
+        val playing = notes.busyAt(t) { it.v }
         // what the member does with the hands, the body and the head while the part pauses (see [strummingGoal],
         // [frettingGoal]), and how far a slouch settles the body
         val idle = idles(t)
@@ -346,7 +348,9 @@ class StringPlayer(
         val live = 0.35 + 0.65 * playing
         val drive = live + (1 - live) * mover.traits.steady
         val nod = mover.nod(beat) * drive
-        val body = nod + mover.burst()
+        // (of a sudden burst of sound the body takes only a little: on a slow song the burst is the player's own
+        // stroke, and the body would jerk with the strumming hand)
+        val body = nod + BURST_SHARE * mover.burst()
         val parts = mover.parts
         val sway = sin(PI * beat / 2) * drive * parts.sway
 
@@ -753,6 +757,9 @@ class StringPlayer(
     }
 
     private companion object {
+        /** How much of a sudden burst of sound goes into the body (the trunk and the knees), 0 to 1. */
+        const val BURST_SHARE = 0.25
+
         /**
          * Sitting cross-legged on the floor (KLANG-00481; the maintainer, 2026-11-23: "ok cross-legged"), in the
          * figure's sizes: how high the pelvis is over the floor (a share of the figure's height) and how far back it
