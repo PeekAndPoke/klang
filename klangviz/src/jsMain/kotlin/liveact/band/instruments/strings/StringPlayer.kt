@@ -855,11 +855,13 @@ class StringPlayer(
 
         /**
          * An instrument held between the legs ([Lap.Between]): how far up its neck points (radians), and where its
-         * body stands in the lap: so far to the strumming side of the body's middle, its lowest point so high over
+         * body stands in the lap: so far to the strumming side of the body's middle (less than nothing: a little
+         * to the fretting side, where it leans on that leg; the maintainer, 2026-11-23: "a bit more in the center ...
+         * and rest on their left leg slightly"), its lowest point so high over
          * the floor (a share of the figure's height), so far before the body.
          */
         const val SIT_TILT_BETWEEN = 0.62
-        const val SIT_LAP_OUT = 0.04
+        const val SIT_LAP_OUT = -0.05
         const val SIT_LAP_HIGH = 0.075
         const val SIT_LAP_FORE = 0.20
 
