@@ -28,6 +28,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.viz.liveact.LiveAct
 import io.peekandpoke.klang.viz.liveact.Picture
 import io.peekandpoke.klang.viz.liveact.Score
+import io.peekandpoke.klang.viz.liveact.band.after
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
@@ -262,6 +263,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /** Which song of the [PROGRAMME] the show plays, or will play when it starts. */
     private var playing: Int by value(0)
 
+    /**
+     * The song the band comes from at a change of song (its place in the [PROGRAMME]); null for a show begun from the
+     * start screen. The next show's band walks from that song's places to its own (`StagePlot.after`).
+     */
+    private var cameFrom: Int? = null
+
     /** The show's volume, 0 to 1, as the drawer set it: kept from one song to the next. */
     private var volume: Double = 1.0
 
@@ -416,6 +423,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             return
         }
 
+        cameFrom = playing
         playing = stepSong(now = playing, by = by, songs = PROGRAMME.size)
         frameSink = null
         stopFading()
@@ -473,6 +481,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         leaveFullscreen()
         stop(problem = null)
+        cameFrom = null
         volume = 1.0
         player?.setOutputVolume(1.0)
     }
@@ -764,6 +773,9 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         val programmed = PROGRAMME[playing]
         val song = programmed.song
+        // at a change of song the band walks from where it was in the song before, and no show opens anew
+        val before = cameFrom?.let { PROGRAMME[it].score }
+        val score = if (before != null) programmed.score.copy(plot = programmed.score.plot.after(before.plot)) else programmed.score
         val pattern = compile(code = song.code)
         // made now and started after the walk-in: it answers its cycles before it sounds, so the band reads the very
         // notes that will sound (KLANG-00450). Its tempo is set first: the cycles are read at the tempo it starts at.
@@ -796,6 +808,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             strobe = strobe,
             oversample = tested?.oversample ?: 1,
             fog = tested?.fog ?: FogQuality.High,
+            opens = before == null,
         )
 
         preparing = null
@@ -805,7 +818,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                 show = Show(seed = showSeed(switches = switches, random = Random.Default), music = music, switches = switches),
                 key = "stage-${++stages}",
                 test = false,
-                score = programmed.score,
+                score = score,
             )
         )
 

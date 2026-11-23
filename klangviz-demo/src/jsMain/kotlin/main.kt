@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.after
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.scores.KOKON
 import io.peekandpoke.klang.viz.liveact.song.Recording
@@ -88,7 +89,14 @@ fun main() {
             // the demo serves its figures fresh from the build: its version is a fixed word
             // (`?score=kokon`: Kokon's band and places, to look at them; its song is not recorded here, so with
             // `?test` they play the test notes, and without it they stand)
-            val score = if (window.location.search.contains("score=kokon")) KOKON else DER_SCHMETTERLING
+            val kokon = window.location.search.contains("score=kokon")
+            val own = if (kokon) KOKON else DER_SCHMETTERLING
+            // (`?after`: as the band takes the song up coming from the other one, to look at the way between two songs)
+            val score = if (window.location.search.contains("after")) {
+                own.copy(plot = own.plot.after((if (kokon) DER_SCHMETTERLING else KOKON).plot))
+            } else {
+                own
+            }
 
             LiveAct(show = show, score = score, models = MODELS, version = "dev")
         }

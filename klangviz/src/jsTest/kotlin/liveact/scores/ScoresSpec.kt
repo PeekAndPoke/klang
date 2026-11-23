@@ -12,6 +12,9 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.band.Changeover
+import io.peekandpoke.klang.viz.liveact.band.after
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_BACK
 import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_LATE_LEAST
@@ -61,6 +64,43 @@ class ScoresSpec : StringSpec({
             withClue(name) {
                 score.eyeContact.rise shouldBeGreaterThanOrEqual CONTACT_MEET + CONTACT_LATE_LEAST
                 score.eyeContact.fall shouldBeGreaterThanOrEqual CONTACT_BACK
+            }
+        }
+    }
+
+    "from one song to the next everyone walks from where they were, in time to settle, the hands empty" {
+        for ((from, before) in SCORES) {
+            for ((to, score) in SCORES) {
+                if (from == to) {
+                    continue
+                }
+
+                val plot = score.plot.after(before.plot)
+
+                withClue("$from to $to") {
+                    plot.places shouldBe score.plot.places
+                    plot.intro shouldBe Changeover.INTRO
+                    plot.entrances.keys.toList() shouldBe score.plot.entrances.keys.toList()
+
+                    for ((player, walk) in plot.entrances) {
+                        val was = before.plot.places.getValue(player)
+                        val goes = score.plot.places.getValue(player)
+
+                        withClue(player) {
+                            listOf(walk.fromX, walk.fromZ, walk.fromY) shouldBe listOf(was.x, was.z, was.y)
+                            walk.carries shouldBe false
+                            walk.start shouldBeLessThan walk.end
+                            walk.end shouldBeLessThanOrEqual -Changeover.SETTLE
+
+                            if (was.x == goes.x && was.z == goes.z && was.y == goes.y) {
+                                // who stays has arrived before the clock starts
+                                walk.end shouldBeLessThan -Changeover.INTRO
+                            } else {
+                                walk.start shouldBeGreaterThanOrEqual -Changeover.INTRO
+                            }
+                        }
+                    }
+                }
             }
         }
     }

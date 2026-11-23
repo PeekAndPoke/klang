@@ -94,6 +94,9 @@ class Notstrom private constructor(
         /** How long the drummer takes to sit down once he is at the stool, in seconds. */
         private const val SIT = 1.6
 
+        /** How long a strung player takes to take up the instrument that appears once they are at their place. */
+        private const val TAKE = 1.0
+
         /** The head's middle and size, in the body's rest space: a little above and behind where the head's bone starts. */
         private fun hairOf(rig: Rig): HairPart {
             val neck = rig.restStart("head")
@@ -401,6 +404,22 @@ class Notstrom private constructor(
             val sits = if (plot.places.getValue(player).sits) smooth(walk.since / SIT) else 0.0
 
             stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walk, gait = character(player).gait), sits = sits)
+
+            if (!plot.entrances.getValue(player).carries) {
+                // coming from the song before, the hands are empty: a plain walk, and once there the instrument
+                // appears and the hands take it
+                val takes = smooth(walk.since / TAKE)
+
+                stringPlayer.instrument.group.visible = walk.since >= 0
+
+                if (takes < 1) {
+                    val playing = capture(rig(player))
+
+                    walkPose(rig = rig(player), walk = walk, gait = character(player).gait)
+                    blend(rig = rig(player), a = capture(rig(player)), b = playing, w = takes)
+                }
+            }
+
             stepLegs(rig(player), walk)
         }
 

@@ -72,6 +72,8 @@ fun tempoLine(song: Song): String {
  * light, turning slowly to the look's own when it begins; the maintainer, 2026-11-20: "It should also be dark in the
  * beginning"), unless the address sets
  * `?opening=` itself ([setsOpening]; `?opening=off` opens as before), and not in a frozen show (the picture test's).
+ * [opens]: false for a show that follows another one at a change of song: no opening, the stage is lit as the
+ * band walks to its new places.
  * [frozenAt]: the time the show is frozen at (the picture test's band, standing); the address's `?t=` is not taken,
  * as a frozen show would never start. Taken from the address: the live act's other switches (`seed`, `still`, the
  * camera's, `oversample`, `fog`, ...); decided here: `nostrobe`, `nohud`, `t`.
@@ -82,6 +84,7 @@ fun showSwitches(
     oversample: Int = 1,
     fog: FogQuality = FogQuality.High,
     frozenAt: Double? = null,
+    opens: Boolean = true,
 ): Switches {
     val parts = query.removePrefix("?").split("&").filter { it.isNotEmpty() }
     val hud = parts.any { it.substringBefore("=") == DEV }
@@ -95,7 +98,7 @@ fun showSwitches(
         "${Switch.Oversample.key}=$oversample".takeUnless { byHand || oversample <= 1 },
         "${Switch.Fog.key}=${fog.word}".takeUnless { setsFog(query) || fog == FogQuality.High },
         "${Switch.Look.key}=$NEW_LOOK".takeUnless { setsLook(query) },
-        "${Switch.Opening.key}=$OPENING".takeUnless { setsOpening(query) || frozenAt != null },
+        "${Switch.Opening.key}=$OPENING".takeUnless { setsOpening(query) || frozenAt != null || !opens },
         frozenAt?.let { "${Switch.Time.key}=$it" },
     )
 

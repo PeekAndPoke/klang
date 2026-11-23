@@ -52,10 +52,12 @@ fun enter(rig: Rig, entrance: Entrance, home: Place, t: Double): WalkIn {
     val way = from.distanceTo(to)
 
     rig.root.position.copy(from).lerp(to, k)
-    rig.root.position.y = home.y * smooth((u - 0.70) / 0.18)
+    // (from as high as it began: the riser, where it comes from there)
+    rig.root.position.y = entrance.fromY + (home.y - entrance.fromY) * smooth((u - 0.70) / 0.18)
 
-    // walking, the figure faces its way; arriving, it turns to how it stands
-    val heading = atan2(to.x - from.x, to.z - from.z)
+    // walking, the figure faces its way; arriving, it turns to how it stands. One who does not move at all has no
+    // way to face: they stand as they stand
+    val heading = if (way > 1e-6) atan2(to.x - from.x, to.z - from.z) else home.turn
     var d = home.turn - heading
 
     d = atan2(sin(d), cos(d))
