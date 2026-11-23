@@ -150,11 +150,21 @@ class Lacquer private constructor(
     /**
      * The room the lacquer mirrors (see [Lacquer]): a small scene made once, drawn by [renderer] and filtered by
      * three.js's PMREM generator into [texture]. Its warm strip follows the sun ([sun]); where it changes, the room is
-     * drawn anew into a new picture and the old one freed. [dispose] frees the scene, the generator and the picture.
+     * drawn anew into the same picture: one picture for the room's whole life, so whatever mirrors it never holds an
+     * old one (before, each drawing made a new picture and freed the last: about 1.5 MB made and freed twice a
+     * second while the world drifts, and a material that took the new one a frame late mirrored nothing for that
+     * frame). [dispose] frees the scene, the generator and the pictures.
      */
-    private class Room(renderer: WebGLRenderer) {
+    private class Room(private val renderer: WebGLRenderer) {
         private val scene = Three.addon.createScene()
         private val generator: dynamic = Three.addon.create<Any>("PMREMGenerator", renderer)
+
+        /**
+         * The room as seen from where the band stands, all six ways: drawn anew where the sun's strip changes, and
+         * filtered from there into [target]. Its colours may be brighter than white: half floats.
+         */
+        private val cube: dynamic = Three.addon.create<Any>("WebGLCubeRenderTarget", ROOM_PIXELS, js("({ type: 1016 })"))
+        private val eye: dynamic = Three.addon.create<Any>("CubeCamera", 0.1, 100.0, cube)
 
         /** The warm strip's own colour: the sun's. */
         private val sunStrip: Color
@@ -169,9 +179,6 @@ class Lacquer private constructor(
             private set
 
         private var target: WebGLRenderTarget
-
-        /** The room drawn before this one, kept for one more drawing (see [sun]). */
-        private var stale: WebGLRenderTarget? = null
 
         init {
             val dark = Three.addon.createColor(0)
@@ -205,14 +212,15 @@ class Lacquer private constructor(
             strip(width = 0.7, height = 6.0, at = Triple(-5.0, 2.0, 5.0), rgb = Triple(0.22, 0.24, 0.3))
             strip(width = 0.7, height = 6.0, at = Triple(5.0, 2.0, 5.0), rgb = Triple(0.22, 0.24, 0.3))
 
-            target = draw()
+            eye.position.set(0.0, EYE, 0.0)
+            target = draw(into = null)
             texture = target.texture
         }
 
         /**
          * The sun's strip in [rgb] (linear): where it differs from the room as drawn, by more than [ROOM_STEP] or for
          * longer than half a second, and the last drawing is more than [ROOM_EVERY_MS] old, the room is drawn anew;
-         * gives whether it was (the materials then take the new [texture]).
+         * gives whether it was (into the same [texture]).
          */
         fun sun(rgb: Triple<Double, Double, Double>): Boolean {
             val off = maxOf(abs(rgb.first - shown.first), abs(rgb.second - shown.second), abs(rgb.third - shown.third))
@@ -228,33 +236,26 @@ class Lacquer private constructor(
             drawnAt = nowMs
             sunStrip.setRGB(rgb.first, rgb.second, rgb.third)
 
-            // the room before this one is kept until the next is drawn: a material that takes the new one a frame
-            // late (an instrument's own body, which follows the shared lacquer as the band is posed, before this)
-            // would mirror a freed picture for that frame, which is no picture at all
-            stale?.dispose()
-            stale = target
-            target = draw()
-            texture = target.texture
+            draw(into = target)
 
             return true
         }
 
         fun dispose() {
-            stale?.dispose()
-            stale = null
+            cube.dispose()
             target.dispose()
             generator.dispose()
             scene.disposeTree()
         }
 
-        /** Draws the room and filters it into a new picture, 128 pixels a side: the room is soft strips, a finer one shows nothing more. */
-        private fun draw(): WebGLRenderTarget {
-            val options: dynamic = js("({})")
+        /**
+         * Draws the room, [ROOM_PIXELS] pixels a side (the room is soft strips, a finer one shows nothing more), and
+         * filters it [into] the picture given, or into a new one where there is none yet; gives that picture.
+         */
+        private fun draw(into: WebGLRenderTarget?): WebGLRenderTarget {
+            eye.update(renderer, scene)
 
-            options.size = 128
-            options.position = vec(0.0, EYE, 0.0)
-
-            return generator.fromScene(scene, 0.0, 0.1, 100.0, options).unsafeCast<WebGLRenderTarget>()
+            return generator.fromCubemap(cube.texture, into).unsafeCast<WebGLRenderTarget>()
         }
     }
 
@@ -441,5 +442,8 @@ class Lacquer private constructor(
 
         /** The height the room is seen from: a figure's chest. */
         private const val EYE = 1.2
+
+        /** The room's picture, in pixels a side of each of its six ways. */
+        private const val ROOM_PIXELS = 128
     }
 }
