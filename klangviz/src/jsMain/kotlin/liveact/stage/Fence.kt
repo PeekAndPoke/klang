@@ -303,8 +303,15 @@ class Fence(scene: Scene) {
         private const val HIGH = 16.0
 
         /** The posts: how many, how far apart, how thick. */
-        private const val POSTS = 18
-        internal const val POST_EVERY = 3.2
+        // (twice as wide as they were, 3.2 m: Sirene's eyes in her ghost stood right behind a post, at her place in
+        // Der Schmetterling and where she sits in Kokon. Now the two posts nearest the middle stand 3.2 m to either
+        // side of it, and her ghost's head stays between them all through a visit, as the total sees it; the
+        // maintainer, 2026-11-23: "we need to make the fence segments wider")
+        private const val POSTS = 10
+        internal const val POST_EVERY = 6.4
+
+        /** How much wider the front lamp's cone covers the surface behind when it has crept for the ghosts, in metres. */
+        internal const val GHOST_WIDER = 3.2
         internal const val POST_RADIUS = 0.045
 
         /** The surface behind's colour where a lamp is on in full ([light]): the lamp's light makes it warm or cold. */

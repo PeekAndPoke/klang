@@ -616,7 +616,7 @@ class Stage(
             dt = dt,
         )
         ghostNear = WorldLight.ghostEase(from = ghostNear, to = ghostCreep, dt = dt)
-        lights.approach(by = ghostNear, surface = shadowsAt, wider = Fence.POST_EVERY)
+        lights.approach(by = ghostNear, surface = shadowsAt, wider = Fence.GHOST_WIDER)
 
         this.front = front
         this.world = world
