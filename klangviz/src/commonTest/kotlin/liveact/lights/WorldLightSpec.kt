@@ -252,6 +252,48 @@ class WorldLightSpec : StringSpec({
         WorldLight.moodColor(WorldTime(on = Double.NaN, night = 1.0, ember = 0.0), lamp) shouldBe 0x102030
     }
 
+    "the lamp as shown follows its creep softly, and eases into the way back" {
+        // steady creep: it follows, a little behind, and arrives
+        var shown = 0.0
+
+        repeat(500) { shown = WorldLight.ghostEase(from = shown, to = 2.0, dt = 0.02) }
+        shown shouldBe (2.0 plusOrMinus 1e-3)
+
+        // the creep turns round and goes back at its pace: the shown lamp starts slowly and then follows
+        var creep = 2.0
+        val steps = mutableListOf<Double>()
+
+        repeat(100) {
+            creep = WorldLight.ghostCreep(from = creep, coming = false, dt = 0.02)
+
+            val next = WorldLight.ghostEase(from = shown, to = creep, dt = 0.02)
+
+            steps += shown - next
+            shown = next
+        }
+
+        steps.first() shouldBeLessThan steps.last() / 10
+        steps.zipWithNext().all { (a, b) -> b >= a - 1e-12 } shouldBe true
+        // no time, or no number: where it was
+        WorldLight.ghostEase(from = 1.0, to = 2.0, dt = 0.0) shouldBe 1.0
+        WorldLight.ghostEase(from = 1.0, to = Double.NaN, dt = 0.02) shouldBe 1.0
+        WorldLight.ghostEase(from = Double.NaN, to = 2.0, dt = 0.0) shouldBe 0.0
+    }
+
+    "the drift rests at dusk and dawn too, half way between the day and the night" {
+        val period = WorldLight.DRIFT_PERIOD
+        val dusk = period / 4
+
+        fun pace(t: Double): Double = kotlin.math.abs(WorldLight.drift(t = t + 0.5) - WorldLight.drift(t = t - 0.5))
+
+        WorldLight.drift(t = dusk) shouldBe (0.5 plusOrMinus 1e-12)
+        // slower at dusk than on the way to it and on the way on from it
+        pace(dusk) shouldBeLessThan pace(dusk - period / 12) / 3
+        pace(dusk) shouldBeLessThan pace(dusk + period / 12) / 3
+        pace(3 * dusk) shouldBeLessThan pace(3 * dusk - period / 12) / 3
+        WorldLight.drift(t = Double.POSITIVE_INFINITY) shouldBe 0.0
+    }
+
     "the front lamp's cone opens as it creeps, so it covers the surface as before and one piece more at the end" {
         // a lamp 8 m before the band, the surface 10 m behind it, a cone of 0.6
         fun covered(creep: Double, angle: Double): Double = (8.0 - creep + 10.0) * tan(angle)

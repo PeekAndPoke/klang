@@ -121,6 +121,12 @@ that and can be taken in any order, or side by side. Step 9 can begin thin right
 - More bands and more figures: `Player` as an enum is the last thing that names the six; it becomes data when a
   second band needs it, not before.
 - The Meet page reading the same sheets (it already reads name, instrument and wildness).
+- The lamps' colours as something a scene or a song equips (the maintainer, 2026-11-23: "the stage color
+  combination fall into the category of equipable lighting skill of the scene / song?"). They are data already: six
+  moods, each a pair of colours for the stage as made, for daylight, twilight and night (`LightPlan.MOODS`); today one
+  fixed table. In the scenery step a song chooses its set.
+- Which version of a movement a member has, and when the show turns from one to another, is equipped and orchestrated
+  on purpose, never chosen by chance (the maintainer, 2026-11-23, KLANG-00480).
 
 ## Decided (the maintainer, 2026-11-21)
 

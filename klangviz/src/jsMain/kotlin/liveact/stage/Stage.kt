@@ -200,6 +200,9 @@ class Stage(
     /** How far the front lamp has crept toward the band for the ghosts, in metres ([WorldLight.ghostCreep]). */
     private var ghostCreep = 0.0
 
+    /** The lamp's way as it is shown: the creep, followed softly ([WorldLight.ghostEase]). */
+    private var ghostNear = 0.0
+
     /**
      * How far the band's shadows show the ghosts now, 0 to 1 ([WorldLight.ghostShare]); none before the wall, which
      * shows no ghosts (so nothing that belongs to them, as the eyes in a shadow, is drawn on it).
@@ -209,7 +212,7 @@ class Stage(
 
     /** How far the total's camera goes back for the ghosts now, in metres ([WorldLight.ghostPull]). */
     val ghostPull: Double
-        get() = WorldLight.ghostPull(creep = ghostCreep, lamp = lights.frontStands, wall = shadowsAt, band = 0.0, camera = TOTAL_FROM.z)
+        get() = WorldLight.ghostPull(creep = ghostNear, lamp = lights.frontStands, wall = shadowsAt, band = 0.0, camera = TOTAL_FROM.z)
 
     private val crowd: Crowd
 
@@ -610,7 +613,8 @@ class Stage(
             coming = look == WorldLook.Ghosts && variants.stage == StageLook.Mesh,
             dt = dt,
         )
-        lights.approach(by = ghostCreep, surface = shadowsAt, wider = Fence.POST_EVERY)
+        ghostNear = WorldLight.ghostEase(from = ghostNear, to = ghostCreep, dt = dt)
+        lights.approach(by = ghostNear, surface = shadowsAt, wider = Fence.POST_EVERY)
 
         this.front = front
         this.world = world

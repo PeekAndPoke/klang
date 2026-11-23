@@ -52,6 +52,9 @@ object WorldLight {
     const val GHOST_APPROACH = 3.0
     const val GHOST_APPROACH_SECONDS = GhostVisits.HOLD
 
+    /** The lamp as shown follows its creep softly: about two thirds of what is left in this many seconds ([ghostEase]). */
+    const val GHOST_EASE_SECONDS = 1.2
+
     /** The widest the front lamp's cone opens for the ghosts, half its opening in radians ([ghostCone]). */
     const val GHOST_CONE_MOST = 1.2
     const val GHOST_RETREAT_SECONDS = GhostVisits.TURN_SECONDS
@@ -102,9 +105,11 @@ object WorldLight {
 
     /**
      * The time of day of the drift at the show's time [t] (seconds), one round in [period] seconds: 0 (day) at 0 s,
-     * 1 (night) at half the round, day again at its end. The way between follows a cosine, eased once more, so it
-     * rests a little at each end and moves fastest at dusk and dawn. A [t] of no number is the day; a [period] of no
-     * number, or not above 0, is [DRIFT_PERIOD].
+     * 1 (night) at half the round, day again at its end. The way between follows a cosine and rests three times: at
+     * the day, at the night, and half way between them at dusk and at dawn, where the lamps wear their twilight
+     * colours ([moodColor]; the maintainer, 2026-11-23: "yes give it a rest, or make the transition slower"; before,
+     * it moved fastest just there). A [t] of no number is the day; a [period] of no number, or not above 0, is
+     * [DRIFT_PERIOD].
      */
     fun drift(t: Double, period: Double = DRIFT_PERIOD): Double {
         // NaN-guard: no time is the day, no period the period as made
@@ -115,7 +120,16 @@ object WorldLight {
         val round = if (period.isFinite() && period > 0.0) period else DRIFT_PERIOD
         val wave = 0.5 - 0.5 * cos(2 * PI * t / round)
 
-        return wave * wave * (3 - 2 * wave)
+        // NaN-guard: a time without an end has no place in the round: the day
+        if (wave != wave) {
+            return 0.0
+        }
+
+        // each half of the way eased on its own: from the day to the twilight, from the twilight to the night
+        val half = if (wave < 0.5) wave * 2 else wave * 2 - 1
+        val eased = half * half * (3 - 2 * half)
+
+        return if (wave < 0.5) 0.5 * eased else 0.5 + 0.5 * eased
     }
 
     /** The share of its light the sun gives against the stage as made: by day 1.3, by night 0.9, at ember 1.6. */
@@ -321,6 +335,24 @@ object WorldLight {
         val pace = if (coming) GHOST_APPROACH / GHOST_APPROACH_SECONDS else -GHOST_APPROACH / GHOST_RETREAT_SECONDS
 
         return (was + pace * dt).coerceIn(0.0, GHOST_APPROACH)
+    }
+
+    /**
+     * The front lamp's way toward the band as it is shown, after [dt] more seconds, when it was shown at [from] and
+     * [ghostCreep] says [to]: it follows softly, most of the way in [GHOST_EASE_SECONDS], so where the creep turns
+     * round at once (the ghosts go: from coming closer to going back) the lamp, the ghosts' size and the camera
+     * that goes with them ease into the way back (the maintainer, 2026-11-23: the return "should ease in ...
+     * currently it somehow starts a bit abrupt"). No time: where it was.
+     */
+    fun ghostEase(from: Double, to: Double, dt: Double): Double {
+        // NaN-guard: no number moves nothing, and no place is the lamp's own
+        val was = if (from != from) 0.0 else from
+
+        if (dt != dt || dt <= 0.0 || to != to) {
+            return was.coerceIn(0.0, GHOST_APPROACH)
+        }
+
+        return (was + (to - was) * (1 - exp(-dt / GHOST_EASE_SECONDS))).coerceIn(0.0, GHOST_APPROACH)
     }
 
     /**

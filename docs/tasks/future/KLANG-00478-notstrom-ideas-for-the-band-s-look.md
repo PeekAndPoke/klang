@@ -212,3 +212,9 @@ Not built: the bodies and the true-self shadows (they need modelling and the cha
 - 2026-11-20: the belt of Sirene's dress; the eyes inside the skull with a slight glow.
 - 2026-11-20: a shared head builder for the figures (the maintainer's yes).
 - 2026-11-20: Sirene's seat a little smaller, calves kept, thighs a little more defined, with her feet.
+- 2026-11-21 to 2026-11-23: the surroundings, the instruments' dress, more camera angles and moves (the stop at the
+  moon, the flight before the frontwoman, the way back for the ghosts), the lamps in three sets by time of day with a
+  held twilight, the ghosts' eyes as a negative.
+- 2026-11-22 to 2026-11-23: the look's first code review, two rounds, clean (`ae56c90e0`, `f1c024731`). Kraft's three.js
+  component keeping its WebGL context is with Ultra as ULTRA-00348; until a release has it, the two lines that give
+  the context up in `LiveAct` and `MeetTheBand` stay.
