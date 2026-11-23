@@ -381,7 +381,7 @@ class ShadowEyes private constructor(
         private const val GLOW = 1.0
 
         /** How strong the halo round her dark eyes in a ghost is at its middle (her eyes' colour at this strength). */
-        private const val HALO = 0.3
+        private const val HALO = 0.1
 
         /** How far the glow reaches round each eye, in its half widths. */
         private const val REACH = 4.0
