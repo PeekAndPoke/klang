@@ -132,9 +132,11 @@ moment between two shows) is replaced. Its planner for the walks (`StagePlot.aft
 |---|---|---|
 | 1 | The show goes on with another song at a moment on its own clock (`Show.take`, `Song.startsAt`, `Show.beatAt`) | done, `295ac967b` |
 | 2 | The clock runs on between two songs (`ShowClock.hush`, `changeTo`); the light plan keeps its first bar | done, `83f9b3ffd` |
-| 3 | The band outlives its song: the six figures stay, their seats are exchanged (`Notstrom.reseat`). Who keeps the same instrument keeps the very object and gets the next song's part; an instrument no longer needed vanishes; a new one appears once its player has reached the start pose. A member who sat gets up before walking | open |
-| 4 | The camera counts its rounds from the song's start on the running clock | open |
-| 5 | The live act takes the change while it stays mounted; the app stops the old sound, reads the next song from the moment it will begin, and hands both over; the drawer stays | open |
+| 3 | The band outlives its song: the six figures stay, their seats are exchanged (`Notstrom.reseat`). Who keeps the same instrument keeps the very object and gets the next song's part; an instrument no longer needed vanishes; a new one appears once its player has reached the start pose. A member who sat gets up before walking | first draft, `1d56169b1` |
+| 4 | The camera counts its rounds from the song's start on the running clock | first draft, `1d56169b1` |
+| 5 | The live act takes the change while it stays mounted; the app stops the old sound, reads the next song from the moment it will begin, and hands both over; the drawer stays | first draft, `1d56169b1` |
+
+Seen in stills of the demo only (`?test&change=3`), on a loaded machine: the motion and the app (with sound) need the maintainer's eye. Not built yet: Beben's resting pose, the ghosts' lamp nearer in Kokon. The camera returns to the total by its dolly, or by a cut where it looked away from the stage. Where the next song takes longer than 1.5 s to get ready, the walks begin that much into their way.
 
 Known rough edges to refine after step 5: the instruments' vanishing and appearing is a plain shrinking and growing;
 the ways are straight lines; the lacquer has to take up a trumpet that was made anew.
