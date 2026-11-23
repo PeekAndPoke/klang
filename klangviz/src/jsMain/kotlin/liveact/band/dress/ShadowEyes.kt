@@ -247,8 +247,16 @@ class ShadowEyes private constructor(
         // (on a ghost they give no light at all, from the first moment: there they are dark, see FRAGMENT)
         glow.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
             .multiplyScalar(eyes.emissiveIntensity * onWall * GLOW * (1.0 - ghostly))
-        halo.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
-            .multiplyScalar(eyes.emissiveIntensity * onWall * HALO * ghostly)
+        // the halo in a ghost: her eyes' colour at a strength of its own, whatever their light is just now (their
+        // light swells with the music, and a halo that swelled with it burned out into the shape of its plane)
+        val most = maxOf(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
+
+        // NaN-guard: eyes of no colour (or of none that is a number) give no halo
+        if (most > 0.0) {
+            halo.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b).multiplyScalar(HALO * onWall * ghostly / most)
+        } else {
+            halo.set(0.0, 0.0, 0.0)
+        }
         cover.value = ghostly * onWall
         // in a ghost the eyes are drawn after the haze behind the fence, whose glowing veil would wash them out
         mesh.renderOrder = if (cover.value > 0.0) ORDER_IN_GHOST else ORDER
@@ -372,8 +380,8 @@ class ShadowEyes private constructor(
         /** How brightly the eyes on the surface glow against her own eyes. */
         private const val GLOW = 1.0
 
-        /** How strong the halo round her dark eyes in a ghost is, against her eyes' own light. */
-        private const val HALO = 0.1
+        /** How strong the halo round her dark eyes in a ghost is at its middle (her eyes' colour at this strength). */
+        private const val HALO = 0.3
 
         /** How far the glow reaches round each eye, in its half widths. */
         private const val REACH = 4.0
@@ -448,8 +456,11 @@ class ShadowEyes private constructor(
   // 2026-11-23: "now we can have the halo back when the eyes are black"): the negative of the dark hollow that once
   // stood round an eye of light
   float haloAt(vec2 p) {
-    float r = length(p / vec2(uEye.x * 1.7, uEye.x * 1.25));
-    return exp(-r * r * 0.7);
+    // round, and nothing at all from as far out as the plane's nearest edge is from the eye: no edge of the plane
+    // can show, however bright it is
+    float reach = 0.95 * min(0.5 * uSize.x - uHalf, 0.5 * uSize.y);
+    float fall = 1.0 - clamp(length(p) / max(reach, 1e-4), 0.0, 1.0);
+    return fall * fall;
   }
 
   float eyeAt(vec2 p) {
@@ -465,9 +476,7 @@ class ShadowEyes private constructor(
     // in a ghost (uCover) their shape is dark: it takes the ghost's light away there (and uGlow is none then)
     float dark = clamp(darkAt(p - vec2(uHalf, 0.0)) + darkAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
     float around = clamp(haloAt(p - vec2(uHalf, 0.0)) + haloAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
-    // (the halo is gone before the plane's edge, wherever the eyes sit in it)
-    vec2 edge = smoothstep(vec2(0.0), vec2(0.3), min(vUv, 1.0 - vUv));
-    gl_FragColor = vec4(uGlow * light + uHalo * around * (1.0 - dark) * edge.x * edge.y, 0.92 * uCover * dark);
+    gl_FragColor = vec4(uGlow * light + uHalo * around * (1.0 - dark), 0.92 * uCover * dark);
     #include <colorspace_fragment>
   }"""
     }
