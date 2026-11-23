@@ -215,13 +215,13 @@ class Song(rpm: Double, val grows: Boolean = true) {
         }
 
         // which foot and which hand hit last, of the hits that go, on every kit read so far
-        for ((kit, before) in forgottenHits.toList()) {
+        for ((kit, earlier) in forgottenHits.toList()) {
             val gone = drumHits(kit).filter { it.t < cut }
 
             forgottenHits[kit] = ForgottenHits(
-                kick = gone.lastOrNull { it.drum == Drum.Kick } ?: before.kick,
-                snare = gone.lastOrNull { it.drum == Drum.Snare } ?: before.snare,
-                hands = (before.hands + gone).filter { it.drum != Drum.Kick && it.t >= cut - BUSY },
+                kick = gone.lastOrNull { it.drum == Drum.Kick } ?: earlier.kick,
+                snare = gone.lastOrNull { it.drum == Drum.Snare } ?: earlier.snare,
+                hands = (earlier.hands + gone).filter { it.drum != Drum.Kick && it.t >= cut - BUSY },
             )
         }
 

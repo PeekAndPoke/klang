@@ -6,7 +6,6 @@
 package io.peekandpoke.klang.viz.liveact.stage
 
 import io.peekandpoke.klang.viz.liveact.Three
-import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.viz.liveact.lights.Lamp
 import io.peekandpoke.klang.viz.liveact.lights.WorldLight
 import io.peekandpoke.klang.viz.liveact.lights.WorldTime
@@ -49,11 +48,10 @@ import kotlin.math.PI
  * the surface around them glows in its deep ([world]).
  *
  * Hidden and shown again with [show] (the look turned over to the wall and back while the show plays: kept, so the
- * turn back costs no new materials). Everything it makes is in the scene and is freed with it, or with [dispose] where
- * the fence goes before the scene does.
+ * turn back costs no new materials). Everything it makes is in the scene and is freed with it.
  */
-class Fence(private val scene: Scene) {
-    /** The wire mesh, the posts and the surface behind: what [dispose] takes out of the scene and frees. */
+class Fence(scene: Scene) {
+    /** The wire mesh, the posts and the surface behind. */
     private val parts: List<Object3D>
 
     /** The surface behind the mesh: black unless the front lamp is on. */
@@ -217,20 +215,6 @@ class Fence(private val scene: Scene) {
 
         ghostPale.set(pr, pg, pb)
         ghostDepth.set(dr * level, dg * level, db * level)
-    }
-
-    /**
-     * Takes the mesh, the posts and the surface behind out of the scene and frees what they hold on the graphics card
-     * (their shapes, their materials, the posts' places). The fence is gone after it; call it once.
-     */
-    fun dispose() {
-        for (part in parts) {
-            scene.remove(part)
-        }
-
-        for (part in parts) {
-            part.disposeTree()
-        }
     }
 
     /**

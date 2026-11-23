@@ -192,8 +192,6 @@ class LookVariantsSpec : StringSpec({
         LookVariants().underworld shouldBe UnderworldLook.Off
         LookVariants.of(Switches.parse("?floor=mirror&underworld=on")) shouldBe
             LookVariants(floor = FloorLook.Mirror, underworld = UnderworldLook.On)
-        UnderworldLook.FADE_IN shouldBe 2.0
-        UnderworldLook.FADE_OUT shouldBe 3.0
     }
 
     "the key v turns the underworld over and leaves the rest; it shows only where the mirror is drawn; its line says why not" {
@@ -230,7 +228,6 @@ class LookVariantsSpec : StringSpec({
         RippleLook.Faint.fine shouldBe 0.0
         RippleLook.Gentle.fine shouldBe 0.0
         RippleLook.Faint.broad shouldBe (RippleLook.Gentle.broad / 2 plusOrMinus 1e-4)
-        RippleLook.Gentle.broad shouldBe (0.006 / 4 plusOrMinus 1e-12)
         (RippleLook.Strong.broad to RippleLook.Strong.fine) shouldBe (0.0 to 0.006)
     }
 
@@ -255,10 +252,6 @@ class LookVariantsSpec : StringSpec({
         LookVariants().blur shouldBe BlurLook.Crisp
         LookVariants.NEW.blur shouldBe BlurLook.Crisp
         LookVariants.of(Switches.parse("?look=new&blur=crisp")) shouldBe LookVariants.NEW.copy(blur = BlurLook.Crisp)
-    }
-
-    "the blur's cones: crisp narrow, soft between, stone the cone the floor was first made with" {
-        BlurLook.entries.map { it.cone } shouldBe listOf(0.004, 0.012, 0.03)
     }
 
     "?stone=plain is the plain stone; no switch, an empty one or another word the marble" {

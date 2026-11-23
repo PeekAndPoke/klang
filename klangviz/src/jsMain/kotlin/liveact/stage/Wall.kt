@@ -14,7 +14,6 @@ import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
 import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.klang.viz.liveact.Three
-import io.peekandpoke.klang.viz.liveact.disposeTree
 import io.peekandpoke.klang.workshop.threejs.fog
 import io.peekandpoke.klang.workshop.threejs.scale
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
@@ -107,10 +106,9 @@ fun wall(
  * By night the lamps' light on it leans cold and dims ([world], [WallLean]).
  *
  * Each frame: [light]. Hidden and shown again with [show] (the look turned over to the fence and back while the show
- * plays: kept, so the turn back costs no new material). It is freed with the scene, or with [dispose] where it goes
- * before the scene does.
+ * plays: kept, so the turn back costs no new material). It is freed with the scene.
  */
-class BackWall(private val scene: Scene) {
+class BackWall(scene: Scene) {
     private val material: MeshStandardMaterial = Three.addon.createMeshStandardMaterial(jsObject {
         color = 0x000000
         roughness = 0.95
@@ -150,12 +148,6 @@ class BackWall(private val scene: Scene) {
     /** Shows the wall ([visible]) or hides it, kept as it is: hidden, it is not drawn. */
     fun show(visible: Boolean) {
         mesh.visible = visible
-    }
-
-    /** Takes the wall out of the scene and frees its shape and its material. Call it once. */
-    fun dispose() {
-        scene.remove(mesh)
-        mesh.disposeTree()
     }
 
     companion object {

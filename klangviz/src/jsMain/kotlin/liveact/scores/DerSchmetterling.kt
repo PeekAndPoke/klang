@@ -93,7 +93,7 @@ val DER_SCHMETTERLING: Score = Score(
     ),
     // two of them look at each other: a chance every 11 s, two in five taken. Up to 4.3 s from the first one's glance
     // until both look (the other answers one to three seconds late), the look shared 0.7 to 1.6 s, and both back at
-    // their playing 2.15 s after the first looks away
+    // their playing 1.25 s after the first looks away, well within the fall's 2.15 s
     eyeContact = ChanceInSlots(
         every = 11.0,
         chance = 0.4,

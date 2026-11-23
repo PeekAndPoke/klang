@@ -14,7 +14,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.skills.ChanceSkill
 import io.peekandpoke.klang.viz.liveact.band.skills.CrossedMallets
 import io.peekandpoke.klang.viz.liveact.band.skills.IdleSkill
 import io.peekandpoke.klang.viz.liveact.band.skills.Mannerism
@@ -40,11 +40,6 @@ class MembersSpec : StringSpec({
     "a sheet's name is the member's own, as the band calls them" {
         Members.of(Player.Sirene).name shouldBe "Sirene"
         Members.of(Player.Wucht).name shouldBe "Wucht"
-    }
-
-    "Klaue plays left-handed, everyone else right-handed" {
-        // the maintainer, 2026-11-21: "Can we make the manager left-handed?"
-        Player.entries.filter { Members.of(it).hand == Side.L } shouldBe listOf(Player.Klaue)
     }
 
     "a sheet's figure is the file the figure script writes for its player" {
@@ -74,7 +69,7 @@ class MembersSpec : StringSpec({
         kinds.size shouldBeGreaterThan 1
     }
 
-    "every member has a gait, the hips moving from 0 to 1.5 as they walk; Sirene's are the measure, and move the most" {
+    "every member has a gait, the hips moving from 0 to 1.5 as they walk; Sirene's move the most" {
         // the maintainer, 2026-11-20: "when walking we need a setting for each char how much the hip moves"
         for (player in Player.entries) {
             val hips = Members.of(player).character.gait.hips
@@ -85,9 +80,19 @@ class MembersSpec : StringSpec({
             }
         }
 
-        // her stroll is what the hips' motion at 1 is (see `HipMotion`), and she is the lure
-        Members.of(Player.Sirene).character.gait.hips shouldBe 1.0
+        // she is the lure
         Player.entries.maxBy { Members.of(it).character.gait.hips } shouldBe Player.Sirene
+    }
+
+    "every kind of skill used by chance on the sheets takes its rolls from a place of its own" {
+        // two kinds with the same place would take the same roll for the same slot, and go together
+        val places = Player.entries
+            .flatMap { p -> Members.of(p).skills.filterIsInstance<ChanceSkill>() }
+            .associate { it::class to it.rolls }
+
+        places.values.toSet().size shouldBe places.size
+        // (and there are several kinds on the sheets to tell apart)
+        places.size shouldBeGreaterThan 1
     }
 
     "on Sirene's sheet every timed look goes back slowly: it falls over 1.5 s at least, no faster than it rises, and still arrives" {

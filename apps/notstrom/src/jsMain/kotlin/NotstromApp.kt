@@ -251,9 +251,6 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
     private var stages = 0
 
-    /** How often the page "Meet the band" was opened: each time it is another component, made anew. */
-    private var meetings = 0
-
     /** The step of the show's opening that fades now; null outside the opening (the tests' phases have none). */
     private var fading: Fading? by value(null)
 
@@ -454,7 +451,6 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         problem = null
         warning = null
-        meetings++
         phase = Phase.Meet
     }
 
@@ -945,8 +941,6 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                     )
                 }
                 Phase.Meet -> div {
-                    // each visit is a component of its own: made anew, and freed when it goes
-                    key = "meet-$meetings"
                     css {
                         put("position", "absolute")
                         put("inset", "0")

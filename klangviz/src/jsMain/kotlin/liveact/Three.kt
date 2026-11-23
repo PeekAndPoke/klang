@@ -36,15 +36,17 @@ internal fun Double.toFixed(digits: Int): String = asDynamic().toFixed(digits).u
 
 /**
  * Whether a key was pressed while the user types somewhere (a field, a text area, an editor): the live act's keys
- * are single letters and the space bar, and must not take them away from a text.
+ * are single letters and the space bar, and must not take them away from a text. A slider (`input` of type `range`,
+ * as the volume) takes no text: a key pressed on it is no typing.
  */
 internal fun Event.fromTyping(): Boolean {
     // where the key was really pressed: inside a web component the plain target is only its host
     val path: dynamic = asDynamic().composedPath?.call(this)
     val target: dynamic = (if (path != null && path.length > 0) path[0] else null) ?: this.target ?: return false
     val tag = (target.tagName as? String)?.lowercase()
+    val slider = tag == "input" && (target.type as? String)?.lowercase() == "range"
 
-    return tag == "input" || tag == "textarea" || tag == "select" || target.isContentEditable == true
+    return (tag == "input" && !slider) || tag == "textarea" || tag == "select" || target.isContentEditable == true
 }
 
 /**

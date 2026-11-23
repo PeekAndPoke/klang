@@ -14,7 +14,7 @@ import io.peekandpoke.klang.viz.liveact.Switches
  * every time it is really dark we flip the surrounding to another one. So let us try 2 or 3."). One theme seen in two
  * places that belong together: large dark shapes lit from below, left and right of the stage behind the fence where it
  * runs on past the band, and the same theme as a horizon of silhouettes behind and around the audience, under the
- * night sky. [word] is its name in the address.
+ * night sky. Its name in the address is [AroundLook]'s.
  *
  * - [Forest]: tall old trees, bare-limbed giants and dark pines (the maintainer's own idea: "trees lit from below").
  * - [Ruins]: the ruins of a colossal ancient theatre, broken arches and shattered columns.
@@ -23,10 +23,10 @@ import io.peekandpoke.klang.viz.liveact.Switches
  * Each is drawn into its own colour channel of the same two pictures ([ordinal]: red, green, blue), so turning from one
  * to the next builds nothing.
  */
-enum class Surrounding(val word: String) {
-    Forest("forest"),
-    Ruins("ruins"),
-    Stones("stones"),
+enum class Surrounding {
+    Forest,
+    Ruins,
+    Stones,
 }
 
 /**

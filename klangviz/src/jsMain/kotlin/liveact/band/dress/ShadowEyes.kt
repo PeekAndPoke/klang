@@ -246,7 +246,7 @@ class ShadowEyes private constructor(
 
         // (on a ghost they give no light at all, from the first moment: there they are dark, see FRAGMENT)
         glow.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
-            .multiplyScalar(eyes.emissiveIntensity * onWall * GLOW * (1.0 - ghostly))
+            .multiplyScalar(eyes.emissiveIntensity * onWall * (1.0 - ghostly))
         // the halo in a ghost: her eyes' colour at a strength of its own, whatever their light is just now (their
         // light swells with the music, and a halo that swelled with it burned out into the shape of its plane)
         val most = maxOf(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
@@ -376,9 +376,6 @@ class ShadowEyes private constructor(
 
         /** How far in toward the head's axis the eyes are thrown from, as a share of their way there. */
         private const val INSET = 0.45
-
-        /** How brightly the eyes on the surface glow against her own eyes. */
-        private const val GLOW = 1.0
 
         /** How strong the halo round her dark eyes in a ghost is at its middle (her eyes' colour at this strength). */
         private const val HALO = 0.1

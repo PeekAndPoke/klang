@@ -21,6 +21,8 @@ import io.peekandpoke.klang.viz.liveact.band.notstrom.Notstrom
 import io.peekandpoke.klang.viz.liveact.lights.FrontLight
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
+import io.peekandpoke.klang.workshop.threejs.matrixWorld
+import io.peekandpoke.klang.workshop.threejs.transformDirection
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
@@ -120,24 +122,30 @@ class MeetBand private constructor(
 
             return shapes
         }
+    }
 
-        /**
-         * [rig] standing at rest: the arms hanging by the sides, as the show's walk has them without the swing
-         * (`walkPose`).
-         */
-        private fun stand(rig: Rig) {
-            val s = rig.s
+    /** Where a hand reaches, and the way its elbow bends: made once and set anew for each hand ([stand]). */
+    private val handAt: Vector3 = vec()
+    private val elbowTo: Vector3 = vec()
 
-            rig.reset()
-            rig.update()
+    /**
+     * [rig] standing at rest: the arms hanging by the sides, as the show's walk has them without the swing
+     * (`walkPose`).
+     */
+    private fun stand(rig: Rig) {
+        val s = rig.s
 
-            for (side in Side.entries) {
-                val sign = side.sign
-                val shoulder = rig.shoulder.getValue(side)
-                val hand = vec(shoulder.x + 0.05 * sign * s, shoulder.y - 0.94 * rig.armLength, 0.05 * s)
+        rig.reset()
+        rig.update()
 
-                rig.hand(side, rig.root.localToWorld(hand), rig.dir(0.3 * sign, -0.3, -1.0))
-            }
+        for (side in Side.entries) {
+            val sign = side.sign
+            val shoulder = rig.shoulder.getValue(side)
+
+            handAt.set(shoulder.x + 0.05 * sign * s, shoulder.y - 0.94 * rig.armLength, 0.05 * s)
+            // as the rig's own way along its axes ([Rig.dir]), without a new vector
+            elbowTo.set(0.3 * sign, -0.3, -1.0).transformDirection(rig.root.matrixWorld)
+            rig.hand(side, rig.root.localToWorld(handAt), elbowTo)
         }
     }
 

@@ -278,6 +278,22 @@ class ShowClockSpec : StringSpec({
         frozenAt(62.1) shouldBe 1.0
     }
 
+    "a show that opens without a song walks in on the page's clock: pitch black before the first frame, then rising" {
+        val show = Show(seed = 1, music = Counted(Asked(), song = null), switches = Switches.parse("opening=ember"))
+        val clock = ShowClock(show = show, notice = null, intro = 15.0, opens = true)
+
+        try {
+            clock.houseAt() shouldBe 0.0
+
+            clock.start()
+
+            // the walk-in has just begun: hardly any light yet
+            (clock.houseAt() < 0.01) shouldBe true
+        } finally {
+            clock.dispose()
+        }
+    }
+
     "a show that opens but follows music it does not move has no walk-in: its light is up at once" {
         val show = Show(seed = 1, music = Counted(Asked(own = false)), switches = Switches.parse("opening=ember"))
         val clock = ShowClock(show = show, notice = null, intro = 15.0, opens = true)

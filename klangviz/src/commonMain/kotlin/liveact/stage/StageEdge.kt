@@ -37,7 +37,8 @@ object StageEdge {
      * How far the floor's point at [x], [z] lies inside the stage's edge, in metres: above 0 inside, 0 on the edge,
      * below 0 outside. Exact to the back and along the arc's axes; elsewhere on the arc a close estimate (the oval's
      * own measure over its slope), good to some centimetres near the edge, which is where it is read. Toward the middle
-     * it grows to [HALF_X] at most.
+     * it grows to [HALF_X] at most. It is the reference twin of the shader's copy (`STAGE_EDGE_GLSL`, the floors' fragment
+     * shaders): a change to one is made to the other.
      */
     fun distance(x: Double, z: Double): Double {
         val back = z - BACK
@@ -50,7 +51,4 @@ object StageEdge {
 
         return min(back, arc)
     }
-
-    /** Whether the floor's point at [x], [z] lies on the stage (on its edge counts as on it). */
-    fun inside(x: Double, z: Double): Boolean = distance(x = x, z = z) >= 0.0
 }

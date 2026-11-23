@@ -95,11 +95,18 @@ class ShowClock(
         }
     }
 
-    /** Call right before the first frame. With [begun], the walk-in begins here. */
+    /**
+     * Call right before the first frame. With [begun], the walk-in begins here; and in a show without a song, whose
+     * walk-in runs on the page's clock from the first frame.
+     */
     fun start() {
         started = now()
 
         if (begun && controls != null && introAt == null) {
+            introAt = started
+        }
+
+        if (transport == null && introAt == null) {
             introAt = started
         }
     }
@@ -158,13 +165,14 @@ class ShowClock(
 
     /**
      * The house level in a show that opens ([houseAt]): frozen, the level of its time since the walk-in's start; where
-     * the clock runs no walk-in (no music of its own to move), up at once, as without an opening; else 0 until the
-     * walk-in begins, then rising by the frames counted since.
+     * the show follows someone else's music (a transport without controls: no walk-in), up at once, as without an
+     * opening; else 0 until the walk-in begins (at the click, or in a show without a song at [start]), then rising by
+     * the frames counted since.
      */
     private fun risingHouse(): Double {
         show.frozen?.let { return LightsUp.level(since = it + intro) }
 
-        if (controls == null) {
+        if (transport != null && controls == null) {
             return 1.0
         }
 

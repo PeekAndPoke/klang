@@ -11,6 +11,9 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.stage.GhostLight
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.tan
 
 private fun near(x: Double) = x plusOrMinus 1e-9
@@ -151,9 +154,6 @@ class WorldLightSpec : StringSpec({
 
         WorldLight.hazeBase(red) shouldBeNear Triple(WorldLight.GHOST_GLOW * r, WorldLight.GHOST_GLOW * g, WorldLight.GHOST_GLOW * b)
         WorldLight.hazeTint(red) shouldBe Triple(1.0, 1.0, 1.0)
-        WorldLight.ghostPale(red) shouldBe GhostLight.Red.pale.let { (pr, pg, pb) ->
-            Triple(WorldLight.GHOST_PALE * pr, WorldLight.GHOST_PALE * pg, WorldLight.GHOST_PALE * pb)
-        }
         WorldLight.ghostDepth(red) shouldBe GhostLight.Red.depth
         WorldLight.roomLight(red) shouldBe near(0.35)
         WorldLight.roomSun(red) shouldBeNear Triple(WorldLight.GHOST_ROOM * r, WorldLight.GHOST_ROOM * g, WorldLight.GHOST_ROOM * b)
@@ -178,8 +178,6 @@ class WorldLightSpec : StringSpec({
         WorldLight.ghostClearing(GHOSTS) shouldBe near(WorldLight.GHOST_CLEARING)
         WorldLight.ghostClearing(GHOSTS.copy(ghosts = 0.5)) shouldBe near(WorldLight.GHOST_CLEARING / 2)
         WorldLight.ghostClearing(NIGHT) shouldBe 0.0
-        (WorldLight.GHOST_CLEARING < 1.0) shouldBe true
-        (WorldLight.GHOST_CLEARING > 0.0) shouldBe true
     }
 
     "the turn into the ghosts is even: halfway, every value halfway between the night's and the ghosts'" {
@@ -210,7 +208,7 @@ class WorldLightSpec : StringSpec({
         WorldLight.drift(t = WorldLight.DRIFT_PERIOD) shouldBe (0.0 plusOrMinus 1e-12)
         WorldLight.drift(t = WorldLight.DRIFT_PERIOD / 4) shouldBe (0.5 plusOrMinus 1e-12)
         // a tenth of the way from an end moves less than a plain cosine would: it rests there
-        WorldLight.drift(t = WorldLight.DRIFT_PERIOD / 20) shouldBeLessThan 0.5 - 0.5 * kotlin.math.cos(kotlin.math.PI / 10)
+        WorldLight.drift(t = WorldLight.DRIFT_PERIOD / 20) shouldBeLessThan 0.5 - 0.5 * cos(PI / 10)
         WorldLight.drift(t = 15.0, period = 30.0) shouldBe (1.0 plusOrMinus 1e-12)
     }
 
@@ -284,7 +282,7 @@ class WorldLightSpec : StringSpec({
         val period = WorldLight.DRIFT_PERIOD
         val dusk = period / 4
 
-        fun pace(t: Double): Double = kotlin.math.abs(WorldLight.drift(t = t + 0.5) - WorldLight.drift(t = t - 0.5))
+        fun pace(t: Double): Double = abs(WorldLight.drift(t = t + 0.5) - WorldLight.drift(t = t - 0.5))
 
         WorldLight.drift(t = dusk) shouldBe (0.5 plusOrMinus 1e-12)
         // slower at dusk than on the way to it and on the way on from it

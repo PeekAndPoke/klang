@@ -27,7 +27,7 @@ class LookGroupSpec : StringSpec({
     "every variant with its key, the whole look first, then as the keys turn them over" {
         startsWith(TODAY).map { "${it.label} (${it.key})" } shouldBe listOf(
             "Look (x)", "Stage (m)", "Floor (p)", "Haze (h)", "Eyes (i)", "Skin (l)", "World (n)", "Ghosts (null)",
-            "Underworld (v)", "Ripple (b)", "Blur (c)", "Stone (k)", "Outline (j)",
+            "Underworld (v)", "Ripple (b)", "Blur (c)", "Stone (k)", "Outline (j)", "Around (null)",
         )
     }
 
@@ -46,6 +46,7 @@ class LookGroupSpec : StringSpec({
             listOf("Crisp", "Soft", "Stone"),
             listOf("Plain", "Marble"),
             listOf("Off", "On"),
+            listOf("Turns", "Forest", "Ruins", "Stones", "Off"),
         )
     }
 
@@ -56,11 +57,12 @@ class LookGroupSpec : StringSpec({
 
         marked(TODAY) shouldBe listOf(
             listOf("Today"), listOf("Wall"), listOf("Plain"), listOf("Whole"), listOf("Face"), listOf("Suit"), listOf("Off"),
-            listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Marble"), listOf("Off"),
+            listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Marble"), listOf("Off"), listOf("Off"),
         )
         marked(NEW) shouldBe listOf(
             listOf("New"), listOf("Fence"), listOf("Mirror"), listOf("Parts"), listOf("Shadow"), listOf("Lacquer"),
             listOf("Drift"), listOf("Cold"), listOf("Off"), listOf("Gentle"), listOf("Crisp"), listOf("Marble"), listOf("Off"),
+            listOf("Turns"),
         )
         marked(NEW.tune(NEW.shown.copy(world = WorldLook.Night, ghosts = GhostLight.Red, stone = StoneLook.Plain))).let {
             it[6] shouldBe listOf("Night")
@@ -78,6 +80,7 @@ class LookGroupSpec : StringSpec({
         groups.named("Stage").options.single { it.label == "Wall" }.to shouldBe LookVariants.NEW.copy(stage = StageLook.Wall)
         groups.named("Blur").options.single { it.label == "Stone" }.to shouldBe LookVariants.NEW.copy(blur = BlurLook.Stone)
         groups.named("Eyes").options.single { it.label == "Face" }.to shouldBe LookVariants.NEW.copy(eyes = EyesLook.Face)
+        groups.named("Around").options.single { it.label == "Ruins" }.to shouldBe LookVariants.NEW.copy(around = AroundLook.Ruins)
         // the marked one chooses what is shown already
         groups.drop(1).forEach { group -> group.options.single { it.marked }.to shouldBe LookVariants.NEW }
         groups.drop(1).flatMap { it.options }.none { it.flips } shouldBe true
@@ -113,6 +116,7 @@ class LookGroupSpec : StringSpec({
             "Blur" to "with the mirror floor only",
             "Stone" to "with the mirror floor only",
             "Outline" to null,
+            "Around" to null,
         )
     }
 

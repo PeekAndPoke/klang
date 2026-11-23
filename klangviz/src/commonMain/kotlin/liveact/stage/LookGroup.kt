@@ -67,6 +67,9 @@ data class LookGroup(val label: String, val key: String?, val options: List<Opti
                 of(label = "Outline", key = "j", entries = OutlineLook.entries, chosen = v.outline, word = { it.word }) {
                     v.copy(outline = it)
                 },
+                of(label = "Around", key = null, entries = AroundLook.entries, chosen = v.around, word = { it.word }) {
+                    v.copy(around = it)
+                },
             )
         }
 

@@ -608,7 +608,7 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
 
         /** The show's other keys, in a quiet line below the look's controls with `?dev`. */
         const val OTHER_KEYS = "Other keys: q total camera, 1 to 6 players, 0 back to the show's camera, " +
-            "space play and pause, arrows skip"
+            "the right arrow skips the walk-in"
 
         /** How often the drawer asks whether its time to go has come, while it is shown, in milliseconds. */
         const val DUE_MS = 250

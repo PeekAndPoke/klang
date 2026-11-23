@@ -204,11 +204,13 @@ class Stage(
     private var ghostNear = 0.0
 
     /**
-     * How far the band's shadows show the ghosts now, 0 to 1 ([WorldLight.ghostShare]); none before the wall, which
-     * shows no ghosts (so nothing that belongs to them, as the eyes in a shadow, is drawn on it).
+     * How far the band's shadows show the ghosts now, 0 to 1 ([WorldLight.ghostShare]), for what belongs to them (the
+     * eyes in a shadow); none before the wall, which shows no ghosts, and none where the haze stays whole
+     * ([LookVariants.partsHaze], which holds only with the fence): it hides the figures, and the eyes drawn after it
+     * would show over nothing (the maintainer, 2026-11-23). The lamp's creep and the camera do not go by it.
      */
     val ghosts: Double
-        get() = if (variants.stage == StageLook.Mesh) WorldLight.ghostShare(world) else 0.0
+        get() = if (variants.partsHaze) WorldLight.ghostShare(world) else 0.0
 
     /** How far the total's camera goes back for the ghosts now, in metres ([WorldLight.ghostPull]). */
     val ghostPull: Double
@@ -672,11 +674,11 @@ class Stage(
 
         mirror?.underworld(under)
 
-        // the surroundings, by turns where the world drifts: the next one each time the ghosts visit
+        // the surroundings, by turns: the next one at each ghosts' visit, also where the world is held and none comes
         around?.let {
             it.sides(variants.stage == StageLook.Mesh)
             it.light(
-                moment = AroundCourse.at(t = t, seed = show.seed, look = variants.around, drifts = drifts),
+                moment = AroundCourse.at(t = t, seed = show.seed, look = variants.around),
                 world = world,
                 level = glow,
             )

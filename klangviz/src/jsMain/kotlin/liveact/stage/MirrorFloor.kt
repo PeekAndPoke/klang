@@ -36,6 +36,7 @@ import io.peekandpoke.kraft.addons.threejs.js.TextureFilter
 import io.peekandpoke.kraft.addons.threejs.js.Vector2
 import io.peekandpoke.kraft.addons.threejs.js.WebGLRenderer
 import io.peekandpoke.kraft.utils.jsObject
+import kotlinx.browser.window
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
@@ -489,7 +490,7 @@ class MirrorFloor(
         var wide = max(1, shown.width.unsafeCast<Int>())
         var tall = max(1, shown.height.unsafeCast<Int>())
         val page = (shown.clientWidth ?: 0).unsafeCast<Double>()
-        val ratio = (kotlinx.browser.window.devicePixelRatio).coerceIn(1.0, 2.0)
+        val ratio = window.devicePixelRatio.coerceIn(1.0, 2.0)
 
         // (a canvas laid out nowhere, as in a test, has no page size: its own pixels then)
         if (page > 0.0 && page * ratio < wide) {

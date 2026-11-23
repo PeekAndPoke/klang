@@ -15,7 +15,6 @@ import io.peekandpoke.klang.workshop.threejs.onBeforeCompile
 import io.peekandpoke.klang.workshop.threejs.scale
 import io.peekandpoke.klang.workshop.threejs.set
 import io.peekandpoke.klang.workshop.threejs.toneMapped
-import io.peekandpoke.klang.workshop.threejs.uniform
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MeshBasicMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Scene
@@ -49,9 +48,6 @@ class Riser(scene: Scene) {
     private val gap: MeshBasicMaterial
     private val pool: MeshBasicMaterial
 
-    /** How bright the gold lines' own faint light is: it goes with the stage's light. */
-    private val lines = uniform(1.0)
-
     init {
         val stone = Three.addon.createMeshStandardMaterial(jsObject {
             color = 0x08090c
@@ -68,20 +64,15 @@ class Riser(scene: Scene) {
         })
         sides.asDynamic().flatShading = true
         sides.onBeforeCompile("riser-gold-lines") { shader: CompiledShader ->
-            shader.uniforms["uRiserLines"] = lines
             shader.vertexShader = shader.vertexShader
                 .replaceFirst("#include <common>", "#include <common>\nvarying vec2 vRiser;")
                 .replaceFirst("#include <begin_vertex>", "#include <begin_vertex>\nvRiser = uv;")
             shader.fragmentShader = shader.fragmentShader
-                .replaceFirst("#include <common>", "#include <common>\nvarying vec2 vRiser;\nuniform float uRiserLines;\n$GOLD_LINES")
+                .replaceFirst("#include <common>", "#include <common>\nvarying vec2 vRiser;\n$GOLD_LINES")
                 .replaceFirst("#include <color_fragment>", "#include <color_fragment>\nfloat riserLine = riserLineAt(vRiser);\n" +
                     "diffuseColor.rgb = mix(diffuseColor.rgb, vec3($GOLD), riserLine);")
                 .replaceFirst("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.55, riserLine);")
                 .replaceFirst("#include <metalnessmap_fragment>", "#include <metalnessmap_fragment>\nmetalnessFactor = mix(metalnessFactor, 0.6, riserLine);")
-                .replaceFirst(
-                    "#include <emissivemap_fragment>",
-                    "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3($GOLD) * ${LINE_LIGHT.toFixed(3)} * riserLine * uRiserLines;",
-                )
         }
 
         // the sides, from the gap up to where the top edge is cut off
@@ -139,7 +130,6 @@ class Riser(scene: Scene) {
 
         gap.color.setHex(GLOW_COLOR).scale(share * (GAP_REST + (GAP_BEAT - GAP_REST) * beat))
         pool.color.setHex(GLOW_COLOR).scale(share * (POOL_REST + (POOL_BEAT - POOL_REST) * beat))
-        lines.value = share
     }
 
     /** One six-sided ring of the plinth: [top] and [bottom] its radii, a flat side toward the audience. */
@@ -213,10 +203,9 @@ class Riser(scene: Scene) {
 
         /**
          * The gold of the lines (linear red, green, blue): an old, dull gold, quieter than the lines on the band, which
-         * stand right before it; and how bright their own light is: none, they show only where a lamp finds them.
+         * stand right before it. They have no light of their own: they show only where a lamp finds them.
          */
         private const val GOLD = "0.42, 0.29, 0.10"
-        private const val LINE_LIGHT = 0.0
 
         /**
          * The gold lines on a side, 0 to 1, from the side's own coordinates (x: round the plinth, 0 to 1 over its six

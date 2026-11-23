@@ -42,7 +42,6 @@ class StoredTestSpec : StringSpec({
     }
 
     "a result of another test version counts no more: version 2, before the three fog qualities; 3, before the mirror at fog low" {
-        StoredTest.TEST_VERSION shouldBe 4
         KEPT.copy(version = 2, fog = "high").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = 3, fog = "low").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION + 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false

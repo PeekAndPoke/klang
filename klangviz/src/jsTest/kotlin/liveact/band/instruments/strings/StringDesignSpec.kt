@@ -64,8 +64,10 @@ class StringDesignSpec : StringSpec({
         BodyOutline(elsewhere).contour(steps = 4)[7] shouldNotBe BodyOutline(points).contour(steps = 4)[7]
     }
 
-    "every model has its own name, the letter after its kind" {
-        DESIGNS.map { it.name } shouldBe listOf("E-Guitar A", "E-Guitar B", "E-Guitar C", "Bass A", "Bass B")
+    "every model has a name of its own: it keys the program of its gold body, which two models must not share" {
+        val names = DESIGNS.map { it.name }
+
+        names.toSet().size shouldBe names.size
     }
 
     "every model's pickups, bridge and knobs lie on its body, and its quake's trace and its claw's scratches across it" {

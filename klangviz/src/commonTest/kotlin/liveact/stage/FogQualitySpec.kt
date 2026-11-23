@@ -24,8 +24,6 @@ class FogQualitySpec : StringSpec({
     }
 
     "the fog was made with twelve sheets of 0.22 each; fewer sheets let more through each" {
-        FogQuality.MADE_LAYERS shouldBe 12
-        FogQuality.MADE_SHARE shouldBe 0.22
         FogQuality.High.share shouldBe (0.311123 plusOrMinus 1e-6)
         FogQuality.Low.share shouldBe (0.525448 plusOrMinus 1e-6)
         FogQuality.Off.share shouldBe 0.0

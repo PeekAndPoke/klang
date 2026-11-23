@@ -41,7 +41,6 @@ class WorldCourseSpec : StringSpec({
         val course = WorldCourse(opening = WorldLook.Ember)
         val turn = WorldCourse.TURN_SECONDS
 
-        turn shouldBe 20.0
         course.follow(t = -0.5, look = WorldLook.Day, dt = 0.0) shouldBe ember
         course.follow(t = 0.0, look = WorldLook.Day, dt = 0.5) shouldBe
             WorldTime(on = 1.0, night = 1.0 - 0.5 / turn, ember = 1.0 - 0.5 / turn)

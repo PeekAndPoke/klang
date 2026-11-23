@@ -169,28 +169,57 @@ class StrollRoute(
      */
     internal fun hipsAt(x: Double): Double {
         // the legs from the round before to the one a blend ahead, each with when the change to its kind begins; the
-        // round before ends a [WAIT] at her place, so its last change lies more than a blend back
+        // round before ends a [WAIT] at her place, so its last change lies more than a blend back. Walked twice, as
+        // they come, and nothing kept: this is asked many times a frame (the look-back's grid)
         val now = max(0.0, x)
-        val changes = mutableListOf<Pair<Double, Double>>()
+        val from = max(0, roundAt(now) - 1)
+        val to = roundAt(now + KIND_BLEND) + 1
 
-        for (round in max(0, roundAt(now) - 1)..roundAt(now + KIND_BLEND) + 1) {
-            for ((i, walk) in roundOf(round).walks.withIndex()) {
-                changes.add((startOf(round) + walk.start - KIND_BLEND) to walkKindOf(round = round, leg = i).hips)
+        // which change, counted from the first, is the last a whole blend back (or the first)
+        var settled = 0
+        var n = 0
+
+        for (round in from..to) {
+            val start = startOf(round)
+            val walks = roundOf(round).walks
+
+            for (i in walks.indices) {
+                if (start + walks[i].start - KIND_BLEND <= x - KIND_BLEND) {
+                    settled = n
+                }
+
+                n++
             }
         }
 
-        // the kind of the last change a whole blend back (or the first), and each change since eased in
-        val settled = max(0, changes.indexOfLast { (at, _) -> at <= x - KIND_BLEND })
-        var hips = changes[settled].second
+        // its kind, and each change since eased in
+        var hips = 0.0
+        var before = 0.0
 
-        for (k in settled + 1 until changes.size) {
-            val (at, kind) = changes[k]
+        n = 0
 
-            if (at > x) {
-                break
+        changes@ for (round in from..to) {
+            val start = startOf(round)
+            val walks = roundOf(round).walks
+
+            for (i in walks.indices) {
+                val kind = walkKindOf(round = round, leg = i).hips
+
+                if (n == settled) {
+                    hips = kind
+                } else if (n > settled) {
+                    val at = start + walks[i].start - KIND_BLEND
+
+                    if (at > x) {
+                        break@changes
+                    }
+
+                    hips += (kind - before) * smooth((x - at) / KIND_BLEND)
+                }
+
+                before = kind
+                n++
             }
-
-            hips += (kind - changes[k - 1].second) * smooth((x - at) / KIND_BLEND)
         }
 
         return hips
@@ -286,7 +315,10 @@ class StrollRoute(
 
     /**
      * What the round [round] is meant to do (an edge round with no time for its way becomes a plain one or a visit,
-     * a visit with no time for its way a plain one, see [build]).
+     * a visit with no time for its way a plain one, see [build]). Every round that goes to no camera is meant to walk
+     * the edge: since the edge became the big loop (2026-11-21, see [EDGE_LEFT]) only the rounds of 69 seconds have
+     * the time for it at [EDGE_PACE], some 3 rounds in 20 (it was 0.55 of the rounds that had the time, and 0.7 for
+     * the first, smaller widening the same day, about one in five).
      */
     private fun wanted(round: Int): Kind {
         // about two rounds in five go to the camera (the sum as a floating number: a large seed must not wrap round;
@@ -303,7 +335,7 @@ class StrollRoute(
             }
         }
 
-        return if (roll(round = round, leg = 99, k = 0) < EDGE_SHARE) Kind.Edge else plainOr(round)
+        return Kind.Edge
     }
 
     /** A plain round or, in about [VISIT_SHARE] of them, a visit (where there is anyone to visit). */
@@ -686,14 +718,6 @@ class StrollRoute(
 
         /** The straight walk at the lens before the stop up close. */
         internal const val RUN_IN = 1.0
-
-        /**
-         * The share of the other rounds that walk the edge, where the round has time for it at [EDGE_PACE]. Since
-         * the edge became the big loop (2026-11-21, see [EDGE_LEFT]) only the rounds of 69 seconds have that time,
-         * and every one of them that goes to no camera walks it: some 3 rounds in 20 (it was 0.55 of the rounds
-         * that had the time, and 0.7 for the first, smaller widening the same day, about one in five).
-         */
-        internal const val EDGE_SHARE = 1.0
 
         /**
          * The fastest pace an edge round may ask of her; a round that would need more is a plain one. 0.15 until

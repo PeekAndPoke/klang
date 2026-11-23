@@ -16,9 +16,9 @@ import io.peekandpoke.klang.viz.liveact.lights.GhostVisits
 
 class AroundCourseSpec : StringSpec({
 
-    /** The surrounding of the show of [seed] at every whole second up to [seconds], where the world drifts. */
+    /** The surrounding of the show of [seed] at every whole second up to [seconds]. */
     fun course(seed: Int, seconds: Int): List<AroundMoment> =
-        (0..seconds).map { AroundCourse.at(t = it.toDouble(), seed = seed, look = AroundLook.Turns, drifts = true) }
+        (0..seconds).map { AroundCourse.at(t = it.toDouble(), seed = seed, look = AroundLook.Turns) }
 
     /** The turns of the show of [seed] up to [seconds]: when each lies, from the ghosts' visits. */
     fun turns(seed: Int, seconds: Double): List<Double> =
@@ -53,15 +53,15 @@ class AroundCourseSpec : StringSpec({
         orders.map { it[1] }.toSet() shouldBe setOf(Surrounding.Ruins, Surrounding.Stones)
     }
 
-    "by turns where the world drifts: the next one at each turn, in the show's order, round and round" {
+    "by turns: the next one at each turn, in the show's order, round and round" {
         for (seed in listOf(1, 4, 5, 42)) {
             val order = AroundCourse.order(seed)
             val flips = turns(seed = seed, seconds = 1800.0)
 
             flips.size shouldBeGreaterThan 5
-            AroundCourse.at(t = 0.0, seed = seed, look = AroundLook.Turns, drifts = true).surrounding shouldBe Surrounding.Forest
+            AroundCourse.at(t = 0.0, seed = seed, look = AroundLook.Turns).surrounding shouldBe Surrounding.Forest
 
-            fun at(t: Double): Surrounding? = AroundCourse.at(t = t, seed = seed, look = AroundLook.Turns, drifts = true).surrounding
+            fun at(t: Double): Surrounding? = AroundCourse.at(t = t, seed = seed, look = AroundLook.Turns).surrounding
 
             for ((n, flip) in flips.withIndex()) {
                 at(flip - 0.01) shouldBe order[n % 3]
@@ -92,7 +92,7 @@ class AroundCourseSpec : StringSpec({
         val seed = 4
         val flip = turns(seed = seed, seconds = 600.0).first()
 
-        fun presence(t: Double): Double = AroundCourse.at(t = t, seed = seed, look = AroundLook.Turns, drifts = true).presence
+        fun presence(t: Double): Double = AroundCourse.at(t = t, seed = seed, look = AroundLook.Turns).presence
 
         presence(flip) shouldBe 0.0
         presence(flip - AroundCourse.FADE) shouldBe 1.0
@@ -105,24 +105,16 @@ class AroundCourseSpec : StringSpec({
         presence(-20.0) shouldBe 1.0
     }
 
-    "a still at a given time shows the same one, whenever it is asked" {
-        for (t in listOf(-3.0, 0.0, 61.7, 240.0, 333.3, 541.0)) {
-            AroundCourse.at(t = t, seed = 5, look = AroundLook.Turns, drifts = true) shouldBe
-                AroundCourse.at(t = t, seed = 5, look = AroundLook.Turns, drifts = true)
-        }
-    }
-
-    "held, it stays all through; off, there is none; a world that does not drift, or no time, the forest" {
+    "held, it stays all through; off, there is none; no time, the forest" {
         for (t in listOf(0.0, 250.0, 900.0)) {
-            AroundCourse.at(t = t, seed = 1, look = AroundLook.Ruins, drifts = true) shouldBe AroundMoment(Surrounding.Ruins, 1.0)
-            AroundCourse.at(t = t, seed = 1, look = AroundLook.Stones, drifts = false) shouldBe AroundMoment(Surrounding.Stones, 1.0)
-            AroundCourse.at(t = t, seed = 1, look = AroundLook.Forest, drifts = true) shouldBe AroundMoment(Surrounding.Forest, 1.0)
-            AroundCourse.at(t = t, seed = 1, look = AroundLook.Off, drifts = true) shouldBe AroundMoment(null, 0.0)
-            AroundCourse.at(t = t, seed = 1, look = AroundLook.Turns, drifts = false) shouldBe AroundMoment(Surrounding.Forest, 1.0)
+            AroundCourse.at(t = t, seed = 1, look = AroundLook.Ruins) shouldBe AroundMoment(Surrounding.Ruins, 1.0)
+            AroundCourse.at(t = t, seed = 1, look = AroundLook.Stones) shouldBe AroundMoment(Surrounding.Stones, 1.0)
+            AroundCourse.at(t = t, seed = 1, look = AroundLook.Forest) shouldBe AroundMoment(Surrounding.Forest, 1.0)
+            AroundCourse.at(t = t, seed = 1, look = AroundLook.Off) shouldBe AroundMoment(null, 0.0)
         }
 
-        AroundCourse.at(t = Double.NaN, seed = 1, look = AroundLook.Turns, drifts = true) shouldBe AroundMoment(Surrounding.Forest, 1.0)
-        AroundCourse.at(t = Double.POSITIVE_INFINITY, seed = 1, look = AroundLook.Turns, drifts = true) shouldBe
+        AroundCourse.at(t = Double.NaN, seed = 1, look = AroundLook.Turns) shouldBe AroundMoment(Surrounding.Forest, 1.0)
+        AroundCourse.at(t = Double.POSITIVE_INFINITY, seed = 1, look = AroundLook.Turns) shouldBe
             AroundMoment(Surrounding.Forest, 1.0)
     }
 })

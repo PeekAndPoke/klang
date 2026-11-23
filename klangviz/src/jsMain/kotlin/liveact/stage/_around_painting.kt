@@ -27,11 +27,11 @@ import kotlin.math.sqrt
 // How the surroundings' shapes are drawn (Around): once, as the stage is built, onto two canvases, by code and the
 // same every time (each shape's numbers come from a seeded stream, Dice). A caricature: bold dark shapes, no detail.
 //
-// Each surrounding goes into its own colour channel of both pictures (Surrounding.ordinal: red, green, blue), so one
-// texture holds all three, and a turn from one to the next is a uniform. In a channel, 1 is a near shape, a little
-// under a half one further back (darker, and a little see-through), 0 nothing. What is drawn in metres: the canvas's
-// transform turns them into its pixels. The finest limbs are kept some pixels wide and fade as they get thinner, so
-// they do not shimmer as the camera moves.
+// Each surrounding goes into its own colour channel of the pictures (Surrounding.ordinal: red, green, blue), so one
+// texture holds all three, and a turn from one to the next is a uniform. Each row of shapes, the near ones and those
+// further back, has a picture of its own (Row); in a channel, 1 is a shape of that row, 0 nothing. What is drawn in
+// metres: the canvas's transform turns them into its pixels. The finest limbs are kept some pixels wide and fade as
+// they get thinner, so they do not shimmer as the camera moves.
 
 /** A stream of numbers from 0 to 1, the same every time for the same [salt]: what makes a shape the same every time. */
 internal class Dice(private val salt: Double) {
@@ -57,8 +57,10 @@ private const val DRAWN_TO = DRAWN_FROM + Around.SIDE_TO - Around.SIDE_FROM
 
 /**
  * A picture of the shapes left and right of the stage (see [Around]), [width] by [height] pixels: the audience's left
- * in its left half; of the shapes only those of [row], drawn whole and at full strength (the other row's are rolled
- * as well, so both pictures are of the same place).
+ * in its left half; of the shapes only those of [row], drawn whole and at full strength. The other row's are rolled
+ * as well, so the ruins and the stones are of the same place in both pictures; the forest's are not quite, since a
+ * limb stops forking by the picture's pixels ([Painter.FINEST]) and the two pictures are not equally fine, so from the
+ * first limb that forks less their rolls part.
  */
 internal fun paintSides(row: Row, width: Int, height: Int): HTMLCanvasElement = packed(width = width, height = height) { g, surrounding ->
     val wide = DRAWN_TO - DRAWN_FROM
@@ -139,7 +141,7 @@ private fun far(row: Row, relief: Boolean, width: Int, height: Int): HTMLCanvasE
 
 /**
  * A picture of [width] by [height] pixels with each surrounding drawn by [paint] in its own channel: each is drawn
- * white (near) and grey (far) on a clear canvas, put on [ground], turned to its channel's colour and added.
+ * white on a clear canvas, put on [ground], turned to its channel's colour and added.
  */
 private fun packed(
     width: Int,
@@ -252,15 +254,15 @@ private class Horizon(val reach: Double) {
 
 /**
  * Draws shapes onto [g] in metres, by the numbers of [dice]; [pixels] is how many of the picture's pixels a metre is at
- * least, so the finest limbs stay some pixels wide. With [only], just that row's shapes are drawn, the far ones then
- * whole and at full strength; the other row's leave no mark. With [relief], not the shapes are drawn but how far their
+ * least, so the finest limbs stay some pixels wide. Of the shapes just those of the row [only] are drawn, whole and
+ * at full strength; the other row's leave no mark. With [relief], not the shapes are drawn but how far their
  * surfaces stand out (see [paintFarRelief]): the same shapes at the same places, plain at [LEVEL], their detail on them.
  */
 private class Painter(
     val g: CanvasRenderingContext2D,
     val dice: Dice,
     val pixels: Double,
-    val only: Row? = null,
+    val only: Row,
     val relief: Boolean = false,
 ) {
     /** Whether the shapes drawn just now leave no mark. */
@@ -323,7 +325,7 @@ private class Painter(
         g.fillStyle = if (relief) grey(LEVEL) else "#ffffff"
     }
 
-    /** Shapes from now on further back: grey, and only behind what is there already. */
+    /** Shapes from now on further back: in a picture of their own, white, whole and at full strength. */
     fun far() {
         if (only == Row.Near) {
             return none()
@@ -331,15 +333,8 @@ private class Painter(
 
         unseen = false
         g.globalAlpha = 1.0
-
-        if (only == Row.Deep) {
-            // a picture of its own: whole, at full strength
-            g.globalCompositeOperation = "source-over"
-            g.fillStyle = "#ffffff"
-        } else {
-            g.globalCompositeOperation = "destination-over"
-            g.fillStyle = FAR
-        }
+        g.globalCompositeOperation = "source-over"
+        g.fillStyle = "#ffffff"
     }
 
     /** Shapes from now on cut out of what is there (an arch's opening). */
@@ -981,7 +976,8 @@ private class Painter(
         var s = -horizon.reach
 
         while (s < horizon.reach) {
-            if (abs(s - moon) < 8.5) {
+            // exact both ways, so a stone set just past the gap is never found in it again
+            if (s > moon - 8.5 && s < moon + 8.5) {
                 s = moon + 8.5
 
                 continue
@@ -1016,9 +1012,6 @@ private class Painter(
     }
 
     companion object {
-        /** A shape further back: a little under half. */
-        const val FAR = "rgb(107,107,107)"
-
         /** A limb thinner than this many pixels forks no further. */
         const val FINEST = 1.5
 

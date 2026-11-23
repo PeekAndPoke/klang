@@ -52,8 +52,9 @@ import org.w3c.dom.HTMLCanvasElement
  * no shadows, no light of their own on anything else.
  *
  * Their light: dim, from below, fading upward into the dark ([AroundLight]), with a lit edge where a shape has nothing
- * below it or toward the stage. The horizon's shapes have a relief: rounded from their edge to their middle and rough
- * with a grain (bark, courses of stone), lit from below and from either side ([FAR_ROUND], [FAR_ROUGH]).
+ * below it (beside the stage also where it has nothing toward the stage). The horizon's shapes have a relief: rounded
+ * from their edge to their middle and rough with a grain (bark, courses of stone), lit from below and from either side
+ * ([FAR_ROUND], [FAR_ROUGH]).
  *
  * Hidden and shown again with [show] (the look turned off and on again: kept). [dispose] takes it out of the scene and
  * frees what it holds.
@@ -214,14 +215,10 @@ class Around(private val scene: Scene) {
             material(
                 picture = farPicture,
                 deep = farDeepPicture,
-                from = 0.0,
-                across = 1.0,
                 below = FAR_EDGE / FAR_HIGH,
-                inward = 0.0,
                 foot = FAR_FOOT,
                 fall = FAR_FALL,
                 gain = FAR_GAIN,
-                hides = 1.0,
                 spread = FAR_SPREAD,
                 // laid over the stars and the moon, which are drawn before it: its soft edge stays soft against them
                 depthWrite = false,
@@ -237,23 +234,19 @@ class Around(private val scene: Scene) {
     }
 
     /**
-     * The material of the band: it reads [picture] (its near shapes) and [deep] (the ones behind them) from [from] [across] of its width; a shape's edge is lit
-     * where the picture is empty [below] of its height under it and [inward] of its width toward the stage; the light
-     * is strongest at [foot] metres up and falls to 1/e over [fall]; [gain] how strong it is; [hides] how much a shape
-     * hides what is behind it (0 to 1); [spread] over how many metres to either side of the stage's middle the light
-     * turns from the cold side to the warm one.
+     * The material of the band: it reads [picture] (its near shapes) and [deep] (the ones behind them) across its
+     * whole width; a shape's edge is lit where the picture is empty [below] of its height under it; the light is
+     * strongest at [foot] metres up and falls to 1/e over [fall]; [gain] how strong it is; [spread] over how many
+     * metres to either side of the stage's middle the light turns from the cold side to the warm one. A shape hides
+     * what is behind it fully.
      */
     private fun material(
         picture: CanvasTexture,
         deep: CanvasTexture,
-        from: Double,
-        across: Double,
         below: Double,
-        inward: Double,
         foot: Double,
         fall: Double,
         gain: Double,
-        hides: Double,
         spread: Double,
         depthWrite: Boolean,
         side: Int,
@@ -261,9 +254,7 @@ class Around(private val scene: Scene) {
         val uniforms = uniformsOf(
             "uMap" to uniform(picture),
             "uDeep" to uniform(deep),
-            "uSpan" to uniform(Three.addon.createVector2(x = from, y = across)),
             "uBelow" to uniform(below),
-            "uInward" to uniform(inward),
             "uPick" to uniform(pick),
             "uShow" to shown,
             "uCold" to uniform(cold),
@@ -271,9 +262,8 @@ class Around(private val scene: Scene) {
             "uFoot" to uniform(foot),
             "uFall" to uniform(fall),
             "uGain" to uniform(gain),
-            "uHides" to uniform(hides),
             "uSpread" to uniform(spread),
-            "uMetres" to uniform(Three.addon.createVector2(x = 2 * FAR_WRAP * FAR_RADIUS * across, y = FAR_HIGH)),
+            "uMetres" to uniform(Three.addon.createVector2(x = 2 * FAR_WRAP * FAR_RADIUS, y = FAR_HIGH)),
             "uGrain" to uniform(grain),
             "uRound" to uniform(FAR_ROUND),
             "uRough" to uniform(FAR_ROUGH),
@@ -380,16 +370,18 @@ class Around(private val scene: Scene) {
             Surrounding.Stones to (0.45 to 0.4),
         )
 
-        /** How far below and toward the stage an edge looks for the empty dark that lights it, in metres. */
+        /**
+         * How far an edge looks for the empty dark that lights it, in metres: beside the stage below and toward the
+         * stage ([EDGE]), on the horizon below only ([FAR_EDGE]).
+         */
         const val EDGE = 0.15
         const val FAR_EDGE = 0.35
 
         private val VERTEX = """
-  uniform vec2 uSpan;
   varying vec2 vUv;
   varying vec3 vWorld;
   void main() {
-    vUv = vec2(uSpan.x + uv.x * uSpan.y, uv.y);
+    vUv = uv;
     vec4 world = modelMatrix * vec4(position, 1.0);
     vWorld = world.xyz;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -450,13 +442,13 @@ class Around(private val scene: Scene) {
         // (dimmer, and a little see-through), so each has its whole soft edge: a picture read larger than it is drawn
         // then shows no steps (with both in one picture, the far shapes' half strength had to be doubled, which made
         // every edge hard; the maintainer, 2026-11-22: "pixellated outlines"). Its light rises from its foot and fades
-        // upward; an edge with nothing below it or toward the stage catches more. The colour leans cold on the
+        // upward; an edge with nothing below it catches more. The colour leans cold on the
         // audience's left, warm on its right.
         private val FRAGMENT = """
   uniform sampler2D uMap, uDeep, uRelief;
   uniform vec3 uPick, uCold, uWarm;
   uniform vec2 uMetres, uGrain, uTexel;
-  uniform float uBelow, uInward, uShow, uFoot, uFall, uGain, uHides, uSpread, uRound, uRough, uCarve;
+  uniform float uBelow, uShow, uFoot, uFall, uGain, uSpread, uRound, uRough, uCarve;
   varying vec2 vUv;
   varying vec3 vWorld;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -481,8 +473,7 @@ class Around(private val scene: Scene) {
     float v = dot(texture2D(map, vUv).rgb, uPick);
     if (v < 0.003) return vec3(0.0);
     float below = dot(texture2D(map, vUv - vec2(0.0, uBelow)).rgb, uPick);
-    float inward = dot(texture2D(map, vUv + vec2(uInward, 0.0)).rgb, uPick);
-    float rim = max(v - below, 0.0) + 0.6 * max(v - inward, 0.0);
+    float rim = max(v - below, 0.0);
     // the surface's lean, from its height a little to either side and above and below
     vec2 e = vec2(0.35) / uMetres;
     vec2 ex = vec2(e.x, 0.0);
@@ -524,7 +515,7 @@ class Around(private val scene: Scene) {
     // each side's light where it stands, a little of it everywhere
     float warmth = smoothstep(-uSpread, uSpread, vWorld.x);
     vec3 light = uCold * lit.x * mix(1.0, 0.3, warmth) + uWarm * lit.y * mix(0.3, 1.0, warmth);
-    gl_FragColor = vec4(light * uGain * uShow, there * uHides * uShow);
+    gl_FragColor = vec4(light * uGain * uShow, there * uShow);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }"""

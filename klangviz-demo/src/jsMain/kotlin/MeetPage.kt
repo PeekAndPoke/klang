@@ -38,18 +38,13 @@ class MeetPage(ctx: Ctx<Props>) : Component<MeetPage.Props>(ctx) {
     private var selected: Player by value(props.first)
 
     private val onKey: (Event) -> Unit = { event ->
-        val key = (event as? KeyboardEvent)?.key
-        val step = when (key) {
-            "ArrowRight" -> 1
-            "ArrowLeft" -> -1
-            else -> 0
-        }
+        // a key held with Ctrl, Alt or Meta is the browser's
+        val key = (event as? KeyboardEvent)?.takeUnless { it.ctrlKey || it.metaKey || it.altKey }?.key
 
-        if (step != 0) {
-            val order = MeetLayout.ORDER
-            val at = order.indexOf(selected)
-
-            selected = order[(at + step + order.size) % order.size]
+        when (key) {
+            "ArrowRight" -> selected = MeetLayout.next(selected)
+            "ArrowLeft" -> selected = MeetLayout.previous(selected)
+            else -> Unit
         }
     }
 

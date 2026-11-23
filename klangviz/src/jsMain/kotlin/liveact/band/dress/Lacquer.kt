@@ -405,10 +405,9 @@ class Lacquer private constructor(
             m.envMap = room
             m.envMapIntensity = ROOM
 
-            val kind = cloth
             // Skalpell's hair, combed back: lacquered strands, glossier and duller by turns
             val combed = hair?.let { combedBack(hair = it, matt = "0.30", gloss = "0.06") } ?: ""
-            val cacheKey = "lacquer-" + kind.key + (if (hair != null) "-hair" else "")
+            val cacheKey = "lacquer-" + cloth.key + (if (hair != null) "-hair" else "")
 
             material.onBeforeCompile(cacheKey) { shader: CompiledShader ->
                 shader.uniforms["uKlGold"] = gold
@@ -420,7 +419,7 @@ class Lacquer private constructor(
                     .replaceFirst("#include <common>", "#include <common>\nvarying vec3 vRest;\nuniform vec3 uKlGold;\n$INLAY_GLSL")
                     .replaceFirst(
                         "#include <color_fragment>",
-                        "#include <color_fragment>\nfloat klGold; { vec3 p = vRest; ${kind.before} klGold = clamp(${kind.inlay}, 0.0, 1.0); }\n" +
+                        "#include <color_fragment>\nfloat klGold; { vec3 p = vRest; ${cloth.before} klGold = clamp(${cloth.inlay}, 0.0, 1.0); }\n" +
                             "diffuseColor.rgb = mix(diffuseColor.rgb, uKlGold, klGold);",
                     )
                     .replaceFirst(

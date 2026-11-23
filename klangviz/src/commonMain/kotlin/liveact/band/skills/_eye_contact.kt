@@ -19,11 +19,18 @@ const val CONTACT_MEET: Double = 1.3
 /** The least the other answers the first one's glance late, in seconds; the most is what the timing's rise leaves. */
 const val CONTACT_LATE_LEAST: Double = 1.0
 
+/** How long a head takes to turn back to the playing at the end of a contact, in seconds. */
+const val CONTACT_TURN_BACK: Double = 0.9
+
+/** How long after the first one the second looks away at the end of a contact, in seconds. */
+const val CONTACT_LAG: Double = 0.35
+
 /**
- * How long the two take to be back at their playing once the first looks away, in seconds: the least fall of the
- * timing, so that both are back by the end of a use.
+ * How long the two take to be back at their playing once the first looks away, in seconds: the second looks away
+ * [CONTACT_LAG] after the first and turns back over [CONTACT_TURN_BACK]. The timing's fall is at least this, so that
+ * both are back by the end of a use.
  */
-const val CONTACT_BACK: Double = 2.15
+const val CONTACT_BACK: Double = CONTACT_LAG + CONTACT_TURN_BACK
 
 /** How far a contact with the trumpet player keeps from her notes, before it and after it, in seconds. */
 const val CONTACT_CLEAR: Double = 3.0
@@ -90,8 +97,8 @@ fun contactAt(
     val x = t - glanceAt
     val shared = away - glanceAt
     val glance = 0.50 * smooth(x / 1.2) * smooth((2.0 - x) / 0.9)
-    val again = 0.62 * smooth((x - late - 0.4) / 0.9) * smooth((shared + 0.9 - x) / 0.9)
-    val answer = 0.58 * smooth((x - late) / 1.1) * smooth((shared + 0.35 + 0.9 - x) / 0.9)
+    val again = 0.62 * smooth((x - late - 0.4) / 0.9) * smooth((shared + CONTACT_TURN_BACK - x) / CONTACT_TURN_BACK)
+    val answer = 0.58 * smooth((x - late) / 1.1) * smooth((shared + CONTACT_LAG + CONTACT_TURN_BACK - x) / CONTACT_TURN_BACK)
 
     // as their eyes meet, a small nod to each other, the second a moment after the first
     fun greet(at: Double): Double {

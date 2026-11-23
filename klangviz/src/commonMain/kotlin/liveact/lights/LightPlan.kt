@@ -402,10 +402,10 @@ class LightPlan(private val show: Show, private val kick: String) {
 
         /**
          * Whether the stroboscope flashes at [t]: inside one of the bass drum's [runs] (a little before and after),
-         * but only a run that begins at [first] or later.
+         * but only a run that begins at [FIRST_SHADOWS] or later.
          */
-        fun strobes(runs: List<Run>, t: Double, first: Double = FIRST_SHADOWS): Boolean =
-            runs.any { it.from >= first && t >= it.from - 0.02 && t < it.to + 0.08 }
+        fun strobes(runs: List<Run>, t: Double): Boolean =
+            runs.any { it.from >= FIRST_SHADOWS && t >= it.from - 0.02 && t < it.to + 0.08 }
 
         /**
          * A mood's round, in bars: it holds, and over the round's last bars it goes over into another, as many of

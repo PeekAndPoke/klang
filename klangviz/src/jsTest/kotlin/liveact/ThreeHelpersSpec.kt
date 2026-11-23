@@ -109,6 +109,13 @@ class ThreeHelpersSpec : StringSpec({
         typingOn(null) shouldBe false
     }
 
+    "a key pressed on a slider is no typing: the volume's slider keeps no key from the show" {
+        val slider = document.createElement("input")
+        slider.setAttribute("type", "range")
+
+        inPage(slider) { typingOn(slider) } shouldBe false
+    }
+
     "a key pressed in a field inside a web component is typing, though the window sees only its host" {
         val host = document.createElement("div")
         val field = document.createElement("input")

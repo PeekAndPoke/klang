@@ -328,8 +328,8 @@ class StringPlayer(
         instrument.light(lit)
 
         val playing = min(1.0, energy)
-        // what the member does with the hands, the body and the head while the part pauses (see [rightGoal],
-        // [leftGoal]), and how far a slouch settles the body
+        // what the member does with the hands, the body and the head while the part pauses (see [strummingGoal],
+        // [frettingGoal]), and how far a slouch settles the body
         val idle = idles(t)
         val settle = idle.filter { it.skill is Slouch }.maxOfOrNull { it.share } ?: 0.0
         // tuning up: how far the head leans in to listen

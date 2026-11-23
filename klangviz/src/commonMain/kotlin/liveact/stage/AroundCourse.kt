@@ -27,8 +27,10 @@ data class AroundMoment(val surrounding: Surrounding?, val presence: Double)
  * visit ([FLIP_AFTER] seconds after it begins) the surrounding fades out over [FADE] seconds, turns to the next one, and
  * fades in over as long: unseen, as the ghosts are fully there then. The pitch black before the walk-in (`?opening=ember`)
  * needs no turn: the show begins in the first one, the forest, which comes up with the house. The drift's deepest
- * night is not dark enough (the band stands in the lamps' light), and a world held by hand has no visits: the forest
- * stays.
+ * night is not dark enough (the band stands in the lamps' light).
+ *
+ * The turns run whatever the world does (the maintainer, 2026-11-23): where it is held by hand the ghosts do not
+ * visit, and the surrounding turns at the same moments in plain sight, with the same fade.
  *
  * The order goes by the show's seed: the forest first (the maintainer's own idea, the first and the default), then the
  * others in an order the seed picks, round and round, so all of them come by turns and none twice in a row.
@@ -52,20 +54,20 @@ object AroundCourse {
 
     /**
      * The surrounding at the show's time [t] (seconds) of the show of [seed], with the look at [look]: none where it is
-     * off; the one held where one is ([AroundLook.held]); by turns ([AroundLook.Turns]) where the world [drifts] (only
-     * then the ghosts visit), else the first. A [t] of no number, or an endless one, is the first, fully there.
+     * off; the one held where one is ([AroundLook.held]); by turns ([AroundLook.Turns]), whether the world drifts or
+     * is held. A [t] of no number, or an endless one, is the first, fully there.
      */
-    fun at(t: Double, seed: Int, look: AroundLook, drifts: Boolean): AroundMoment {
-        val order = order(seed)
-
+    fun at(t: Double, seed: Int, look: AroundLook): AroundMoment {
         when (look) {
             AroundLook.Off -> return AroundMoment(surrounding = null, presence = 0.0)
             AroundLook.Forest, AroundLook.Ruins, AroundLook.Stones -> return AroundMoment(surrounding = look.held, presence = 1.0)
             AroundLook.Turns -> Unit
         }
 
+        val order = order(seed)
+
         // NaN-guard: no time is the first, as the show begins
-        if (!drifts || t != t || !t.isFinite()) {
+        if (t != t || !t.isFinite()) {
             return AroundMoment(surrounding = order.first(), presence = 1.0)
         }
 

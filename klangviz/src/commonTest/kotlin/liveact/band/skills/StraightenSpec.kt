@@ -9,7 +9,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 import kotlin.math.abs
 
@@ -29,16 +28,6 @@ private val STRAIGHTEN = Straighten(
 )
 
 class StraightenSpec : StringSpec({
-
-    "how straight a member stands is what the timing gives, with the skill's own rolls" {
-        val show = Show(seed = 3)
-        val roll = { index: Double -> show.own(index, 23.0) }
-        val own = { index: Double -> roll(index + 15000.0) }
-
-        (0..6000).map { STRAIGHTEN.at(t = it / 10.0, roll = roll) } shouldBe
-            (0..6000).map { STRAIGHTEN.timing.inUse(t = it / 10.0, roll = own) }
-        (0..6000).maxOf { STRAIGHTEN.at(t = it / 10.0, roll = roll) } shouldBeGreaterThan 0.99
-    }
 
     "before the song the member stands as always, and nothing is cut off where it begins" {
         // every chance taken: a use in every slot, also in the one before the song

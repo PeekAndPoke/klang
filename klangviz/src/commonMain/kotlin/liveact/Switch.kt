@@ -256,14 +256,14 @@ enum class Switch(val key: String) {
     /**
      * `?ripple=faint`: how uneven the mirror floor's stone is ([RippleLook]): none, faint, gentle or strong (the ripple
      * as it was first made); it bends the reflection and tilts the floor's own shading alike. Any other value, or none,
-     * faint. Only where the mirror floor is drawn ([Floor]). The key b steps through them while the show plays
+     * gentle. Only where the mirror floor is drawn ([Floor]). The key b steps through them while the show plays
      * ([LookVariants]).
      */
     Ripple("ripple"),
 
     /**
      * `?blur=crisp`: how blurred the mirror floor's reflection is ([BlurLook]): crisp, soft or stone (the blur as it
-     * was first made); near the floor it is crisp at every level. Any other value, or none, soft. Only where the
+     * was first made); near the floor it is crisp at every level. Any other value, or none, crisp. Only where the
      * mirror floor is drawn ([Floor]). The key c steps through them while the show plays ([LookVariants]).
      */
     Blur("blur"),
