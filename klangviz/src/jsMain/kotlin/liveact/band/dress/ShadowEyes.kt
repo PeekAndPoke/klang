@@ -193,8 +193,8 @@ class ShadowEyes private constructor(
             blending = Blending.NormalBlending
         })
         // their light is added to what is behind: the colour is multiplied in already, and the alpha they give
-        // dims the surface behind by as much. That is nothing, but in a ghost: there a thin, soft rim close round
-        // each eye takes some of the ghost's pale light away, so the eye stands out of it (see FRAGMENT)
+        // dims the surface behind by as much. That is nothing, but in a ghost: there the eyes give no light and
+        // their shape takes the ghost's pale light away, a negative of the eyes on a shadow (see FRAGMENT)
         material.asDynamic().premultipliedAlpha = true
         // their light goes to the screen as it is, as her own eyes' does (see Rig)
         material.toneMapped = false
@@ -238,8 +238,12 @@ class ShadowEyes private constructor(
         val onWall = EyesInShadow.wall(share)
 
         // her eyes' light as it is set this frame, before it leaves her face
-        glow.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b).multiplyScalar(eyes.emissiveIntensity * onWall * GLOW)
-        cover.value = ghosts.coerceIn(0.0, 1.0) * onWall
+        val ghostly = ghosts.coerceIn(0.0, 1.0)
+
+        // (on a ghost they give no light at all, from the first moment: there they are dark, see FRAGMENT)
+        glow.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
+            .multiplyScalar(eyes.emissiveIntensity * onWall * GLOW * (1.0 - ghostly))
+        cover.value = ghostly * onWall
         // in a ghost the eyes are drawn after the haze behind the fence, whose glowing veil would wash them out
         mesh.renderOrder = if (cover.value > 0.0) ORDER_IN_GHOST else ORDER
         faceFull = eyes.emissiveIntensity
@@ -422,13 +426,12 @@ class ShadowEyes private constructor(
   uniform vec3 uGlow;
   uniform float uCover;
 
-  // the soft outline of an eye in a ghost, 0 to 1: a thin dark rim close round its core, fading outward within
-  // about the eye's own height. (A wide dark hollow stood there once and read as a black halo; without anything
-  // the eyes were barely seen in the ghost's pale light: the maintainer, 2026-11-23, both.)
-  float rimAt(vec2 p) {
-    float d = length(p / uEye);
-    float off = (d - 1.15) / 0.45;
-    return exp(-off * off);
+  // an eye's own shape, 0 to 1, soft at its rim: what is dark of it in a ghost. A ghost is pale light, so there the
+  // eyes are its negative: dark where on a shadow they are light (the maintainer, 2026-11-23: "maybe we make the
+  // ghost eyes black/dark, like a negative"; before, an eye of light in a dark hollow read as a black halo, without
+  // the hollow it was barely seen, and with a thin rim it read as a pair of glasses)
+  float darkAt(vec2 p) {
+    return 1.0 - smoothstep(0.7, 1.25, length(p / uEye));
   }
 
   float eyeAt(vec2 p) {
@@ -441,9 +444,9 @@ class ShadowEyes private constructor(
   void main() {
     vec2 p = (vUv - 0.5) * uSize;
     float light = eyeAt(p - vec2(uHalf, 0.0)) + eyeAt(p + vec2(uHalf, 0.0));
-    // in a ghost (uCover) brighter: the ghost is pale light itself, and the eyes have to stand out of it
-    float rim = clamp(rimAt(p - vec2(uHalf, 0.0)) + rimAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
-    gl_FragColor = vec4(uGlow * light * (1.0 + 1.3 * uCover), 0.3 * uCover * rim);
+    // in a ghost (uCover) their shape is dark: it takes the ghost's light away there (and uGlow is none then)
+    float dark = clamp(darkAt(p - vec2(uHalf, 0.0)) + darkAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
+    gl_FragColor = vec4(uGlow * light, 0.92 * uCover * dark);
     #include <colorspace_fragment>
   }"""
     }
