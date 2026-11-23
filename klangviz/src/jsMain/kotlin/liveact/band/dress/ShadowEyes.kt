@@ -427,7 +427,7 @@ class ShadowEyes private constructor(
   // the eyes were barely seen in the ghost's pale light: the maintainer, 2026-11-23, both.)
   float rimAt(vec2 p) {
     float d = length(p / uEye);
-    float off = (d - 1.3) / 0.8;
+    float off = (d - 1.15) / 0.45;
     return exp(-off * off);
   }
 
@@ -443,7 +443,7 @@ class ShadowEyes private constructor(
     float light = eyeAt(p - vec2(uHalf, 0.0)) + eyeAt(p + vec2(uHalf, 0.0));
     // in a ghost (uCover) brighter: the ghost is pale light itself, and the eyes have to stand out of it
     float rim = clamp(rimAt(p - vec2(uHalf, 0.0)) + rimAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
-    gl_FragColor = vec4(uGlow * light * (1.0 + 1.3 * uCover), 0.6 * uCover * rim);
+    gl_FragColor = vec4(uGlow * light * (1.0 + 1.3 * uCover), 0.3 * uCover * rim);
     #include <colorspace_fragment>
   }"""
     }
