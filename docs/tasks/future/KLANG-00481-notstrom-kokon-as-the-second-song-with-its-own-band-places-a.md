@@ -117,6 +117,28 @@ way between two scores.
 
 Places to choose from: `prototypes/band/ignored/previews/kokon/places-ABC.png` (three half circles, from above).
 
+## The change of song without a cut (the maintainer, 2026-11-23)
+
+"I would not cut between the scenes ... we have to figure out what differs, for example except for Sirene and Rune
+everyone keeps their instruments, and then swap the instruments. I would also do it like this: 1. let the no longer
+needed instruments vanish, 2. while they vanish everyone takes the new start pose, 3. only when the start pose is
+fully reached let the new instruments appear. Cutting between scenes will never really work as there will be jumps in
+the musicians positions, the fog, the light etc."
+
+So the first draft (`922325be7`: the next show's walk-in begins where the last song left everyone, with a dark
+moment between two shows) is replaced. Its planner for the walks (`StagePlot.after`) stays. The plan:
+
+| Step | What | State |
+|---|---|---|
+| 1 | The show goes on with another song at a moment on its own clock (`Show.take`, `Song.startsAt`, `Show.beatAt`) | done, `295ac967b` |
+| 2 | The clock runs on between two songs (`ShowClock.hush`, `changeTo`); the light plan keeps its first bar | done, `83f9b3ffd` |
+| 3 | The band outlives its song: the six figures stay, their seats are exchanged (`Notstrom.reseat`). Who keeps the same instrument keeps the very object and gets the next song's part; an instrument no longer needed vanishes; a new one appears once its player has reached the start pose. A member who sat gets up before walking | open |
+| 4 | The camera counts its rounds from the song's start on the running clock | open |
+| 5 | The live act takes the change while it stays mounted; the app stops the old sound, reads the next song from the moment it will begin, and hands both over; the drawer stays | open |
+
+Known rough edges to refine after step 5: the instruments' vanishing and appearing is a plain shrinking and growing;
+the ways are straight lines; the lacquer has to take up a trumpet that was made anew.
+
 ## Decide before implementing (all answered above; kept for the record)
 
 1. **Who strolls, and who may not?** "Rune cannot stroll around": today Sirene strolls, with her trumpet. Kokon has no
@@ -152,3 +174,4 @@ To be planned once the points are decided; step 1 can begin before.
 
 - 2026-11-23: created.
 - 2026-11-23: the maintainer's decisions; step 1 (programme and drawer) and the tags done.
+- 2026-11-23: Kokon's score, sitting in two ways, the drummer's rest, ghost eyes as a skill, the looks at one who sits; a first draft of the change of song, then the maintainer's word against a cut, and the first two steps of the change without one.
