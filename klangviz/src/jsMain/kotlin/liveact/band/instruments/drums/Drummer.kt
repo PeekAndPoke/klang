@@ -174,6 +174,18 @@ class Drummer(
         rig.turn("chest", X_AXIS, 0.06)
         rig.turn("neck", X_AXIS, 0.06 * nod * parts.head)
         rig.turn("head", X_AXIS, -0.12 + 0.24 * nod * parts.head + 0.02 * snare)
+
+        // at rest (a long silence in his part): the back comes up from the kit, and the head bows a little
+        val (last, coming) = all.around(t)
+        val rest = restShare(
+            since = if (last != null) t - last.t else Double.POSITIVE_INFINITY,
+            until = if (coming != null) coming.t - t else Double.POSITIVE_INFINITY,
+        )
+
+        if (rest > 0) {
+            rig.turn("belly", X_AXIS, -REST_UPRIGHT * rest)
+            rig.turn("head", X_AXIS, REST_BOW * rest)
+        }
         mover.apply(rig, t)
 
         if (bow > 0) {
@@ -197,11 +209,14 @@ class Drummer(
         for (side in listOf(Side.L, Side.R)) {
             val hand = hands.getValue(side)
 
+            // at rest the stick lies along the thigh, its tip past the knee, the hand on the thigh
+            val resting = vec(REST_OUT * side.sign * s, kit.seat + REST_HIGH * s, REST_FORE * s)
+
             holdStick(
                 rig = rig,
                 side = side,
-                tip = hand.tip,
-                bend = hand.bend,
+                tip = hand.tip.clone().lerp(resting, rest),
+                bend = hand.bend * (1 - rest),
                 length = kit.stickLength,
                 pole = rig.dir(0.55 * side.sign, -1.0, -0.5),
                 mesh = kit.sticks.getValue(side),
@@ -347,6 +362,17 @@ class Drummer(
     }
 
     private companion object {
+        /**
+         * At rest (see `restShare`): how far the back comes up and the head bows (radians), and where a stick's tip
+         * lies, in the figure's sizes: out to the side, over the stool's height, and before the body (past the
+         * knee, the stick along the thigh and the hand on it).
+         */
+        const val REST_UPRIGHT = 0.12
+        const val REST_BOW = 0.16
+        const val REST_OUT = 0.17
+        const val REST_HIGH = 0.07
+        const val REST_FORE = 0.50
+
         /** Where along a stick the hand holds it, from its tip, as a share of its length (as in `holdStick`). */
         const val GRIP = 0.72
 

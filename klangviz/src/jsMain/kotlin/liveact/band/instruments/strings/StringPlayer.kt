@@ -488,7 +488,7 @@ class StringPlayer(
             // in the lap of one who sits the instrument may lie on the legs and sink into them, but it never goes
             // into the floor (the maintainer, 2026-11-23: "they can touch the legs and even sink into them ... but
             // they must not enter the floor"): it is lifted by as much as its body's lowest point would lie below
-            // the floor. The body's outline in the instrument's own measure, either way up (a left-handed one is
+            // a level a little over the floor (SIT_CLEAR). The body's outline in the instrument's own measure, either way up (a left-handed one is
             // mirrored across its neck), and half its depth
             val floor = rig.root.getWorldPosition(vec()).y + SIT_CLEAR * s
             var lowest = Double.POSITIVE_INFINITY
@@ -798,8 +798,12 @@ class StringPlayer(
         const val SIT_KNEE_UP = 0.12
         const val SIT_KNEE_FORE = 0.45
 
-        /** How far over the floor the instrument's body stays in the lap of one who sits, and half the body's depth. */
-        const val SIT_CLEAR = 0.012
+        /**
+         * How far over the floor the instrument's body stays in the lap of one who sits (about half a thigh: it lies
+         * on the legs and sinks into them a little, not through them; at 0.012 it went "a little too much through the
+         * legs", the maintainer, 2026-11-23), and half the body's depth.
+         */
+        const val SIT_CLEAR = 0.075
         const val SIT_BODY_DEEP = 0.03
 
         /**
