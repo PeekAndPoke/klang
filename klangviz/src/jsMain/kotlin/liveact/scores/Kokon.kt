@@ -30,8 +30,8 @@ import io.peekandpoke.klang.viz.liveact.stage.Stage
  *
  * The places (the maintainer's choice of three sketches, 2026-11-23: "layout b"): a half circle open to the audience,
  * the drummer on his riser at its back, Sirene and Rune side by side in its middle before the riser (their dialogue
- * in the middle), Skalpell and Klaue at its tips, Beben beside the riser. Everyone stands for now; sitting is this
- * ticket's next step.
+ * in the middle), Skalpell and Klaue at its tips, Beben beside the riser. All but the drummer sit cross-legged on the
+ * floor, the instrument in the lap; the drummer has his stool.
  */
 val KOKON: Score = Score(
     cast = Cast(
@@ -91,11 +91,11 @@ val KOKON: Score = Score(
         intro = 15.0,
         places = mapOf(
             Player.Wucht to Place(x = 0.1, z = -2.1, turn = 0.0, y = Stage.RISER),
-            Player.Beben to Place(x = -2.1, z = -0.7, turn = 0.4),
-            Player.Skalpell to Place(x = -2.4, z = 1.2, turn = 0.9),
-            Player.Sirene to Place(x = -0.75, z = 0.35, turn = 0.15),
-            Player.Rune to Place(x = 0.75, z = 0.35, turn = -0.15),
-            Player.Klaue to Place(x = 2.4, z = 1.2, turn = -0.9),
+            Player.Beben to Place(x = -2.1, z = -0.7, turn = 0.4, sits = true),
+            Player.Skalpell to Place(x = -2.4, z = 1.2, turn = 0.9, sits = true),
+            Player.Sirene to Place(x = -0.75, z = 0.35, turn = 0.15, sits = true),
+            Player.Rune to Place(x = 0.75, z = 0.35, turn = -0.15, sits = true),
+            Player.Klaue to Place(x = 2.4, z = 1.2, turn = -0.9, sits = true),
         ),
         entrances = linkedMapOf(
             Player.Wucht to Entrance(fromX = 0.1, fromZ = -7.5, start = -15.0, end = -9.0),

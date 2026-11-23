@@ -8,8 +8,11 @@ package io.peekandpoke.klang.viz.liveact.band
 // The stage plot (the Bühnenaufstellung): who stands where on the stage, and how and when each one walks in. A
 // song's score holds one (see Score); the band, the camera and the frontwoman's strolls are handed it.
 
-/** Where a player stands: [x] to the audience's right, [z] toward the audience, the [turn], and how high ([y], the riser). */
-data class Place(val x: Double, val z: Double, val turn: Double, val y: Double = 0.0)
+/**
+ * Where a player stands: [x] to the audience's right, [z] toward the audience, the [turn], and how high ([y], the
+ * riser). [sits]: they sit there cross-legged on the floor (a strung player, the instrument in the lap).
+ */
+data class Place(val x: Double, val z: Double, val turn: Double, val y: Double = 0.0, val sits: Boolean = false)
 
 /** A player's walk-in: from ([fromX], [fromZ]), off the stage, to its place, between the times [start] and [end]. */
 data class Entrance(val fromX: Double, val fromZ: Double, val start: Double, val end: Double)

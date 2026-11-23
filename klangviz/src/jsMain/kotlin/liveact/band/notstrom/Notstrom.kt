@@ -389,8 +389,12 @@ class Notstrom private constructor(
         // the string players and the marimba player walk as they stand, the legs stepping and the hips moving as each
         // one's gait has them on the walk-in
         for ((player, stringPlayer) in strings) {
-            stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walks.getValue(player), gait = character(player).gait))
-            stepLegs(rig(player), walks.getValue(player))
+            val walk = walks.getValue(player)
+            // one whose place is on the floor sits down over the first SIT seconds after arriving there
+            val sits = if (plot.places.getValue(player).sits) smooth(walk.since / SIT) else 0.0
+
+            stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walk, gait = character(player).gait), sits = sits)
+            stepLegs(rig(player), walk)
         }
 
         cast.marimba?.player?.let { player ->

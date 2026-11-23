@@ -128,7 +128,8 @@ private class IdleHand(
  *
  * [notes]: sorted by time, one per pluck or strum; the nod goes by the [show]'s tempo. [traits]: how the player
  * moves with the music, with the show's chance under [seed] (the player's own; the prototype's fallback is 4, the
- * band gives each player one of their own). [bearing]: how the player carries themselves over the instrument, the
+ * band gives each player one of their own). `update`'s `sits` (0 to 1) has the player sit cross-legged on the floor,
+ * the instrument in the lap. [bearing]: how the player carries themselves over the instrument, the
  * member's own (see [Bearing]), or a plain one where none is given; [outline]: the body's
  * outline, the [design]'s own unless given; [looks]: where the member's skills ask the head to look at a time (see
  * `lookAt`, the last in rank first; none unless given): the head comes up from the instrument and turns to each as
@@ -296,7 +297,11 @@ class StringPlayer(
      * The player at [t]: the strings' light, the body with the beat, the instrument on the trunk, both hands. [hips]:
      * how the hips move as the player walks (the walk-in, see `walkInHips`); the arms hold the instrument as ever.
      */
-    fun update(t: Double, hips: HipMotion = HipMotion.NONE) {
+    fun update(t: Double, hips: HipMotion = HipMotion.NONE, sits: Double = 0.0) {
+        // NaN-guard: a share of no number is standing
+        val seated = if (sits != sits) 0.0 else sits.coerceIn(0.0, 1.0)
+        val upright = 1 - seated
+
         if (part.refresh()) {
             notes = fingered(strums = part.events, now = t)
         }
@@ -352,11 +357,24 @@ class StringPlayer(
         val over = sin(PI * beat / 2)
         val weight = step * drive * over / (0.35 + 0.65 * abs(over))
 
-        rig.moveHips(vec((0.03 * sway + 0.065 * weight) * s, -(0.04 + bounce * body * parts.knees) * rig.pelvis.y, 0.0))
+        // (one who sits does not go from leg to leg, and no knee gives: what is left is the trunk's)
+        rig.moveHips(
+            vec(
+                (0.03 * sway + 0.065 * weight) * s * upright,
+                -(0.04 + bounce * body * parts.knees) * rig.pelvis.y * upright,
+                0.0,
+            )
+        )
+
+        if (seated > 0) {
+            // sitting cross-legged on the floor: the pelvis comes down to just above it and a little back, where
+            // the weight of one who sits is
+            rig.moveHips(vec(0.0, -(rig.pelvis.y - SIT_HIGH * rig.height) * seated, -SIT_BACK * s * seated))
+        }
 
         if (step > 0) {
-            rig.turn("hips", Z_AXIS, -0.06 * weight)
-            rig.turn("belly", Z_AXIS, 0.05 * weight)
+            rig.turn("hips", Z_AXIS, -0.06 * weight * upright)
+            rig.turn("belly", Z_AXIS, 0.05 * weight * upright)
         }
 
         if (settle > 0) {
@@ -375,7 +393,8 @@ class StringPlayer(
             ?: 0.0
         val straight = min(lean, 0.0) - 0.05
 
-        rig.turn("belly", X_AXIS, lean + (straight - lean) * up + 0.04 * body * parts.trunk)
+        // (one who sits bends a little further over the instrument in the lap)
+        rig.turn("belly", X_AXIS, lean + (straight - lean) * up + 0.04 * body * parts.trunk + SIT_BEND * seated)
         rig.turn("chest", X_AXIS, -0.06 * up)
         rig.turn("chest", Z_AXIS, -0.05 * sway)
         // the chest turned a little toward the neck
@@ -434,8 +453,19 @@ class StringPlayer(
             val foot = rig.ankle.getValue(side).clone()
 
             foot.x += 0.07 * sign * s
-            foot.y += 0.035 * s * max(0.0, -weight * sign)
-            rig.foot(side, rig.root.localToWorld(foot), rig.dir(0.3 * sign, 0.0, 1.0))
+            foot.y += 0.035 * s * max(0.0, -weight * sign) * upright
+
+            if (seated > 0) {
+                // the legs crossed before the body: each ankle a little past the middle, one before the other, just
+                // above the floor; the knees lie out to the sides
+                val crossed = vec(-SIT_CROSS * sign * s, SIT_ANKLE * s, (SIT_REACH + (if (side == Side.L) SIT_STAGGER else 0.0)) * s)
+
+                foot.lerp(crossed, seated)
+            }
+
+            val knee = rig.dir(0.3 * sign + (SIT_KNEE_OUT - 0.3) * sign * seated, SIT_KNEE_UP * seated, 1.0 - (1.0 - SIT_KNEE_FORE) * seated)
+
+            rig.foot(side, rig.root.localToWorld(foot), knee)
         }
 
         // the instrument hangs from the trunk: before the hip on the strumming side, its neck up and toward the
@@ -723,6 +753,24 @@ class StringPlayer(
     }
 
     private companion object {
+        /**
+         * Sitting cross-legged on the floor (KLANG-00481; the maintainer, 2026-11-23: "ok cross-legged"), in the
+         * figure's sizes: how high the pelvis is over the floor (a share of the figure's height) and how far back it
+         * goes; how far the trunk bends over the instrument (radians); where the ankles lie (how far past the middle
+         * each one crosses, how high, how far before the body, and how much further the left one); and where the
+         * knees point (out to the side, up a little, and forward).
+         */
+        const val SIT_HIGH = 0.115
+        const val SIT_BACK = 0.06
+        const val SIT_BEND = 0.10
+        const val SIT_CROSS = 0.05
+        const val SIT_ANKLE = 0.07
+        const val SIT_REACH = 0.30
+        const val SIT_STAGGER = 0.07
+        const val SIT_KNEE_OUT = 1.0
+        const val SIT_KNEE_UP = 0.12
+        const val SIT_KNEE_FORE = 0.45
+
         /**
          * A slouch: how far the hips go over the leg on the strumming side and down (a share of their height), how
          * far they tilt, how far the chest sinks.
