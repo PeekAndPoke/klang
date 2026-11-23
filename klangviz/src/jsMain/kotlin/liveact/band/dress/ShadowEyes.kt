@@ -192,9 +192,9 @@ class ShadowEyes private constructor(
             depthWrite = false
             blending = Blending.NormalBlending
         })
-        // their light is added to what is behind (the alpha they give is 0), and in a ghost they first take the
-        // ghost's own light away around them (the alpha is the socket's share, see FRAGMENT): the colour is
-        // multiplied in already, so the surface behind is dimmed by one minus the alpha and the light laid on it
+        // their light is added to what is behind: the colour is multiplied in already, and the alpha they give
+        // dims the surface behind by as much. That is nothing, but in a ghost: there a thin, soft rim close round
+        // each eye takes some of the ghost's pale light away, so the eye stands out of it (see FRAGMENT)
         material.asDynamic().premultipliedAlpha = true
         // their light goes to the screen as it is, as her own eyes' does (see Rig)
         material.toneMapped = false
@@ -422,11 +422,13 @@ class ShadowEyes private constructor(
   uniform vec3 uGlow;
   uniform float uCover;
 
-  // how dark the socket around an eye is in a ghost, 0 to 1: a ghost is pale light, and an eye of light would be
-  // lost in it, so the eye sits in a dark hollow there
-  float socketAt(vec2 p) {
-    float r = length(p / vec2(uEye.x * 2.6, uEye.x * 1.9));
-    return exp(-r * r * 0.7);
+  // the soft outline of an eye in a ghost, 0 to 1: a thin dark rim close round its core, fading outward within
+  // about the eye's own height. (A wide dark hollow stood there once and read as a black halo; without anything
+  // the eyes were barely seen in the ghost's pale light: the maintainer, 2026-11-23, both.)
+  float rimAt(vec2 p) {
+    float d = length(p / uEye);
+    float off = (d - 1.3) / 0.8;
+    return exp(-off * off);
   }
 
   float eyeAt(vec2 p) {
@@ -439,8 +441,9 @@ class ShadowEyes private constructor(
   void main() {
     vec2 p = (vUv - 0.5) * uSize;
     float light = eyeAt(p - vec2(uHalf, 0.0)) + eyeAt(p + vec2(uHalf, 0.0));
-    float socket = clamp(socketAt(p - vec2(uHalf, 0.0)) + socketAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
-    gl_FragColor = vec4(uGlow * light * (1.0 + 0.8 * uCover), 0.92 * uCover * socket);
+    // in a ghost (uCover) brighter: the ghost is pale light itself, and the eyes have to stand out of it
+    float rim = clamp(rimAt(p - vec2(uHalf, 0.0)) + rimAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
+    gl_FragColor = vec4(uGlow * light * (1.0 + 1.3 * uCover), 0.6 * uCover * rim);
     #include <colorspace_fragment>
   }"""
     }
