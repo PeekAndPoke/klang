@@ -440,7 +440,7 @@ export spin = notes => n(notes)
   .gain(0.30)                                      // the clean amp hit softly: notes ring into each other in it
   .pan(0.5)                                        // 0.25 in the parts, before the amp: listen for a drift to the middle
   .vibrato(beatRate(0.25).mul(perlin(0.95, 1.05).slow(4)), perlin(0.05, 0.07))
-  .apply(spinBus)
+  .apply(spinBus).tag("spin")
 
 // Sing: the melody on the bright rig, an octave up.
 export sing = notes => n(notes.add(7))
@@ -450,14 +450,14 @@ export sing = notes => n(notes.add(7))
   .vibrato(rate = beatRate(0.33), semitones = perlin(0.025, 0.040))
   .gain(1.0)
   .pan(0.6)                                        // a little right of centre, before the amp: listen for a drift to the middle
-  .apply(singBus).late(perlin(0.0005, 0.0015))
+  .apply(singBus).late(perlin(0.0005, 0.0015)).tag("sing")
 
 // Soar: the melody two octaves up, wider, over the wings.
 export soar = notes => n(notes.add(14))
   .sound(bright).adsrOff().unison(voices = 9, spread = 0.06)
   .ignp("decay", 3.0).clip(1.5)
   .pregain(0.6).gain(0.5).pan(0.5)
-  .apply(soarBus)
+  .apply(soarBus).tag("soar")
 
 // Swell: volume-knob swells, the thing inside stretching. Doubled on the left, a little late.
 export swell = chords => n(chords.add(7))
@@ -465,7 +465,7 @@ export swell = chords => n(chords.add(7))
   .ignp("attack", 1.3).ignp("decay", 1.8).clip(1)
   .late(0.030)
   .gain(0.6).pan(0.0).superimpose(x => x.pan(1.0)) // far left and far right, the right a little late
-  .apply(swellBus)
+  .apply(swellBus).tag("swell")
 
 // Beat: the heartbeat under the skin, 3-3-2 on the root, an octave down.
 export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
@@ -473,7 +473,7 @@ export beat = roots => n(roots.add(-7)).struct("x ~ ~ x ~ ~ x ~")
   .ignp("decay", 2.0).clip(2)
   .velocity("1.0 0.9 0.85")
   .gain(1.0).pan(0.5)                              // on the left, across from the melody on the right
-  .apply(beatBus)
+  .apply(beatBus).tag("beat")
 
 // Chug: the heavy rig, palm-muted on the root, an octave down.
 export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
@@ -484,7 +484,7 @@ export chug = roots => n(roots.add(-7)).struct("[x x] x@2  [x x] x@2  [x x] x")
   .pregain(0.6).gain(0.8).late(perlin(0.0005, 0.0010).seed(2)).apply(
     x => x.pan(0.50),
     // x => x.pan(0.10),
-  ).apply(heavyBus)
+  ).apply(heavyBus).tag("chug")
 
 // Wings: tremolo-picked power chords on the heavy rig, hard left and right.
 export wings = chords => n(chords).ply(16)
@@ -496,14 +496,14 @@ export wings = chords => n(chords).ply(16)
     x => x.pan(0.95),
     x => x.pan(0.05),
   )
-  .apply(heavyBus)
+  .apply(heavyBus).tag("wings")
 
 // Strike: one heavy chord, let ring, through a heavy amp of its own.
 export strike = chords => n(chords)
   .sound(heavy).adsrOff().unison(voices = 11, spread = 0.08)
   .ignp("decay", 4.5).clip(1)
   .gain(1.0).apply(x => x.pan(0.10),x => x.pan(0.90))
-  .apply(strikeBus)
+  .apply(strikeBus).tag("strike")
 
 // Chime: a melody on the clean rig, two octaves up, picked and let ring. The butterfly after the storm.
 export chime = notes => n(notes.add(14))
@@ -515,7 +515,7 @@ export chime = notes => n(notes.add(14))
   .late(perlin(0.001, 0.002))
   .tremolo(rate = beatRate(0.166), depth = perlin(0.100, 0.150))     // The guitar finger
   .vibrato(rate = beatRate(0.166), semitones = perlin(0.020, 0.030))
-  .apply(chimeBus)
+  .apply(chimeBus).tag("chime")
 
 // Strum: the clean rig, one slow strum, let ring.
 export strum = notes => n(notes)
@@ -523,7 +523,7 @@ export strum = notes => n(notes)
   .ignp("decay", 0.30).ignp("sustain", 0.50).ignp("release", 5.0).clip(40)
   .gain(0.5)                                       // the clean amp hit softly: the strum rings into itself in it
   .pan(0.40)                                       // before the amp: listen for a drift to the middle
-  .apply(strumBus)
+  .apply(strumBus).tag("strum")
 
 // The drums, for the second run of the heavy block: the band of Der Schmetterling, heavy and half time. The kick on one,
 // the snare on three, the Trommel rolling in on the off-beats of two and four, a crash on one and open hats on two to
@@ -533,27 +533,31 @@ let drumRoom = x => x.reverb(wet = 0.3, size = 5)
 export kick = pat => sound("bd").struct(pat)
   .sound(metalKick).adsrOff().n("0").scale(songScale).transpose(-24).velocity("1.0 0.94 0.96 0.94")
   .gain(0.70).pan(0.5)
-  .cylinder(11).apply(drumRoom)
+  .cylinder(11).apply(drumRoom).tag("kick")
 
 export snare = pat => sound(pat)
   .sound(metalSnare).adsrOff().freq(snareHz)
   .gain(0.39).pan(0.575)
   .lpf(freq = "13000".add(saw(0, 1200).slow(12)), q = 0.5)
   .delay(0.33, pure(4/65).div(cps), 0.85, 24) // Snare needs it own cylinder for the dalay!
-  .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015))
+  .cylinder(12).apply(drumRoom).late(perlin(0.001, 0.0015)).tag("snare")
 
 export hats = pat => sound(pat)
   .velocity("1.0 0.7 0.8 0.7")
   .hpf(800).lpf(freq = 14500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
   .gain(0.70).pan(0.40)                            
-  .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035))
+  .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035)).tag("hats")
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 0.92).ignp("harmonics", 1.00)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.45).cylinder(15)
+  .clip(0.90).gain(0.45).cylinder(15).tag("bass")
+
+// Every line carries a tag with its own name (spin, sing, soar, swell, beat, chug, wings, strike, chime, strum, kick,
+// snare, hats, bass): the band of the live act reads the song by them and plays what it hears (who plays which is the
+// score's, in the live act). A tag changes nothing of the sound.
 
 // Parts  -----------------------------------------------------------------------------------------------------------
 // Lines played together. Every part starts on its own first cycle, so a round of the cocoon always starts on Dm.
