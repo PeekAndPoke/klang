@@ -24,13 +24,14 @@ private const val BAR = 240.0 / (RPM * 4)
 /** The cast's: the marimba and the trumpet play seldom, and the frontwoman strolls. */
 private val SELDOM = listOf(Player.Rune, Player.Sirene)
 
-private fun rounds(seed: Int = 0, force: RoundKind? = null) = Rounds(
+private fun rounds(seed: Int = 0, force: RoundKind? = null, arcless: Set<Player> = emptySet()) = Rounds(
     seed = seed,
     bar = BAR,
     looks = Player.entries.associateWith { looksOf(it) },
     seldom = SELDOM,
     strolls = Player.Sirene,
     force = force,
+    arcless = arcless,
 )
 
 private fun look(rounds: Rounds, n: Int, i: Int, now: Double, playsAt: (Player) -> List<Double>, before: LookPlan = LookPlan()) =
@@ -172,6 +173,10 @@ class LookPlanSpec : StringSpec({
 
         withClue("an arc round the stage") {
             kind(r, n = n, now = a, playsAt = playing(from = 0.0, to = 0.0)).what shouldBe RoundKind.Looks
+        }
+
+        withClue("an arc round one whose arc has no room in the song's places") {
+            kind(rounds(force = RoundKind.Arc, arcless = setOf(Player.Wucht)), n = n, now = a, playsAt = drums).what shouldBe RoundKind.Looks
         }
 
         val begun = kind(r, n = n, now = a, playsAt = drums)

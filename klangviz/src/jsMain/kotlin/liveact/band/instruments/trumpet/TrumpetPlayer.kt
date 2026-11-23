@@ -98,11 +98,11 @@ class TrumpetPlayer(
     private val gait: Gait = Gait(hips = 1.0),
     others: Map<Player, Place>,
     /**
-     * Her place in the song; unless given, where her figure stands now. At a change of song she is made while her
-     * figure is somewhere else and held some other way: what she takes from it (where she stands to play, how her
-     * head rests, how high her chin is) is taken at this place, standing at rest.
+     * Her place in the song. At a change of song she is made while her figure is somewhere else and held some other
+     * way: what she takes from it (where she stands to play, how her head rests, how high her chin is) is taken at
+     * this place, standing at rest.
      */
-    place: Place? = null,
+    place: Place,
 ) {
     /**
      * Where she is and how she walks: [at] her place on the stage, [turn] which way she faces, [speed] how fast she
@@ -217,12 +217,9 @@ class TrumpetPlayer(
         val stoodAt = rig.root.position.clone()
         val stoodTurned = rig.root.rotation.y
 
-        if (place != null) {
-            rig.root.position.set(place.x, place.y, place.z)
-            rig.root.rotation.y = place.turn
-            rig.reset()
-        }
-
+        rig.root.position.set(place.x, place.y, place.z)
+        rig.root.rotation.y = place.turn
+        rig.reset()
         rig.update()
         headRest = rig.bone("head").getWorldQuaternion(quat())
 
@@ -230,12 +227,10 @@ class TrumpetPlayer(
         homeTurn = rig.root.rotation.y
         val chin = rig.bone("head").getWorldPosition(vec()).y
 
-        if (place != null) {
-            // the figure is where it was, held as it was
-            rig.root.position.copy(stoodAt)
-            rig.root.rotation.y = stoodTurned
-            blend(rig = rig, a = held, b = held, w = 0.0)
-        }
+        // the figure is where it was, held as it was
+        rig.root.position.copy(stoodAt)
+        rig.root.rotation.y = stoodTurned
+        blend(rig = rig, a = held, b = held, w = 0.0)
 
         route = StrollRoute(
             seed = show.seed,

@@ -135,8 +135,8 @@ class LooksSpec : StringSpec({
 
         val kokon = KOKON.plot.places
 
-        // (only the two in the middle have room: everyone else has a neighbour within the arc)
-        Player.entries.filter { arcHasRoom(player = it, homes = kokon) }.toSet() shouldBe setOf(Player.Sirene, Player.Rune)
+        // (who exactly is the places' to say, and they move freely: only that the close half circle leaves some out)
+        Player.entries.all { arcHasRoom(player = it, homes = kokon) } shouldBe false
         // one who stands on the line of sight, clear of the camera all along the arc, takes the room too
         val alone = Place(x = 0.0, z = 0.0, turn = 0.0)
 

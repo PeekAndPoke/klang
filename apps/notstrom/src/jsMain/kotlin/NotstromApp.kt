@@ -431,8 +431,9 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         scope.launch {
             try {
-                // (where the stage does not take it, as the change before is still under way, the song stays)
-                if (!goOnWith(stage = stage, programmed = PROGRAMME[to])) {
+                // (where the stage is there and does not take it, as the change before is still under way, the song
+                // stays; a show that ended meanwhile keeps the song chosen)
+                if (!goOnWith(stage = stage, programmed = PROGRAMME[to]) && running === stage) {
                     playing = from
                 }
             } catch (e: CancellationException) {
