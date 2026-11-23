@@ -69,7 +69,55 @@ In steps, each one something to look at:
 Step 1 and 2 are small. Step 3 and 4 are the work. Step 6 is where "a new way to represent all of this" is decided:
 what a score has to say so that nothing else names a member or a place.
 
-## Decide before implementing
+## Decided (the maintainer, 2026-11-23)
+
+1. **Nobody strolls in Kokon.** "I would like to try a different setting on the stage where they sit in a closer half
+   circle, since this is a slow song. So no-one can stroll."
+2. **Who plays what.** "I would give Sirene a guitar too here. Also it would be nice if the dialogue between soar and
+   spin would be played in turns by Sirene and Rune. Also chug and wings play at the same time, so they need to be
+   distributed between Skalpell and Klaue. Not sure what to do with beat, but I think no-one needs to play it."
+   Taken from that, the rest this session's choice until the maintainer says otherwise:
+
+   | Member | Plays | Voices (tags) |
+   |---|---|---|
+   | Sirene | guitar, the melody | sing, soar, chime |
+   | Rune | guitar, the thread | spin, strum |
+   | Skalpell | guitar | wings, swell |
+   | Klaue | guitar | chug, strike |
+   | Beben | bass | bass |
+   | Wucht | drums | kick, snare, hats |
+   | nobody | | beat |
+
+3. **The tags are in the song** (`c57345f83`: every voice carries a tag with its own name).
+4. **Wucht and Beben "meditate"** while they have nothing to play (the first two minutes).
+5. **Cross-legged, and they walk.** "They would need to walk to their new positions and sit ... or get up when
+   changing to the next song. So basically we need a model for where everyone's home-position is in each song and a
+   planner for in between the songs."
+6. **Only the instruments teleport, not the members.** "On the teleport ... I would only teleport the instruments not
+   the members."
+7. **Step by step:** "we start with a rough draft for the transition and refine."
+
+What follows from 5 and 6: a change of song does not end the show and build another (step 1's first way, which
+stays as the rough draft until the next is there). The stage stays; the members get up, walk from the old song's
+homes to the new song's and sit or stand there; their instruments vanish and the new ones appear. So the band has
+to outlive its song: a member's home, posture and instrument are the song's (the score's), and something plans the
+way between two scores.
+
+## The work, as it stands
+
+1. Done: the programme of songs and the drawer (`2ec18953d`); Kokon's tags (`c57345f83`).
+2. **A cast of any shape:** a score seats members at instruments freely (no marimba, no trumpet, four guitars); Sirene
+   and Rune get a bearing and a guitar. Then Kokon's score with its places, everyone standing at first: the band plays
+   Kokon.
+3. **Sitting:** the cross-legged pose with the instrument on the lap, and "meditating" for whoever has nothing to
+   play; a home says whether its member sits.
+4. **The way between two songs, a rough draft:** the members get up, walk to their new homes, sit; the instruments
+   teleport. First as plainly as it can be done, then refined.
+5. **The camera and the rest that knows the places** read them from the score.
+
+Places to choose from: `prototypes/band/ignored/previews/kokon/places-ABC.png` (three half circles, from above).
+
+## Decide before implementing (all answered above; kept for the record)
 
 1. **Who strolls, and who may not?** "Rune cannot stroll around": today Sirene strolls, with her trumpet. Kokon has no
    trumpet. Is it Sirene who then stays in her place, or does Rune get a part of her own?
@@ -103,3 +151,4 @@ To be planned once the points are decided; step 1 can begin before.
 ## History
 
 - 2026-11-23: created.
+- 2026-11-23: the maintainer's decisions; step 1 (programme and drawer) and the tags done.
