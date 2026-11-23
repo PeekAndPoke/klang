@@ -66,7 +66,7 @@ class View(
     homes: Map<Player, Place>,
     activity: (Player) -> List<Double>,
     seldom: List<Player>,
-    strolls: Player,
+    strolls: Player?,
 ) {
     private val switches = show.switches
 

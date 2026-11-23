@@ -119,7 +119,7 @@ class Choreography(
     looks: Map<Player, List<Placement>>,
     private val activity: (Player) -> List<Double>,
     seldom: List<Player>,
-    strolls: Player,
+    strolls: Player?,
     force: RoundKind? = null,
 ) {
     private val cycle: Double = show.bar
@@ -347,7 +347,7 @@ class Choreography(
      * is made one kind (to see that kind alone).
      */
     private fun retreat(t: Double, home: Shot, planned: Shot): Shot {
-        val her = rigs[rounds.strolls]?.root?.position
+        val her = rounds.strolls?.let { rigs[it] }?.root?.position
 
         approach = her?.let { Approaching.next(before = approach, t = t, x = it.x, z = it.z, camX = home.pos.x, camZ = home.pos.z) }
 

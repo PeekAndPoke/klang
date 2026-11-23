@@ -550,14 +550,14 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         now.band.play(t)
 
         // she who plays the trumpet looks at nobody while she plays
-        val her = props.score.cast.trumpet.player
+        val her = props.score.cast.trumpet?.player
 
         eyeContact(
             show = show,
             timing = props.score.eyeContact,
             rigs = now.band.rigs,
             her = her,
-            herNotes = now.band.playsAt(her),
+            herNotes = her?.let { now.band.playsAt(it) }.orEmpty(),
             t = t,
             skills = { player -> Members.of(player).skills },
         )
@@ -780,7 +780,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         val drawer = renderer
 
         if (wanted && lacquer == null && band != null && drawer != null) {
-            lacquer = Lacquer.of(renderer = drawer, bodies = band.bodies, brass = listOf(band.frontwoman.trumpet.brass))
+            lacquer = Lacquer.of(renderer = drawer, bodies = band.bodies, brass = listOfNotNull(band.frontwoman?.trumpet?.brass))
         }
 
         lacquer?.wear(wanted)

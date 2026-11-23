@@ -56,7 +56,7 @@ fun eyeContact(
     show: Show,
     timing: ChanceInSlots,
     rigs: Map<Player, Rig>,
-    her: Player,
+    her: Player?,
     herNotes: List<Double>,
     t: Double,
     skills: (Player) -> List<Skill>,

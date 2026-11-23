@@ -11,6 +11,7 @@ import io.peekandpoke.klang.viz.liveact.Score
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
+import io.peekandpoke.klang.viz.liveact.scores.KOKON
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
 
@@ -22,12 +23,11 @@ data class Programmed(val song: Song, val score: Score)
  * maintainer, 2026-11-23: "a way to switch between songs: in the drawer 'next song' / 'previous song' and showing the
  * current title and rpm"). The show opens with the first.
  *
- * Kokon has no score of its own yet: it is played by Der Schmetterling's, and as its voices carry no tags the band
- * hears nothing of it and stands still. Its own band, places and tags are KLANG-00481's next steps.
+ * Each song has its own score: its band, who plays what, and where they are.
  */
 val PROGRAMME: List<Programmed> = listOf(
     Programmed(song = BuiltInSongs.derSchmetterling, score = DER_SCHMETTERLING),
-    Programmed(song = BuiltInSongs.kokon, score = DER_SCHMETTERLING),
+    Programmed(song = BuiltInSongs.kokon, score = KOKON),
 )
 
 /**

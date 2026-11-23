@@ -12,6 +12,7 @@ import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
+import io.peekandpoke.klang.viz.liveact.scores.KOKON
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
 import io.peekandpoke.klang.viz.liveact.sound.Loudness
@@ -85,7 +86,11 @@ fun main() {
 
         kraft.mount(selector = "#app", engine = PreactVDomEngine()) {
             // the demo serves its figures fresh from the build: its version is a fixed word
-            LiveAct(show = show, score = DER_SCHMETTERLING, models = MODELS, version = "dev")
+            // (`?score=kokon`: Kokon's band and places, to look at them; its song is not recorded here, so with
+            // `?test` they play the test notes, and without it they stand)
+            val score = if (window.location.search.contains("score=kokon")) KOKON else DER_SCHMETTERLING
+
+            LiveAct(show = show, score = score, models = MODELS, version = "dev")
         }
     }
 }

@@ -67,7 +67,7 @@ class Rounds(
     val bar: Double,
     val looks: Map<Player, List<Placement>>,
     val seldom: List<Player>,
-    val strolls: Player,
+    val strolls: Player?,
     val force: RoundKind? = null,
 ) {
     /** A round, in seconds. */

@@ -69,7 +69,7 @@ fun contactAt(
     timing: ChanceInSlots,
     roll: (Double) -> Double,
     pairs: List<Pair<Player, Player>>,
-    her: Player,
+    her: Player?,
     herNotes: List<Double>,
 ): ContactInUse? {
     val span = timing.spanAt(t = t, roll = roll) ?: return null

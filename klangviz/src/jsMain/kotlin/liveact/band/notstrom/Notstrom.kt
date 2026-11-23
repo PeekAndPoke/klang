@@ -258,20 +258,23 @@ class Notstrom private constructor(
      */
     private val tails: List<HairTail> = Player.entries.mapNotNull { player -> HairTail.of(rig(player)) }
 
-    val marimba = MarimbaPlayer(
-        show = show,
-        rig = rig(cast.marimba.player),
-        part = tunePart(tag = cast.marimba.tag, test = ::testTune),
-        traits = character(cast.marimba.player).traits,
-        seed = character(cast.marimba.player).seed,
-        skills = Members.of(cast.marimba.player).skills,
-        arrives = plot.entrances.getValue(cast.marimba.player).end,
-        idles = idlesOf(
-            player = cast.marimba.player,
-            part = tunePart(tag = cast.marimba.tag, test = ::testTune),
-            margin = MarimbaPlayer.idleMargin(bpm = show.bpm, skills = Members.of(cast.marimba.player).skills),
-        ),
-    )
+    /** The marimba player; null in a song without a marimba. */
+    val marimba: MarimbaPlayer? = cast.marimba?.let { seat ->
+        MarimbaPlayer(
+            show = show,
+            rig = rig(seat.player),
+            part = tunePart(tag = seat.tag, test = ::testTune),
+            traits = character(seat.player).traits,
+            seed = character(seat.player).seed,
+            skills = Members.of(seat.player).skills,
+            arrives = plot.entrances.getValue(seat.player).end,
+            idles = idlesOf(
+                player = seat.player,
+                part = tunePart(tag = seat.tag, test = ::testTune),
+                margin = MarimbaPlayer.idleMargin(bpm = show.bpm, skills = Members.of(seat.player).skills),
+            ),
+        )
+    }
 
     /**
      * Where a look can go: the camera (the viewer, as the show keeps it), the members' eyes as they are posed now,
@@ -285,16 +288,19 @@ class Notstrom private constructor(
         nowhere = { player -> rig(player).let { it.root.localToWorld(vec(0.45 * it.height, 0.4 * it.height, 1.5 * it.height)) } },
     )
 
-    val frontwoman = TrumpetPlayer(
-        show = show,
-        rig = rig(cast.trumpet.player),
-        part = tunePart(tag = cast.trumpet.tag, test = ::testCall),
-        traits = character(cast.trumpet.player).traits,
-        seed = character(cast.trumpet.player).seed,
-        looks = headLooksOf(cast.trumpet.player),
-        gait = character(cast.trumpet.player).gait,
-        others = plot.places.filterKeys { it != cast.trumpet.player },
-    )
+    /** The trumpet player, who strolls; null in a song without a trumpet. */
+    val frontwoman: TrumpetPlayer? = cast.trumpet?.let { seat ->
+        TrumpetPlayer(
+            show = show,
+            rig = rig(seat.player),
+            part = tunePart(tag = seat.tag, test = ::testCall),
+            traits = character(seat.player).traits,
+            seed = character(seat.player).seed,
+            looks = headLooksOf(seat.player),
+            gait = character(seat.player).gait,
+            others = plot.places.filterKeys { it != seat.player },
+        )
+    }
 
     /** The string players, in the order they are moved each frame. */
     val strings: List<Pair<Player, StringPlayer>> = cast.strings.map { seat ->
@@ -387,11 +393,13 @@ class Notstrom private constructor(
             stepLegs(rig(player), walks.getValue(player))
         }
 
-        val marimbaRig = rig(cast.marimba.player)
-        val marimbaWalk = walks.getValue(cast.marimba.player)
+        cast.marimba?.player?.let { player ->
+            val marimbaRig = rig(player)
+            val marimbaWalk = walks.getValue(player)
 
-        marimba.update(t, hips = walkInHips(rig = marimbaRig, walk = marimbaWalk, gait = character(cast.marimba.player).gait))
-        stepLegs(marimbaRig, marimbaWalk)
+            marimba?.update(t, hips = walkInHips(rig = marimbaRig, walk = marimbaWalk, gait = character(player).gait))
+            stepLegs(marimbaRig, marimbaWalk)
+        }
 
         // the drummer walks in with the sticks in his hands, and sits down once he is at the stool
         drummer.update(t)
@@ -417,19 +425,21 @@ class Notstrom private constructor(
 
         // the frontwoman, last: her looks may go to the others' eyes, as they are posed in this frame. Put where her
         // walk-in has her; once there she is her own (her place, her strolls)
-        val herRig = rig(cast.trumpet.player)
-        val herWalk = walks.getValue(cast.trumpet.player)
-        val her = if (herWalk.since < 0) {
-            TrumpetPlayer.Walk(at = herRig.root.position.clone(), turn = herRig.root.rotation.y, speed = 0.0, going = 0.0)
-        } else {
-            null
-        }
+        cast.trumpet?.player?.let { player ->
+            val herRig = rig(player)
+            val herWalk = walks.getValue(player)
+            val her = if (herWalk.since < 0) {
+                TrumpetPlayer.Walk(at = herRig.root.position.clone(), turn = herRig.root.rotation.y, speed = 0.0, going = 0.0)
+            } else {
+                null
+            }
 
-        frontwoman.update(
-            t,
-            put = her,
-            hips = her?.let { walkInHips(rig = herRig, walk = herWalk, gait = character(cast.trumpet.player).gait) },
-        )
-        stepLegs(herRig, herWalk)
+            frontwoman?.update(
+                t,
+                put = her,
+                hips = her?.let { walkInHips(rig = herRig, walk = herWalk, gait = character(player).gait) },
+            )
+            stepLegs(herRig, herWalk)
+        }
     }
 }

@@ -14,8 +14,8 @@ class MeetHelpersSpec : StringSpec({
 
     "what each one plays is what the show's cast gives them" {
         playsIn(SHOW_SCORE.cast.drums.player) shouldBe "Drums"
-        playsIn(SHOW_SCORE.cast.trumpet.player) shouldBe "Trumpet"
-        playsIn(SHOW_SCORE.cast.marimba.player) shouldBe "Marimba"
+        playsIn(checkNotNull(SHOW_SCORE.cast.trumpet).player) shouldBe "Trumpet"
+        playsIn(checkNotNull(SHOW_SCORE.cast.marimba).player) shouldBe "Marimba"
         SHOW_SCORE.cast.strings.map { it.player } shouldBe listOf(Player.Beben, Player.Skalpell, Player.Klaue)
         playsIn(Player.Beben) shouldBe "Bass"
         playsIn(Player.Skalpell) shouldBe "Lead guitar"
