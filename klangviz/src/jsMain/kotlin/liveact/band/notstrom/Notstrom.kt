@@ -72,6 +72,7 @@ import io.peekandpoke.klang.workshop.threejs.asMeshStandardMaterial
 import io.peekandpoke.klang.workshop.threejs.asSkinnedMesh
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
 import io.peekandpoke.klang.workshop.threejs.gltfLoader
+import io.peekandpoke.klang.workshop.threejs.lerp
 import io.peekandpoke.klang.workshop.threejs.materials
 import io.peekandpoke.klang.workshop.threejs.name
 import io.peekandpoke.klang.workshop.threejs.quaternion
@@ -121,8 +122,14 @@ class Notstrom private constructor(
         private const val TAKE = 1.0
 
         /** At a change of song: how long an instrument takes to go and to come, and a figure to ease into its new pose. */
-        private const val VANISH = 1.4
-        private const val APPEAR = 0.9
+        private const val VANISH = 2.2
+        private const val APPEAR = 1.8
+
+        /** How high an instrument floats as it goes, and from how high it comes, in metres. */
+        private const val FLOAT = 0.9
+
+        /** How long one who arrives with empty hands takes from the walk into the start pose, in seconds. */
+        private const val LAND = 0.5
         private const val EASE = 1.6
 
         /** The head's middle and size, in the body's rest space: a little above and behind where the head's bone starts. */
@@ -310,6 +317,7 @@ class Notstrom private constructor(
             part = tunePart(tag = seat.tag, test = ::testTune),
             margin = MarimbaPlayer.idleMargin(bpm = show.bpm, skills = Members.of(seat.player).skills),
         ),
+        home = plot.places.getValue(seat.player),
     )
 
     /**
@@ -360,16 +368,25 @@ class Notstrom private constructor(
     )
 
     /**
-     * An instrument that goes at a change of song: [prop] shrinks from the moment [since] on the show's clock, from
-     * the size it had ([size]), and is taken out of the scene and freed when it is gone.
+     * An instrument that goes at a change of song: [prop] floats up from where it was ([from], its height) and is
+     * seen through more and more ([veil], made at its first frame) from the moment [since] on the show's clock; it is
+     * taken out of the scene and freed when it is gone.
      */
-    private class Leaving(val prop: Object3D, val since: Double, val size: Vector3)
+    private class Leaving(val prop: Object3D, val since: Double, val from: Double) {
+        var veil: Veil? = null
+    }
 
     /**
-     * An instrument that comes at a change of song: [props] grow to their size ([sizes]) once their [player] has
-     * reached the start pose ([reseat]); until then they are not seen.
+     * An instrument that comes at a change of song: once its [player] has reached the start pose ([reseat]) the
+     * [props] come down into place from above, less and less seen through ([veils], made at the first frame they are
+     * seen); until then they are not seen. [put]: the height each was last put at here, to tell it from one its
+     * player has put anew since.
      */
-    private class Arriving(val player: Player, val props: List<Object3D>, val sizes: List<Vector3>)
+    private class Arriving(val player: Player, val props: List<Object3D>) {
+        var veils: List<Veil>? = null
+        val put: MutableList<Double> = props.map { Double.NaN }.toMutableList()
+        val base: MutableList<Double> = props.map { 0.0 }.toMutableList()
+    }
 
     private val leaving = mutableListOf<Leaving>()
     private val arriving = mutableListOf<Arriving>()
@@ -482,49 +499,71 @@ class Notstrom private constructor(
 
     /** [prop] goes from [t] on: it shrinks away ([Leaving]). */
     private fun goes(prop: Object3D, t: Double) {
-        leaving.add(Leaving(prop = prop, since = t, size = prop.scale.clone()))
+        leaving.add(Leaving(prop = prop, since = t, from = prop.position.y))
     }
 
     /** [props] come once [player] has reached the start pose: not seen until then ([Arriving]). */
     private fun comes(player: Player, props: List<Object3D>) {
-        arriving.add(Arriving(player = player, props = props, sizes = props.map { it.scale.clone() }))
+        arriving.add(Arriving(player = player, props = props))
         props.forEach { it.visible = false }
     }
 
-    /** Whether [player]'s instrument is still to come ([Arriving]): the hands are empty until it does. */
-    private fun awaits(player: Player): Boolean = arriving.any { it.player == player }
-
     /**
-     * The instruments that go and come at [t] (the show's clock): one that goes shrinks over [VANISH] seconds and
-     * is then taken out and freed; one that comes grows over [APPEAR] seconds from the moment its player has been
-     * at their place for [settled] seconds (sat down, where they sit). [walks]: how each one walks now.
+     * The instruments that go and come at [t] (the show's clock; the maintainer, 2026-11-23: "float up, ease in and
+     * get transparent ... and while appearing the other way around"). One that goes floats up [FLOAT] metres over
+     * [VANISH] seconds, slowly at first, seen through more and more, and is then taken out and freed. One that comes
+     * comes down from that high over [APPEAR] seconds, less and less seen through, from the moment its player has
+     * been at their place for [settled] seconds (sat down, where they sit). [walks]: how each one walks now. Call it
+     * after everyone is posed: a player puts their instrument each frame.
      */
     private fun swap(t: Double, walks: Map<Player, WalkIn>) {
         val gone = leaving.filter { t - it.since >= VANISH }
 
         for (left in gone) {
             left.prop.parent?.remove(left.prop)
+            left.veil?.lift()
             left.prop.disposeOwn()
         }
 
         leaving.removeAll(gone)
 
         for (left in leaving) {
-            left.prop.scale.copy(left.size).multiplyScalar(1 - smooth((t - left.since) / VANISH))
+            val u = ((t - left.since) / VANISH).coerceIn(0.0, 1.0)
+            val veil = left.veil ?: Veil(left.prop).also { left.veil = it }
+
+            // (slowly at first: it lifts off)
+            left.prop.position.y = left.from + FLOAT * u * u
+            veil.show(1 - smooth(u))
         }
 
         val there = mutableListOf<Arriving>()
 
         for (coming in arriving) {
             val since = walks.getValue(coming.player).since - settled(coming.player)
-            val grown = smooth(since / APPEAR)
+            val here = smooth(since / APPEAR)
 
-            coming.props.forEachIndexed { index, prop ->
-                prop.visible = grown > 0
-                prop.scale.copy(coming.sizes[index]).multiplyScalar(max(grown, 1e-3))
+            if (here <= 0) {
+                coming.props.forEach { it.visible = false }
+
+                continue
             }
 
-            if (grown >= 1) {
+            val veils = coming.veils ?: coming.props.map { Veil(it) }.also { coming.veils = it }
+
+            coming.props.forEachIndexed { index, prop ->
+                // where its player has put it anew this frame, that is its place; else the one it had
+                if (prop.position.y != coming.put[index]) {
+                    coming.base[index] = prop.position.y
+                }
+
+                prop.visible = true
+                prop.position.y = coming.base[index] + FLOAT * (1 - here) * (1 - here)
+                coming.put[index] = prop.position.y
+                veils[index].show(here)
+            }
+
+            if (here >= 1) {
+                veils.forEach { it.lift() }
                 there.add(coming)
             }
         }
@@ -622,7 +661,6 @@ class Notstrom private constructor(
             }
         }
 
-        swap(t = t, walks = walks)
 
         // the string players and the marimba player walk as they stand, the legs stepping and the hips moving as each
         // one's gait has them on the walk-in
@@ -637,15 +675,17 @@ class Notstrom private constructor(
             stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walk, gait = character(player).gait), sits = sits)
 
             if (!plot.entrances.getValue(player).carries) {
-                // coming from the song before with another instrument to play, the hands are empty: a plain walk,
-                // and once the start pose is reached the instrument appears and the hands take it
+                // coming from the song before with another instrument to play, the hands are empty: a plain walk.
+                // At the place the body takes its start pose at once (it sits down, where it sits: nobody waits
+                // for the others); the arms hang until that pose is reached, then the instrument comes and they
+                // take it
                 val takes = smooth((walk.since - settled(player)) / TAKE)
 
                 if (takes < 1) {
                     val playing = capture(rig(player))
 
                     walkPose(rig = rig(player), walk = walk, gait = character(player).gait)
-                    blend(rig = rig(player), a = capture(rig(player)), b = playing, w = takes)
+                    blendApart(rig = rig(player), a = capture(rig(player)), b = playing, body = smooth(walk.since / LAND), arms = takes)
                 }
             }
 
@@ -701,6 +741,8 @@ class Notstrom private constructor(
             stepLegs(herRig, herWalk)
         }
 
+        swap(t = t, walks = walks)
+
         // after a change of song, who has another instrument now eases from how they were held into this
         eased?.let { from ->
             val w = smooth((t - easedAt) / EASE)
@@ -715,6 +757,24 @@ class Notstrom private constructor(
             }
         }
     }
+}
+
+/** The bones of the arms: the ones named after the joints from the shoulder to the fingers. */
+private fun isArm(bone: String): Boolean = ARM_BONES.any { bone.startsWith(it) }
+
+private val ARM_BONES = listOf("shoulder", "elbow", "wrist", "hand", "finger", "thumb")
+
+/**
+ * Sets [rig] between the poses [a] and [b] as `blend` does, the arms ([isArm]) [arms] of the way to [b] and the rest
+ * of the body [body] of it.
+ */
+private fun blendApart(rig: Rig, a: CapturedPose, b: CapturedPose, body: Double, arms: Double) {
+    for ((name, bone) in rig.bones) {
+        bone.quaternion.copy(a.turns.getValue(name)).slerp(b.turns.getValue(name), if (isArm(name)) arms else body)
+    }
+
+    rig.bone("hips").position.copy(a.hips).lerp(b.hips, body)
+    rig.update()
 }
 
 /**

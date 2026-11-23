@@ -10,6 +10,7 @@ import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.Z_AXIS
 import io.peekandpoke.klang.viz.liveact.around
+import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
@@ -86,6 +87,8 @@ class MarimbaPlayer(
     skills: List<Skill> = emptyList(),
     private val arrives: Double = Double.NEGATIVE_INFINITY,
     private val idles: (Double) -> List<IdleInUse> = { emptyList() },
+    /** Her place in the song, where the marimba stands; unless given, where her figure stands now. */
+    private val home: Place? = null,
 ) {
     /** Her crossed mallets, where her sheet has them. */
     private val crossing: CrossedMallets? = crossingOf(skills)
@@ -120,7 +123,7 @@ class MarimbaPlayer(
     init {
         part.refresh()
         notes = part.events
-        marimba = Marimba(rig = rig, notes = notes, grows = part.grows)
+        marimba = Marimba(rig = rig, notes = notes, grows = part.grows, home = home)
         rests = mapOf(
             Side.L to vec(0.14 * s, marimba.height + 0.012 * s, marimba.near + 0.08 * s),
             Side.R to vec(-0.14 * s, marimba.height + 0.012 * s, marimba.near + 0.08 * s),

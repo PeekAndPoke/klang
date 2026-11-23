@@ -6,6 +6,7 @@
 package io.peekandpoke.klang.viz.liveact.band.instruments.marimba
 
 import io.peekandpoke.klang.viz.liveact.Three
+import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringMaterials
@@ -161,7 +162,7 @@ internal class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val
  * (sorted by time, as far as the song is known; widened for a song that [grows]), the tubes below them, the frame,
  * and the four mallets. A bar lights up and dips when it is hit (see [answer]); the whole of it hovers.
  */
-class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
+class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) {
     private val s: Double = rig.s
 
     /** The marimba. */
@@ -199,9 +200,16 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean) {
 
         // the marimba stands on the stage where she plays, whether she is there yet or not
         stage.add(group)
-        group.position.copy(rig.root.position)
-        group.rotation.y = rig.root.rotation.y
-        floor = rig.root.position.y
+        // (at her place in the song, where it is told: at a change of song she is not there yet)
+        if (home != null) {
+            group.position.set(home.x, home.y, home.z)
+            group.rotation.y = home.turn
+        } else {
+            group.position.copy(rig.root.position)
+            group.rotation.y = rig.root.rotation.y
+        }
+
+        floor = group.position.y
 
         // the bars: from the lowest note played to the highest, widened to whole naturals; low notes to the player's
         // left
