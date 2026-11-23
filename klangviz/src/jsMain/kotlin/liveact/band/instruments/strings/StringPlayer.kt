@@ -814,9 +814,9 @@ class StringPlayer(
         const val SIT_ANKLE = 0.07
         const val SIT_REACH = 0.30
         const val SIT_STAGGER = 0.07
-        const val SIT_KNEE_OUT = 1.0
-        const val SIT_KNEE_UP = 0.12
-        const val SIT_KNEE_FORE = 0.45
+        const val SIT_KNEE_OUT = 0.62
+        const val SIT_KNEE_UP = 0.30
+        const val SIT_KNEE_FORE = 0.70
 
         /**
          * Where an instrument in the lap rests: on the thigh of the strumming side, so far out from the body's
