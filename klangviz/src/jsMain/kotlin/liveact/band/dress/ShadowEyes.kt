@@ -121,6 +121,9 @@ class ShadowEyes private constructor(
     private val half = uniform(0.0)
     private val eye = Three.addon.createVector2()
     private val glow = vec()
+
+    /** The light of the halo round her dark eyes in a ghost, linear: her eyes' own colour (see FRAGMENT). */
+    private val halo = vec()
     /** How far the eyes take the ghost's own light away around them, 0 (a shadow: none) to 1 (in a ghost). */
     private val cover = uniform(0.0)
 
@@ -184,6 +187,7 @@ class ShadowEyes private constructor(
                 "uHalf" to half,
                 "uEye" to uniform(eye),
                 "uGlow" to uniform(glow),
+                "uHalo" to uniform(halo),
                 "uCover" to cover,
             )
             vertexShader = VERTEX
@@ -243,6 +247,8 @@ class ShadowEyes private constructor(
         // (on a ghost they give no light at all, from the first moment: there they are dark, see FRAGMENT)
         glow.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
             .multiplyScalar(eyes.emissiveIntensity * onWall * GLOW * (1.0 - ghostly))
+        halo.set(eyes.emissive.r, eyes.emissive.g, eyes.emissive.b)
+            .multiplyScalar(eyes.emissiveIntensity * onWall * HALO * ghostly)
         cover.value = ghostly * onWall
         // in a ghost the eyes are drawn after the haze behind the fence, whose glowing veil would wash them out
         mesh.renderOrder = if (cover.value > 0.0) ORDER_IN_GHOST else ORDER
@@ -366,6 +372,9 @@ class ShadowEyes private constructor(
         /** How brightly the eyes on the surface glow against her own eyes. */
         private const val GLOW = 1.0
 
+        /** How strong the halo round her dark eyes in a ghost is, against her eyes' own light. */
+        private const val HALO = 0.1
+
         /** How far the glow reaches round each eye, in its half widths. */
         private const val REACH = 4.0
 
@@ -424,6 +433,7 @@ class ShadowEyes private constructor(
   uniform float uHalf;
   uniform vec2 uEye;
   uniform vec3 uGlow;
+  uniform vec3 uHalo;
   uniform float uCover;
 
   // an eye's own shape, 0 to 1, soft at its rim: what is dark of it in a ghost. A ghost is pale light, so there the
@@ -432,6 +442,14 @@ class ShadowEyes private constructor(
   // the hollow it was barely seen, and with a thin rim it read as a pair of glasses)
   float darkAt(vec2 p) {
     return 1.0 - smoothstep(0.7, 1.25, length(p / uEye));
+  }
+
+  // the halo round a dark eye in a ghost, 0 to 1: a soft, wide glow of the eye's own light (the maintainer,
+  // 2026-11-23: "now we can have the halo back when the eyes are black"): the negative of the dark hollow that once
+  // stood round an eye of light
+  float haloAt(vec2 p) {
+    float r = length(p / vec2(uEye.x * 1.7, uEye.x * 1.25));
+    return exp(-r * r * 0.7);
   }
 
   float eyeAt(vec2 p) {
@@ -446,7 +464,10 @@ class ShadowEyes private constructor(
     float light = eyeAt(p - vec2(uHalf, 0.0)) + eyeAt(p + vec2(uHalf, 0.0));
     // in a ghost (uCover) their shape is dark: it takes the ghost's light away there (and uGlow is none then)
     float dark = clamp(darkAt(p - vec2(uHalf, 0.0)) + darkAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
-    gl_FragColor = vec4(uGlow * light, 0.92 * uCover * dark);
+    float around = clamp(haloAt(p - vec2(uHalf, 0.0)) + haloAt(p + vec2(uHalf, 0.0)), 0.0, 1.0);
+    // (the halo is gone before the plane's edge, wherever the eyes sit in it)
+    vec2 edge = smoothstep(vec2(0.0), vec2(0.3), min(vUv, 1.0 - vUv));
+    gl_FragColor = vec4(uGlow * light + uHalo * around * (1.0 - dark) * edge.x * edge.y, 0.92 * uCover * dark);
     #include <colorspace_fragment>
   }"""
     }
