@@ -86,6 +86,7 @@ class View(
             seldom = seldom,
             strolls = strolls,
             force = forcedKind(switches[Switch.Move]),
+            sitting = homes.filterValues { it.sits }.keys,
         )
     } else {
         null

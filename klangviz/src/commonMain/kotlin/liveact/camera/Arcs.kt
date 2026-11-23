@@ -66,5 +66,8 @@ private val ARCS: Map<Player, Orbit> = mapOf(
     Player.Skalpell to Orbit(far = 2.7, high = 1.35, at = Triple(0.0, 1.15, 0.1), fov = 38.0, from = -0.95, to = 0.50),
 )
 
-/** The arc round [player]. */
-fun arcOf(player: Player): Orbit = ARCS[player] ?: STANDING_ARC
+/** Round one who sits cross-legged on the floor: nearer, lower, and only before them (others sit close by). */
+private val SITTING_ARC = Orbit(far = 2.3, high = 0.80, at = Triple(0.0, 0.52, 0.1), fov = 38.0, from = -0.55, to = 0.55)
+
+/** The arc round [player]; round one who [sits] on the floor the low one, whoever they are. */
+fun arcOf(player: Player, sits: Boolean = false): Orbit = if (sits) SITTING_ARC else ARCS[player] ?: STANDING_ARC

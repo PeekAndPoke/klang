@@ -69,7 +69,8 @@ const val TOTAL_DRIFT_Z = 0.12
 fun looksOn(homes: Map<Player, Place>): Map<Player, List<Placement>> = homes.mapValues { (player, home) ->
     val others = homes.filterKeys { it != player }.values.map { Ground(x = it.x, z = it.z) }
 
-    looksOf(player).map { look ->
+    // (one who sits on the floor is looked at as one who sits, whoever they are)
+    (if (home.sits) SITTING_LOOKS else looksOf(player)).map { look ->
         when {
             look.pos.second + home.y >= OVERHEAD -> look
 
@@ -121,6 +122,8 @@ class Choreography(
     seldom: List<Player>,
     strolls: Player?,
     force: RoundKind? = null,
+    /** Who sits on the floor at their place (the stage plot's): the camera goes round them lower. */
+    private val sitting: Set<Player> = emptySet(),
 ) {
     private val cycle: Double = show.bar
 
@@ -254,7 +257,7 @@ class Choreography(
 
     /** The way round [player], [u] of it, from one side ([way] 1) or the other (-1). */
     fun arcBy(player: Player, way: Int, u: Double): Shot {
-        val a = arcOf(player)
+        val a = arcOf(player, sits = player in sitting)
         val angle = a.angle(way = way, u = u)
         val root = rigs.getValue(player).root
 
@@ -497,7 +500,7 @@ class Choreography(
         // round, so it cuts. And from the frontwoman, who may stroll off and turn while the camera travels: the way
         // back hangs on her place, and would jump. And from an arc that ends behind someone (see `Orbit.cutsBack`)
         val strolls = roundKind != RoundKind.Arc && subject(n, 2).player == rounds.strolls
-        val behind = roundKind == RoundKind.Arc && subject(n, 0).player?.let { arcOf(it).cutsBack } == true
+        val behind = roundKind == RoundKind.Arc && subject(n, 0).player?.let { arcOf(it, sits = it in sitting).cutsBack } == true
 
         if (away(shot) || strolls || behind) {
             label = "total"

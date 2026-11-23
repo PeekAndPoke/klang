@@ -54,6 +54,18 @@ val STANDING_LOOKS: List<Placement> = listOf(
     Placement(pos = Triple(-1.9, 1.1, 1.3), at = Triple(0.0, 1.10, 0.2), fov = 40.0),       // from their right, low
 )
 
+/**
+ * Looks at a player who sits cross-legged on the floor (KLANG-00481), as [STANDING_LOOKS]: lower, and aimed at the
+ * head and the hands of one who sits (the maintainer, 2026-11-23: "when the musicians are sitting we need to adjust
+ * the direct shots of them, we are now aiming over their heads").
+ */
+val SITTING_LOOKS: List<Placement> = listOf(
+    Placement(pos = Triple(0.6, 0.30, 2.1), at = Triple(0.0, 0.55, 0.1), fov = 42.0),       // from the floor, in front
+    Placement(pos = Triple(1.9, 0.75, 0.9), at = Triple(0.0, 0.50, 0.2), fov = 38.0),       // from their left
+    Placement(pos = Triple(-0.8, 0.90, 1.6), at = Triple(0.0, 0.62, 0.1), fov = 30.0),      // close on head and hands
+    Placement(pos = Triple(-1.8, 0.45, 1.3), at = Triple(0.0, 0.48, 0.2), fov = 40.0),      // from their right, low
+)
+
 /** Looks at the players who do not stand ([looksOf] gives everyone else [STANDING_LOOKS]), as [STANDING_LOOKS]. */
 val LOOKS: Map<Player, List<Placement>> = mapOf(
     Player.Wucht to listOf(
