@@ -693,7 +693,7 @@ class Stage(
             height = renderer.domElement.height.toDouble(),
             energy = if (sound != null) min(1.0, sound.slow) else 0.0,
             low = if (sound != null) min(1.0, sound.low) else 0.0,
-            beat = t * show.bpm / 60,
+            beat = show.beatAt(t),
             level = glow,
         )
     }

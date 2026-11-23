@@ -269,7 +269,7 @@ class MarimbaPlayer(
         val shift = max(-1.0, min(1.0, beyond / reach)) * reach
         // -1 on the right leg, 1 on the left
         val weight = shift / (stance + rig.ankle.getValue(Side.L).x)
-        val nod = mover.nod(t * show.bpm / 60)
+        val nod = mover.nod(show.beatAt(t))
         val body = nod + mover.burst()
 
         rig.reset()

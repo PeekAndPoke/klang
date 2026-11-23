@@ -168,6 +168,9 @@ class TrumpetPlayer(
     /** Her way on a stroll, the same for every stroll (see [StrollRoute]): a stroll only shifts its time. */
     private val route: StrollRoute
     private val bpm: Double = show.bpm
+
+    /** The beats that lie before her song began, on the show's clock at her song's tempo: her beat counts from there. */
+    private val beatsBefore: Double = show.songStart * bpm / 60
     private val s: Double = rig.s
 
     /**
@@ -448,7 +451,7 @@ class TrumpetPlayer(
         val turns = looksAt(t = t, walk = walk, put = put != null)
         val calm = turns.filter { it.look.still }.maxOfOrNull { it.share } ?: 0.0
 
-        val beat = t * bpm / 60
+        val beat = t * bpm / 60 - beatsBefore
         val nod = mover.nod(beat) * (1 - 0.7 * up) * (1 - 0.7 * calm)
         val body = nod + mover.burst()
         val parts = mover.parts

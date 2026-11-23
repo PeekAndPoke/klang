@@ -121,8 +121,12 @@ class Part<T>(val grows: Boolean, private val version: () -> Int, private val re
  *
  * An event with several tags has a strength for each of them. (The prototype this was ported from kept one for the
  * event, the last tag's; no recording so far has an event with two tags.)
+ *
+ * [startsAt]: the moment on the show's clock at which this song begins (0 for a show's first song; later for one a
+ * show goes on with, see `Show.take`). What is added, forgotten and dropped is told in the song's own seconds, from
+ * its start; every reading gives the show's clock's time.
  */
-class Song(rpm: Double, val grows: Boolean = true) {
+class Song(rpm: Double, val grows: Boolean = true, val startsAt: Double = 0.0) {
 
     /** A [recording], known whole. */
     constructor(recording: Recording) : this(rpm = recording.rpm, grows = false) {
@@ -178,7 +182,7 @@ class Song(rpm: Double, val grows: Boolean = true) {
 
                 known.getOrPut(tag) { mutableListOf() }.add(
                     SongEvent(
-                        t = e.t,
+                        t = e.t + startsAt,
                         d = e.d,
                         v = min(1.0, max(0.25, (e.gain ?: most) / most)),
                         midi = midiOf(e),
@@ -200,9 +204,9 @@ class Song(rpm: Double, val grows: Boolean = true) {
      * told apart as it was.
      */
     fun forget(before: Double) {
-        var cut = before
+        var cut = before + startsAt
 
-        for (t in known.values.flatMap { list -> list.map { it.t }.filter { it < before } }.sortedDescending()) {
+        for (t in known.values.flatMap { list -> list.map { it.t }.filter { it < cut } }.sortedDescending()) {
             if (cut - t > 0.03) {
                 break
             }
@@ -238,12 +242,14 @@ class Song(rpm: Double, val grows: Boolean = true) {
      * then [add]ed; asked for both before the band moves again, the band plans once.
      */
     fun drop(from: Double) {
-        if (known.values.none { list -> list.any { it.t >= from } }) {
+        val at = from + startsAt
+
+        if (known.values.none { list -> list.any { it.t >= at } }) {
             return
         }
 
         for (list in known.values) {
-            list.removeAll { it.t >= from }
+            list.removeAll { it.t >= at }
         }
 
         changed()

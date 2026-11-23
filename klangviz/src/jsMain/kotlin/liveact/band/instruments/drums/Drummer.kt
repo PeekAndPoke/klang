@@ -163,7 +163,7 @@ class Drummer(
         rig.reset()
         rig.update()
         // sitting: the pelvis onto the stool, the trunk leaning in, nodding with the kick and the snare
-        val nod = mover.nod(t * show.bpm / 60)
+        val nod = mover.nod(show.beatAt(t))
         val body = nod + mover.burst()
         val parts = mover.parts
         val bob = 0.012 * s * body * parts.knees + 0.004 * s * snare

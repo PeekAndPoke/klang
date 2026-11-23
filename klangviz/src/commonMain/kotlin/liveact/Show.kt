@@ -43,23 +43,49 @@ data class Switches(private val values: Map<String, String> = emptyMap()) {
 /**
  * What one performance is given: its [seed], the [music] it plays to, and the [switches].
  *
+ * A performance can go from one song to the next without ending ([take]; KLANG-00481, the maintainer, 2026-11-23:
+ * "I would not cut between the scenes"): the show's clock runs on, and the next song begins at a moment on it
+ * ([songStart]). So the song, the tempo and the bar are the ones of the song that plays now; whoever keeps one of
+ * them keeps the song's of the moment it was asked.
+ *
  * Every chance in the choreography is drawn under the seed ([own]), so each seed is another performance (who nods
  * how at which moment, the wandering, the fits, the looks, the strolls, the lights' turns, the camera) and the same
  * seed the same one again. The playing itself never depends on it.
  */
 class Show(
     val seed: Int,
-    val music: Music = Music.none,
+    music: Music = Music.none,
     val switches: Switches = Switches(),
 ) {
+    /** The music the show plays to now. */
+    var music: Music = music
+        private set
+
+    /** When the song that plays now began, on the show's clock (seconds): 0 for the first. */
+    var songStart: Double = 0.0
+        private set
+
     /** The song, as far ahead as it is known; null where there is none (the band plays test notes). */
-    val song: Song? = music.song
+    val song: Song? get() = music.song
 
     /** Beats a minute. */
-    val bpm: Double = song?.bpm ?: 120.0
+    val bpm: Double get() = song?.bpm ?: 120.0
 
     /** A bar of four beats, in seconds. */
-    val bar: Double = 240.0 / bpm
+    val bar: Double get() = 240.0 / bpm
+
+    /** The beat at [t] on the show's clock, counted from where the song that plays now began. */
+    fun beatAt(t: Double): Double = (t - songStart) * bpm / 60
+
+    /**
+     * Goes on with [next], whose song begins at [at] on the show's clock (its events are told in the clock's time
+     * already: see [Song.startsAt]).
+     */
+    fun take(next: Music, at: Double) {
+        music = next
+        // NaN-guard: a moment of no number is the clock's start
+        songStart = if (at != at) 0.0 else at
+    }
 
     /** The time the show is frozen at (`?t=`), for stills; null where it runs. */
     val frozen: Double? = switches.double(Switch.Time)

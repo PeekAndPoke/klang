@@ -345,7 +345,7 @@ class StringPlayer(
         val tune = idle.filter { it.skill is TuneUp }.maxOfOrNull { it.share } ?: 0.0
 
         // the body: knees giving on the beat, the trunk leaning, the head going with the beat
-        val beat = t * show.bpm / 60
+        val beat = show.beatAt(t)
         // how much he is playing drives the body, less so for a steady player
         val live = 0.35 + 0.65 * playing
         val drive = live + (1 - live) * mover.traits.steady

@@ -7,6 +7,8 @@ package io.peekandpoke.klang.viz.liveact.song
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.sound.RecordedMusic
 
 private fun event(t: Double, tag: String, sound: String? = null, note: String? = null, freq: Double? = null, gain: Double? = null, d: Double = 0.1) =
     RecordedEvent(t = t, d = d, tags = listOf(tag), note = note, freq = freq, gain = gain, sound = sound)
@@ -396,5 +398,39 @@ class SongSpec : StringSpec({
 
         s.drumHits(KIT).map { it.limb } shouldBe listOf(Limb.KickL)
         s.drumHits(other).map { it.limb } shouldBe listOf(Limb.KickR)
+    }
+
+    "a song that begins later on the show's clock tells every reading in the clock's time" {
+        val events = listOf(
+            RecordedEvent(t = 1.0, d = 0.5, tags = listOf("kick")),
+            RecordedEvent(t = 3.0, d = 0.5, tags = listOf("kick")),
+            RecordedEvent(t = 20.0, d = 0.5, tags = listOf("kick")),
+        )
+        val later = Song(rpm = 30.0, startsAt = 100.0)
+
+        later.add(events)
+        later.times(listOf("kick")) shouldBe listOf(101.0, 103.0, 120.0)
+
+        // forgetting and dropping are told in the song's own seconds, as adding is
+        later.forget(before = 2.0)
+        later.times(listOf("kick")) shouldBe listOf(103.0, 120.0)
+        later.drop(from = 10.0)
+        later.times(listOf("kick")) shouldBe listOf(103.0)
+    }
+
+    "a show that goes on with another song counts its beats from where that song began" {
+        val first = RecordedMusic(song = Song(Recording(rpm = 30.0, events = emptyList())), loudness = null)
+        val next = RecordedMusic(song = Song(rpm = 15.0, startsAt = 200.0), loudness = null)
+        val show = Show(seed = 1, music = first)
+
+        show.bpm shouldBe 120.0
+        show.beatAt(2.0) shouldBe 4.0
+
+        show.take(next = next, at = 200.0)
+        show.bpm shouldBe 60.0
+        show.bar shouldBe 4.0
+        show.songStart shouldBe 200.0
+        show.beatAt(201.0) shouldBe 1.0
+        show.song shouldBe next.song
     }
 })

@@ -639,7 +639,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     "camera: ${now.view.what()}",
                     "seed ${show.seed}",
                     "t ${t.toFixed(2)} s",
-                    "beat ${(t * show.bpm / 60).toFixed(2)}",
+                    "beat ${show.beatAt(t).toFixed(2)}",
                 ),
                 listOf(
                     "${fps.toFixed(0)} fps",

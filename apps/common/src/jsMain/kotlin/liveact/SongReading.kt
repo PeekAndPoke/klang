@@ -202,12 +202,13 @@ class SongReading private constructor(
          * Begins to read the song a [playback] plays: its events from where it is heard (from its first cycle before
          * it has begun) as far ahead as it is read, at the tempo the playback has there. The playback may be one that
          * is made and not started yet: set its tempo first (`updateRpm`), so the cycles read are the ones that sound.
+         * [startsAt]: the moment on the show's clock at which the playback begins to sound (a show's next song).
          */
-        suspend fun begin(playback: KlangCyclicPlayback): SongReading {
+        suspend fun begin(playback: KlangCyclicPlayback, startsAt: Double = 0.0): SongReading {
             val now = playback.heardCycles() ?: 0.0
             // a bar back as well: a note that began just before still sounds
             val reading = SongReading(
-                song = Song(rpm = playback.rpmAt(now)),
+                song = Song(rpm = playback.rpmAt(now), startsAt = startsAt),
                 playback = playback,
                 to = max(0, floor(now).toInt() - 1),
             )

@@ -364,7 +364,7 @@ class LightPlan(private val show: Show, private val kick: String) {
         // trigger seizures in people with photosensitive epilepsy: a public showing needs a warning before it.
         // ?nostrobe switches it off.
         if (!show.switches.has(Switch.NoStrobe) && strobes(runs = runs, t = t)) {
-            val sixteenth = (t * show.bpm / 60 * 4) % 1
+            val sixteenth = (show.beatAt(t) * 4).mod(1.0)
 
             return FrontLight(level = if (sixteenth < 0.28) 1.0 else Strobe.LOW, strobing = true)
         }
