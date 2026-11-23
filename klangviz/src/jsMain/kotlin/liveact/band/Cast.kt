@@ -60,6 +60,19 @@ data class Cast(
     val players: List<Player>
         get() = listOfNotNull(drums.player, marimba?.player, trumpet?.player) + strings.map { it.player }
 
+    /**
+     * Who plays the same instrument in this song and in [next], and so keeps it in their hands at a change of song:
+     * the drummer where both have the same one, and a strung player whose instrument is of the same design and
+     * outline in both.
+     */
+    fun keeps(next: Cast): Set<Player> {
+        val strung = next.strings
+            .filter { seat -> strings.any { it.player == seat.player && it.design === seat.design && it.outline == seat.outline } }
+            .map { it.player }
+
+        return (strung + listOfNotNull(drums.player.takeIf { it == next.drums.player })).toSet()
+    }
+
     /** The song's tags [player] is seen to play by (the camera and the eyes go by them); none where they have no seat. */
     fun tagsOf(player: Player): List<String> = when (player) {
         drums.player -> drums.kit.beat

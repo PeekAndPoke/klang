@@ -69,12 +69,14 @@ class Rounds(
     val seldom: List<Player>,
     val strolls: Player?,
     val force: RoundKind? = null,
+    /** The moment on the show's clock at which the song begins: 0 for a show's first song. */
+    val after: Double = 0.0,
 ) {
     /** A round, in seconds. */
     val length: Double = ROUND * bar
 
     /** The song starts after the count-in; the rounds begin up to twelve bars later, by the seed. */
-    val start: Double = (2 + floor(chance(n = 0, i = 0, salt = 9) * 13)) * bar
+    val start: Double = after + (2 + floor(chance(n = 0, i = 0, salt = 9) * 13)) * bar
 
     /** A number from 0 to 1 that belongs to the round [n], the look [i] and a purpose [salt], under this seed. */
     fun chance(n: Int, i: Int, salt: Int): Double {

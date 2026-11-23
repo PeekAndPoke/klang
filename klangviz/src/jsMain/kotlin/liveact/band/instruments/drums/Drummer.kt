@@ -78,12 +78,12 @@ private class HeldStick(
 class Drummer(
     private val show: Show,
     private val rig: Rig,
-    private val hits: Part<DrumHit>,
+    private var hits: Part<DrumHit>,
     traits: Traits,
     seed: Double = 1.0,
     /** The band's name, written on the bass drum's front head. */
     name: String = "",
-    private val idles: (Double) -> List<IdleInUse> = { emptyList() },
+    private var idles: (Double) -> List<IdleInUse> = { emptyList() },
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
     private val s: Double = rig.s
@@ -102,6 +102,19 @@ class Drummer(
     private var planned: DrumPlan? = null
 
     init {
+        hits.refresh()
+        plan()
+    }
+
+    /**
+     * Goes on with other [hits] and their [idles]: the next song's, at the same kit (KLANG-00481: the drummer keeps
+     * his kit at a change of song). Nothing of the hits before is kept: the limbs begin anew.
+     */
+    fun take(hits: Part<DrumHit>, idles: (Double) -> List<IdleInUse>) {
+        this.hits = hits
+        this.idles = idles
+        planned = null
+        scratching = null
         hits.refresh()
         plan()
     }

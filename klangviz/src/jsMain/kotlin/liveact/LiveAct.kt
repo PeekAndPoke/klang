@@ -21,6 +21,7 @@ import io.peekandpoke.klang.viz.liveact.lights.WorldLight
 import io.peekandpoke.klang.viz.liveact.sound.Downshift
 import io.peekandpoke.klang.viz.liveact.sound.Sharpness
 import io.peekandpoke.klang.viz.liveact.band.skills.GhostEyes
+import io.peekandpoke.klang.viz.liveact.sound.Music
 import io.peekandpoke.klang.viz.liveact.stage.EyesLook
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
@@ -78,6 +79,7 @@ fun Tag.LiveAct(
     frameTimes: ((Double) -> Unit)? = null,
     stepsDown: Boolean = false,
     picture: Picture? = null,
+    changes: SongChanges? = null,
 ) = comp(
     LiveAct.Props(
         show = show,
@@ -88,6 +90,7 @@ fun Tag.LiveAct(
         frameTimes = frameTimes,
         stepsDown = stepsDown,
         picture = picture,
+        changes = changes,
     )
 ) {
     LiveAct(it)
@@ -161,7 +164,55 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
          * as the key g's, the shadows and the reflections at once. Null: none.
          */
         val picture: Picture? = null,
+        /** The change of song, asked for from outside ([SongChanges]): the show goes on with another one. Null: none. */
+        val changes: SongChanges? = null,
     )
+
+    /** The score of the song that plays now: the props' until the show goes on with another ([change]). */
+    private var taken: Score? = null
+    private val score: Score get() = taken ?: props.score
+
+    /** The show's time at the last frame. */
+    private var lastT: Double = 0.0
+
+    /**
+     * The show goes on with [next] and its [music], whose song begins [at] that moment on the show's clock
+     * ([SongChanges.change]): the show and its clock take the music, the band its new seats and places, the camera
+     * its new rounds; the stage and its light stay as they are.
+     */
+    private fun change(next: Score, music: Music, at: Double) {
+        val now = running ?: return
+        val show = props.show
+        val t = lastT
+
+        now.clock.changeTo(music = music, at = at)
+        show.take(next = music, at = at)
+        now.band.reseat(cast = next.cast, plot = next.plot, idles = next.idles, startsAt = at, t = t)
+        now.view.retake(
+            homes = next.plot.places,
+            activity = now.band::playsAt,
+            seldom = next.cast.seldom,
+            strolls = next.cast.strolls,
+            after = at,
+            t = t,
+        )
+        taken = next
+
+        // the eyes in the shadows are the song's to rest
+        if (GhostEyes in next.resting) {
+            shadowEyes.forEach { it.dispose() }
+            shadowEyes = emptyList()
+        }
+
+        eyesAsChosen()
+
+        // the lacquer knows the brass it polishes: with another trumpet (or none) it is made anew
+        lacquer?.let {
+            it.dispose()
+            lacquer = null
+            skinAsChosen()
+        }
+    }
 
     /** Everything a running show holds, once its figures are loaded. */
     private class Running(
@@ -379,6 +430,10 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
             onUnmount {
                 props.picture?.detach()
+                props.changes?.let {
+                    it.clock = null
+                    it.take = null
+                }
                 window.removeEventListener("resize", onResize)
                 window.document.removeEventListener("visibilitychange", onVisibility)
                 window.removeEventListener("keydown", onKey)
@@ -533,6 +588,10 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
             since = window.performance.now()
             before = since
             running = Running(stage = stage, band = band, clock = clock, view = view)
+            props.changes?.let {
+                it.clock = { lastT }
+                it.take = ::change
+            }
             eyesAsChosen()
             skinAsChosen()
             ctx.scene.visible = true
@@ -546,15 +605,17 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         val t = now.clock.showTime()
         val energy = show.energyAt(t)
 
+        lastT = t
+
         show.energy = energy
         now.band.play(t)
 
         // she who plays the trumpet looks at nobody while she plays
-        val her = props.score.cast.trumpet?.player
+        val her = score.cast.trumpet?.player
 
         eyeContact(
             show = show,
-            timing = props.score.eyeContact,
+            timing = score.eyeContact,
             rigs = now.band.rigs,
             her = her,
             herNotes = her?.let { now.band.playsAt(it) }.orEmpty(),
@@ -763,7 +824,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         val rigs = running?.band?.rigs
         val into = scene
 
-        if (wanted && shadowEyes.isEmpty() && rigs != null && into != null && GhostEyes !in props.score.resting) {
+        if (wanted && shadowEyes.isEmpty() && rigs != null && into != null && GhostEyes !in score.resting) {
             shadowEyes = Members.ghostEyed.mapNotNull { player -> rigs[player]?.let { ShadowEyes.of(scene = into, rig = it) } }
         }
 

@@ -59,7 +59,7 @@ import kotlin.math.min
  * The keys are heard from the window until [dispose].
  */
 class View(
-    show: Show,
+    private val show: Show,
     private val scene: Scene,
     private val camera: PerspectiveCamera,
     private val rigs: Map<Player, Rig>,
@@ -71,13 +71,22 @@ class View(
     private val switches = show.switches
 
     /** A bar, in seconds. */
-    private val bar: Double = show.bar
+    private var bar: Double = show.bar
 
     /** The looks at each player, clear of the others where they stand. */
-    private val looks: Map<Player, List<Placement>> = looksOn(homes)
+    private var looks: Map<Player, List<Placement>> = looksOn(homes)
 
     /** The camera's choreography, when the song is there (`?still`: the wide view only). */
-    private val choreography: Choreography? = if (show.song != null && !switches.has(Switch.Still)) {
+    private var choreography: Choreography? =
+        choreographyOf(homes = homes, activity = activity, seldom = seldom, strolls = strolls, after = 0.0)
+
+    private fun choreographyOf(
+        homes: Map<Player, Place>,
+        activity: (Player) -> List<Double>,
+        seldom: List<Player>,
+        strolls: Player?,
+        after: Double,
+    ): Choreography? = if (show.song != null && !switches.has(Switch.Still)) {
         Choreography(
             show = show,
             rigs = rigs,
@@ -87,9 +96,32 @@ class View(
             strolls = strolls,
             force = forcedKind(switches[Switch.Move]),
             sitting = homes.filterValues { it.sits }.keys,
+            after = after,
         )
     } else {
         null
+    }
+
+    /**
+     * The show goes on with another song (KLANG-00481), whose band has the places [homes] and begins [after] that
+     * moment on the show's clock; [t]: now. The camera's rounds are counted anew from the song's start, by the
+     * show's bar as it is now (call it once the show has taken the song). Where the camera is on a look, it comes
+     * back to the total by the dolly zoom it has by hand ([Hand.Back]), and the rounds have it from there.
+     */
+    fun retake(homes: Map<Player, Place>, activity: (Player) -> List<Double>, seldom: List<Player>, strolls: Player?, after: Double, t: Double) {
+        if (choreography == null) {
+            return
+        }
+
+        bar = show.bar
+        looks = looksOn(homes)
+        val made = choreographyOf(homes = homes, activity = activity, seldom = seldom, strolls = strolls, after = after)
+
+        choreography = made
+        lookOf.clear()
+        hand = null
+        // (a camera that looks away from the total would be swung right round on the way: it cuts, as by hand)
+        returning = shown?.takeIf { made != null && !made.away(it) }?.let { Hand.Back(shot = it, from = t) }
     }
 
     /** `?view=side`, or stadium, or a player's name: a fixed camera. */
@@ -120,6 +152,9 @@ class View(
 
     private var label: String = "fixed"
     private var hand: Hand? = null
+
+    /** After a change of song ([retake]): the way back to the total from where the camera was; null once it is there. */
+    private var returning: Hand.Back? = null
     private var shown: Shot? = null
     private var clock: Double = 0.0
     private var player: Player = Player.Skalpell
@@ -237,7 +272,7 @@ class View(
 
             k == "d" && last != null -> {
                 // a camera that looks away from the total would be swung right round on the way: it cuts
-                hand = if (choreography != null && !choreography.away(last)) {
+                hand = if (choreography?.away(last) == false) {
                     Hand.Back(from = clock, shot = Shot(pos = last.pos.clone(), at = last.at.clone(), fov = last.fov))
                 } else {
                     Hand.Home
@@ -282,6 +317,22 @@ class View(
         return home
     }
 
+    /** The camera on its way back to the total after a change of song ([returning]) at [t]; null once it is there. */
+    private fun comingBack(t: Double, choreography: Choreography): Shot? {
+        val now = returning ?: return null
+        val u = max(0.0, t - now.from)
+
+        if (u >= RETURN) {
+            returning = null
+
+            return null
+        }
+
+        label = "back to the total for the next song"
+
+        return choreography.back(shot = now.shot, home = choreography.home(t), u = smoother(u / RETURN))
+    }
+
     private fun place(t: Double) {
         clock = t
 
@@ -323,7 +374,7 @@ class View(
             }
 
             choreography != null -> {
-                val mine = byHand(t, choreography)
+                val mine = byHand(t, choreography) ?: comingBack(t, choreography)
                 val shot = mine ?: choreography.at(t)
 
                 if (mine == null) {
@@ -403,6 +454,9 @@ class View(
     }
 
     private companion object {
+        /** After a change of song: how long the camera takes back to the total, in seconds. */
+        const val RETURN = 6.0
+
         /** How long the circle round the band takes by hand (the key a), in bars: slower than it was (16). */
         const val HAND_CIRCLE = 22
 

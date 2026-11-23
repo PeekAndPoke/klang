@@ -149,13 +149,13 @@ class StringPlayer(
     private val show: Show,
     private val rig: Rig,
     private val design: StringDesign,
-    private val part: Part<Strum>,
+    private var part: Part<Strum>,
     traits: Traits,
     private val seed: Double = 4.0,
     bearing: Bearing? = null,
     private val outline: BodyOutline = design.outline,
     private val looks: (Double) -> List<Look> = { emptyList() },
-    private val idles: (Double) -> List<IdleInUse> = { emptyList() },
+    private var idles: (Double) -> List<IdleInUse> = { emptyList() },
     skills: List<Skill> = emptyList(),
     hand: Side = Side.R,
     private val lap: Lap = Lap.OnThigh,
@@ -206,6 +206,20 @@ class StringPlayer(
     private var idleHand: IdleHand? = null
 
     init {
+        part.refresh()
+        notes = fingered(strums = part.events, now = Double.NEGATIVE_INFINITY)
+    }
+
+    /**
+     * Goes on with another [part] and its [idles]: the next song's, on the same instrument (KLANG-00481: who keeps
+     * their instrument at a change of song keeps this very player). Nothing of the part before is kept: the hands
+     * begin anew.
+     */
+    fun take(part: Part<Strum>, idles: (Double) -> List<IdleInUse>) {
+        this.part = part
+        this.idles = idles
+        planned = StringPlan()
+        idleHand = null
         part.refresh()
         notes = fingered(strums = part.events, now = Double.NEGATIVE_INFINITY)
     }

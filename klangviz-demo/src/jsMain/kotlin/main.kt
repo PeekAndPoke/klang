@@ -11,12 +11,13 @@ import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.band.Player
-import io.peekandpoke.klang.viz.liveact.band.after
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.scores.KOKON
 import io.peekandpoke.klang.viz.liveact.song.Recording
 import io.peekandpoke.klang.viz.liveact.song.Song
 import io.peekandpoke.klang.viz.liveact.sound.Loudness
+import io.peekandpoke.klang.viz.liveact.SongChanges
+import io.peekandpoke.klang.viz.liveact.band.Changeover
 import io.peekandpoke.klang.viz.liveact.sound.RecordedMusic
 import io.peekandpoke.kraft.addons.registry.addons
 import io.peekandpoke.kraft.addons.threejs.threeJs
@@ -25,6 +26,7 @@ import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 import kotlinx.browser.window
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.await
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlin.random.Random
@@ -85,20 +87,34 @@ fun main() {
         }
         val show = Show(seed = seed, music = music, switches = switches)
 
+        val changes = SongChanges()
+
         kraft.mount(selector = "#app", engine = PreactVDomEngine()) {
             // the demo serves its figures fresh from the build: its version is a fixed word
             // (`?score=kokon`: Kokon's band and places, to look at them; its song is not recorded here, so with
             // `?test` they play the test notes, and without it they stand)
             val kokon = window.location.search.contains("score=kokon")
             val own = if (kokon) KOKON else DER_SCHMETTERLING
-            // (`?after`: as the band takes the song up coming from the other one, to look at the way between two songs)
-            val score = if (window.location.search.contains("after")) {
-                own.copy(plot = own.plot.after((if (kokon) DER_SCHMETTERLING else KOKON).plot))
-            } else {
-                own
+
+            LiveAct(show = show, score = own, models = MODELS, version = "dev", changes = changes)
+        }
+
+        // (`?change=20`: at that time on the show's clock the band goes on with the other song, to look at the change
+        // of song without the app; with `?test`, as the other song is not recorded here)
+        val changeAt = Regex("[?&]change=(-?[0-9.]+)").find(window.location.search)?.groupValues?.get(1)?.toDoubleOrNull()
+
+        if (changeAt != null) {
+            while ((changes.now() ?: Double.NEGATIVE_INFINITY) < changeAt) {
+                delay(50)
             }
 
-            LiveAct(show = show, score = score, models = MODELS, version = "dev")
+            val kokon = window.location.search.contains("score=kokon")
+
+            changes.change(
+                score = if (kokon) DER_SCHMETTERLING else KOKON,
+                music = RecordedMusic(song = null, loudness = null),
+                at = (changes.now() ?: changeAt) + Changeover.INTRO,
+            )
         }
     }
 }

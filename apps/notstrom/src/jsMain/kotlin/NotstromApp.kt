@@ -28,8 +28,9 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.viz.liveact.LiveAct
 import io.peekandpoke.klang.viz.liveact.Picture
 import io.peekandpoke.klang.viz.liveact.Score
-import io.peekandpoke.klang.viz.liveact.band.after
 import io.peekandpoke.klang.viz.liveact.Show
+import io.peekandpoke.klang.viz.liveact.SongChanges
+import io.peekandpoke.klang.viz.liveact.band.Changeover
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
@@ -153,6 +154,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val test: Boolean,
         val score: Score = SHOW_SCORE,
         val picture: Picture = Picture(),
+        val changes: SongChanges = SongChanges(),
     )
 
     /**
@@ -263,11 +265,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /** Which song of the [PROGRAMME] the show plays, or will play when it starts. */
     private var playing: Int by value(0)
 
-    /**
-     * The song the band comes from at a change of song (its place in the [PROGRAMME]); null for a show begun from the
-     * start screen. The next show's band walks from that song's places to its own (`StagePlot.after`).
-     */
-    private var cameFrom: Int? = null
+    /** A change of song is under way ([goOnWith]): until the stage has taken it, no other one begins. */
+    private var changing = false
 
     /** The show's volume, 0 to 1, as the drawer set it: kept from one song to the next. */
     private var volume: Double = 1.0
@@ -419,15 +418,73 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
      * as they are.
      */
     private fun changeSong(by: Int) {
-        if (phase != Phase.Playing) {
+        val stage = running
+
+        if (phase != Phase.Playing || changing || stage == null) {
             return
         }
 
-        cameFrom = playing
-        playing = stepSong(now = playing, by = by, songs = PROGRAMME.size)
-        frameSink = null
-        stopFading()
-        ready(test = false)
+        val to = stepSong(now = playing, by = by, songs = PROGRAMME.size)
+
+        changing = true
+        playing = to
+
+        scope.launch {
+            try {
+                goOnWith(stage = stage, programmed = PROGRAMME[to])
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                console.error("Notstrom could not change the song", e)
+                stop(problem = "Something went wrong while the band changed the song. Please reload the page and try again.")
+            } finally {
+                changing = false
+            }
+        }
+    }
+
+    /**
+     * The show on [stage] goes on with [programmed], without ending (KLANG-00481): the song is compiled and read
+     * while the one before still sounds; then the stage takes it ([SongChanges.change]): the sound before stops,
+     * the band goes to its new places over the changeover's time, and the song begins at the moment chosen here,
+     * from which its readings are told.
+     */
+    private suspend fun goOnWith(stage: Running, programmed: Programmed) {
+        val player = ensurePlayer()
+        val song = programmed.song
+        val now = stage.changes.now() ?: return
+        // the song begins once it is ready (GETS_READY at most, else the band's ways are cut short by the rest) and the
+        // band has had the changeover's time
+        val leaves = now + GETS_READY
+        val at = leaves + Changeover.INTRO
+        val pattern = compile(code = song.code)
+        val playback = player.play(pattern)
+
+        playback.updateRpm(song.rpm)
+
+        val reading = SongReading.begin(playback, startsAt = at)
+        val transport = ShowPlayback(
+            begin = {
+                playback.also { it.start(KlangCyclicPlayback.Options(rpm = song.rpm)) }
+            },
+        )
+        val music = PlayingMusic(song = reading.song, analyser = { player.getAnalyzer() }, listen = { transport })
+
+        while ((stage.changes.now() ?: leaves) < leaves) {
+            delay(CHANGE_WAIT_MS)
+        }
+
+        if (running !== stage || !stage.changes.change(score = programmed.score, music = music, at = at)) {
+            // the show ended meanwhile: the song made for it is never heard
+            reading.close()
+            playback.stop()
+
+            return
+        }
+
+        // the reading of the song before ends, the next one's is followed
+        beside?.cancel()
+        beside = scope.launch(start = CoroutineStart.UNDISPATCHED) { reading.follow() }
     }
 
     /** What is there goes, and the machine is [test]ed or the show gets ready and begins. */
@@ -481,7 +538,6 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         leaveFullscreen()
         stop(problem = null)
-        cameFrom = null
         volume = 1.0
         player?.setOutputVolume(1.0)
     }
@@ -773,9 +829,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         val programmed = PROGRAMME[playing]
         val song = programmed.song
-        // at a change of song the band walks from where it was in the song before, and no show opens anew
-        val before = cameFrom?.let { PROGRAMME[it].score }
-        val score = if (before != null) programmed.score.copy(plot = programmed.score.plot.after(before.plot)) else programmed.score
+        val score = programmed.score
         val pattern = compile(code = song.code)
         // made now and started after the walk-in: it answers its cycles before it sounds, so the band reads the very
         // notes that will sound (KLANG-00450). Its tempo is set first: the cycles are read at the tempo it starts at.
@@ -808,7 +862,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             strobe = strobe,
             oversample = tested?.oversample ?: 1,
             fog = tested?.fog ?: FogQuality.High,
-            opens = before == null,
+            opens = true,
         )
 
         preparing = null
@@ -945,6 +999,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                             walkInAtOnce = true,
                             stepsDown = true,
                             picture = now.picture,
+                            changes = now.changes,
                         )
                     }
                 }
@@ -1126,6 +1181,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         /** How often the show's making looks whether the screen of the click is out yet, in milliseconds. */
         const val SCREEN_WAIT_MS = 50L
+
+        /** At a change of song: how long the next song is given to get ready before the band sets off, in seconds. */
+        const val GETS_READY = 1.5
+
+        /** How often a change of song looks whether its moment has come, in milliseconds. */
+        const val CHANGE_WAIT_MS = 30L
 
         /** The dynamometer's rounds, averaged (as the studio runs it). */
         const val SOUND_ROUNDS = 3

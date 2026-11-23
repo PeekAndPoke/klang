@@ -44,6 +44,18 @@ import io.peekandpoke.klang.viz.liveact.band.skills.idlesAt
 import io.peekandpoke.klang.viz.liveact.band.skills.keepsIdle
 import io.peekandpoke.klang.viz.liveact.band.skills.lookAt
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.band.NoteSeat
+import io.peekandpoke.klang.viz.liveact.band.after
+import io.peekandpoke.klang.viz.liveact.band.figure.CapturedPose
+import io.peekandpoke.klang.viz.liveact.band.figure.WalkIn
+import io.peekandpoke.klang.viz.liveact.band.instruments.drums.KitMaterials
+import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaMaterials
+import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringMaterials
+import io.peekandpoke.kraft.addons.threejs.js.Object3D
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.sin
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.song.Part
@@ -77,16 +89,27 @@ import kotlinx.coroutines.coroutineScope
  */
 class Notstrom private constructor(
     private val show: Show,
-    private val cast: Cast,
-    private val plot: StagePlot,
+    cast: Cast,
+    plot: StagePlot,
     /** Every player's rig, in the players' order. */
     val rigs: Map<Player, Rig>,
     /** The figures' dressed parts (the dark skin, the hair), each with its pattern: what the lacquer look re-dresses. */
     val bodies: List<DressedBody>,
     private val viewer: Vector3,
     /** How many of the members' idle moves happen, 0 to 1 (the score's, see `Score.idles`). */
-    private val idles: Double,
+    idles: Double,
 ) {
+    /**
+     * Who plays what, where they are and how they get there, and how many idle moves happen: the score's of the song
+     * that plays now. They change when the band goes on with another song ([reseat]); the six figures stay.
+     */
+    private var cast: Cast = cast
+    private var plot: StagePlot = plot
+    private var idles: Double = idles
+
+    /** The moment on the show's clock at which the song that plays now begins: the plot's walks are told from there. */
+    private var startsAt: Double = 0.0
+
     companion object {
         /** The band's name, as it stands on the bass drum. */
         const val NAME = "MØRTSTØN"
@@ -96,6 +119,11 @@ class Notstrom private constructor(
 
         /** How long a strung player takes to take up the instrument that appears once they are at their place. */
         private const val TAKE = 1.0
+
+        /** At a change of song: how long an instrument takes to go and to come, and a figure to ease into its new pose. */
+        private const val VANISH = 1.4
+        private const val APPEAR = 0.9
+        private const val EASE = 1.6
 
         /** The head's middle and size, in the body's rest space: a little above and behind where the head's bone starts. */
         private fun hairOf(rig: Rig): HairPart {
@@ -266,22 +294,23 @@ class Notstrom private constructor(
     private val tails: List<HairTail> = Player.entries.mapNotNull { player -> HairTail.of(rig(player)) }
 
     /** The marimba player; null in a song without a marimba. */
-    val marimba: MarimbaPlayer? = cast.marimba?.let { seat ->
-        MarimbaPlayer(
-            show = show,
-            rig = rig(seat.player),
+    var marimba: MarimbaPlayer? = cast.marimba?.let { marimbaPlayerOf(it) }
+        private set
+
+    private fun marimbaPlayerOf(seat: NoteSeat): MarimbaPlayer = MarimbaPlayer(
+        show = show,
+        rig = rig(seat.player),
+        part = tunePart(tag = seat.tag, test = ::testTune),
+        traits = character(seat.player).traits,
+        seed = character(seat.player).seed,
+        skills = Members.of(seat.player).skills,
+        arrives = startsAt + plot.entrances.getValue(seat.player).end,
+        idles = idlesOf(
+            player = seat.player,
             part = tunePart(tag = seat.tag, test = ::testTune),
-            traits = character(seat.player).traits,
-            seed = character(seat.player).seed,
-            skills = Members.of(seat.player).skills,
-            arrives = plot.entrances.getValue(seat.player).end,
-            idles = idlesOf(
-                player = seat.player,
-                part = tunePart(tag = seat.tag, test = ::testTune),
-                margin = MarimbaPlayer.idleMargin(bpm = show.bpm, skills = Members.of(seat.player).skills),
-            ),
-        )
-    }
+            margin = MarimbaPlayer.idleMargin(bpm = show.bpm, skills = Members.of(seat.player).skills),
+        ),
+    )
 
     /**
      * Where a look can go: the camera (the viewer, as the show keeps it), the members' eyes as they are posed now,
@@ -296,37 +325,215 @@ class Notstrom private constructor(
     )
 
     /** The trumpet player, who strolls; null in a song without a trumpet. */
-    val frontwoman: TrumpetPlayer? = cast.trumpet?.let { seat ->
-        TrumpetPlayer(
-            show = show,
-            rig = rig(seat.player),
-            part = tunePart(tag = seat.tag, test = ::testCall),
-            traits = character(seat.player).traits,
-            seed = character(seat.player).seed,
-            looks = headLooksOf(seat.player),
-            gait = character(seat.player).gait,
-            others = plot.places.filterKeys { it != seat.player },
-        )
-    }
+    var frontwoman: TrumpetPlayer? = cast.trumpet?.let { trumpetPlayerOf(it) }
+        private set
+
+    private fun trumpetPlayerOf(seat: NoteSeat): TrumpetPlayer = TrumpetPlayer(
+        show = show,
+        rig = rig(seat.player),
+        part = tunePart(tag = seat.tag, test = ::testCall),
+        traits = character(seat.player).traits,
+        seed = character(seat.player).seed,
+        looks = headLooksOf(seat.player),
+        gait = character(seat.player).gait,
+        others = plot.places.filterKeys { it != seat.player },
+    )
 
     /** The string players, in the order they are moved each frame. */
-    val strings: List<Pair<Player, StringPlayer>> = cast.strings.map { seat ->
-        seat.player to StringPlayer(
-            show = show,
-            rig = rig(seat.player),
-            design = seat.design,
-            part = stringPart(seat),
-            traits = character(seat.player).traits,
-            seed = character(seat.player).seed,
-            bearing = Members.of(seat.player).bearing,
-            outline = seat.outline ?: seat.design.outline,
-            looks = headLooksOf(seat.player),
-            idles = idlesOf(player = seat.player, part = stringPart(seat)),
-            skills = Members.of(seat.player).skills,
-            hand = Members.of(seat.player).hand,
-            lap = Members.of(seat.player).lap,
+    var strings: List<Pair<Player, StringPlayer>> = cast.strings.map { seat -> seat.player to stringPlayerOf(seat) }
+        private set
+
+    private fun stringPlayerOf(seat: StringSeat): StringPlayer = StringPlayer(
+        show = show,
+        rig = rig(seat.player),
+        design = seat.design,
+        part = stringPart(seat),
+        traits = character(seat.player).traits,
+        seed = character(seat.player).seed,
+        bearing = Members.of(seat.player).bearing,
+        outline = seat.outline ?: seat.design.outline,
+        looks = headLooksOf(seat.player),
+        idles = idlesOf(player = seat.player, part = stringPart(seat)),
+        skills = Members.of(seat.player).skills,
+        hand = Members.of(seat.player).hand,
+        lap = Members.of(seat.player).lap,
+    )
+
+    /**
+     * An instrument that goes at a change of song: [prop] shrinks from the moment [since] on the show's clock, from
+     * the size it had ([size]), and is taken out of the scene and freed when it is gone.
+     */
+    private class Leaving(val prop: Object3D, val since: Double, val size: Vector3)
+
+    /**
+     * An instrument that comes at a change of song: [props] grow to their size ([sizes]) once their [player] has
+     * reached the start pose ([reseat]); until then they are not seen.
+     */
+    private class Arriving(val player: Player, val props: List<Object3D>, val sizes: List<Vector3>)
+
+    private val leaving = mutableListOf<Leaving>()
+    private val arriving = mutableListOf<Arriving>()
+
+    /**
+     * How everyone was held at the last change of song, and when it was (the show's clock): each figure eases from
+     * there into what the next song has it do (one who sat gets up, one whose instrument went lets the arms come
+     * down), over [EASE] seconds. Null where no change is under way.
+     */
+    private var eased: Map<Player, CapturedPose>? = null
+    private var easedAt: Double = 0.0
+
+    /** How everyone stood turned at the last change of song: they turn from there into their way, over [EASE] seconds. */
+    private var turned: Map<Player, Double> = emptyMap()
+
+    /** Who sat in the song before and goes on with the same instrument: they get up from the change on ([easedAt]). */
+    private var rising: Set<Player> = emptySet()
+
+    /**
+     * The band goes on with another song without leaving the stage (KLANG-00481; the maintainer, 2026-11-23: "let
+     * the no longer needed instruments vanish; while they vanish everyone takes the new start pose; only when the
+     * start pose is fully reached let the new instruments appear"). [cast], [plot] and [idles] are the next song's
+     * score's; [startsAt]: the moment on the show's
+     * clock at which the song begins; [t]: now on that clock. The [plot] is the song's own: the walks to it are planned
+     * here, from where everyone is. Call it once the show has taken the next song
+     * (`Show.take`): the parts are read from it.
+     *
+     * Who keeps their instrument keeps the very player and its instrument, and gets the next song's part: the
+     * drummer (both songs have him at the kit), and a strung player who has the same design in both. Every other
+     * instrument of the song before goes, and every other one of the next song comes.
+     */
+    fun reseat(cast: Cast, plot: StagePlot, idles: Double, startsAt: Double, t: Double) {
+        check(cast.drums.player == this.cast.drums.player) { "A change of the drummer is not built yet" }
+
+        val keeps = this.cast.keeps(cast)
+        val beforeStrings = strings
+        // the walks begin where everyone is now (she who strolls is not at her place)
+        val here = this.plot.copy(
+            places = this.plot.places.mapValues { (player, place) ->
+                rig(player).root.position.let { place.copy(x = it.x, z = it.z) }
+            },
         )
+
+        // how everyone is held now, and who sits: they ease from there
+        val held = rigs.mapValues { (_, rig) -> capture(rig) }
+        val sat = this.plot.places.filterValues { it.sits }.keys
+
+        easedAt = t
+        turned = rigs.mapValues { (_, rig) -> rig.root.rotation.y }
+
+        this.cast = cast
+        this.plot = plot.after(before = here, keeps = keeps)
+        this.idles = idles
+        this.startsAt = startsAt
+
+        drummer.take(
+            hits = drumPart(),
+            idles = idlesOf(
+                player = cast.drums.player,
+                part = drumPart(),
+                arrives = this.plot.entrances.getValue(cast.drums.player).end + SIT,
+            ),
+        )
+
+        strings = cast.strings.map { seat ->
+            val kept = beforeStrings.firstOrNull { it.first == seat.player }?.second?.takeIf { seat.player in keeps }
+
+            if (kept != null) {
+                kept.take(part = stringPart(seat), idles = idlesOf(player = seat.player, part = stringPart(seat)))
+
+                seat.player to kept
+            } else {
+                val made = stringPlayerOf(seat)
+
+                comes(player = seat.player, props = listOf(made.instrument.group))
+
+                seat.player to made
+            }
+        }
+
+        // the strung instruments nobody plays any more
+        for ((player, old) in beforeStrings) {
+            if (strings.none { it.first == player && it.second === old }) {
+                goes(prop = old.instrument.group, t = t)
+            }
+        }
+
+        marimba?.let { old ->
+            goes(prop = old.marimba.group, t = t)
+            old.marimba.mallets.values.flatten().forEach { goes(prop = it, t = t) }
+        }
+        frontwoman?.let { old -> goes(prop = old.trumpet.group, t = t) }
+
+        marimba = cast.marimba?.let { seat ->
+            marimbaPlayerOf(seat).also { made ->
+                comes(player = seat.player, props = listOf(made.marimba.group) + made.marimba.mallets.values.flatten())
+            }
+        }
+        frontwoman = cast.trumpet?.let { seat ->
+            trumpetPlayerOf(seat).also { made -> comes(player = seat.player, props = listOf(made.trumpet.group)) }
+        }
+
+        // who goes on with the same player gets up by that player's own pose, where they sat; who has another one
+        // now eases from how they were held into what it has them do
+        val same = strings.filter { (player, now) -> beforeStrings.any { it.first == player && it.second === now } }.map { it.first }.toSet()
+
+        rising = sat intersect same
+        eased = held.filterKeys { it !in same && it != cast.drums.player }
     }
+
+    /** [prop] goes from [t] on: it shrinks away ([Leaving]). */
+    private fun goes(prop: Object3D, t: Double) {
+        leaving.add(Leaving(prop = prop, since = t, size = prop.scale.clone()))
+    }
+
+    /** [props] come once [player] has reached the start pose: not seen until then ([Arriving]). */
+    private fun comes(player: Player, props: List<Object3D>) {
+        arriving.add(Arriving(player = player, props = props, sizes = props.map { it.scale.clone() }))
+        props.forEach { it.visible = false }
+    }
+
+    /** Whether [player]'s instrument is still to come ([Arriving]): the hands are empty until it does. */
+    private fun awaits(player: Player): Boolean = arriving.any { it.player == player }
+
+    /**
+     * The instruments that go and come at [t] (the show's clock): one that goes shrinks over [VANISH] seconds and
+     * is then taken out and freed; one that comes grows over [APPEAR] seconds from the moment its player has been
+     * at their place for [settled] seconds (sat down, where they sit). [walks]: how each one walks now.
+     */
+    private fun swap(t: Double, walks: Map<Player, WalkIn>) {
+        val gone = leaving.filter { t - it.since >= VANISH }
+
+        for (left in gone) {
+            left.prop.parent?.remove(left.prop)
+            left.prop.disposeOwn()
+        }
+
+        leaving.removeAll(gone)
+
+        for (left in leaving) {
+            left.prop.scale.copy(left.size).multiplyScalar(1 - smooth((t - left.since) / VANISH))
+        }
+
+        val there = mutableListOf<Arriving>()
+
+        for (coming in arriving) {
+            val since = walks.getValue(coming.player).since - settled(coming.player)
+            val grown = smooth(since / APPEAR)
+
+            coming.props.forEachIndexed { index, prop ->
+                prop.visible = grown > 0
+                prop.scale.copy(coming.sizes[index]).multiplyScalar(max(grown, 1e-3))
+            }
+
+            if (grown >= 1) {
+                there.add(coming)
+            }
+        }
+
+        arriving.removeAll(there)
+    }
+
+    /** How long [player] takes at their place to reach the start pose: the time to sit down, where they sit. */
+    private fun settled(player: Player): Double = if (plot.places.getValue(player).sits) SIT else 0.0
 
     /**
      * Where [player]'s skills ask the head to look at a time (see [lookAt]): by the skills on their sheet, with their
@@ -353,6 +560,8 @@ class Notstrom private constructor(
         margin: Double = IDLE_MARGIN,
     ): (Double) -> List<IdleInUse> {
         val member = Members.of(player)
+        // (told from the song's start, as the plot's walks are: on the show's clock it is that much later)
+        val from = startsAt + arrives
 
         if (member.skills.none { it is IdleSkill } || !(idles > 0.0)) {
             return { emptyList() }
@@ -362,7 +571,7 @@ class Notstrom private constructor(
 
         return { t ->
             part.refresh()
-            idlesAt(skills = member.skills, t = t, roll = roll, plays = part.events, arrives = arrives, margin = margin)
+            idlesAt(skills = member.skills, t = t, roll = roll, plays = part.events, arrives = from, margin = margin)
                 // a quiet song keeps only some of them (the score's)
                 .filter { keepsIdle(start = t - it.since, seed = member.character.seed, share = idles) }
         }
@@ -392,25 +601,45 @@ class Notstrom private constructor(
 
     /** The band at [t]: everyone where their walk-in has them, playing; the legs of those who walk step. */
     fun play(t: Double) {
+        // (the plot's walks are told from the song's start)
         val walks = plot.entrances.mapValues { (player, entrance) ->
-            enter(rig = rig(player), entrance = entrance, home = plot.places.getValue(player), t = t)
+            enter(rig = rig(player), entrance = entrance, home = plot.places.getValue(player), t = t - startsAt)
         }
+
+        // after a change of song nobody turns into their way at once
+        if (turned.isNotEmpty()) {
+            val w = smooth((t - easedAt) / EASE)
+
+            if (w >= 1) {
+                turned = emptyMap()
+            } else {
+                for ((player, was) in turned) {
+                    val root = rig(player).root
+                    val d = root.rotation.y - was
+
+                    root.rotation.y = was + atan2(sin(d), cos(d)) * w
+                }
+            }
+        }
+
+        swap(t = t, walks = walks)
 
         // the string players and the marimba player walk as they stand, the legs stepping and the hips moving as each
         // one's gait has them on the walk-in
         for ((player, stringPlayer) in strings) {
             val walk = walks.getValue(player)
             // one whose place is on the floor sits down over the first SIT seconds after arriving there
-            val sits = if (plot.places.getValue(player).sits) smooth(walk.since / SIT) else 0.0
+            val down = if (plot.places.getValue(player).sits) smooth(walk.since / SIT) else 0.0
+            // (and one who sat in the song before gets up first, from the change of song on)
+            val up = if (player in rising) 1 - smooth((t - easedAt) / SIT) else 0.0
+            val sits = max(down, up)
 
             stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walk, gait = character(player).gait), sits = sits)
 
             if (!plot.entrances.getValue(player).carries) {
-                // coming from the song before, the hands are empty: a plain walk, and once there the instrument
-                // appears and the hands take it
-                val takes = smooth(walk.since / TAKE)
-
-                stringPlayer.instrument.group.visible = walk.since >= 0
+                // coming from the song before with another instrument to play, the hands are empty: a plain walk,
+                // and once the start pose is reached the instrument appears and the hands take it
+                val takes = smooth((walk.since - settled(player)) / TAKE)
 
                 if (takes < 1) {
                     val playing = capture(rig(player))
@@ -470,6 +699,51 @@ class Notstrom private constructor(
                 hips = her?.let { walkInHips(rig = herRig, walk = herWalk, gait = character(player).gait) },
             )
             stepLegs(herRig, herWalk)
+        }
+
+        // after a change of song, who has another instrument now eases from how they were held into this
+        eased?.let { from ->
+            val w = smooth((t - easedAt) / EASE)
+
+            if (w >= 1) {
+                eased = null
+                rising = emptySet()
+            } else {
+                for ((player, pose) in from) {
+                    blend(rig = rig(player), a = pose, b = capture(rig(player)), w = w)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Frees what an instrument that left the scene holds of its own: its shapes, and its materials but the ones every
+ * instrument of its kind shares (`KitMaterials`, `StringMaterials`, `MarimbaMaterials`: those live as long as the
+ * page). A material's pictures are not freed here: the instruments' own materials have none of their own.
+ */
+private fun Object3D.disposeOwn() {
+    val shared: Set<Any> = setOf(
+        StringMaterials.lacquer, StringMaterials.neckWood, StringMaterials.markedNeck, StringMaterials.metal, StringMaterials.gold,
+        MarimbaMaterials.wood, MarimbaMaterials.brass, MarimbaMaterials.felt,
+        KitMaterials.shell, KitMaterials.brass, KitMaterials.steel,
+    )
+
+    traverse { node ->
+        val o: dynamic = node
+
+        o.geometry?.dispose()
+
+        val materials: Array<dynamic> = when {
+            o.material == null -> emptyArray()
+            js("Array.isArray")(o.material).unsafeCast<Boolean>() -> o.material.unsafeCast<Array<dynamic>>()
+            else -> arrayOf(o.material)
+        }
+
+        for (material in materials) {
+            if (shared.none { it === material }) {
+                material.dispose()
+            }
         }
     }
 }

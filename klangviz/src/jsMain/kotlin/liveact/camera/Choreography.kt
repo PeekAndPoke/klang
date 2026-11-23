@@ -124,6 +124,8 @@ class Choreography(
     force: RoundKind? = null,
     /** Who sits on the floor at their place (the stage plot's): the camera goes round them lower. */
     private val sitting: Set<Player> = emptySet(),
+    /** The moment on the show's clock at which the song begins (see [Rounds]): the rounds are counted from there. */
+    after: Double = 0.0,
 ) {
     private val cycle: Double = show.bar
 
@@ -135,6 +137,7 @@ class Choreography(
         seldom = seldom,
         strolls = strolls,
         force = force,
+        after = after,
     )
     private val round: Double = rounds.length
 
