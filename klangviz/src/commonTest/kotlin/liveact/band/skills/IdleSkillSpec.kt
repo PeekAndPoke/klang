@@ -197,4 +197,20 @@ class IdleSkillSpec : StringSpec({
             }
         }
     }
+
+    "a quiet song keeps only a share of the idle moves, each one whole and the same way every time" {
+        val starts = List(2000) { it * 7.37 }
+
+        starts.count { keepsIdle(start = it, seed = 3.0, share = 1.0) } shouldBe 2000
+        starts.count { keepsIdle(start = it, seed = 3.0, share = 0.0) } shouldBe 0
+        starts.count { keepsIdle(start = it, seed = 3.0, share = Double.NaN) } shouldBe 0
+
+        val kept = starts.count { keepsIdle(start = it, seed = 3.0, share = 0.1) }
+
+        (kept in 120..280) shouldBe true
+        // a use is asked for at every frame of it, its beginning worked out a hair differently each time
+        keepsIdle(start = 41.3700001, seed = 3.0, share = 0.5) shouldBe keepsIdle(start = 41.3699999, seed = 3.0, share = 0.5)
+        // and another member keeps other ones
+        (starts.map { keepsIdle(start = it, seed = 3.0, share = 0.5) } == starts.map { keepsIdle(start = it, seed = 4.0, share = 0.5) }) shouldBe false
+    }
 })

@@ -41,6 +41,7 @@ import io.peekandpoke.klang.viz.liveact.band.skills.Look
 import io.peekandpoke.klang.viz.liveact.band.skills.LookPlaces
 import io.peekandpoke.klang.viz.liveact.band.skills.crowdSpots
 import io.peekandpoke.klang.viz.liveact.band.skills.idlesAt
+import io.peekandpoke.klang.viz.liveact.band.skills.keepsIdle
 import io.peekandpoke.klang.viz.liveact.band.skills.lookAt
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
@@ -83,6 +84,8 @@ class Notstrom private constructor(
     /** The figures' dressed parts (the dark skin, the hair), each with its pattern: what the lacquer look re-dresses. */
     val bodies: List<DressedBody>,
     private val viewer: Vector3,
+    /** How many of the members' idle moves happen, 0 to 1 (the score's, see `Score.idles`). */
+    private val idles: Double,
 ) {
     companion object {
         /** The band's name, as it stands on the bass drum. */
@@ -118,6 +121,7 @@ class Notstrom private constructor(
             models: String,
             version: String,
             viewer: Vector3,
+            idles: Double = 1.0,
             arrived: (count: Int, of: Int) -> Unit = { _, _ -> },
         ): Notstrom {
             val loaded = fetch(models = models, version = version, arrived = arrived)
@@ -138,7 +142,7 @@ class Notstrom private constructor(
                 bodies.addAll(dress(player = player, rig = rig))
             }
 
-            return Notstrom(show = show, cast = cast, plot = plot, rigs = rigs, bodies = bodies, viewer = viewer)
+            return Notstrom(show = show, cast = cast, plot = plot, rigs = rigs, bodies = bodies, viewer = viewer, idles = idles)
         }
 
         /**
@@ -346,7 +350,7 @@ class Notstrom private constructor(
     ): (Double) -> List<IdleInUse> {
         val member = Members.of(player)
 
-        if (member.skills.none { it is IdleSkill }) {
+        if (member.skills.none { it is IdleSkill } || !(idles > 0.0)) {
             return { emptyList() }
         }
 
@@ -355,6 +359,8 @@ class Notstrom private constructor(
         return { t ->
             part.refresh()
             idlesAt(skills = member.skills, t = t, roll = roll, plays = part.events, arrives = arrives, margin = margin)
+                // a quiet song keeps only some of them (the score's)
+                .filter { keepsIdle(start = t - it.since, seed = member.character.seed, share = idles) }
         }
     }
 

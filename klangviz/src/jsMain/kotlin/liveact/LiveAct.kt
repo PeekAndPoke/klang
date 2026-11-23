@@ -492,6 +492,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     models = props.models,
                     version = props.version,
                     viewer = viewer,
+                    idles = score.idles,
                     arrived = { count, of -> props.picture?.tellFigures(Picture.Figures(arrived = count, of = of, failed = false)) },
                 )
             } catch (e: CancellationException) {

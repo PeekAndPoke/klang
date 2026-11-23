@@ -108,4 +108,6 @@ val KOKON: Score = Score(
     ),
     // as in Der Schmetterling, until Kokon asks for its own
     eyeContact = DER_SCHMETTERLING.eyeContact,
+    // a quiet song: hardly anyone shakes out a hand or scratches their head
+    idles = 0.08,
 )

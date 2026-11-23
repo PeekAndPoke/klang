@@ -6,9 +6,11 @@
 package io.peekandpoke.klang.viz.liveact.band.skills
 
 import io.peekandpoke.klang.viz.liveact.Timed
+import io.peekandpoke.klang.viz.liveact.hash01
 import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 import io.peekandpoke.klang.viz.liveact.triggers.PartPause
 import kotlin.math.abs
+import kotlin.math.round
 
 // What a member does with the hands while the part pauses (the maintainer, 2026-11-18: "more skills for when a player
 // is idle... relaxing poses, head-scratching, brush hair back"). Used by chance as a timed skill is, but only within a
@@ -172,6 +174,22 @@ fun idleAt(
     }
 
     return IdleInUse(skill = skill, share = share, since = t - span.start, length = span.endInclusive - span.start)
+}
+
+/**
+ * Whether a use of an idle skill that began at [start] (seconds into the show) is kept in a song that keeps only
+ * [share] of them (0 to 1; `Score.idles`): by the use's own beginning and the member's [seed], so a use is kept or
+ * left out as a whole and the same way whenever it is asked. All of them at 1, none at 0 or at no number.
+ */
+fun keepsIdle(start: Double, seed: Double, share: Double): Boolean {
+    // NaN-guard: a share of no number keeps none (every comparison with it is false)
+    if (!(share > 0.0)) {
+        return false
+    }
+
+    // (a use's beginning to the hundredth of a second: it is worked out from the moment asked, a hair differently
+    // each time)
+    return share >= 1.0 || hash01(round(start * 100) * 0.731 + seed * 17.3 + 5.9) < share
 }
 
 /**
