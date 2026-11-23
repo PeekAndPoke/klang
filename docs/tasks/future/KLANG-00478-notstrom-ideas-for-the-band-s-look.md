@@ -218,3 +218,7 @@ Not built: the bodies and the true-self shadows (they need modelling and the cha
 - 2026-11-22 to 2026-11-23: the look's first code review, two rounds, clean (`ae56c90e0`, `f1c024731`). Kraft's three.js
   component keeping its WebGL context is with Ultra as ULTRA-00348; until a release has it, the two lines that give
   the context up in `LiveAct` and `MeetTheBand` stay.
+- 2026-11-23: ULTRA-00348 is released in Ultra 0.119.0: Kraft's three.js component gives its context up itself.
+  klang is on 0.118.0 (`buildSrc/src/main/java/Deps.kt`); once it is on 0.119.0 (a release with many breaking
+  changes, mostly Kontainer and datetime, so an upgrade of its own), the two lines that give the context up in
+  `LiveAct` and `MeetTheBand` can go.
