@@ -305,4 +305,68 @@ class ShowClockSpec : StringSpec({
             clock.dispose()
         }
     }
+
+    "a change of song: the music is let go, the show's time runs on, and the next song's music plays from its moment" {
+        val first = Asked()
+        val next = Asked()
+        val clock = ShowClock(show = Show(seed = 1, music = Counted(first)), notice = null, intro = 0.0)
+
+        try {
+            window.dispatchEvent(Event("click"))
+            clock.showTime() shouldBe 0.0
+            first.time = 30.0
+            clock.showTime() shouldBe 30.0
+
+            // let go: no jump back, no standstill, and the show does not wait for a click
+            clock.hush()
+            first.calls shouldBe listOf("play", "release")
+
+            val after = clock.showTime()
+
+            (after >= 30.0 && after < 31.0) shouldBe true
+            clock.waiting() shouldBe false
+
+            // the next song begins at a moment that has come already: it plays at once, from that moment
+            clock.changeTo(music = Counted(next), at = after)
+            next.calls shouldBe emptyList()
+            clock.waiting() shouldBe false
+            clock.showTime() shouldBe after
+            next.calls shouldBe listOf("play")
+
+            // and from then the show's time is that moment and the music's time on top
+            next.time = 5.0
+            clock.showTime() shouldBe after + 5.0
+        } finally {
+            clock.dispose()
+        }
+
+        next.calls shouldBe listOf("play", "release")
+    }
+
+    "a song that begins later is waited for on the show's running time, and a frozen show changes nothing" {
+        val first = Asked()
+        val next = Asked()
+        val clock = ShowClock(show = Show(seed = 1, music = Counted(first)), notice = null, intro = 0.0)
+
+        try {
+            window.dispatchEvent(Event("click"))
+            clock.showTime() shouldBe 0.0
+            first.time = 10.0
+            clock.changeTo(music = Counted(next), at = 10.0 + 3600.0)
+
+            val waited = clock.showTime()
+
+            (waited >= 10.0 && waited < 11.0) shouldBe true
+            next.calls shouldBe emptyList()
+        } finally {
+            clock.dispose()
+        }
+
+        val frozenMusic = Counted(Asked())
+        val frozen = ShowClock(show = Show(seed = 1, music = frozenMusic, switches = Switches.parse("t=62.1")), notice = null, intro = 15.0)
+
+        frozen.changeTo(music = Counted(Asked()), at = 100.0)
+        frozen.showTime() shouldBe 62.1
+        frozen.dispose()
+    }
 })

@@ -212,6 +212,13 @@ class LightPlan(private val show: Show, private val kick: String) {
     private var runsOf: List<Double>? = null
     private var found: List<Run> = emptyList()
 
+    /**
+     * The bar the plan goes by: the first song's, for the whole show. A show that goes on with another song
+     * (`Show.take`) has another bar then; the plan's rounds keep the one they began with, so no mood, rig or lamp
+     * jumps at the change (the plan's time is the show's clock, which runs on).
+     */
+    private val bar0: Double = show.bar
+
     /** The moods in the order they come, as far as asked for: the show opens in the first. */
     private val order = mutableListOf(0)
 
@@ -238,7 +245,7 @@ class LightPlan(private val show: Show, private val kick: String) {
 
     /** The moods at [t]: the one that holds, going over into the next in its round's last bars ([turnOf]). */
     fun moodAt(t: Double): MoodMix {
-        val x = max(0.0, t) / show.bar
+        val x = max(0.0, t) / bar0
         val k = floor(x / ROUND).toInt()
         val turn = turnOf(k)
         val u = smooth((x - k * ROUND - (ROUND - turn)) / turn)
@@ -283,7 +290,7 @@ class LightPlan(private val show: Show, private val kick: String) {
             return BackRigMix(from = held, to = held, share = 0.0)
         }
 
-        val x = max(0.0, t) / show.bar
+        val x = max(0.0, t) / bar0
         val k = floor(x / (RIG_HOLD + RIG_TURN)).toInt()
         val u = smooth((x - k * (RIG_HOLD + RIG_TURN) - RIG_HOLD) / RIG_TURN)
 
@@ -310,7 +317,7 @@ class LightPlan(private val show: Show, private val kick: String) {
             return FrontColors.RED
         }
 
-        val turn = floor((t / show.bar + (show.seed * 7.0) % 40) / 40)
+        val turn = floor((t / bar0 + (show.seed * 7.0) % 40) / 40)
         val colors = FrontColors.SHOW
 
         return colors[floor(hash01(turn * 9.7 + show.seed * 1.3 + 0.4) * colors.size).toInt() % colors.size]
@@ -336,7 +343,7 @@ class LightPlan(private val show: Show, private val kick: String) {
             return FrontLight.off
         }
 
-        val bar = show.bar
+        val bar = bar0
         val x = ((t / bar + (show.seed * 7.0) % 40) % 40 + 40) % 40
 
         if (trying) {
