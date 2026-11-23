@@ -25,7 +25,21 @@ import io.peekandpoke.klang.viz.liveact.band.skills.Skill
  * can do on their own, beyond playing and moving with the beat, in the order of rank (see [Skill]); one without a
  * skill simply does not do it. [hand]: the hand they lead with, the right unless the sheet says the left: a string
  * player strums with it and frets with the other, on an instrument built for that hand (see `StringPlayer`).
+ * [lap]: how they hold a strung instrument when they sit on the floor (see [Lap]).
  */
+/**
+ * How one who sits cross-legged on the floor holds a strung instrument (the maintainer, 2026-11-23, with two
+ * photographs: "let the guys sit like in the first one and the girls with guitar resting between the legs like in
+ * the second one").
+ */
+enum class Lap {
+    /** The waist of the instrument's lower edge on the thigh of the strumming side, the instrument held flat. */
+    OnThigh,
+
+    /** The instrument's body between the legs, standing in the lap, its neck pointing well up. */
+    Between,
+}
+
 data class Member(
     val player: Player,
     val dress: Dress,
@@ -33,6 +47,7 @@ data class Member(
     val bearing: Bearing?,
     val skills: List<Skill>,
     val hand: Side = Side.R,
+    val lap: Lap = Lap.OnThigh,
 ) {
     /** Their name, as the band calls them: the player's. */
     val name: String get() = player.name

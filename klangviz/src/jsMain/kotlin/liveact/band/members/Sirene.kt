@@ -109,4 +109,5 @@ val SIRENE: Member = Member(
             move = 0.8,
         ),
     ),
+    lap = Lap.Between,
 )

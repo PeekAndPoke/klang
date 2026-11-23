@@ -64,4 +64,5 @@ val RUNE: Member = Member(
             ),
         ),
     ),
+    lap = Lap.Between,
 )

@@ -16,6 +16,7 @@ import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.members.Lap
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.figure.walkHips
 import io.peekandpoke.klang.viz.liveact.band.members.Bearing
@@ -157,6 +158,7 @@ class StringPlayer(
     private val idles: (Double) -> List<IdleInUse> = { emptyList() },
     skills: List<Skill> = emptyList(),
     hand: Side = Side.R,
+    private val lap: Lap = Lap.OnThigh,
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
 
@@ -477,7 +479,11 @@ class StringPlayer(
         val waist = rig.bone("chest").getWorldPosition(vec())
         // (in the lap of one who sits it lies flatter: the neck points less far up; the maintainer, 2026-11-23:
         // "they need to be held at a more natural angle... flatter angle")
-        val tilt = k.tilt + (SIT_TILT - k.tilt) * seated
+        val lapTilt = when (lap) {
+            Lap.OnThigh -> SIT_TILT
+            Lap.Between -> SIT_TILT_BETWEEN
+        }
+        val tilt = k.tilt + (lapTilt - k.tilt) * seated
         val axisX = rig.dir(cos(tilt) * mirror, sin(tilt), 0.16).normalize()
         val face = rig.dir(0.0, 0.22, 1.0)
         val axisZ = face.addScaledVector(axisX, -face.dot(axisX)).normalize()
@@ -488,21 +494,36 @@ class StringPlayer(
             .addScaledVector(rig.dir(0.0, 0.0, 1.0), 0.17 * s)
 
         if (seated > 0) {
-            // in the lap the instrument rests on the thigh of the strumming side, where its body is narrowest: the
-            // waist of its lower edge sits on the leg (the maintainer, 2026-11-23: "the indentation at the bottom of
-            // the guitar has to rest on the leg"). The waist: of the lower edge's points about the body's middle
-            // the one nearest the strings (the outline in the instrument's own measure; a left-handed instrument is
-            // mirrored across its neck)
-            val lower = outline.points.filter { (along, across) -> across * mirror < 0 && abs(along) < SIT_WAIST_WITHIN * k.bodyHalfLength }
-            val waist = lower.maxByOrNull { (_, across) -> across * mirror }
+            when (lap) {
+                // on the thigh of the strumming side, where the body is narrowest: the waist of its lower edge sits
+                // on the leg (the maintainer, 2026-11-23: "the indentation at the bottom of the guitar has to rest on
+                // the leg"). The waist: of the lower edge's points about the body's middle the one nearest the
+                // strings (the outline in the instrument's own measure; a left-handed instrument is mirrored across
+                // its neck)
+                Lap.OnThigh -> {
+                    val lower = outline.points.filter { (along, across) ->
+                        across * mirror < 0 && abs(along) < SIT_WAIST_WITHIN * k.bodyHalfLength
+                    }
+                    val waist = lower.maxByOrNull { (_, across) -> across * mirror }
 
-            if (waist != null) {
-                val thigh = rig.root.localToWorld(vec(-SIT_THIGH_OUT * mirror * s, SIT_THIGH_HIGH * rig.height, SIT_THIGH_FORE * s))
-                val rested = thigh
-                    .addScaledVector(axisX, -waist.first * s)
-                    .addScaledVector(axisY, -waist.second * mirror * s)
+                    if (waist != null) {
+                        val thigh = rig.root.localToWorld(vec(-SIT_THIGH_OUT * mirror * s, SIT_THIGH_HIGH * rig.height, SIT_THIGH_FORE * s))
+                        val rested = thigh
+                            .addScaledVector(axisX, -waist.first * s)
+                            .addScaledVector(axisY, -waist.second * mirror * s)
 
-                at.lerp(rested, seated)
+                        at.lerp(rested, seated)
+                    }
+                }
+
+                // between the legs: the body stands in the lap before the trunk, on its lowest point
+                Lap.Between -> {
+                    val lowest = outline.points.minOf { (along, across) -> axisX.y * along * s - abs(axisY.y * across * s) }
+                    val rested = rig.root.localToWorld(vec(-SIT_LAP_OUT * mirror * s, SIT_LAP_HIGH * rig.height, SIT_LAP_FORE * s))
+
+                    rested.y -= lowest
+                    at.lerp(rested, seated)
+                }
             }
 
             // in the lap of one who sits the instrument may lie on the legs and sink into them, but it never goes
@@ -812,11 +833,11 @@ class StringPlayer(
         const val SIT_BEND = 0.10
         const val SIT_CROSS = 0.05
         const val SIT_ANKLE = 0.07
-        const val SIT_REACH = 0.30
+        const val SIT_REACH = 0.50
         const val SIT_STAGGER = 0.07
-        const val SIT_KNEE_OUT = 0.62
-        const val SIT_KNEE_UP = 0.30
-        const val SIT_KNEE_FORE = 0.70
+        const val SIT_KNEE_OUT = 1.0
+        const val SIT_KNEE_UP = 0.05
+        const val SIT_KNEE_FORE = 0.35
 
         /**
          * Where an instrument in the lap rests: on the thigh of the strumming side, so far out from the body's
@@ -824,13 +845,23 @@ class StringPlayer(
          * sizes; and how far from the body's middle along the neck its waist is looked for (a share of the body's
          * half length).
          */
-        const val SIT_THIGH_OUT = 0.09
-        const val SIT_THIGH_HIGH = 0.125
+        const val SIT_THIGH_OUT = 0.13
+        const val SIT_THIGH_HIGH = 0.10
         const val SIT_THIGH_FORE = 0.10
         const val SIT_WAIST_WITHIN = 0.4
 
         /** How far up the neck of an instrument in the lap points, in radians (standing it is the design's own tilt). */
         const val SIT_TILT = 0.16
+
+        /**
+         * An instrument held between the legs ([Lap.Between]): how far up its neck points (radians), and where its
+         * body stands in the lap: so far to the strumming side of the body's middle, its lowest point so high over
+         * the floor (a share of the figure's height), so far before the body.
+         */
+        const val SIT_TILT_BETWEEN = 0.62
+        const val SIT_LAP_OUT = 0.04
+        const val SIT_LAP_HIGH = 0.075
+        const val SIT_LAP_FORE = 0.20
 
         /**
          * How far over the floor the instrument's body stays in the lap of one who sits (about half a thigh: it lies
