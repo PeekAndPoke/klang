@@ -152,7 +152,7 @@ class StringPlayer(
     traits: Traits,
     private val seed: Double = 4.0,
     bearing: Bearing? = null,
-    outline: BodyOutline = design.outline,
+    private val outline: BodyOutline = design.outline,
     private val looks: (Double) -> List<Look> = { emptyList() },
     private val idles: (Double) -> List<IdleInUse> = { emptyList() },
     skills: List<Skill> = emptyList(),
@@ -484,6 +484,26 @@ class StringPlayer(
             .addScaledVector(rig.dir(0.0, 1.0, 0.0), k.hang * s)
             .addScaledVector(rig.dir(0.0, 0.0, 1.0), 0.17 * s)
 
+        if (seated > 0) {
+            // in the lap of one who sits the instrument may lie on the legs and sink into them, but it never goes
+            // into the floor (the maintainer, 2026-11-23: "they can touch the legs and even sink into them ... but
+            // they must not enter the floor"): it is lifted by as much as its body's lowest point would lie below
+            // the floor. The body's outline in the instrument's own measure, either way up (a left-handed one is
+            // mirrored across its neck), and half its depth
+            val floor = rig.root.getWorldPosition(vec()).y + SIT_CLEAR * s
+            var lowest = Double.POSITIVE_INFINITY
+
+            for ((along, across) in outline.points) {
+                val reach = axisX.y * along * s - abs(axisY.y * across * s) - abs(axisZ.y) * SIT_BODY_DEEP * s
+
+                lowest = min(lowest, at.y + reach)
+            }
+
+            if (lowest < floor) {
+                at.y += (floor - lowest) * seated
+            }
+        }
+
         instrument.group.position.copy(at)
         instrument.group.quaternion.setFromRotationMatrix(mat4().makeBasis(axisX, axisY, axisZ))
         // across the strings toward the lowest one, up as it is played: for a left-handed player the instrument is
@@ -777,6 +797,10 @@ class StringPlayer(
         const val SIT_KNEE_OUT = 1.0
         const val SIT_KNEE_UP = 0.12
         const val SIT_KNEE_FORE = 0.45
+
+        /** How far over the floor the instrument's body stays in the lap of one who sits, and half the body's depth. */
+        const val SIT_CLEAR = 0.012
+        const val SIT_BODY_DEEP = 0.03
 
         /**
          * A slouch: how far the hips go over the leg on the strumming side and down (a share of their height), how
