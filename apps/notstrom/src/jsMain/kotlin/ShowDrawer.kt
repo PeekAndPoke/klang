@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.notstrom
 
+import io.peekandpoke.klang.apps.common.Song
 import io.peekandpoke.klang.viz.liveact.Oversampling
 import io.peekandpoke.klang.viz.liveact.Picture
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
@@ -40,8 +41,28 @@ import org.w3c.dom.events.KeyboardEvent
 import kotlin.math.roundToInt
 
 @Suppress("FunctionName")
-fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (Double) -> Unit, onBack: () -> Unit) = comp(
-    ShowDrawer.Props(picture = picture, release = release, dev = dev, onVolume = onVolume, onBack = onBack)
+fun Tag.ShowDrawer(
+    picture: Picture,
+    release: String,
+    dev: Boolean,
+    song: Song,
+    volume: Double,
+    onVolume: (Double) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onBack: () -> Unit,
+) = comp(
+    ShowDrawer.Props(
+        picture = picture,
+        release = release,
+        dev = dev,
+        song = song,
+        volume = volume,
+        onVolume = onVolume,
+        onPrevious = onPrevious,
+        onNext = onNext,
+        onBack = onBack,
+    )
 ) {
     ShowDrawer(it)
 }
@@ -61,9 +82,11 @@ fun Tag.ShowDrawer(picture: Picture, release: String, dev: Boolean, onVolume: (D
  * state (the test's choice, the keys o and g, the live act's own step down), where a choice is the visitor's and
  * holds ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
  * nothing while it is hidden).
+ * Before them the song: its title and its tempo ([Props.song], [tempoLine]) between "Previous song" and "Next song"
+ * ([Props.onPrevious], [Props.onNext]: the show of the other song begins; KLANG-00481).
  * The second: the way back to the start page ([Props.onBack]: the show ends there, as its stage goes; the maintainer,
  * 2026-11-21: "a button in the drawer that goes back to the start page"); a button for fullscreen, whose label follows
- * the page's real state (also when fullscreen was entered by the choice before the show, or left with Esc); the volume, 0 to 100 percent, full at first and not kept
+ * the page's real state (also when fullscreen was entered by the choice before the show, or left with Esc); the volume, 0 to 100 percent, as the show has it ([Props.volume]: full at first, kept from song to song)
  * ([Props.onVolume] is told a gain from 0 to 1); and at its end, small and quiet, the [Props.release]. On a narrow
  * window a row wraps within itself, a group of buttons too, so nothing runs past the window's edge.
  *
@@ -91,7 +114,13 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
         val picture: Picture,
         val release: String,
         val dev: Boolean,
+        /** The song that plays: its title and its tempo stand in the first row. */
+        val song: Song,
+        /** The volume as the show has it now, 0 to 1 (kept from one song to the next). */
+        val volume: Double,
         val onVolume: (Double) -> Unit,
+        val onPrevious: () -> Unit,
+        val onNext: () -> Unit,
         val onBack: () -> Unit,
     )
 
@@ -100,7 +129,7 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
     private var fullscreen: Boolean by value(isFullscreen())
 
     /** The volume, in percent. */
-    private var volume: Int by value(100)
+    private var volume: Int by value((props.volume.coerceIn(0.0, 1.0) * 100).roundToInt())
 
     /** The samples drawn for each pixel now, as the live act tells. */
     private val samples: Double by subscribingTo(props.picture.samples)
@@ -296,6 +325,30 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 if (shown && !passes(it)) {
                     it.stopPropagation()
                 }
+            }
+
+            // the song: the one before, what plays, the one after
+            row {
+                plainButton(text = "Previous song", primary = false) { props.onPrevious() }
+
+                span {
+                    css {
+                        put("color", "#d7dbe6")
+                        put("white-space", "nowrap")
+                    }
+                    +props.song.title
+                }
+
+                span {
+                    css {
+                        put("color", "#8a93a8")
+                        put("font-variant-numeric", "tabular-nums")
+                        put("white-space", "nowrap")
+                    }
+                    +tempoLine(props.song)
+                }
+
+                plainButton(text = "Next song", primary = false) { props.onNext() }
             }
 
             // the picture

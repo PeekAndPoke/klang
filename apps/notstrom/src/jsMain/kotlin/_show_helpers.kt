@@ -14,14 +14,42 @@ import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
 
-/** The song the show plays: Der Schmetterling, the built-in song, played by its score ([SHOW_SCORE]). */
-val SHOW_SONG: Song = BuiltInSongs.derSchmetterling
+/** One song of the show's programme: the built-in [song], and the [score] its band plays it by. */
+data class Programmed(val song: Song, val score: Score)
 
 /**
- * The score the band plays [SHOW_SONG] by: Der Schmetterling's cast and stage plot. The page "Meet the band" says
- * what each one plays by its cast ([playsIn]).
+ * The show's programme, in its order: the drawer goes from one to the next and back ([stepSong]; KLANG-00481, the
+ * maintainer, 2026-11-23: "a way to switch between songs: in the drawer 'next song' / 'previous song' and showing the
+ * current title and rpm"). The show opens with the first.
+ *
+ * Kokon has no score of its own yet: it is played by Der Schmetterling's, and as its voices carry no tags the band
+ * hears nothing of it and stands still. Its own band, places and tags are KLANG-00481's next steps.
  */
-val SHOW_SCORE: Score = DER_SCHMETTERLING
+val PROGRAMME: List<Programmed> = listOf(
+    Programmed(song = BuiltInSongs.derSchmetterling, score = DER_SCHMETTERLING),
+    Programmed(song = BuiltInSongs.kokon, score = DER_SCHMETTERLING),
+)
+
+/**
+ * The score of the programme's first song: Der Schmetterling's cast and stage plot. The page "Meet the band" says
+ * what each one plays by its cast ([playsIn]), and the picture test stands its band by it.
+ */
+val SHOW_SCORE: Score = PROGRAMME.first().score
+
+/**
+ * The place in a programme of [songs] songs that lies [by] songs on from [now] (back for less than 0): after the
+ * last comes the first again, before the first the last. A programme of no song has only the place 0.
+ */
+fun stepSong(now: Int, by: Int, songs: Int): Int = if (songs <= 0) 0 else (now + by).mod(songs)
+
+/** The [song]'s tempo as the drawer says it: its rounds a minute, without a fraction where it has none ("35 rpm"). */
+fun tempoLine(song: Song): String {
+    val rpm = song.rpm
+    val whole = rpm.toInt()
+
+    // NaN-guard: a tempo of no number is said as it is, not as a whole one
+    return if (rpm.isFinite() && rpm == whole.toDouble()) "$whole rpm" else "$rpm rpm"
+}
 
 /**
  * The live act's switches for a show: those of the page's address ([query], `?seed=7&still`), with the stroboscope

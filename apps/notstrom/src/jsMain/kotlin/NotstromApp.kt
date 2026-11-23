@@ -27,6 +27,7 @@ import io.peekandpoke.klang.sprudel.SprudelDiagnostics
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.viz.liveact.LiveAct
 import io.peekandpoke.klang.viz.liveact.Picture
+import io.peekandpoke.klang.viz.liveact.Score
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
@@ -141,10 +142,17 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     }
 
     /**
-     * A mounted stage: the show or the picture test ([test]); [key] is another one for every stage; [picture] sees and
+     * A mounted stage: the show or the picture test ([test]); [key] is another one for every stage; [score]: what its
+     * band plays by (the show's: its song's); [picture] sees and
      * sets its oversampling and its fog (the test's second part, the drawer) and sees its frame rate (the drawer).
      */
-    private class Running(val show: Show, val key: String, val test: Boolean, val picture: Picture = Picture())
+    private class Running(
+        val show: Show,
+        val key: String,
+        val test: Boolean,
+        val score: Score = SHOW_SCORE,
+        val picture: Picture = Picture(),
+    )
 
     /**
      * A step of the show's opening that fades ([OpeningFade]): [step], after a click on the screen of [from] (the start
@@ -250,6 +258,12 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     private var beside: Job? = null
 
     private var stages = 0
+
+    /** Which song of the [PROGRAMME] the show plays, or will play when it starts. */
+    private var playing: Int by value(0)
+
+    /** The show's volume, 0 to 1, as the drawer set it: kept from one song to the next. */
+    private var volume: Double = 1.0
 
     /** The step of the show's opening that fades now; null outside the opening (the tests' phases have none). */
     private var fading: Fading? by value(null)
@@ -388,6 +402,28 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             fade(step = OpeningFade.Step.Click, from = phase)
         }
 
+        ready(test = test)
+    }
+
+    /**
+     * The drawer's "previous song" and "next song" while the show plays: the song [by] places on in the [PROGRAMME]
+     * ([stepSong]). The show that runs ends (its stage goes, and with it its song stops), and the show of the other
+     * song gets ready and begins, with its own band on its own stage: black between them, the window and the volume
+     * as they are.
+     */
+    private fun changeSong(by: Int) {
+        if (phase != Phase.Playing) {
+            return
+        }
+
+        playing = stepSong(now = playing, by = by, songs = PROGRAMME.size)
+        frameSink = null
+        stopFading()
+        ready(test = false)
+    }
+
+    /** What is there goes, and the machine is [test]ed or the show gets ready and begins. */
+    private fun ready(test: Boolean) {
         phase = Phase.Readying
         problem = null
         beside?.cancel()
@@ -437,6 +473,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         leaveFullscreen()
         stop(problem = null)
+        volume = 1.0
         player?.setOutputVolume(1.0)
     }
 
@@ -725,7 +762,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             delay(SCREEN_WAIT_MS)
         }
 
-        val song = SHOW_SONG
+        val programmed = PROGRAMME[playing]
+        val song = programmed.song
         val pattern = compile(code = song.code)
         // made now and started after the walk-in: it answers its cycles before it sounds, so the band reads the very
         // notes that will sound (KLANG-00450). Its tempo is set first: the cycles are read at the tempo it starts at.
@@ -767,6 +805,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                 show = Show(seed = showSeed(switches = switches, random = Random.Default), music = music, switches = switches),
                 key = "stage-${++stages}",
                 test = false,
+                score = programmed.score,
             )
         )
 
@@ -887,7 +926,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                     } else {
                         LiveAct(
                             show = now.show,
-                            score = SHOW_SCORE,
+                            score = now.score,
                             models = MODELS,
                             version = release,
                             walkInAtOnce = true,
@@ -936,7 +975,14 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                         picture = now.picture,
                         release = release,
                         dev = showsDev(props.query),
-                        onVolume = { gain -> player?.setOutputVolume(gain) },
+                        song = PROGRAMME[playing].song,
+                        volume = volume,
+                        onVolume = { gain ->
+                            volume = gain
+                            player?.setOutputVolume(gain)
+                        },
+                        onPrevious = { changeSong(by = -1) },
+                        onNext = { changeSong(by = 1) },
                         onBack = { backToStart() },
                     )
                 }
@@ -1014,7 +1060,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                 return@notstromScreen
             }
 
-            leadLine("$DEMO - ${SHOW_SONG.title}")
+            leadLine("$DEMO - ${PROGRAMME[playing].song.title}")
             bodyText { +"The show has sound, and fast flashing lights (a stroboscope)." }
 
             // without the tests, the choices for the show come right before its start

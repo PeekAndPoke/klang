@@ -7,12 +7,33 @@ package io.peekandpoke.klang.notstrom
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.apps.common.BuiltInSongs
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
 
 class ShowHelpersSpec : StringSpec({
+
+    "the programme goes round: after the last song the first, before the first the last" {
+        stepSong(now = 0, by = 1, songs = 2) shouldBe 1
+        stepSong(now = 1, by = 1, songs = 2) shouldBe 0
+        stepSong(now = 0, by = -1, songs = 2) shouldBe 1
+        stepSong(now = 0, by = -1, songs = 3) shouldBe 2
+        stepSong(now = 2, by = 5, songs = 3) shouldBe 1
+        stepSong(now = 4, by = 1, songs = 0) shouldBe 0
+    }
+
+    "the programme opens with Der Schmetterling and has Kokon after it, each with a score" {
+        PROGRAMME.map { it.song.title } shouldBe listOf(BuiltInSongs.derSchmetterling.title, BuiltInSongs.kokon.title)
+        SHOW_SCORE shouldBe PROGRAMME.first().score
+    }
+
+    "a tempo is said in rounds a minute, without a fraction where it has none" {
+        tempoLine(BuiltInSongs.derSchmetterling) shouldBe "35 rpm"
+        tempoLine(BuiltInSongs.kokon) shouldBe "19 rpm"
+        tempoLine(BuiltInSongs.kokon.copy(rpm = 19.5)) shouldBe "19.5 rpm"
+    }
 
     "the stroboscope switched off on the start screen sets nostrobe, and the address's other switches stay" {
         val switches = showSwitches(query = "?seed=7&still", strobe = false)
