@@ -125,6 +125,11 @@ setter semantics) and `/dsl-design`. What they produce today:
   (source cycle `floor(c / n)`). `extend(n)` is `fast(n)`. `iter(n)` is a slowcat of `early(i / n)` copies,
   not a pattern class of its own. `whole` is never null (`ref/event-model.md`).
 - **Test across 12 cycles and filter by `isOnset`**: `ref/testing.md`.
+- **The mini-notation's `?`**: the number after it is the probability of being PLAYED (a bare `?` is 0.5; it
+  must touch the mark), unlike `degradeBy(x)`, which drops the share x. Every mark of one notation string has
+  its own dice, told by the seed, the time and the mark's place in the string (`QuestionMarks` in
+  `MnPatternToSprudelPattern.kt`); marks of two strings count anew and can go together (the maintainer,
+  2026-11-24: "keep it as is for now"). Guard: `MiniNotationQuestionMarkSpec`.
 - **A stdlib string method must not share a name with a sprudel function**: sprudel registers every pattern
   function on strings too, and the later import wins. Guard: `LangStdlibStringMethodCollisionSpec`.
 
@@ -246,3 +251,5 @@ One line per step; the narrative is in the linked record or in `ref/memory-histo
 - 2026-11-06: a one-knob door's parameter takes the knob's word (`gain(gain)`, `pan(pan)`, `legato(legato)`, ...;
   `transpose(interval)`), KLANG-00417 B5.
 - 2026-11-06: the parameter parity audit done (KLANG-00417); `DoorOrderParitySpec` pins sprudel against the Ignitor and Katalyst twins.
+- 2026-11-24: every `?` of the mini-notation has its own random value, and its number is the probability of being
+  played (KLANG-00482).

@@ -148,7 +148,9 @@ class MiniNotationParser(
                 }
 
                 match(TokenType.QUESTION) -> {
-                    val probStr = if (check(TokenType.LITERAL) && peek().text.firstOrNull()?.isDigit() == true) {
+                    // the mark's number touches the mark: a number after a space is the next step ("0 2? 4")
+                    val numbered = check(TokenType.LITERAL) && peek().start == previous().end && peek().text.firstOrNull()?.isDigit() == true
+                    val probStr = if (numbered) {
                         consume(TokenType.LITERAL, "").text
                     } else {
                         null

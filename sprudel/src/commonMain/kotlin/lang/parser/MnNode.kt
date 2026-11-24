@@ -43,7 +43,7 @@ sealed class MnNode {
         val multiplier: Double? = null,  // *n  — play n times faster
         val divisor: Double? = null,  // /n  — play n times slower
         val weight: Double? = null,  // @n  — relative time weight in a sequence
-        val probability: Double? = null,  // ?   or ?0.5 — random degradation probability
+        val probability: Double? = null,  // ?   or ?0.5: the probability of being played (a bare ? is 0.5)
         val euclidean: Euclidean? = null, // (pulses, steps[, rotation])
         /**
          * `{name name …}` — tweak names referencing transforms that `tweaks(…)` binds later.

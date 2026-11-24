@@ -89,8 +89,8 @@ Patterns are written as strings using mini-notation:
 | `a/N`      | Slow           | Stretch over N cycles                       | `"bd/2"` (plays every other cycle)     |
 | `a@N`      | Weight         | Take N relative time units                  | `"c4@2 e4"` (c4 lasts twice as long)   |
 | `a!N`      | Repeat         | Clone in-place N times                      | `"bd!4"` = `"bd bd bd bd"`             |
-| `a?`       | Degrade        | 50% chance of playing                       | `"hh?"`                                |
-| `a?N`      | Degrade by     | N% chance of playing                        | `"hh?0.3"` (30% chance)                |
+| `a?`       | Maybe          | plays half of the time; each `?` in a string has its own dice | `"hh?"`, `"[hh?!8]"`             |
+| `a?N`      | Maybe by       | plays with the probability N (0 to 1)       | `"hh?0.3"` (plays about 30%)           |
 | `a\|b\|c`  | Choice         | Random pick each cycle                      | `"bd\|sd\|cp"`                         |
 | `a(p,s)`   | Euclidean      | p pulses over s steps                       | `"bd(3,8)"`                            |
 | `a(p,s,r)` | Euclidean+rot  | With rotation                               | `"bd(3,8,2)"`                          |
