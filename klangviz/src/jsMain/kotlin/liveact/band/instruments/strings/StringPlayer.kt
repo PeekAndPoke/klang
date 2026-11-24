@@ -541,6 +541,9 @@ class StringPlayer(
                         val thigh = rig.at("knee$strumming").lerp(rig.at("ankle$strumming"), SIT_THIGH_ALONG)
 
                         thigh.y += SIT_THIGH_OVER * s
+                        // (and a little before the body, so the instrument does not stand in the trunk: the
+                        // maintainer, 2026-11-24: "a little further away from their upper body... just a little")
+                        thigh.addScaledVector(rig.dir(0.0, 0.0, 1.0), SIT_THIGH_BEFORE * s)
 
                         val rested = thigh
                             .addScaledVector(axisX, -waist.first * s)
@@ -876,11 +879,12 @@ class StringPlayer(
         /**
          * Where an instrument in the lap rests: on the thigh of the strumming side as the figure holds it, this share
          * of the way from the hip to the knee, and this far above the thigh's middle line (in the figure's size:
-         * about half the thigh's thickness); and how far from the body's middle along the neck the instrument's
+         * about half the thigh's thickness) and this far before it, away from the trunk; and how far from the body's middle along the neck the instrument's
          * waist is looked for (a share of the body's half length).
          */
         const val SIT_THIGH_ALONG = 0.45
         const val SIT_THIGH_OVER = 0.07
+        const val SIT_THIGH_BEFORE = 0.06
         const val SIT_WAIST_WITHIN = 0.4
 
         /** How far up the neck of an instrument in the lap points, in radians (standing it is the design's own tilt). */
