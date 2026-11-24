@@ -883,7 +883,7 @@ class StringPlayer(
          * waist is looked for (a share of the body's half length).
          */
         const val SIT_THIGH_ALONG = 0.45
-        const val SIT_THIGH_OVER = 0.07
+        const val SIT_THIGH_OVER = 0.115
         const val SIT_THIGH_BEFORE = 0.06
         const val SIT_WAIST_WITHIN = 0.4
 
