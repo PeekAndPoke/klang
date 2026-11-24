@@ -47,9 +47,15 @@ object Changeover {
     /** The stage's clock starts this long before the next song. */
     const val INTRO = 12.0
 
-    /** The first one sets off this long after that (time to get up for one who sat), and each next one this much later. */
-    const val FIRST = 2.0
-    const val APART = 0.5
+    /**
+     * One who stands sets off this long after that: almost at once, while the instrument that goes still fades (the
+     * maintainer, 2026-11-24: the vanishing and the walk "can happen in parallel. Otherwise Rune and Sirene wait
+     * (looking stuck) until their instruments have fully gone. Then they also have more time to walk"). One who sat
+     * gets up first. Each next one sets off this much later than the one before.
+     */
+    const val AT_ONCE = 0.2
+    const val GOT_UP = 1.4
+    const val APART = 0.3
 
     /** A walk's pace, and the least and the most a walk takes. */
     const val PACE = 0.9
@@ -67,13 +73,13 @@ object Changeover {
  * This plot as the band takes it up coming from the song [before]: the same places, but everyone walks there from
  * their place in that song instead of from off the stage (the maintainer, 2026-11-23: "we need a model for where
  * everyone's home-position is in each song and a planner for in between the songs"). In this plot's order they set
- * off one after the other, each at a walking pace; who stands where they stood does not walk (their walk is over
+ * off one shortly after the other (one who sat once they are up), each at a walking pace; who stands where they stood does not walk (their walk is over
  * before the clock starts). [keeps]: who plays the same instrument in both songs and carries it along; everyone
  * else's hands are empty on the way. A first draft of the way between two songs: straight lines, no care yet for
  * who crosses whom.
  */
 fun StagePlot.after(before: StagePlot, keeps: Set<Player> = emptySet()): StagePlot {
-    var leaves = -Changeover.INTRO + Changeover.FIRST
+    var later = 0.0
     val walks = entrances.keys.associateWith { player ->
         val to = places.getValue(player)
         val from = before.places[player] ?: to
@@ -91,11 +97,11 @@ fun StagePlot.after(before: StagePlot, keeps: Set<Player> = emptySet()): StagePl
             )
         } else {
             val takes = (far / Changeover.PACE).coerceIn(Changeover.LEAST, Changeover.MOST)
-            val start = leaves
+            val start = -Changeover.INTRO + (if (from.sits) Changeover.GOT_UP else Changeover.AT_ONCE) + later
             // (never later than in time to settle: a long way is walked faster)
             val end = min(start + takes, -Changeover.SETTLE)
 
-            leaves += Changeover.APART
+            later += Changeover.APART
 
             Entrance(fromX = from.x, fromZ = from.z, start = start, end = end, fromY = from.y, carries = player in keeps)
         }
