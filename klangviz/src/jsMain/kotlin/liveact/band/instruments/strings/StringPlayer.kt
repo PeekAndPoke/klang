@@ -124,6 +124,7 @@ private class IdleHand(
     val arm: List<Quaternion>,
 )
 
+
 /**
  * A string player: a strung instrument of the [design] (a bass, a guitar) on a strap, played by [rig].
  *
@@ -476,8 +477,9 @@ class StringPlayer(
             foot.y += 0.035 * s * max(0.0, -weight * sign) * upright
 
             if (seated > 0) {
-                // the legs crossed before the body: each ankle a little past the middle, one before the other, just
-                // above the floor; the knees lie out to the sides
+                // the legs crossed close before the body: each ankle past the middle, one before the other, just
+                // above the floor; the knees lie out to the sides, a little up (the maintainer chose this seat of
+                // five, 2026-11-24: "the lower legs need to be pulled closer to the body")
                 val crossed = vec(-SIT_CROSS * sign * s, SIT_ANKLE * s, (SIT_REACH + (if (side == Side.L) SIT_STAGGER else 0.0)) * s)
 
                 foot.lerp(crossed, seated)
@@ -486,6 +488,15 @@ class StringPlayer(
             val knee = rig.dir(0.3 * sign + (SIT_KNEE_OUT - 0.3) * sign * seated, SIT_KNEE_UP * seated, 1.0 - (1.0 - SIT_KNEE_FORE) * seated)
 
             rig.foot(side, rig.root.localToWorld(foot), knee)
+
+            if (seated > 0) {
+                // the foot of one who sits lies on its side, the toes on past the other shin: not held as for standing
+                val name = "toe$side"
+                val laid = rig.dir(-0.9 * sign, -0.15, 0.4)
+
+                rig.update()
+                rig.point(name, rig.axisOf(name).lerp(laid, seated))
+            }
         }
 
         // the instrument hangs from the trunk: before the hip on the strumming side, its neck up and toward the
@@ -845,13 +856,13 @@ class StringPlayer(
         const val SIT_HIGH = 0.115
         const val SIT_BACK = 0.06
         const val SIT_BEND = 0.10
-        const val SIT_CROSS = 0.05
-        const val SIT_ANKLE = 0.07
-        const val SIT_REACH = 0.50
-        const val SIT_STAGGER = 0.07
+        const val SIT_CROSS = 0.12
+        const val SIT_ANKLE = 0.09
+        const val SIT_REACH = 0.27
+        const val SIT_STAGGER = 0.10
         const val SIT_KNEE_OUT = 1.0
-        const val SIT_KNEE_UP = 0.05
-        const val SIT_KNEE_FORE = 0.35
+        const val SIT_KNEE_UP = 0.12
+        const val SIT_KNEE_FORE = 0.30
 
         /**
          * Where an instrument in the lap rests: on the thigh of the strumming side, so far out from the body's
