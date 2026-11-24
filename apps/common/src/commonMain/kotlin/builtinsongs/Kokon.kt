@@ -69,9 +69,9 @@ let pedalStock = Kat.fn(x => x)
 let pedalScreamer = Kat.fn(x => x.parallel(
     clean => clean,
     dirt => dirt
-      .highpass(200)
+      .highpass(210)
       .distort(0.10, "soft")
-      .lowpass(6500, 2.0) // the tone knob, half way
+      .lowpass(6000, 2.0) // the tone knob, half way
       .mul(0.60)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
   .mul(0.55))                                       // level
@@ -84,7 +84,7 @@ let pedalFuzz = Kat.fn(x => x
 
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
 let pedalBoost = Kat.fn(x => x.parallel(
-  clean => clean, 
+  clean => clean,
   dirt => dirt.highpass(600).mul(1.2)
 ).mul(0.65))
 
@@ -143,9 +143,9 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  4.20)        // thump: closed-back box resonance
-    .band(freq =  900, q = 0.7, db =  4.00)        // roar:  low mids
-    .band(freq = 2700, q = 1.5, db =  1.30)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.6, db =  3.90)        // thump: closed-back box resonance
+    .band(freq =  800, q = 0.7, db =  4.20)        // roar:  low mids
+    .band(freq = 2400, q = 1.2, db =  2.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(90, 0.707, x => x.passes(2)))
@@ -185,8 +185,8 @@ let makeGuitar = (pickup) => {
   let pAnalog     = Ign.slot.analog
 
   // Sound knobs
-  let pBrightness = Ign.param("brightness", 5500.000, "Pre-distortion lowpass cutoff in Hz")
-  
+  let pBrightness = Ign.param("brightness", 4200.000, "Pre-distortion lowpass cutoff in Hz")
+ 
   // ADSR
   let pAttack     = Ign.param("attack",       0.005, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
@@ -205,12 +205,12 @@ let makeGuitar = (pickup) => {
  
   let signal = saw.mul(Ign.slot.pregain)
     // Pre-distortion: sweeping lowpass adds dynamic character
-    .lowpass(Ign.sine(0.50).plus(1).times(1000).plus(pBrightness), 1.50)            
+    .lowpass(Ign.sine(0.50).plus(1).times(1600).plus(pBrightness), 1.50)            
     // Simulate plucked string
     .pitchEnvelope(0.2, x => x.adsr(0.001, 0.050, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.pinknoise().adsr(pAttack, 0.3, 0.05, pRelease).highpass(Ign.perlin(1).mul(200).add(2000)).mul(0.05))
+    .plus(Ign.pinknoise().adsr(pAttack, 0.3, 0.25, pRelease).highpass(Ign.perlin(1).mul(200).add(2000)).mul(0.05))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "exp"))
