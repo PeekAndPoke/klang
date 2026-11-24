@@ -478,9 +478,10 @@ class StringPlayer(
 
             if (seated > 0) {
                 // the legs crossed close before the body: each ankle past the middle, one before the other, just
-                // above the floor; the knees lie out to the sides, a little up (the maintainer chose this seat of
+                // above the floor (the one of the fretting side before the other: a left-handed player sits as the
+                // right-handed one's mirror); the knees lie out to the sides, a little up (the maintainer chose this seat of
                 // five, 2026-11-24: "the lower legs need to be pulled closer to the body")
-                val crossed = vec(-SIT_CROSS * sign * s, SIT_ANKLE * s, (SIT_REACH + (if (side == Side.L) SIT_STAGGER else 0.0)) * s)
+                val crossed = vec(-SIT_CROSS * sign * s, SIT_ANKLE * s, (SIT_REACH + (if (side == fretting) SIT_STAGGER else 0.0)) * s)
 
                 foot.lerp(crossed, seated)
             }
