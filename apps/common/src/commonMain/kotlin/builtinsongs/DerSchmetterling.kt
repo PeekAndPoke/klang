@@ -37,7 +37,7 @@ let pickupSingle = Ign.fn(x => x
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3800, 2.4)                              // the peak, low and wide
+  .lowpass(3200, 2.4)                              // the peak, low and wide
   .mul(1.1))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -55,12 +55,12 @@ let pedalStock = Kat.fn(x => x)
 let pedalScreamer = Kat.fn(x => x.parallel(
     clean => clean,
     dirt => dirt
-      .highpass(180)
-      .distort(0.20, "soft")
-      .lowpass(4300) // the tone knob, half way
-      .mul(0.40)  // the clipper only ever sees the mids, the clean bass carries, both aligned
+      .highpass(200)
+      .distort(0.10, "soft")
+      .lowpass(6500, 2.0) // the tone knob, half way
+      .mul(0.60)  // the clipper only ever sees the mids, the clean bass carries, both aligned
   )
-  .mul(0.50))                                       // level
+  .mul(0.55))                                       // level
 
 // Fuzz: everything clips, hard and lopsided, splatty.
 let pedalFuzz = Kat.fn(x => x
@@ -71,8 +71,8 @@ let pedalFuzz = Kat.fn(x => x
 // Treble booster: cuts the bass and pushes the rest into the preamp. The classic bright crunch.
 let pedalBoost = Kat.fn(x => x.parallel(
   clean => clean, 
-  dirt => dirt.highpass(720).mul(1.2)
-).mul(0.6))
+  dirt => dirt.highpass(600).mul(1.2)
+).mul(0.65))
 
 // Guitar rig - Pre-Amps  ---------------------------------------------------------------------------------------------------------------------------
 
@@ -129,7 +129,7 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  4.00)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.6, db =  4.20)        // thump: closed-back box resonance
     .band(freq =  900, q = 0.7, db =  4.00)        // roar:  low mids
     .band(freq = 2700, q = 1.5, db =  1.30)        // bark:  the upper-mid speaker peak
   )
@@ -170,6 +170,9 @@ let makeGuitar = (pickup) => {
   let pSpread     = Ign.slot.spread
   let pAnalog     = Ign.slot.analog
 
+  // Sound knobs
+  let pBrightness = Ign.param("brightness", 5500.000, "Pre-distortion lowpass cutoff in Hz")
+  
   // ADSR
   let pAttack     = Ign.param("attack",       0.005, "Attack")
   let pDecay      = Ign.param("decay",        1.000, "Decay")
@@ -187,6 +190,8 @@ let makeGuitar = (pickup) => {
   )
  
   let signal = saw.mul(Ign.slot.pregain)
+    // Pre-distortion: sweeping lowpass adds dynamic character
+    .lowpass(Ign.sine(0.50).plus(1).times(1000).plus(pBrightness), 1.50)            
     // Simulate plucked string
     .pitchEnvelope(0.2, x => x.adsr(0.001, 0.050, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
@@ -539,7 +544,7 @@ export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.20)
 export snare_arrange = x => x.cylinder(7).mute("<0!128 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
-export hats_pat = `<[cr hh!3] [hh!4]!7 [oh hh!3] [hh!4]!5 [[hh?]!12]!2  [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
+export hats_pat = `<[cr hh!3] [hh!4]!7 [oh hh!3] [hh!4]!5 [hh!4 ~!2 hh!4 ~!2]!2  [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
 export hats_shape = x => x.gain(0.17).pan(0.425)
   .hpf(650).lpf(freq = "14000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 2.0)
 export hats_arrange = x => x.cylinder(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
