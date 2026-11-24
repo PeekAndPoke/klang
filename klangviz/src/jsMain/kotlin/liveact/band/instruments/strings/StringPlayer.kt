@@ -533,7 +533,15 @@ class StringPlayer(
                     val waist = lower.maxByOrNull { (_, across) -> across * mirror }
 
                     if (waist != null) {
-                        val thigh = rig.root.localToWorld(vec(-SIT_THIGH_OUT * mirror * s, SIT_THIGH_HIGH * rig.height, SIT_THIGH_FORE * s))
+                        // the thigh as the figure holds it now: a point along it from the hip toward the knee, and
+                        // above its middle line by about half its thickness (each figure's own leg, however it sits:
+                        // the maintainer, 2026-11-24, of Klaue's: "it still cuts through the leg too much")
+                        rig.update()
+
+                        val thigh = rig.at("knee$strumming").lerp(rig.at("ankle$strumming"), SIT_THIGH_ALONG)
+
+                        thigh.y += SIT_THIGH_OVER * s
+
                         val rested = thigh
                             .addScaledVector(axisX, -waist.first * s)
                             .addScaledVector(axisY, -waist.second * mirror * s)
@@ -866,14 +874,13 @@ class StringPlayer(
         const val SIT_KNEE_FORE = 0.30
 
         /**
-         * Where an instrument in the lap rests: on the thigh of the strumming side, so far out from the body's
-         * middle, so high over the floor (a share of the figure's height) and so far before the body, in the figure's
-         * sizes; and how far from the body's middle along the neck its waist is looked for (a share of the body's
-         * half length).
+         * Where an instrument in the lap rests: on the thigh of the strumming side as the figure holds it, this share
+         * of the way from the hip to the knee, and this far above the thigh's middle line (in the figure's size:
+         * about half the thigh's thickness); and how far from the body's middle along the neck the instrument's
+         * waist is looked for (a share of the body's half length).
          */
-        const val SIT_THIGH_OUT = 0.13
-        const val SIT_THIGH_HIGH = 0.10
-        const val SIT_THIGH_FORE = 0.10
+        const val SIT_THIGH_ALONG = 0.45
+        const val SIT_THIGH_OVER = 0.07
         const val SIT_WAIST_WITHIN = 0.4
 
         /** How far up the neck of an instrument in the lap points, in radians (standing it is the design's own tilt). */

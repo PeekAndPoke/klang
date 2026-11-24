@@ -128,6 +128,10 @@ class Notstrom private constructor(
         /** How high an instrument floats as it goes, and from how high it comes, in metres. */
         private const val FLOAT = 0.9
 
+        /** How far one who sits floats up and down, in the figure's size, and how fast (the marimba's: 0.012 and 1.3). */
+        private const val FLOAT_SEAT = 0.018
+        private const val FLOAT_PACE = 1.1
+
         /** How long one who arrives with empty hands takes from the walk into the start pose, in seconds. */
         private const val LAND = 0.5
         private const val EASE = 1.6
@@ -691,6 +695,11 @@ class Notstrom private constructor(
             // (and one who sat in the song before gets up first, from the change of song on)
             val up = if (player in rising) 1 - smooth((t - easedAt) / SIT) else 0.0
             val sits = max(down, up)
+
+            // one who sits does not quite touch the floor: they float, a slow breath up and down, as the marimba
+            // does, each at their own moment (the maintainer, 2026-11-24: "They appear to be floating so let them
+            // move up and down slowly and very slightly, similar to how the marimba floats")
+            rig(player).let { it.root.position.y += FLOAT_SEAT * it.s * sin(t * FLOAT_PACE + player.ordinal * 1.7) * sits }
 
             stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walk, gait = character(player).gait), sits = sits)
 
