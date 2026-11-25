@@ -143,12 +143,12 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  4.00)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.4, db =  5.50)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  3.20)        // thump: closed-back box resonance
+    .band(freq = 1000, q = 0.5, db =  4.00)        // roar:  low mids
     .band(freq = 2700, q = 1.2, db =  1.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(90, 0.707, x => x.passes(2)))
+  .highpass(100, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = Kat.fn(x => x

@@ -129,12 +129,12 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  4.00)        // thump: closed-back box resonance
-    .band(freq =  800, q = 0.4, db =  5.50)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  3.20)        // thump: closed-back box resonance
+    .band(freq = 1000, q = 0.5, db =  4.00)        // roar:  low mids
     .band(freq = 2700, q = 1.2, db =  1.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
-  .highpass(90, 0.707, x => x.passes(2)))
+  .highpass(100, 0.707, x => x.passes(2)))
 
 // 1x12 open back: the open back cancels the bass, the top chimes and rolls off late and soft.
 let cab1x12 = Kat.fn(x => x
@@ -296,7 +296,7 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).ad
   .clip(0.80)
 
 export lead_arrange = x => x.cylinder(0) //  .mute()
-  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.23))
+  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.21))
   .velocity("<1.1 0.95 1.00 0.95>*4")
   .shuffle("<1!64  1!17 4!14 1!1 1!32  1!7 4!8 1!1  1!64>")
   .mute(   "<1!64  0!32          1!32  0!32         1!64>")
@@ -337,8 +337,8 @@ export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(gu
 export guitar2_pat =
   `<[4 4 6 8  4 4 2  3]  [7  7 [ 5  4]     6  7 4 5 6]
     [4 4 6 8  4 4 7  8]  [9 11 [10  9]     6  7 4 2 3]
-    [4 4 6 8  4 4 5  6]  [4  4 6           8 11 [11 4] [1 2] 3]
-    [4 4 3 6  4 4 2  3]  [7  4 [2 7] [6 7] [4 4 6 4]!2 [0 2 4 7] 8]>/4`
+    [4 4 6 8  4 4 5  6]  [4  4 6           8 11 [7 4] [1 2] 3]
+    [4 4 3 6  4 4 2  3]  [7  4 [2 7] [6 7] [4 4 6 4]!2 [4 2] 1]>/4`
 
 export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
   .sound(guitar).adsrOff().unison(voices = 13, spread = 0.10)
@@ -365,9 +365,9 @@ export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!
 // Guitar 3  --------------------------------------------------------------------------------------------------------------------------------------------------
 export guitar3_pat =
   `<[0 0  2 4  0 0 -2 -1]  [4 4         2 [4 -1]   4 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1]  [4 7         2 [4 -1]   4 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1]  [0 [[0 4] 7] 2 [4  6]   [[7 6] 7] [7 0] [-3 -2] -1]
-    [0 0 -1 3  0 0 -2 -1]  [4 0         3 [0 -2]   0 0 [0 4 7 9] 6]>/4`
+    [0 0  2 4  0 0 -2 -1]  [4 7         2 [4  2]   4 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1]  [0 [[0 4] 7] 2 [4  6]   [[7 6] 7] [4 0] [-3 -2] -1]
+    [0 0 -1 3  0 0 -2 -1]  [4 0         2 [4  2]   0 0 [0 -2] -1]>/4`
 
 export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .sound(guitar).adsrOff().unison(voices = 13, spread = 0.10)
@@ -386,7 +386,7 @@ export bass_pat =
   `<[0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 -2 -1]
     [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0  5  6]
     [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 [-3 -2] -1]
-    [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [0 4 7 9] 6]>/8`
+    [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 [ 0 -2] -1]>/8`
 
 export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bass).gain(0.22) // . mute()
     .ignp("sub", 0.94).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
