@@ -558,7 +558,7 @@ export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 1.00).ignp("harmonics", 0.95)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
-  .clip(0.90).gain(0.45).cylinder(15).tag("bass")
+  .clip(0.90).gain(0.40).cylinder(15).tag("bass")
 
 // Every line carries a tag with its own name (spin, sing, soar, swell, beat, chug, wings, strike, chime, strum, kick,
 // snare, hats, bass): the band of the live act reads the song by them and plays what it hears (who plays which is the
