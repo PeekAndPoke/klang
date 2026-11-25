@@ -46,12 +46,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(5000, 3.3)                              // the peak, up high and narrow
+  .lowpass(5000, 3.2)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3100, 2.5)                              // the peak, low and wide
+  .lowpass(3100, 2.4)                              // the peak, low and wide
   .mul(1.3))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -143,8 +143,8 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  3.20)        // thump: closed-back box resonance
-    .band(freq = 1000, q = 0.5, db =  4.00)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  3.40)        // thump: closed-back box resonance
+    .band(freq = 1000, q = 0.5, db =  3.50)        // roar:  low mids
     .band(freq = 2700, q = 1.2, db =  1.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
@@ -252,7 +252,7 @@ let noCuts = Kat.fn(x => x)
 // in mul(0.35), ampLevel does not), the line's cuts, then the cylinder's usual strip (body, reverb, compressor, fader),
 // so the lines' body, reverb, compressor and katp("gain.gain") still land.
 let makeAmp = (stages, cuts) => Katalyst(k => k
-  .oversampleAtLeast(4, r => r.serial(stages))
+  .oversampleAtLeast(8, r => r.serial(stages))
   .mul(0.35)
   .serial(cuts)
   .classic())
@@ -556,7 +556,7 @@ export hats = pat => sound(pat)
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
   .sound(bass).velocity("0.98 0.94 0.96 0.94")
-  .ignp("sub", 0.92).ignp("harmonics", 1.00)
+  .ignp("sub", 1.00).ignp("harmonics", 0.95)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
   .clip(0.90).gain(0.45).cylinder(15).tag("bass")
 
@@ -713,22 +713,26 @@ export song = stack(
     .scale(songScale)
     .analog(feel)
 
-  , sound("pink!4").clip(3).adsr(0.5, 0.5, 0.5, 1.5).gain(perlin(0.005, 0.01))
+  , // Background noise
+  sound("pink!4").clip(3).adsr(0.5, 0.5, 0.5, 2.0).gain(perlin(0.005, 0.01))
     .pan(sine(-0.7, 0.7).slow(6)).legato(2)
     .bpf(perlin(1400, 1800).slow(17.sqrt()), 0.7)
     .apply(drumRoom)
  
-  , master(Katalyst(k => k.oversampleAtLeast(4, r => r
-    .reverb(0.10, 7.5, 7500)     
-    .mul(0.25)
-    .bands(b => b
-      .band(low => low.distort(0.001, "soft").mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.100, "soft").mul(0.90)).cut(5100)
-      .band(low => low.distort(0.001, "soft").mul(1.08))
-    ) // the glue on the mids only: the kick and the hats stay clean
-    .mul(4.6)
-    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005) // the ceiling: peaks only
-  )))
+  , 
+  master(Katalyst(k => k
+    .reverb(0.10, 7.5, 8500)
+    .mul(0.20) // the "saturation" knob
+    .oversampleAtLeast(8, r => r
+      .bands(b => b
+        .band(low => low.mul(1.00)).cut(120)
+        .band(mid => mid.distort(0.150, "soft").mul(0.95)).cut(5000)
+        .band(low => low.distort(0.050, "soft").mul(1.00))
+      ) // the glue on the mids only: the kick and the hats stay clean
+    )
+    .mul(4.80)
+    .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
+  ))
 )
 
 
