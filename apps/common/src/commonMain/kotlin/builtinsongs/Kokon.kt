@@ -46,13 +46,13 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(5000, 3.2)                              // the peak, up high and narrow
+  .lowpass(4800, 3.7)                              // the peak, up high and narrow
   .mul(0.8))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3100, 2.4)                              // the peak, low and wide
-  .mul(1.3))                                       // hot output
+  .lowpass(3200, 2.4)                              // the peak, low and wide
+  .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
 let pickupNeck = Ign.fn(x => x
@@ -143,8 +143,8 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  3.40)        // thump: closed-back box resonance
-    .band(freq = 1000, q = 0.5, db =  3.50)        // roar:  low mids
+    .band(freq =  120, q = 0.7, db =  3.20)        // thump: closed-back box resonance
+    .band(freq =  920, q = 0.4, db =  3.50)        // roar:  low mids
     .band(freq = 2700, q = 1.2, db =  1.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
