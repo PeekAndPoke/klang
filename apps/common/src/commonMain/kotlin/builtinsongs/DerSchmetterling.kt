@@ -388,7 +388,7 @@ export bass_pat =
     [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 -2 -1]
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 0 0]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bassSnd).gain(0.23) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bassSnd).gain(0.22) // . mute()
     .ignp("sub", 1.00).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
@@ -459,10 +459,10 @@ export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_
 let metalKick = (() => {
   let thump = Ign.sine()
     .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
-    .adsr(0.0005, 0.25, 0.0, 0.05)
-    .distort(0.1, "soft")   // the hard hit: the loud start clips, the tail stays clean
+    .adsr(0.0005, 0.35, 0.0, 0.05)
+    .distort(0.2, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(1.8)
+  let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(1.8)
 
   return thump.plus(crack)
     .mul(0.25)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
@@ -531,9 +531,9 @@ let metalSnare = (() => {
 
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
-export kick_shape = x => x.sound(metalKick).adsrOff().note("e1").transpose(transposition).gain(0.35).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+export kick_shape = x => x.sound(metalKick).adsrOff().note("e1").transpose(transposition).gain(0.33).velocity("0.98 0.94 0.96 0.94").pan(0.5)
 export kick_arrange = x => x.cylinder(6).mute("<0!128 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
-export kick = sound(kick_pat).apply(kick_shape).tag("kick") //  . solo()
+export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat = 
   `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
@@ -558,7 +558,7 @@ export shaker_arrange = x => x.cylinder(10).late(berlin(0.0010, 0.0020).mul(drun
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
-export countin = sound("oh!2").apply(hats_shape).velocity(0.5).tag("countin").reverb(wet = "0.1", size = 0)
+export countin = sound("oh!2").apply(hats_shape).velocity(0.4).tag("countin").reverb(wet = "0.1", size = 0)
 export countin_arrange = x => x.cylinder(0).filterWhen(t => t < 2)
 
 // Song  ------------------------------------------------------------------------------------------------------------------------------------------------------
