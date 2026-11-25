@@ -103,17 +103,17 @@ let preampClean = Kat.fn(x => x
 
 // Crunch: two tube stages, coupled loosely so the bass goes along and the clipping stays round.
 let preampCrunch = Kat.fn(x => x
-  .highpass(120)
-  .distort(0.35, "tube").highpass(120)
-  .distort(0.18, "asym").highpass(100)
-  .lowpass(5500)
+  .highpass(80)
+  .distort(0.35, "tube").highpass(80)
+  .distort(0.18, "asym").highpass(80)
+  .lowpass(5200)
   .mul(0.62))                                       // volume
 
 // High gain: tighten the bass BEFORE it clips, three cascaded stages, the last one hard, then tame the fizz.
 let preampHighGain = Kat.fn(x => x
-  .highpass(120)                                    // tight: no bass into the gain stages
-  .distort(0.10, "tube").highpass(120)
-  .distort(0.15, "softsat").highpass(100)
+  .highpass(80)                                    // tight: no bass into the gain stages
+  .distort(0.10, "tube").highpass(80)
+  .distort(0.15, "softsat").highpass(80)
   .distort(0.75, "soft")
   .lowpass(5200)                                   // the fizz
   .mul(0.75))                                      // volume
@@ -143,9 +143,9 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.6, db =  4.20)        // thump: closed-back box resonance
-    .band(freq =  900, q = 0.7, db =  4.00)        // roar:  low mids
-    .band(freq = 2700, q = 1.5, db =  1.30)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  4.00)        // thump: closed-back box resonance
+    .band(freq =  800, q = 0.4, db =  5.50)        // roar:  low mids
+    .band(freq = 2700, q = 1.2, db =  1.50)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(90, 0.707, x => x.passes(2)))
