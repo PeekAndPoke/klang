@@ -133,6 +133,22 @@ fun FlowContent.leadLine(text: String) {
     }
 }
 
+/** The songs of a programme by their [titles], one to a line, numbered in the order they are played. */
+fun FlowContent.songList(titles: List<String>) {
+    div {
+        css {
+            put("margin-top", BODY_GAP)
+            put("font-size", "18px")
+            put("line-height", "1.7")
+            put("color", "#aab3c6")
+        }
+
+        titles.forEachIndexed { index, title ->
+            div { +"${index + 1}. $title" }
+        }
+    }
+}
+
 /** Body text, under the leading line or a part before; [color] where it stands out (a result, a problem). */
 fun FlowContent.bodyText(color: String = "#8a93a8", content: FlowContent.() -> Unit) {
     div {

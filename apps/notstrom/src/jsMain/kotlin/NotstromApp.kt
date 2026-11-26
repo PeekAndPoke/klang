@@ -1134,7 +1134,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                 return@notstromScreen
             }
 
-            leadLine("$DEMO - ${PROGRAMME[playing].song.title}")
+            leadLine(DEMO)
+            songList(titles = PROGRAMME.map { it.song.title })
             bodyText { +"The show has sound, and fast flashing lights (a stroboscope)." }
 
             // without the tests, the choices for the show come right before its start
@@ -1168,8 +1169,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         const val MODELS = "liveact/notstrom/"
 
         /**
-         * What the song is to notstrom, before its title on the start screen: the line reads exactly as the maintainer
-         * wrote it, `First Demo - Der Schmetterling` (a plain hyphen between spaces).
+         * What the show is to notstrom: the start screen's leading line, a line of its own, with the programme's
+         * songs listed under it (the maintainer, 2026-11-26).
          */
         const val DEMO = "First Demo"
 

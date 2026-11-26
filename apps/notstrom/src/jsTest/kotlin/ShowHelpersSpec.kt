@@ -30,8 +30,9 @@ class ShowHelpersSpec : StringSpec({
     }
 
     "a tempo is said in rounds a minute, without a fraction where it has none" {
-        tempoLine(BuiltInSongs.derSchmetterling) shouldBe "35 rpm"
-        tempoLine(BuiltInSongs.kokon) shouldBe "19 rpm"
+        // (a tempo given here: a song's own moves freely)
+        tempoLine(BuiltInSongs.derSchmetterling.copy(rpm = 35.0)) shouldBe "35 rpm"
+        tempoLine(BuiltInSongs.kokon.copy(rpm = 19.0)) shouldBe "19 rpm"
         tempoLine(BuiltInSongs.kokon.copy(rpm = 19.5)) shouldBe "19.5 rpm"
     }
 
