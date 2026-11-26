@@ -292,7 +292,7 @@ let marimba = (() => {
 export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).adsrOff()
   .velocity(guitarDyna(0)).body(material = "steel", wet = 0.2)
   .hpf(380, 0.7).lpf(7500, 0.7)
-  .pan(0.05).superimpose(pan(0.95)) // . solo()
+  .pan(0.30).superimpose(pan(0.70)) // . solo()
   .clip(0.80)
 
 export lead_arrange = x => x.cylinder(0) //  .mute()
