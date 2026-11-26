@@ -11,6 +11,19 @@ the mapping from the music events is... all in one place rather than scattered a
 We also have to give instruments where it applies the note range, f.e. for guitars the lowest note and similar for
 the marimba."
 
+Made clear the same day: "With property of player i mean, it should be a property of the seat. Then we will
+probably also not need DrumSeat, StringSeat ... cast will be a list of seats or musicians and each musicians object
+has all it needs to be able to react to music events, start position etc."
+
+## The direction (the maintainer, 2026-11-26)
+
+- The cast is a list of seats (or musicians), one kind of seat for everyone: `DrumSeat`, `NoteSeat` and
+  `StringSeat` go.
+- The instrument is a property of the seat.
+- A seat holds all its musician needs: who they are, the instrument, the music events it is played by, the start
+  position, and whatever else the band reads for them today from other places.
+- An instrument says its note range where it has one (a guitar's lowest note, the marimba's).
+
 ## What is there today
 
 - A song's `Cast` (`band/Cast.kt`) has one field per kind of instrument: `drums` (a `DrumSeat`), `marimba` and
@@ -28,10 +41,11 @@ the marimba."
 
 ## Decide before implementing
 
-Nothing is designed yet. First thoughts, for the maintainer:
+The direction is given above; the shape is not designed yet. First thoughts, for the maintainer:
 
-- One line per musician on stage: who, the instrument they play in this song, the song's events it is played by
-  (tags), and where they are. Whether the place joins that line or stays in the stage plot is the first question.
+- The start position is the seat's by the maintainer's word, so the stage plot's places move into the seats. What
+  is left of the plot (the walk-in's length, the entrances, which are planned from the places at a change of song)
+  needs a home: with the seat too, or a plan made from the seats.
 - The instrument as a thing of its own that the line names (a guitar of a design, the marimba, the trumpet, the
   kit), with what it says of itself: its note range where it has one (a guitar's lowest note from its tuning, the
   marimba's lowest and highest bar), so that a part outside it can be seen, and folded or told.
@@ -51,4 +65,5 @@ Not planned yet.
 
 ## History
 
-- 2026-11-26: created from the maintainer's words.
+- 2026-11-26: created from the maintainer's words; the direction made clear the same day (the instrument is the
+  seat's, one kind of seat, the cast a list of them).
