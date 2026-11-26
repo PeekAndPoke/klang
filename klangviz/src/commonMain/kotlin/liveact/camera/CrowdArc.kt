@@ -21,8 +21,11 @@ import kotlin.math.sin
  * middle a little above its floor ([AT]), so the picture tilts up and shows more of the wall behind.
  */
 object CrowdArc {
-    /** How far from the stage's middle the arc runs, in metres: the crowd stands from 11.5 m to 62 m (`CrowdPlaces`). */
-    const val FAR = 38.0
+    /**
+     * How far from the stage's middle the arc runs, in metres: the crowd stands from 11.5 m to 62 m (`CrowdPlaces`).
+     * It was 38 m (the maintainer, 2026-11-26: "and closer a bit").
+     */
+    const val FAR = 33.0
 
     /** How high the camera goes, in metres, and how far a round's start or end may lie above or below that. */
     const val HIGH = 8.0
@@ -37,13 +40,23 @@ object CrowdArc {
     /** How far round the half ring it may go to either side, in radians from straight before the stage (60°). */
     const val WIDEST = PI / 3
 
-    /** How far it goes along the ring in a round, at least and at most, in radians (20° to 40°). */
-    const val LEAST = PI / 9
-    const val MOST = 2 * PI / 9
+    /**
+     * How far it goes along the ring in a round, at least and at most, in radians (40° to 80°), and the bars of the
+     * round in which it is shown, cut to at the first and cut away at the second, at the round's end (28 bars, some
+     * 46 s). Twice as far in twice the time as at first (20° to 40° in 14 bars; the maintainer, 2026-11-26: "the arc
+     * move could be twice as long or even longer"), so as fast as it was. It begins two bars after the round's early
+     * looks have ended.
+     */
+    const val LEAST = 2 * PI / 9
 
-    /** The bars of a round in which it is shown: cut to at the first, cut away at the second. */
-    const val FROM = 30
-    const val TO = 44
+    /** How far it goes along the ring in a round at most, in radians (80°): see [LEAST]. */
+    const val MOST = 4 * PI / 9
+
+    /** The bar of a round at which it is cut to: see [LEAST]. */
+    const val FROM = 20
+
+    /** The bar of a round at which it is cut away from, the round's end: see [LEAST]. */
+    const val TO = 48
 
     /**
      * Where the arc of a round goes: from [start] to [end] (radians from straight before the stage, + to the stage's
@@ -52,17 +65,21 @@ object CrowdArc {
     data class Way(val start: Double, val end: Double, val startHigh: Double, val endHigh: Double)
 
     /**
-     * The way of a round from three numbers from 0 to 1 its seed gives: [side] where it begins, [length] how far it
-     * goes, [high] how high it begins and ends. It goes toward the middle from where it begins, so it never leaves
-     * the ring ([WIDEST]). NaN-guard: a number of no number is 0.5.
+     * The way of a round from three numbers from 0 to 1 its seed gives: [side] which way it goes (below a half from
+     * the left to the right, else back) and where along the ring it begins, [length] how far it goes, [high] how high
+     * it begins and ends. It begins where the whole way fits on the ring ([WIDEST]). NaN-guard: a number of no number
+     * is 0.5.
      */
     fun way(side: Double, length: Double, high: Double): Way {
         val s = share(side)
         val l = share(length)
         val h = share(high)
-        val start = WIDEST * (2 * s - 1)
         val sweep = LEAST + (MOST - LEAST) * l
-        val end = if (start > 0) start - sweep else start + sweep
+        // which way, and how far in from the ring's end it begins, as a share of the room the way leaves
+        val going = if (s < 0.5) 1 else -1
+        val inward = if (s < 0.5) s * 2 else (s - 0.5) * 2
+        val start = going * (-WIDEST + (2 * WIDEST - sweep) * inward)
+        val end = start + going * sweep
 
         return Way(
             start = start,

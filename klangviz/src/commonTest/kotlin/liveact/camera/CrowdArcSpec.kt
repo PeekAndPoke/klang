@@ -26,7 +26,7 @@ class CrowdArcSpec : StringSpec({
 
     val grid = (0..10).map { it / 10.0 }
 
-    "a round's way stays on the half ring, goes toward the middle, and as far as it should" {
+    "a round's way stays on the half ring, goes either way, and as far as it should" {
         for (side in grid) {
             for (length in grid) {
                 val way = CrowdArc.way(side = side, length = length, high = 0.5)
@@ -36,10 +36,23 @@ class CrowdArcSpec : StringSpec({
                     (abs(way.start) <= CrowdArc.WIDEST + EPS) shouldBe true
                     (abs(way.end) <= CrowdArc.WIDEST + EPS) shouldBe true
                     (sweep >= CrowdArc.LEAST - EPS && sweep <= CrowdArc.MOST + EPS) shouldBe true
-                    // toward the middle: it ends nearer straight ahead than it began, or crosses it
-                    (abs(way.end) < abs(way.start) || way.start * way.end <= 0) shouldBe true
                 }
             }
+        }
+
+        withClue("from the left end to the right, and from the right end to the left") {
+            val right = CrowdArc.way(side = 0.0, length = 1.0, high = 0.5)
+            val left = CrowdArc.way(side = 0.5, length = 1.0, high = 0.5)
+
+            (abs(right.start + CrowdArc.WIDEST) < EPS && right.end > right.start) shouldBe true
+            (abs(left.start - CrowdArc.WIDEST) < EPS && left.end < left.start) shouldBe true
+        }
+
+        withClue("both ways reach the far end of the ring, and begin at many places, not only at its ends") {
+            (abs(CrowdArc.way(side = 1.0, length = 0.5, high = 0.5).end + CrowdArc.WIDEST) < EPS) shouldBe true
+            (CrowdArc.way(side = 0.49, length = 0.5, high = 0.5).end > CrowdArc.WIDEST - 0.1) shouldBe true
+            (grid.filter { it < 0.5 }.map { CrowdArc.way(side = it, length = 0.5, high = 0.5).start }.toSet().size > 2) shouldBe true
+            (grid.filter { it >= 0.5 }.map { CrowdArc.way(side = it, length = 0.5, high = 0.5).start }.toSet().size > 2) shouldBe true
         }
 
         withClue("different numbers, different ways") {

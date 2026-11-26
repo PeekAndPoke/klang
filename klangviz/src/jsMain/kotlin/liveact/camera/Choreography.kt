@@ -39,8 +39,8 @@ import kotlin.math.tan
 //           while there, and back in; one of the two ways may be a cut instead (see Flight)
 //   reverse 32 bars on the total, then twelve bars on the reverse total: from behind the drummer, over his
 //           shoulder, the band from the back and the audience before it; as from a hovering drone, almost steady
-//   crowd   30 bars on the total, then 14 bars slowly along the back of the crowd, high over their heads, looking
-//           at the stage; cut to and cut away from (see CrowdArc)
+//   crowd   20 bars on the total, then 28 bars slowly along the back of the crowd, high over their heads, looking
+//           at the stage, to the round's end; cut to and cut away from (see CrowdArc)
 // A round of looks, with an arc, with the reverse total or along the crowd also has two looks in a row in its first
 // half (bars 12 to 18, back to the total by a plain cut), so such a round never holds the total longer than some 17
 // bars (the maintainer, 2026-11-17: "could use more camera cuts and movements. not too much but a little more").

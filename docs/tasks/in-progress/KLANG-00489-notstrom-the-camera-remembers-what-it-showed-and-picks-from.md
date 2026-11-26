@@ -56,13 +56,15 @@ already ends out there), and whether it is flown to or cut to.
 
 **Step 2, done 2026-11-26: the arc behind the crowd.**
 
-- A sixth kind of round, `RoundKind.Crowd` (`?move=crowd`): 30 bars on the total, then 14 bars slowly along the
-  back of the crowd, looking at the stage, cut to and cut away from (the maintainer: "Cut to, no flight").
+- A sixth kind of round, `RoundKind.Crowd` (`?move=crowd`): 20 bars on the total, then 28 bars slowly along the
+  back of the crowd to the round's end, looking at the stage, cut to and cut away from (the maintainer: "Cut to,
+  no flight"; first 14 bars, made twice as long the same day).
 - Where (the maintainer: "bit lower than and closer than the FOH angle and a bit more of the wall behind the stage
-  visible (in height)"): 38 m from the stage's middle (the mixing desk 46 m), about 8 m up (11 m), give or take
+  visible (in height)", then "closer a bit"): 33 m from the stage's middle (the mixing desk 46 m; first 38 m), about
+  8 m up (11 m), give or take
   0.8 m at either end, looking at the stage's middle 1.4 m up (the desk looks at the ground before the stage), lens
-  28° (27°). Each round begins somewhere within 60° to either side of straight ahead and goes 20° to 40° along the
-  ring toward the middle (`CrowdArc`).
+  28° (27°). Each round goes 40° to 80° along the ring, either way, never past 60° to either side of
+  straight ahead (`CrowdArc`).
 - Weight as the reverse total's; with six kinds a round is drawn from the four that waited longest, so still none
   twice in three rounds. Over a long show: looks about one in five, a circle, an arc and a flight each a little more
   than one in six, the reverse total and the crowd each about one in seven.
@@ -86,14 +88,20 @@ Step 1: `LookPlanSpec` (no kind twice in three rounds over 20 seeds and 200 roun
 however asked, the flight before her, the windows' edges, the wrap); klangviz js (592) and jvm (509) green; 10
 mutants killed; review CLEAN in round 2 (reviewer-opus-high).
 
-Step 2: `CrowdArcSpec` (on the ring, toward the middle, as far as it should; lower and closer than the desk and
+Step 2: `CrowdArcSpec` (on the ring, either way, from many places, as far as it should; lower and closer than the desk and
 looking less steeply; over the stage's middle; above the crowd's lights near it, read from the crowd; after the early
 looks; along the way, never back) and `LookPlanSpec`; klangviz js and jvm green; 4 mutants killed; review CLEAN in
 round 2 (reviewer-opus-high).
+
+The arc twice as long and closer: `CrowdArcSpec` adds both ways reaching the ring's far end from many starting places;
+klangviz js green; the starting-places mutant killed; review CLEAN (reviewer-opus-high).
 
 ## History
 
 - 2026-11-26: created from the maintainer's words; the arc behind the crowd added the same day.
 - 2026-11-26: step 1, the kinds of rounds remember.
 - 2026-11-26: step 2, the arc behind the crowd.
+- 2026-11-26: the arc twice as long and a little closer (the maintainer: "the arc move could be twice as long or
+  even longer and closer a bit"): 40° to 80° in 28 bars (bars 20 to 48), as fast as before, either way along the
+  ring, 33 m out.
 - 2026-11-26: IN PROGRESS.
