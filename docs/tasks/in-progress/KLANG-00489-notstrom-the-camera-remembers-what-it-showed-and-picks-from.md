@@ -1,6 +1,7 @@
 # KLANG-00489: notstrom the camera remembers what it showed and picks from what it has not shown lately
 
-> **Status (2026-11-26): IN PROGRESS.** The kinds of rounds remember (step 1, done); the single angles, the song changes and the arc behind the crowd are open.
+> **Status (2026-11-26): IN PROGRESS.** The kinds of rounds remember (step 1, done); the arc behind the crowd is
+> in (step 2, done); the single angles and the song changes are open.
 
 ## Why this exists
 
@@ -53,6 +54,23 @@ already ends out there), and whether it is flown to or cut to.
   it is looks (`flownBefore`), and she does not send the camera out within a round after a round's own flight
   (`roundFlewBefore`).
 
+**Step 2, done 2026-11-26: the arc behind the crowd.**
+
+- A sixth kind of round, `RoundKind.Crowd` (`?move=crowd`): 30 bars on the total, then 14 bars slowly along the
+  back of the crowd, looking at the stage, cut to and cut away from (the maintainer: "Cut to, no flight").
+- Where (the maintainer: "bit lower than and closer than the FOH angle and a bit more of the wall behind the stage
+  visible (in height)"): 38 m from the stage's middle (the mixing desk 46 m), about 8 m up (11 m), give or take
+  0.8 m at either end, looking at the stage's middle 1.4 m up (the desk looks at the ground before the stage), lens
+  28° (27°). Each round begins somewhere within 60° to either side of straight ahead and goes 20° to 40° along the
+  ring toward the middle (`CrowdArc`).
+- Weight as the reverse total's; with six kinds a round is drawn from the four that waited longest, so still none
+  twice in three rounds. Over a long show: looks about one in five, a circle, an arc and a flight each a little more
+  than one in six, the reverse total and the crowd each about one in seven.
+- For the maintainer at the screen: near the ring's ends the fence's far end can come into the picture (it is 60 m
+  wide); narrower (about 30°) if it looks wrong. And the crowd round and a flight both show the stage from far back:
+  they may follow each other (about one round change in seventeen), and a crowd round may follow the flight before
+  her; the crowd could count as a flight for those rules.
+
 **Open:**
 
 - The single looks of the stage from another angle (`ANGLES`) have no memory yet. The maintainer's words were about
@@ -61,7 +79,6 @@ already ends out there), and whether it is flown to or cut to.
   round of one song and the first of the next can both be flights, and every song replays the seed's same order of
   kinds. Proposed to the maintainer: hand the last two kinds and the last flight before her over to the next song,
   and perhaps let the song's place in the show into the seed.
-- The arc behind the crowd (above).
 
 ## Acceptance
 
@@ -69,8 +86,14 @@ Step 1: `LookPlanSpec` (no kind twice in three rounds over 20 seeds and 200 roun
 however asked, the flight before her, the windows' edges, the wrap); klangviz js (592) and jvm (509) green; 10
 mutants killed; review CLEAN in round 2 (reviewer-opus-high).
 
+Step 2: `CrowdArcSpec` (on the ring, toward the middle, as far as it should; lower and closer than the desk and
+looking less steeply; over the stage's middle; above the crowd's lights near it, read from the crowd; after the early
+looks; along the way, never back) and `LookPlanSpec`; klangviz js and jvm green; 4 mutants killed; review CLEAN in
+round 2 (reviewer-opus-high).
+
 ## History
 
 - 2026-11-26: created from the maintainer's words; the arc behind the crowd added the same day.
 - 2026-11-26: step 1, the kinds of rounds remember.
+- 2026-11-26: step 2, the arc behind the crowd.
 - 2026-11-26: IN PROGRESS.

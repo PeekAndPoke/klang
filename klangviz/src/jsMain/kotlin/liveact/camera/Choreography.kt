@@ -29,7 +29,7 @@ import kotlin.math.sin
 import kotlin.math.tan
 
 // The camera's choreography. Mostly the total: the wide view from the audience, the start position. The song is cut
-// into rounds of 48 cycles (bars, about 79 s), and a round is one of five kinds, by the seed:
+// into rounds of 48 cycles (bars, about 79 s), and a round is one of six kinds, by the seed (none twice in three rounds):
 //   looks   34 bars on the total, then three looks in a row, three bars each, with a cut between them (close on one
 //           player, or the stage from another angle)
 //   arc     the same, but the nine bars are one look: the camera goes slowly part of the way round one player
@@ -39,9 +39,11 @@ import kotlin.math.tan
 //           while there, and back in; one of the two ways may be a cut instead (see Flight)
 //   reverse 32 bars on the total, then twelve bars on the reverse total: from behind the drummer, over his
 //           shoulder, the band from the back and the audience before it; as from a hovering drone, almost steady
-// A round of looks, with an arc or with the reverse total also has two looks in a row in its first half (bars 12 to
-// 18, back to the total by a plain cut), so such a round never holds the total longer than some 17 bars (the
-// maintainer, 2026-11-17: "could use more camera cuts and movements. not too much but a little more").
+//   crowd   30 bars on the total, then 14 bars slowly along the back of the crowd, high over their heads, looking
+//           at the stage; cut to and cut away from (see CrowdArc)
+// A round of looks, with an arc, with the reverse total or along the crowd also has two looks in a row in its first
+// half (bars 12 to 18, back to the total by a plain cut), so such a round never holds the total longer than some 17
+// bars (the maintainer, 2026-11-17: "could use more camera cuts and movements. not too much but a little more").
 // From the late looks or an arc it comes back to the total by a plain cut in two rounds of three, and in the third
 // by a slow dolly zoom over five bars (the camera travels back while its lens opens, so the player keeps much of
 // their size at first as the stage grows round them). Always by a cut from a look that looks away from the total
@@ -304,6 +306,10 @@ class Choreography(
         return shot
     }
 
+    /** The way along the back of the crowd of round [n], [u] of it (0 to 1): where it begins and ends, by the seed. */
+    private fun crowdArc(n: Int, u: Double): Placement =
+        CrowdArc.at(way = CrowdArc.way(side = chance(n, 0, 12), length = chance(n, 0, 13), high = chance(n, 0, 14)), u = u)
+
     /** The slow way round the player of round [n], [u] of it (0 to 1): the part of the round set for them (see [arcOf]). */
     private fun arc(n: Int, u: Double): Shot {
         val player = checkNotNull(subject(n, 0).player) { "An arc round $n without a player" }
@@ -518,6 +524,16 @@ class Choreography(
             label = "reverse total, over the drummer's shoulder"
 
             return reverse(t)
+        }
+
+        if (roundKind == RoundKind.Crowd) {
+            if (x < CrowdArc.FROM || x >= CrowdArc.TO) {
+                return home
+            }
+
+            label = "along the back of the crowd"
+
+            return shot(Subject.Angle(crowdArc(n, (x - CrowdArc.FROM) / (CrowdArc.TO - CrowdArc.FROM))))
         }
 
         val dolly = chance(n, 0, 6) < 0.34

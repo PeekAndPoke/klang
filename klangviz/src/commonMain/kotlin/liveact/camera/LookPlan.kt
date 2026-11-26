@@ -48,7 +48,10 @@ enum class RoundKind(val key: String) {
     Flight("flight"),
 
     /** A long look from behind the drummer at the audience. */
-    Reverse("reverse");
+    Reverse("reverse"),
+
+    /** A slow way along the back of the crowd, high over their heads, looking at the stage ([CrowdArc]). */
+    Crowd("crowd");
 
     companion object {
         /** The kind named [key]; null where there is none. */
@@ -149,8 +152,9 @@ class Rounds(
 
 /**
  * How much weight a kind of round has among the [KIND_CHOICE] the seed draws from ([Rounds.drawn]): the shares each
- * kind had before the camera remembered (KLANG-00489). Over a long show they come out a little evened by the memory:
- * a circle, an arc and a flight a fifth each, the reverse total about one in six, looks a little over a fifth.
+ * kind had before the camera remembered (KLANG-00489), the arc behind the crowd as much as the reverse total. Over a
+ * long show they come out a little evened by the memory: looks about one in five, a circle, an arc and a flight each
+ * a little more than one in six, the reverse total and the arc behind the crowd each about one in seven.
  */
 internal fun kindWeight(kind: RoundKind): Double = when (kind) {
     RoundKind.Circle -> 0.2
@@ -158,13 +162,17 @@ internal fun kindWeight(kind: RoundKind): Double = when (kind) {
     RoundKind.Flight -> 0.2
     RoundKind.Reverse -> 0.15
     RoundKind.Looks -> 0.25
+    RoundKind.Crowd -> 0.15
 }
 
 /** After how many rounds the seed's draws repeat ([Rounds.drawn]): about nine days of rounds of 79 s. */
 internal const val DRAWN_ROUNDS = 10_000
 
-/** From how many of the kinds that waited longest a round's kind is drawn ([Rounds.drawn]). */
-internal const val KIND_CHOICE = 3
+/**
+ * From how many of the kinds that waited longest a round's kind is drawn ([Rounds.drawn]): all but the two drawn
+ * last, so no kind comes twice in three rounds.
+ */
+internal const val KIND_CHOICE = 4
 
 /**
  * The looks the camera has begun, by round and number ([begun], the key `n * LOOKS_A_ROUND + i`): what each one

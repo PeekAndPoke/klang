@@ -196,9 +196,9 @@ class LookPlanSpec : StringSpec({
             val r = rounds(seed = seed)
             val kinds = (0 until 200).map { r.drawn(it) }
 
-            kinds.windowed(KIND_CHOICE).forEachIndexed { n, three ->
-                withClue("seed $seed, rounds $n to ${n + KIND_CHOICE - 1}: $three") {
-                    three.toSet().size shouldBe KIND_CHOICE
+            kinds.windowed(3).forEachIndexed { n, three ->
+                withClue("seed $seed, rounds $n to ${n + 2}: $three") {
+                    three.toSet().size shouldBe 3
                 }
             }
 
@@ -210,7 +210,7 @@ class LookPlanSpec : StringSpec({
             val share = (counts[kind] ?: 0).toDouble() / all
 
             withClue("the share of $kind: $share") {
-                (share > 0.12 && share < 0.30) shouldBe true
+                (share > 0.10 && share < 0.28) shouldBe true
             }
         }
 
@@ -391,14 +391,14 @@ class LookPlanSpec : StringSpec({
 
         chosen(seed = 0) shouldBe listOf(
             "Reverse: Klaue/0 Sirene/2 Beben/3 Skalpell/0 Beben/1",
-            "Flight: Rune/0 Wucht/0 Skalpell/1 Skalpell/0 Klaue/3",
+            "Crowd: Rune/0 Wucht/0 Skalpell/1 Skalpell/0 Klaue/3",
             "Circle: stage/7 stage/7 Skalpell/0 stage/0 Skalpell/1",
-            "Arc: Beben/0 stage/2 Beben/3 Rune/2 Klaue/0",
+            "Looks: Beben/0 stage/2 Beben/3 Rune/2 Klaue/0",
         )
         chosen(seed = 7) shouldBe listOf(
             "Flight: Sirene/2 Rune/0 stage/2 Skalpell/3 Klaue/0",
-            "Reverse: Klaue/2 stage/8 stage/10 Skalpell/3 Beben/3",
-            "Looks: Skalpell/2 stage/6 Skalpell/1 Skalpell/2 Beben/2",
+            "Crowd: Klaue/2 stage/8 stage/10 Skalpell/3 Beben/3",
+            "Reverse: Skalpell/2 stage/6 Skalpell/1 Skalpell/2 Beben/2",
             "Flight: stage/11 Beben/2 Klaue/2 Beben/0 Klaue/2",
         )
 

@@ -86,7 +86,7 @@ enum class Switch(val key: String) {
     Still("still"),
 
     /**
-     * `?move=circle`: every round of the camera's choreography is of that kind: looks, arc, circle, flight or
+     * `?move=circle`: every round of the camera's choreography is of that kind: looks, arc, circle, flight, crowd or
      * reverse; another name gives looks, an empty one leaves the choice to the show.
      */
     Move("move"),
