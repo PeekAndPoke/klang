@@ -5,12 +5,14 @@
 
 package io.peekandpoke.klang.notstrom
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.apps.common.FrameStats
-import io.peekandpoke.klang.viz.liveact.stage.FogQuality
-import kotlinx.serialization.json.Json
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import kotlin.js.Date
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 
 /** A result kept on a plain display of 1280 by 800 at 1.25 pixels, by this test's version. */
 private val KEPT = StoredTest(
@@ -22,8 +24,7 @@ private val KEPT = StoredTest(
     voices = 212,
     fps = 59.5,
     slowestMs = 21.5,
-    oversample = 2,
-    fog = "low",
+    quality = "high",
 )
 
 /** As the browser's storage reads it (ultra's persistInLocalStorage): what it does not know, it leaves out. */
@@ -41,16 +42,15 @@ class StoredTestSpec : StringSpec({
         KEPT.fits(ratio = 1.25, width = 1280, height = 900) shouldBe false
     }
 
-    "a result of another test version counts no more: version 2, before the three fog qualities; 3, before the mirror at fog low" {
-        KEPT.copy(version = 2, fog = "high").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
-        KEPT.copy(version = 3, fog = "low").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+    "a result of another test version counts no more: 5, before the test chose the picture's quality as a whole" {
+        KEPT.copy(version = 5).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION + 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION - 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
     }
 
-    "a kept fog that names no quality makes the result count no more" {
-        KEPT.copy(fog = "thick").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
-        KEPT.fogQuality shouldBe FogQuality.Low
+    "a kept quality that names no preset makes the result count no more" {
+        KEPT.copy(quality = "ultra").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+        KEPT.preset shouldBe PicturePreset.High
     }
 
     "what the result screen shows comes back from it" {
@@ -60,13 +60,20 @@ class StoredTestSpec : StringSpec({
     // The stored text, pinned: a field renamed in the code must not change it, or every visitor's kept result is lost
     "the kept text, field by field" {
         JSON.encodeToString(StoredTest.serializer(), KEPT) shouldBe
-            """{"version":5,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """{"version":6,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """"fps":59.5,"slowestMs":21.5,"quality":"high"}"""
+    }
+
+    "a text kept by version 5 (the oversampling and the fog, no quality) is not read: the test runs again" {
+        val old = """{"version":5,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low"}"""
+
+        shouldThrow<SerializationException> { JSON.decodeFromString(StoredTest.serializer(), old) }
     }
 
     "a kept text is read back, also with a field it does not know" {
-        val text = """{"version":5,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
-            """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low","later":true}"""
+        val text = """{"version":6,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """"fps":59.5,"slowestMs":21.5,"quality":"high","later":true}"""
 
         JSON.decodeFromString(StoredTest.serializer(), text) shouldBe KEPT
     }
@@ -79,15 +86,10 @@ class StoredTestSpec : StringSpec({
         measuredLine(localNoon(year = 2027, month = 0, day = 2) + 5 * 60_000.0) shouldBe "Measured on this machine on 2 Jan 2027 at 12:05."
     }
 
-    "a kept result must hold what the test may choose: a fog of low or high, and 1x or 2x" {
-        KEPT.copy(fog = "high").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
-        KEPT.copy(fog = "off").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
-        // the former qualities (until 2026-11-20) name none now
-        KEPT.copy(fog = "medium").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
-        KEPT.copy(fog = "xhigh").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
-        KEPT.copy(oversample = 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
-        KEPT.copy(oversample = 4).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
-        KEPT.copy(oversample = 0).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+    "a kept result must hold what the test may choose: low, medium or high, never max" {
+        KEPT.copy(quality = "low").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
+        KEPT.copy(quality = "medium").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
+        KEPT.copy(quality = "max").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
     }
 })
 

@@ -65,13 +65,13 @@ data class MachineScore(val sound: Double, val picture: Double, val combined: In
  * A known limit: the test draws in the window as it is, and the show may play in fullscreen, with more pixels to
  * draw. Where that is too much, the live act's own step down while the show plays is the safety net.
  *
- * The fog on the floor ([fogFor]): the test's first part draws it with its most sheets (high). Where that part holds
- * [HOLD_FPS], the fog stays so and the 2x part decides the oversampling as above. Where it does not, a fog part draws
- * the fewest sheets (low) at 1x instead of the 2x part, and the fog's sheets are chosen by how the frame time grows
- * with them. The test never chooses no fog or 0.5x oversampling: those are the visitor's choices, and they hold.
+ * The fog, the shadows and the reflections are chosen with the oversampling, as the picture's quality as a whole, by
+ * the app (notstrom's presets, KLANG-00492): the 1x part draws its medium picture, the 2x part its high one, and below
+ * [HOLD_FPS] at 1x it takes its low one. Until 2026-11-26 a fog part chose the fog's sheets here by how the frame time
+ * grew with them. The test never chooses 0.5x or 4x oversampling: those are the visitor's choices, and they hold.
  */
 object PictureQuality {
-    /** The frames a second the 2x part must hold. */
+    /** The frames a second a part of the picture test must hold: the 1x part for the medium picture, the 2x part for 2x. */
     const val HOLD_FPS = 55.0
 
     /** The share of the 1x part's frame rate the 2x part must keep. */
@@ -83,80 +83,8 @@ object PictureQuality {
     /** From this pixel density on, a display is dense enough without oversampling. */
     const val DENSE = 2.0
 
-    /** The fog part must be this many times as fast as the first part to count as clearly faster (5 percent). */
-    const val FOG_GAIN = 1.05
-
     /** Whether the 2x part of the picture test is worth running: not on a dense display, nor where 1x is too slow. */
     fun measuresTwice(fps1x: Double, density: Double): Boolean = density < DENSE && fps1x >= HOLD_FPS
-
-    /**
-     * Whether the fog part of the picture test is worth running: where the first part ([fpsFull], the fog at its
-     * most sheets) does not hold [HOLD_FPS]. A rate that is no number holds nothing.
-     */
-    fun measuresFog(fpsFull: Double): Boolean = !(fpsFull >= HOLD_FPS)
-
-    /**
-     * The fog's sheets to start the show with: one of [choices], the counts of sheets the test may choose from,
-     * fewest first (notstrom's: low and high). The first part ([fpsFull]) was drawn with the last of them, the fog
-     * part ([fpsFew]; null where it was not run) with the first.
-     *
-     * Where the first part holds [HOLD_FPS]: the most. Else the frame time is taken to grow in a straight line with
-     * the sheets, `t(n) = a + b n` through the two parts (`t = 1000 / fps`, in milliseconds), and the most sheets
-     * whose foreseen rate holds [HOLD_FPS] are chosen; where none does, the fewest. A part at or above [HOLD_FPS]
-     * may have been capped by the display (its true rate may be higher): it is taken at the rate measured, so the
-     * line foresees too slow a rate rather than too fast a one.
-     *
-     * Where the fog part is not clearly faster than the first (less than [FOG_GAIN] times its rate, or slower): fewer
-     * sheets buy nothing measurable, so the fog is not what holds the frames back (a display of 50 pictures a second
-     * or less caps both parts alike), and the look is not given up for no frames: the most.
-     *
-     * The plain answer, the fewest, where a part says nothing: no fog part, or a rate that is no number, not finite or
-     * not above 0.
-     *
-     * Not here: stepping the fog down by itself while the show plays. Where the frames get slow there, the live act's
-     * `Sharpness` (fewer pixels at 1x and 0.5x) and the oversampling's step down are the safety net.
-     */
-    fun fogFor(fpsFull: Double, fpsFew: Double?, choices: List<Int>): Int {
-        require(choices.size >= 2 && choices.zipWithNext().all { (a, b) -> a < b }) { "the fog's choices, fewest first: $choices" }
-
-        val fewest = choices.first()
-        val most = choices.last()
-
-        if (fpsFull >= HOLD_FPS) {
-            return most
-        }
-
-        val fullMs = frameMs(fpsFull)
-        val fewMs = fpsFew?.let { frameMs(it) }
-
-        if (fpsFew == null || fullMs == null || fewMs == null) {
-            return fewest
-        }
-
-        // fewer sheets were not clearly faster: the fog is not what holds the frames back
-        if (fpsFew < FOG_GAIN * fpsFull) {
-            return most
-        }
-
-        return min(foreseenFog(fullMs = fullMs, fewMs = fewMs, choices = choices), most)
-    }
-
-    /**
-     * The most of [choices] the straight line through the two parts' frame times ([fullMs] with the most sheets,
-     * [fewMs] with the fewest, the fewer clearly faster) foresees at [HOLD_FPS]; the fewest where none.
-     */
-    private fun foreseenFog(fullMs: Double, fewMs: Double, choices: List<Int>): Int {
-        val few = choices.first()
-        val full = choices.last()
-        val slope = (fullMs - fewMs) / (full - few)
-        val base = fewMs - slope * few
-        val budget = 1000.0 / HOLD_FPS
-
-        return choices.lastOrNull { n -> base + slope * n <= budget } ?: few
-    }
-
-    /** The time of a frame at [fps], in milliseconds; null for a rate that is no number, not finite or not above 0. */
-    private fun frameMs(fps: Double): Double? = if (fps.isFinite() && fps > 0.0) 1000.0 / fps else null
 
     /** The oversampling to start the show with: 1 or 2 (see the object). */
     fun oversampleFor(fps1x: Double, fps2x: Double?, density: Double): Int = when {

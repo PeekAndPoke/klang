@@ -122,6 +122,17 @@ class Picture {
     }
 
     /**
+     * Asks the live act for the whole picture at [preset] ([PicturePreset]): its oversampling, fog, shadows and
+     * reflections, each as its own choice above does it. Nothing happens while no live act has it.
+     */
+    fun choosePreset(preset: PicturePreset) {
+        choose(preset.samples)
+        chooseFog(preset.fog)
+        chooseShadows(preset.shadows)
+        chooseReflections(preset.reflections)
+    }
+
+    /**
      * Asks the live act to show [variants]: each variant that differs is turned as its own key turns it (the key m for
      * the stage, ...), on the side of the key x shown now, and the line at the top says it for a moment. Nothing
      * happens while no live act has it.

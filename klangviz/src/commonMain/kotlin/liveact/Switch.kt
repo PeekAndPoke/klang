@@ -60,8 +60,17 @@ enum class Switch(val key: String) {
     NoHud("nohud"),
 
     /**
+     * `?quality=high`: the whole picture's quality, one of low, medium, high or max ([PicturePreset]): it sets the
+     * oversampling, the fog, the shadows and the reflections, each of which its own switch overrides
+     * (`?quality=high&fog=low`); without it, or with another word, each is as its own switch or its default says. A
+     * fog, shadows or reflections switch that names none leaves the quality's; an `?oversample=` of any value is
+     * taken (one that names no step is 1x).
+     */
+    Quality("quality"),
+
+    /**
      * `?oversample=2`: the picture starts drawn with that many samples for each pixel shown: 0.5, 1, 2 or 4 (the key o
-     * steps through them, [Oversampling]); any other value is 1.
+     * steps through them, [Oversampling]); any other value is 1. Without it, as `?quality=` says ([PicturePreset]).
      */
     Oversample("oversample"),
 

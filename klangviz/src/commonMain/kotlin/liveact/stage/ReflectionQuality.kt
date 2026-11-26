@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact.stage
 
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 
@@ -42,7 +43,11 @@ enum class ReflectionQuality(val word: String, val size: Double, val budget: Dou
          */
         fun named(word: String?): ReflectionQuality? = if (word == "on") Mid else entries.firstOrNull { it.word == word }
 
-        /** The quality the address asks for (`?reflections=low`); [Mid] without it, or with another word. */
-        fun of(switches: Switches): ReflectionQuality = named(switches[Switch.Reflections]) ?: Mid
+        /**
+         * The quality the address asks for (`?reflections=low`); without it (or with another word) the quality's
+         * (`?quality=`, [PicturePreset]); else [Mid].
+         */
+        fun of(switches: Switches): ReflectionQuality =
+            named(switches[Switch.Reflections]) ?: PicturePreset.of(switches)?.reflections ?: Mid
     }
 }

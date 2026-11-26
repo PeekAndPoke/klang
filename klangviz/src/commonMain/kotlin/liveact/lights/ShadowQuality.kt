@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact.lights
 
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 
@@ -28,7 +29,10 @@ enum class ShadowQuality(val word: String, val mapSize: Int, val innerCasts: Boo
         /** The quality named [word] (`low`); null for any other word. */
         fun named(word: String?): ShadowQuality? = entries.firstOrNull { it.word == word }
 
-        /** The quality the address asks for (`?shadows=low`); [High], the shadows as they were made, without it. */
-        fun of(switches: Switches): ShadowQuality = named(switches[Switch.Shadows]) ?: High
+        /**
+         * The quality the address asks for (`?shadows=low`); without it (or with a word that names none) the
+         * quality's (`?quality=`, [PicturePreset]); else [High], the shadows as they were made.
+         */
+        fun of(switches: Switches): ShadowQuality = named(switches[Switch.Shadows]) ?: PicturePreset.of(switches)?.shadows ?: High
     }
 }

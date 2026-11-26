@@ -6,8 +6,7 @@
 package io.peekandpoke.klang.notstrom
 
 import io.peekandpoke.klang.apps.common.FrameStats
-import io.peekandpoke.klang.viz.liveact.stage.FogQuality
-import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.js.Date
@@ -20,8 +19,8 @@ import kotlin.js.Date
  * [version]: the test's ([TEST_VERSION]); [at]: when it was measured, in milliseconds since 1970; [ratio], [width]
  * and [height]: what it was measured on (the device's pixels for each of the page's, and the screen's size in the
  * page's pixels); [voices]: the safe voices the sound test found; [fps] and [slowestMs]: the frame stats of the
- * picture test's first part (the score's picture half); [oversample] and [fog]: what the test chose ([fog] by its
- * word, `low`).
+ * picture test's first part (the score's picture half); [quality]: the picture's quality the test chose, a
+ * [PicturePreset] by its word (`medium`; KLANG-00492, before that the oversampling and the fog).
  *
  * The names in the stored text are fixed ([SerialName]): a field renamed in the code keeps reading what was kept.
  */
@@ -36,24 +35,22 @@ data class StoredTest(
     @SerialName("voices") val voices: Int,
     @SerialName("fps") val fps: Double,
     @SerialName("slowestMs") val slowestMs: Double,
-    @SerialName("oversample") val oversample: Int,
-    @SerialName("fog") val fog: String,
+    @SerialName("quality") val quality: String,
 ) {
     /** The frame stats the result screen shows. */
     val frames: FrameStats get() = FrameStats(fps = fps, slowestMs = slowestMs)
 
-    /** The fog the test chose; null where the word names none. */
-    val fogQuality: FogQuality? get() = FogQuality.named(fog)
+    /** The picture's quality the test chose; null where the word names none. */
+    val preset: PicturePreset? get() = PicturePreset.named(quality)
 
     /**
      * Whether this result counts for the machine as it is now: measured by this [TEST_VERSION], on a display of the
-     * same [ratio] and screen size ([width] by [height]), and holding what the test may choose (a fog of
-     * [FOG_CHOICES], an oversampling of [OVERSAMPLE_CHOICES]). Otherwise the test runs again, and its result takes
-     * this one's place.
+     * same [ratio] and screen size ([width] by [height]), and holding what the test may choose (a preset of
+     * [QUALITY_CHOICES]). Otherwise the test runs again, and its result takes this one's place.
      */
     fun fits(ratio: Double, width: Int, height: Int): Boolean =
         version == TEST_VERSION && this.ratio == ratio && this.width == width && this.height == height &&
-            fogQuality in FOG_CHOICES && oversample in OVERSAMPLE_CHOICES
+            preset in QUALITY_CHOICES
 
     companion object {
         /**
@@ -61,24 +58,23 @@ data class StoredTest(
          * is measured, how it is judged, a heavier stage): every kept result then counts no more, and each visitor's
          * machine is tested anew. Not the release's name: every deploy would test again. 3 since 2026-11-20: three
          * fog qualities, and a kept `high` meant twelve sheets, now eight. 4 since 2026-11-20: the mirror floor's
-         * reflections no longer go with the fog ([ReflectionQuality], on unless a visitor turns them off), so the
+         * reflections no longer go with the fog (`ReflectionQuality`, on unless a visitor turns them off), so the
          * test's fog part, at low, now draws the new look's mirror as well, which it did not before; a kept result
          * chose its fog on a lighter stage than the show now draws there. 5 since 2026-11-26: half the fog's sheets
-         * (KLANG-00484: low two, high four), so a kept choice was made on a heavier fog than the show now draws.
+         * (KLANG-00484: low two, high four), so a kept choice was made on a heavier fog than the show now draws. 6
+         * since 2026-11-26: the test chooses the picture's quality as a whole (KLANG-00492), kept as `quality` in
+         * place of the oversampling and the fog.
          */
-        const val TEST_VERSION = 5
+        const val TEST_VERSION = 6
 
         /** Where the browser keeps it. */
         const val STORAGE_KEY = "notstrom.machine-test"
 
         /**
-         * The fogs the machine test chooses from, fewest sheets first: its first part draws the last, its fog part the
-         * first. No fog is the visitor's choice, never the test's.
+         * The picture's qualities the machine test chooses from ([presetFor]): its first part draws [PicturePreset.Medium],
+         * its second [PicturePreset.High]. [PicturePreset.Max] is the visitor's choice, never the test's.
          */
-        val FOG_CHOICES: List<FogQuality> = listOf(FogQuality.Low, FogQuality.High)
-
-        /** The oversampling the machine test chooses from: 0.5x and 4x are the visitor's choices, never the test's. */
-        val OVERSAMPLE_CHOICES: List<Int> = listOf(1, 2)
+        val QUALITY_CHOICES: List<PicturePreset> = listOf(PicturePreset.Low, PicturePreset.Medium, PicturePreset.High)
     }
 }
 

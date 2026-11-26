@@ -6,14 +6,15 @@
 package io.peekandpoke.klang.notstrom
 
 import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.apps.common.PictureQuality
 import io.peekandpoke.klang.apps.common.Song
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import io.peekandpoke.klang.viz.liveact.Score
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.scores.KOKON
 import io.peekandpoke.klang.viz.liveact.scores.NOCH_SELTSAMERE_DINGE
-import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
 
 /** One song of the show's programme: the built-in [song], and the [score] its band plays it by. */
@@ -57,9 +58,9 @@ fun tempoLine(song: Song): String = "${song.rpm} rpm"
  * can remove the ?hud option."). The former `?hud` names nothing now: it is handed on as a word the live act does not
  * know, and shows no line.
  *
- * [oversample]: the oversampling the machine's test chose (`oversample=2`); the address's own `?oversample=` wins.
- * [fog]: the fog the machine's test chose (`fog=low`; high, the live act's own, sets nothing); the address's own
- * `?fog=` or `?nofog` wins ([setsFog]).
+ * [quality]: the picture's quality the machine's test chose (`quality=high`; medium, the live act's own, sets
+ * nothing); the address's own `?quality=` wins ([setsQuality]), and its switch of one of the settings (`?fog=low`,
+ * `?oversample=4`, ...) wins over either in the live act.
  * The look is the new one (`look=new`: the fence, the mirror floor, the haze giving way to the shadows, Sirene's eyes in
  * her shadow, the lacquer, the drifting world; the maintainer, 2026-11-20: "please make the new look the default look in
  * notstrom"), unless the address sets `?look=` itself ([setsLook]; `?look=today` gives the look as it was made). The key
@@ -77,8 +78,7 @@ fun tempoLine(song: Song): String = "${song.rpm} rpm"
 fun showSwitches(
     query: String,
     strobe: Boolean,
-    oversample: Int = 1,
-    fog: FogQuality = FogQuality.High,
+    quality: PicturePreset = PicturePreset.Medium,
     frozenAt: Double? = null,
     opens: Boolean = true,
 ): Switches {
@@ -86,13 +86,12 @@ fun showSwitches(
     val hud = parts.any { it.substringBefore("=") == DEV }
     // what the app decides is set below or not handed on; the address's others are handed on
     val others = parts.filter { it.substringBefore("=") !in APP_SWITCHES }
-    // the oversampling the test chose, unless the address sets it by hand
-    val byHand = others.any { it.substringBefore("=") == Switch.Oversample.key }
+    // the picture's quality the test chose, unless the address sets it by hand; the address's own switch of one of
+    // its settings (`?fog=low`) wins over it in the live act
     val all = others + listOfNotNull(
         Switch.NoStrobe.key.takeUnless { strobe },
         Switch.NoHud.key.takeUnless { hud },
-        "${Switch.Oversample.key}=$oversample".takeUnless { byHand || oversample <= 1 },
-        "${Switch.Fog.key}=${fog.word}".takeUnless { setsFog(query) || fog == FogQuality.High },
+        "${Switch.Quality.key}=${quality.word}".takeUnless { setsQuality(query) || quality == PicturePreset.Medium },
         "${Switch.Look.key}=$NEW_LOOK".takeUnless { setsLook(query) },
         "${Switch.Opening.key}=$OPENING".takeUnless { setsOpening(query) || frozenAt != null || !opens },
         frozenAt?.let { "${Switch.Time.key}=$it" },
@@ -168,27 +167,37 @@ const val OPENING = "night"
 /** Whether the address sets the opening itself (`?opening=off`, `?opening=night`): it wins over notstrom's own. */
 fun setsOpening(query: String): Boolean = query.keys().any { it == Switch.Opening.key }
 
-/** Whether the address sets the fog by hand (`?fog=low`, or `?nofog`): it wins over the test's choice. */
+/** Whether the address sets the fog by hand (`?fog=low`, or `?nofog`). */
 fun setsFog(query: String): Boolean = query.keys().any { it == Switch.Fog.key || it == Switch.NoFog.key }
 
-/**
- * The picture's quality the show starts with, in one short line for the tests' result: the [oversample] and the
- * [fog] the test chose, or, where the address of [query] sets either, that it does.
- */
-fun qualityLine(query: String, oversample: Int, fog: FogQuality): String {
-    val oversampling = setsOversample(query)
-    val fogged = setsFog(query)
-    val picture = when {
-        oversample > 1 -> "high (${oversample}x oversampling)"
-        else -> "standard"
-    }
+/** Whether the address sets the picture's quality as a whole by hand (`?quality=low`): it wins over the test's choice. */
+fun setsQuality(query: String): Boolean = query.keys().any { it == Switch.Quality.key }
 
-    return when {
-        oversampling && fogged -> "Picture quality: as the address sets it (oversampling and fog)."
-        oversampling -> "Picture quality: oversampling as the address sets it, fog ${fog.word}."
-        fogged -> "Picture quality: $picture, fog as the address sets it."
-        else -> "Picture quality: $picture, fog ${fog.word}."
-    }
+/**
+ * Whether the address sets any of the picture's quality by hand: the whole (`?quality=`), or one of its settings (the
+ * oversampling, the fog, the shadows, the reflections).
+ */
+fun setsPicture(query: String): Boolean = setsQuality(query) || setsOversample(query) || setsFog(query) ||
+    query.keys().any { it == Switch.Shadows.key || it == Switch.Reflections.key }
+
+/**
+ * The picture's quality the show starts with, in one short line for the tests' result: the [preset] the test chose,
+ * or, where the address of [query] sets any of the picture's quality, that it does.
+ */
+fun qualityLine(query: String, preset: PicturePreset): String =
+    if (setsPicture(query)) "Picture quality: as the address sets it." else "Picture quality: ${preset.word}."
+
+/**
+ * The picture's quality the machine test chooses ([StoredTest.QUALITY_CHOICES]): [PicturePreset.High] where its 2x part
+ * holds (as [PictureQuality.oversampleFor] judges 2x, with [fps1x], [fps2x] and the display's [density]), else
+ * [PicturePreset.Medium] where its first part, the medium picture at 1x, holds [PictureQuality.HOLD_FPS], else
+ * [PicturePreset.Low]. A rate that is no number holds nothing.
+ */
+fun presetFor(fps1x: Double, fps2x: Double?, density: Double): PicturePreset = when {
+    fps1x >= PictureQuality.HOLD_FPS && PictureQuality.oversampleFor(fps1x = fps1x, fps2x = fps2x, density = density) >= 2 ->
+        PicturePreset.High
+    fps1x >= PictureQuality.HOLD_FPS -> PicturePreset.Medium
+    else -> PicturePreset.Low
 }
 
 /** The switches' names in a page's address. */

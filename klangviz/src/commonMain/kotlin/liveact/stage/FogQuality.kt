@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact.stage
 
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import kotlin.math.pow
@@ -51,9 +52,10 @@ enum class FogQuality(val layers: Int, val word: String, val cols: Int, val rows
 
         /**
          * The quality the address asks for: `?fog=off`, `low` or `high` (a word of [FogQuality]), else `?nofog`
-         * [Off], else [High] (also for a word that names none, the former `medium` and `xhigh` among them).
+         * [Off], else the quality's (`?quality=`, [PicturePreset]), else [High] (also for a word that names none, the
+         * former `medium` and `xhigh` among them).
          */
         fun of(switches: Switches): FogQuality = named(switches[Switch.Fog])
-            ?: if (switches.has(Switch.NoFog)) Off else High
+            ?: if (switches.has(Switch.NoFog)) Off else PicturePreset.of(switches)?.fog ?: High
     }
 }

@@ -255,10 +255,19 @@ fun FlowContent.soundTest(progress: KlangBenchmark.Progress?) {
     bodyText { +"How many voices this machine's engine renders in time." }
 }
 
-/** The picture test as it runs, [tenths] of it done (0 to 10): the stage is drawn behind this screen, not seen. */
-fun FlowContent.pictureTest(tenths: Int) {
+/**
+ * The picture test as it runs, [tenths] of it done (0 to 10): the stage is drawn behind this screen, not seen. Where
+ * it is [paused] (the window lost the focus, or the page is hidden: nothing is drawn then), it says so and how to go on.
+ */
+fun FlowContent.pictureTest(tenths: Int, paused: Boolean) {
     leadLine("Checking the picture")
-    bodyText { +"How fast this machine draws the stage, for a few seconds." }
+    bodyText {
+        +if (paused) {
+            "Paused while this window is in the background. Click here to go on."
+        } else {
+            "How fast this machine draws the stage, for a few seconds."
+        }
+    }
     progressBar(share = tenths / 10.0)
 }
 

@@ -11,10 +11,18 @@ import io.kotest.matchers.shouldBe
 class FrameStatsSpec : StringSpec({
 
     "the frame rate comes from the median frame, so a few slow frames do not decide it" {
-        val stats = FrameStats.of(listOf(20.0, 20.0, 400.0, 20.0, 25.0))
+        val stats = FrameStats.of(listOf(20.0, 20.0, 150.0, 20.0, 25.0))
 
         stats.fps shouldBe 50.0
-        stats.slowestMs shouldBe 400.0
+        stats.slowestMs shouldBe 150.0
+    }
+
+    "a frame longer than eight medians is an outlier: left out of the slowest" {
+        // the median is 20 ms: 160 is the longest that still counts, 400 and a hundred seconds do not
+        FrameStats.of(listOf(20.0, 20.0, 400.0, 20.0, 160.0, 100_000.0, 25.0)).slowestMs shouldBe 160.0
+        FrameStats.of(listOf(20.0, 20.0, 400.0, 20.0, 25.0)).slowestMs shouldBe 25.0
+        FrameStats.of(listOf(20.0, 20.0, 160.1, 20.0, 25.0)).slowestMs shouldBe 25.0
+        FrameStats.of(listOf(20.0)).slowestMs shouldBe 20.0
     }
 
     "an even number of frames takes the middle two" {

@@ -8,6 +8,7 @@ package io.peekandpoke.klang.notstrom
 import io.peekandpoke.klang.apps.common.Song
 import io.peekandpoke.klang.viz.liveact.Oversampling
 import io.peekandpoke.klang.viz.liveact.Picture
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import io.peekandpoke.klang.viz.liveact.lights.ShadowQuality
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import io.peekandpoke.klang.viz.liveact.stage.LookFlip
@@ -74,13 +75,14 @@ fun Tag.ShowDrawer(
  * stage brings it, another tap on the stage hides it (that tap does nothing else in the show), taps in the drawer
  * keep it, and it goes by itself 10 s after the last touch on it, so a drawer left open does not stay over the show.
  * Mouse and touch are told apart by the pointer events' kind: a tap also sends the browser's emulated mouse events,
- * which would hold the drawer for ever as a mouse resting on it. It holds two rows (and with `?dev` the look, below).
+ * which would hold the drawer for ever as a mouse resting on it. It holds its rows (and with `?dev` the look, below).
  *
- * The first is the picture: the live act's oversampling, its steps (0.5x to 4x) with the one in use marked, the fog
- * on the floor, its qualities (off, low, high) likewise, the lamps' shadows (low, high), and the mirror floor's
- * reflections (off, low, mid, high), each following the real
- * state (the test's choice, the keys o and g, the live act's own step down), where a choice is the visitor's and
- * holds ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
+ * The first is the picture: its quality as a whole, the four presets ([PicturePreset], KLANG-00492), the one the
+ * settings make marked, else "Custom" lit (shown, not chosen); then the live act's oversampling, its steps (0.5x to
+ * 4x) with the one in use marked, the fog on the floor, its qualities (off, low, high) likewise, the lamps' shadows
+ * (low, high), and the mirror floor's reflections (off, low, mid, high), each following the real state (the test's
+ * choice, the keys o and g, the live act's own step down), where a choice is the visitor's and holds
+ * ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
  * nothing while it is hidden).
  * Before them the song: its title and its tempo ([Props.song], [tempoLine]) between "Previous song" and "Next song"
  * ([Props.onPrevious], [Props.onNext]: the show of the other song begins; KLANG-00481).
@@ -349,6 +351,29 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 }
 
                 plainButton(text = "Next song", primary = false) { props.onNext() }
+            }
+
+            // the picture's quality as a whole: a preset, or custom where the settings below are none of them
+            row {
+                group {
+                    +"Quality"
+
+                    val preset = PicturePreset.matching(samples = samples, fog = fog, shadows = shadows, reflections = reflections)
+
+                    for (each in PicturePreset.entries) {
+                        plainButton(text = presetLabel(each), primary = each == preset) { props.picture.choosePreset(each) }
+                    }
+
+                    // custom is not chosen: it is what the settings below make where they are no preset
+                    span {
+                        css {
+                            put("padding", "0 0.5em")
+                            put("white-space", "nowrap")
+                            put("color", if (preset == null) "#d7dbe6" else "#5c6478")
+                        }
+                        +"Custom"
+                    }
+                }
             }
 
             // the picture
@@ -639,6 +664,14 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
     private fun shadowsLabel(quality: ShadowQuality): String = when (quality) {
         ShadowQuality.Low -> "Low"
         ShadowQuality.High -> "High"
+    }
+
+    /** A preset's label on its button: `Low`, `Medium`, `High`, `Max`. */
+    private fun presetLabel(preset: PicturePreset): String = when (preset) {
+        PicturePreset.Low -> "Low"
+        PicturePreset.Medium -> "Medium"
+        PicturePreset.High -> "High"
+        PicturePreset.Max -> "Max"
     }
 
     /** The reflections' label on their button: `Off`, `Low`, `Mid`, `High`. */

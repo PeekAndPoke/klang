@@ -8,9 +8,9 @@ package io.peekandpoke.klang.notstrom
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.apps.common.BuiltInSongs
+import io.peekandpoke.klang.viz.liveact.PicturePreset
 import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
-import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
 
 class ShowHelpersSpec : StringSpec({
@@ -82,12 +82,33 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "?notest&dev", strobe = true) shouldBe Switches.parse("look=new&opening=night")
     }
 
-    "the test's oversampling is handed on, unless the address sets it by hand; 1 sets nothing" {
-        showSwitches(query = "", strobe = true, oversample = 2)[Switch.Oversample] shouldBe "2"
-        showSwitches(query = "", strobe = true, oversample = 1).has(Switch.Oversample) shouldBe false
-        showSwitches(query = "?oversample=4", strobe = true, oversample = 2)[Switch.Oversample] shouldBe "4"
+    "the test's picture quality is handed on, unless the address sets it by hand; medium sets nothing" {
+        showSwitches(query = "", strobe = true, quality = PicturePreset.High)[Switch.Quality] shouldBe "high"
+        showSwitches(query = "", strobe = true, quality = PicturePreset.Low)[Switch.Quality] shouldBe "low"
+        showSwitches(query = "", strobe = true, quality = PicturePreset.Medium).has(Switch.Quality) shouldBe false
+        showSwitches(query = "?quality=max", strobe = true, quality = PicturePreset.Low)[Switch.Quality] shouldBe "max"
+        // one setting of the address is handed on beside the test's quality, and wins over it in the live act
+        val both = showSwitches(query = "?oversample=4", strobe = true, quality = PicturePreset.High)
+
+        both[Switch.Oversample] shouldBe "4"
+        both[Switch.Quality] shouldBe "high"
         setsOversample("?seed=1&oversample=1") shouldBe true
         setsOversample("?seed=1") shouldBe false
+        setsQuality("?quality=low") shouldBe true
+        setsQuality("?qualityx=low") shouldBe false
+    }
+
+    "the machine test's choice: high where its 2x part holds, medium where its 1x part holds 55, else low" {
+        presetFor(fps1x = 60.0, fps2x = 60.0, density = 1.0) shouldBe PicturePreset.High
+        presetFor(fps1x = 60.0, fps2x = 40.0, density = 1.0) shouldBe PicturePreset.Medium
+        presetFor(fps1x = 60.0, fps2x = null, density = 1.0) shouldBe PicturePreset.Medium
+        // a dense display never gets 2x: medium where 1x holds
+        presetFor(fps1x = 60.0, fps2x = 60.0, density = 2.0) shouldBe PicturePreset.Medium
+        presetFor(fps1x = 55.0, fps2x = null, density = 2.0) shouldBe PicturePreset.Medium
+        presetFor(fps1x = 54.9, fps2x = null, density = 1.0) shouldBe PicturePreset.Low
+        presetFor(fps1x = Double.NaN, fps2x = null, density = 1.0) shouldBe PicturePreset.Low
+        // a 2x rate that holds is no high where 1x did not (the flow never measures it so, but the rule holds anyway)
+        presetFor(fps1x = 40.0, fps2x = 60.0, density = 1.0) shouldBe PicturePreset.Low
     }
 
     "the address's frozen time is not taken; the app's is" {
@@ -101,11 +122,9 @@ class ShowHelpersSpec : StringSpec({
         showSeed(switches = Switches(), random = Random(5)) shouldBe Random(5).nextInt(100_000)
     }
 
-    "the test's fog is handed on, unless the address sets it (fog= or nofog); high sets nothing" {
-        showSwitches(query = "", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "low"
-        showSwitches(query = "", strobe = true, fog = FogQuality.High).has(Switch.Fog) shouldBe false
-        showSwitches(query = "?fog=off", strobe = true, fog = FogQuality.Low)[Switch.Fog] shouldBe "off"
-        showSwitches(query = "?nofog", strobe = true, fog = FogQuality.Low) shouldBe Switches.parse("nofog&nohud&look=new&opening=night")
+    "the address's fog is handed on beside the test's quality (fog= or nofog), and wins over it in the live act" {
+        showSwitches(query = "?fog=off", strobe = true, quality = PicturePreset.Low)[Switch.Fog] shouldBe "off"
+        showSwitches(query = "?nofog", strobe = true) shouldBe Switches.parse("nofog&nohud&look=new&opening=night")
         setsFog("?seed=1&fog=low") shouldBe true
         setsFog("?nofog") shouldBe true
         setsFog("?foggy&seed=1") shouldBe false
@@ -144,26 +163,21 @@ class ShowHelpersSpec : StringSpec({
     }
 
     "the address's shadows are carried into the show; the test chooses none" {
-        showSwitches(query = "?shadows=low", strobe = true, fog = FogQuality.Low)[Switch.Shadows] shouldBe "low"
-        showSwitches(query = "", strobe = true, fog = FogQuality.Low).has(Switch.Shadows) shouldBe false
+        showSwitches(query = "?shadows=low", strobe = true, quality = PicturePreset.High)[Switch.Shadows] shouldBe "low"
+        showSwitches(query = "", strobe = true, quality = PicturePreset.Low).has(Switch.Shadows) shouldBe false
     }
 
-    "the address's reflections are carried into the show; the test chooses none, whatever fog it chose" {
-        showSwitches(query = "?reflections=off", strobe = true, fog = FogQuality.Low)[Switch.Reflections] shouldBe "off"
-        showSwitches(query = "", strobe = true, fog = FogQuality.Low).has(Switch.Reflections) shouldBe false
-        showSwitches(query = "", strobe = true, fog = FogQuality.High).has(Switch.Reflections) shouldBe false
+    "the address's reflections are carried into the show; the test's quality sets them only through the quality" {
+        showSwitches(query = "?reflections=off", strobe = true, quality = PicturePreset.High)[Switch.Reflections] shouldBe "off"
+        showSwitches(query = "", strobe = true, quality = PicturePreset.Low).has(Switch.Reflections) shouldBe false
     }
 
-    "the result's line says the oversampling and the fog, or which of them the address sets" {
-        qualityLine(query = "", oversample = 1, fog = FogQuality.Low) shouldBe "Picture quality: standard, fog low."
-        qualityLine(query = "?seed=2", oversample = 2, fog = FogQuality.High) shouldBe
-            "Picture quality: high (2x oversampling), fog high."
-        qualityLine(query = "?oversample=4", oversample = 2, fog = FogQuality.High) shouldBe
-            "Picture quality: oversampling as the address sets it, fog high."
-        qualityLine(query = "?nofog", oversample = 2, fog = FogQuality.Low) shouldBe
-            "Picture quality: high (2x oversampling), fog as the address sets it."
-        qualityLine(query = "?fog=low&oversample=1", oversample = 1, fog = FogQuality.Low) shouldBe
-            "Picture quality: as the address sets it (oversampling and fog)."
+    "the result's line says the picture's quality the test chose, or that the address sets it" {
+        qualityLine(query = "", preset = PicturePreset.Low) shouldBe "Picture quality: low."
+        qualityLine(query = "?seed=2", preset = PicturePreset.High) shouldBe "Picture quality: high."
+        for (query in listOf("?quality=max", "?oversample=4", "?nofog", "?fog=low", "?shadows=low", "?reflections=high")) {
+            qualityLine(query = query, preset = PicturePreset.Medium) shouldBe "Picture quality: as the address sets it."
+        }
     }
 
     "the new look is notstrom's own, and an address that sets the look wins" {
