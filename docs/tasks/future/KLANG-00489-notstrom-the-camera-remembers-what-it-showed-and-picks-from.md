@@ -28,6 +28,16 @@ rounds: a flight of the round right after one of hers is possible too.
   second asking would find changed (the looks already carry such a plan from one asking to the next, `LookPlan`).
 - In Kokon few have room for an arc (`arcHasRoom`): what cannot be shown must not block the list.
 
+## One more move, noted with it (the maintainer, 2026-11-26)
+
+"We could also have another angle that arcs around the back of the crowd pointing at the stage. Different starting
+and end positions each time."
+
+A new kind of round beside the five: the camera goes along an arc behind the audience, looking at the stage, and
+where the arc begins and ends is drawn anew each time (from the seed and the round, as every choice is). It gives
+the list above one more thing to pick from. To decide then: how high and how far back (the mixing desk's flight
+already ends out there), and whether it is flown to or cut to.
+
 ## The work
 
 Not planned yet.
@@ -38,4 +48,4 @@ Not planned yet.
 
 ## History
 
-- 2026-11-26: created from the maintainer's words.
+- 2026-11-26: created from the maintainer's words; the arc behind the crowd added the same day.
