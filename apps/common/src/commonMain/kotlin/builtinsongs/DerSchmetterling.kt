@@ -612,7 +612,7 @@ export song = stack(
     .mul(4.60)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   ))
-).early(128)
+)
 
 
     """,
