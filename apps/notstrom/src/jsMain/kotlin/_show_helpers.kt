@@ -12,6 +12,7 @@ import io.peekandpoke.klang.viz.liveact.Switch
 import io.peekandpoke.klang.viz.liveact.Switches
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.scores.KOKON
+import io.peekandpoke.klang.viz.liveact.scores.NOCH_SELTSAMERE_DINGE
 import io.peekandpoke.klang.viz.liveact.stage.FogQuality
 import kotlin.random.Random
 
@@ -28,6 +29,7 @@ data class Programmed(val song: Song, val score: Score)
 val PROGRAMME: List<Programmed> = listOf(
     Programmed(song = BuiltInSongs.derSchmetterling, score = DER_SCHMETTERLING),
     Programmed(song = BuiltInSongs.kokon, score = KOKON),
+    Programmed(song = BuiltInSongs.nochSeltsamereDinge, score = NOCH_SELTSAMERE_DINGE),
 )
 
 /**

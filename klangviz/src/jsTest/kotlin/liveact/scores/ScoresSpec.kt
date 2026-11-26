@@ -21,7 +21,11 @@ import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_LATE_LEAST
 import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_MEET
 
 /** Every song's score. */
-private val SCORES = mapOf("Der Schmetterling" to DER_SCHMETTERLING, "Kokon" to KOKON)
+private val SCORES = mapOf(
+    "Der Schmetterling" to DER_SCHMETTERLING,
+    "Kokon" to KOKON,
+    "Noch seltsamere Dinge" to NOCH_SELTSAMERE_DINGE,
+)
 
 /**
  * What the band needs of a score: a check for the future, for whoever writes a score. Each one casts the whole band

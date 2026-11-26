@@ -24,8 +24,12 @@ class ShowHelpersSpec : StringSpec({
         stepSong(now = 4, by = 1, songs = 0) shouldBe 0
     }
 
-    "the programme opens with Der Schmetterling and has Kokon after it, each with a score" {
-        PROGRAMME.map { it.song.title } shouldBe listOf(BuiltInSongs.derSchmetterling.title, BuiltInSongs.kokon.title)
+    "the programme opens with Der Schmetterling, then Kokon and Noch seltsamere Dinge, each with a score" {
+        PROGRAMME.map { it.song.title } shouldBe listOf(
+            BuiltInSongs.derSchmetterling.title,
+            BuiltInSongs.kokon.title,
+            BuiltInSongs.nochSeltsamereDinge.title,
+        )
         SHOW_SCORE shouldBe PROGRAMME.first().score
     }
 
