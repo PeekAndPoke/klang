@@ -177,11 +177,12 @@ let bassSnd = (() => {
 // a fifth up towards the end of each cycle.
 export bass_pat = `<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2 d1 c1 d1]>/4`
 
-export bass = note(bass_pat).struct("x!4").slow(16).ply(32)
+export bass = note(bass_pat).slow(16)
+  .ply("<2 4 8 16>")
   .transpose("<[0 0 0 0 0 0 12 0] [0 0 0 0 0 7 12 0]>")
   .sound(bassSnd).velocity("1.0 0.80 0.90 0.80 0.95 0.80 0.90 0.85")
   .adsr(0.003, 5.00, 0.00, 0.015).clip(0.80).hpf(35)
-  .gain(0.38).pan(0.5)
+  .gain(0.18).pan(0.5)
   .cylinder(4).tag("bass")
 
 // Drums  -----------------------------------------------------------------------------------------------------------------
@@ -248,11 +249,11 @@ export kick = sound(kick_pat).apply(drumTime)
 
 export snare = sound(snare_pat).apply(drumTime)
   .sound(metalSnare).adsrOff().freq(snareHz).gain(0.50).pan(0.55)
-  .degrade(0.01).lpf(12800)
+  .degrade(0.01).lpf(13500)
   .cylinder(6).tag("snare")
 
 export hats = sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
-  .cylinder(5).gain(0.5).pan(0.40).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).lpf(13500).late(0.001)
+  .cylinder(5).gain(0.5).pan(0.40).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).lpf(15000).late(0.001)
   .tag("hats")
 
 // Claps  -----------------------------------------------------------------------------------------------------------------
@@ -295,10 +296,11 @@ export song = stack(
   , // Master
   master(Katalyst(k => k.oversampleAtLeast(4, r => r
     .reverb(0.10, 9, 6500)
+    .mul(0.80)
     .bands(b => b
-      .band(low => low.distort(0.01, "soft").mul(1.00)).cut(150)
+      .band(low => low.mul(1.00)).cut(150)
       .band(mid => mid.distort(0.15, "soft").mul(0.85)).cut(5000)
-      .band(low => low.distort(0.01, "soft").mul(1.00))
+      .band(low => low.mul(1.00))
     ) // the glue on the mids only: the kick and the hats stay clean
     .mul(3.2)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)

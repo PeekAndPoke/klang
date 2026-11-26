@@ -537,8 +537,8 @@ export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat =
   `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
-export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.18).pan(0.575)
-  .lpf("13500".add(perlin(0, 500).slow(4)))
+export snare_shape = x => x.sound(metalSnare).adsrOff().freq(pure(snareHz).add(perlin(-2, 2)))
+  .gain(0.21).pan(0.575).hpf(120).lpf(13500)
 export snare_arrange = x => x.cylinder(7).mute("<0!160 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
