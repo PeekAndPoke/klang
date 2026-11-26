@@ -548,7 +548,7 @@ export hats_pat =
     [cr hh cr hh]!24 
     [cr rd ~ rd] [~ rd ~ rd]!15 [cr rd ~ rd] [~ rd ~ rd]!15>`
 export hats_shape = x => x.gain(0.17).pan(0.425)
-  .hpf(650).lpf(freq = "15000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 2.0)
+  .hpf(650).lpf(freq = "15000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 3.0)
 export hats_arrange = x => x.cylinder(8).mute("<0!160 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
