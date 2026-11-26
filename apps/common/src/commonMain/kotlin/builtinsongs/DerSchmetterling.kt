@@ -21,7 +21,7 @@ import * from "sprudel"
 // Song Status: Upcoming Garage Band ...
 
 let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
-let transposition =   -3    // -1 .. D# | 0 .. E | 1 .. F
+let transposition =   -2    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  220    // Where does the snare cut through?
 
@@ -298,8 +298,8 @@ export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).ad
 export lead_arrange = x => x.cylinder(0) //  .mute()
   .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.21))
   .velocity("<1.1 0.95 1.00 0.95>*4")
-  .shuffle("<1!64  1!17 4!14 1!1 1!32  1!7 4!8 1!1  1!64>")
-  .mute(   "<1!64  0!32          1!32  0!32         1!64>")
+  .shuffle("<1!64  1!17 4!14 1!1 1!64  1!7 4!8 1!1  1!64>")
+  .mute(   "<1!64  0!32          1!64  0!32         1!64>")
   .late(berlin(0.0015, 0.0035).mul(drunk).fast(8))
 
 export lead = n(lead_pat).apply(lead_shape).tag("lead")
@@ -328,7 +328,7 @@ let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
 
 export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
   .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
-  .mute("<0!128 1!64 0!32>")
+  .mute("<0!160 1!64 0!32>")
   .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
 
 export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
@@ -357,7 +357,7 @@ let rhythmBus = x => x.cylinder(2).katalyst(rhythmAmp)
   .katp("gain.gain", 0.32)
 
 export guitar2_arrange = x => x.apply(rhythmBus)  // . solo()
-  .scale("<e2:minor>").mute("<0!128 1!16 0!16>") // .mute()
+  .scale("<e2:minor>").mute("<0!160 1!16 0!16>") // .mute()
   .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
 
 export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
@@ -376,7 +376,7 @@ export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
   .clip(guitarClip(3).fast(2)).pan(0.10).superimpose(pan(0.90))
 
 export guitar3_arrange = x => x.apply(rhythmBus) //  . solo()
-  .scale("<e2:minor>").mute("<0!128 1!16 0!16>") //.mute()
+  .scale("<e2:minor>").mute("<0!160 1!16 0!16>") //.mute()
   .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
 
 export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
@@ -393,7 +393,7 @@ export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bassSnd
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
 export bass_arrange = x => x.cylinder(4) // . mute()
-  .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!128 1!32>")
+  .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!160 1!32>")
   .pan(0.5).clip("<[0.80 0.70 0.65 0.70]>*4".sub(perlin(0.0, 0.1).slow(8)))
   .late(berlin(0.0005, 0.0010).mul(drunk).seg(4))
 
@@ -446,7 +446,7 @@ export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
 
 export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
   .scale("e5:minor").gain(0.05)
-  .mute("<1!96 0!32 1!96  0!32 1!64 0!32 1!96>")                          
+  .mute("<1!96 0!32 1!96  0!32 1!96 0!32 1!96>")                          
 
 export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
 
@@ -532,22 +532,24 @@ let metalSnare = (() => {
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
 export kick_shape = x => x.sound(metalKick).adsrOff().note("e1").transpose(transposition).gain(0.33).velocity("0.98 0.94 0.96 0.94").pan(0.5)
-export kick_arrange = x => x.cylinder(6).mute("<0!128 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
+export kick_arrange = x => x.cylinder(6).mute("<0!160 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
 export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 
 export snare_pat =
   `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
 export snare_shape = x => x.sound(metalSnare).adsrOff().freq(snareHz).gain(0.18).pan(0.575)
-  .lpf("13000".add(perlin(0, 500).slow(4)))
-export snare_arrange = x => x.cylinder(7).mute("<0!128 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
+  .lpf("13500".add(perlin(0, 500).slow(4)))
+export snare_arrange = x => x.cylinder(7).mute("<0!160 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
 export hats_pat =
   `<[cr hh!3] [hh!4]!7 [cr hh!3] [hh!4]!5 [hh!4 ~!2 hh!4 ~!2]!2  
-    [hh hh oh hh]!24 [cr hh cr hh]!24 [~ rd ~ rd]!32>`
+    [cr hh oh hh] [hh hh oh hh]!7 [cr hh oh hh] [hh hh oh hh]!7 [cr hh oh hh] [hh hh oh hh]!7
+    [cr hh cr hh]!24 
+    [cr rd ~ rd] [~ rd ~ rd]!15 [cr rd ~ rd] [~ rd ~ rd]!15>`
 export hats_shape = x => x.gain(0.17).pan(0.425)
-  .hpf(650).lpf(freq = "14000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 2.0)
-export hats_arrange = x => x.cylinder(8).mute("<0!128 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
+  .hpf(650).lpf(freq = "15000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 2.0)
+export hats_arrange = x => x.cylinder(8).mute("<0!160 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
 export shaker_pat = `<white ~ white ~ white ~ white ~ white ~ white>*8`
@@ -589,7 +591,7 @@ export song_body = stack(
     hats.apply(hats_arrange),     // .solo() .mute()
     shaker.apply(shaker_arrange)  // .solo() .mute()
   ).analog(feel).reverb(wet = 0.25, size = 4.0) //. solo() //  .mute()
-).seed(sineOfDay.mul(60 * 24 * 15).round()).shuffle("<1!80 2!48 1!112 2!32>")
+).seed(sineOfDay.mul(60 * 24 * 15).round()).shuffle("<1!80 2!80 1!112 2!32>")
 
 export song = stack(
   // Count-in: four open hats at half the song's hat speed
@@ -610,7 +612,7 @@ export song = stack(
     .mul(4.60)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   ))
-)
+).early(128)
 
 
     """,
