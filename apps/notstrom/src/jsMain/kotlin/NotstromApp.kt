@@ -66,6 +66,7 @@ import kotlinx.html.div
 import kotlinx.serialization.builtins.nullable
 import kotlin.js.Date
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("FunctionName")
 fun Tag.NotstromApp(query: String) = comp(
@@ -319,7 +320,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         checking = true
 
         scope.launch {
-            val addon = withTimeoutOrNull(DETECT_MS) { detected.await() }
+            val addon = withTimeoutOrNull(DETECT_MS.milliseconds) { detected.await() }
 
             checking = false
 
@@ -475,7 +476,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val music = PlayingMusic(song = reading.song, analyser = { player.getAnalyzer() }, listen = { transport })
 
         while ((stage.changes.now() ?: leaves) < leaves) {
-            delay(CHANGE_WAIT_MS)
+            delay(CHANGE_WAIT_MS.milliseconds)
         }
 
         if (running !== stage || !stage.changes.change(score = programmed.score, music = music, at = at)) {
@@ -813,7 +814,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         // up to STAND_MS for the band to stand (late figures are waited for that long); the warm-up and the measure
         // then run without that cap, as long as frames come
-        if (withTimeoutOrNull(STAND_MS) { stood.await() } != null) {
+        if (withTimeoutOrNull(STAND_MS.milliseconds) { stood.await() } != null) {
             measured.await()
         }
 
@@ -830,7 +831,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         // the song is compiled and the stage made once the screen of the click is out: both hold the page for a
         // moment, which would stop its fade halfway
         while (fading != null && fadeSince < OpeningFade.SCREEN_OUT) {
-            delay(SCREEN_WAIT_MS)
+            delay(SCREEN_WAIT_MS.milliseconds)
         }
 
         val programmed = PROGRAMME[playing]
@@ -887,7 +888,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
             // the figures load while the start screen still says that the show gets ready: where the band never stands,
             // the start screen says so instead of waiting for ever
-            delay(STAND_MS)
+            delay(STAND_MS.milliseconds)
 
             if (phase == Phase.Readying) {
                 stop(problem = FIGURES_FAILED)
@@ -908,7 +909,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val making = playerMaking ?: scope.async { makePlayer() }.also { playerMaking = it }
 
         val made = try {
-            withTimeout(PLAYER_MS) { making.await() }
+            withTimeout(PLAYER_MS.milliseconds) { making.await() }
         } catch (e: TimeoutCancellationException) {
             playerMaking = null
             giveUp(making)
