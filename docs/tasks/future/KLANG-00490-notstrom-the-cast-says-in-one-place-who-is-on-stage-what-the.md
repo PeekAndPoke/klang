@@ -24,6 +24,24 @@ has all it needs to be able to react to music events, start position etc."
   position, and whatever else the band reads for them today from other places.
 - An instrument says its note range where it has one (a guitar's lowest note, the marimba's).
 
+## A wider frame, a heads-up (the maintainer, 2026-11-26)
+
+"I think we need to design this even more broadly ... currently the Cast is bound to a song. We need to come to
+the point where the cast can change mid song or properties of one member... this would also make for smoother
+transitions between songs. This would also, in the long run, allow steering the band through patterns in the song
+or a separate choreography system that works on patterns too. Not sure about the final shape, just as a heads up."
+
+What it asks of the design, as far as it can be said now:
+
+- A seat is not fixed for a song: the cast, or one property of one member (the instrument, the place, sitting, a
+  skill), can change at any moment on the show's clock.
+- A change of song is then one case of that: many seats change at once. Today it is a path of its own
+  (`Notstrom.reseat`, KLANG-00481), which takes two whole casts.
+- In the long run the changes are told by patterns: the song's own, or a choreography of its own that works on
+  patterns. So a seat's properties should be values that can be set from outside over time, not constructor
+  arguments read once.
+- The final shape is open. This is a frame to design within, not a plan.
+
 ## What is there today
 
 - A song's `Cast` (`band/Cast.kt`) has one field per kind of instrument: `drums` (a `DrumSeat`), `marimba` and
@@ -66,4 +84,5 @@ Not planned yet.
 ## History
 
 - 2026-11-26: created from the maintainer's words; the direction made clear the same day (the instrument is the
-  seat's, one kind of seat, the cast a list of them).
+  seat's, one kind of seat, the cast a list of them); the wider frame added (a cast that can change mid song,
+  steered by patterns in the long run).
