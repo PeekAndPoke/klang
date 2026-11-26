@@ -188,6 +188,107 @@ class LookPlanSpec : StringSpec({
         }
     }
 
+    "the camera remembers: no kind of round twice in three rounds, and every kind comes about as often as its share" {
+        val counts = mutableMapOf<RoundKind, Int>()
+        var all = 0
+
+        for (seed in 0 until 20) {
+            val r = rounds(seed = seed)
+            val kinds = (0 until 200).map { r.drawn(it) }
+
+            kinds.windowed(KIND_CHOICE).forEachIndexed { n, three ->
+                withClue("seed $seed, rounds $n to ${n + KIND_CHOICE - 1}: $three") {
+                    three.toSet().size shouldBe KIND_CHOICE
+                }
+            }
+
+            kinds.forEach { counts[it] = (counts[it] ?: 0) + 1 }
+            all += kinds.size
+        }
+
+        for (kind in RoundKind.entries) {
+            val share = (counts[kind] ?: 0).toDouble() / all
+
+            withClue("the share of $kind: $share") {
+                (share > 0.12 && share < 0.30) shouldBe true
+            }
+        }
+
+        // the weights still tell: looks more often than the reverse total
+        withClue("looks ${counts[RoundKind.Looks]} against the reverse total ${counts[RoundKind.Reverse]} of $all") {
+            ((counts[RoundKind.Looks] ?: 0) - (counts[RoundKind.Reverse] ?: 0) > all / 40) shouldBe true
+        }
+    }
+
+    "a round's kind is the seed's, the same however it is asked: in order, out of order, again" {
+        val inOrder = rounds(seed = 3).let { r -> (0 until 40).map { r.drawn(it) } }
+        val late = rounds(seed = 3).let { r -> listOf(39, 5, 20).map { r.drawn(it) } }
+
+        late shouldBe listOf(inOrder[39], inOrder[5], inOrder[20])
+        rounds(seed = 3).drawn(-1) shouldBe RoundKind.Looks
+        rounds(seed = 4).let { r -> (0 until 40).map { r.drawn(it) } } shouldNotBe inOrder
+    }
+
+    "a flight right after the camera flew on its own is looks; what is forced stays" {
+        val r = rounds()
+        val n = (0 until 100).first { r.drawn(it) == RoundKind.Flight }
+        val a = r.begins(n = n, i = 0)
+        val drums = playing(Player.Wucht, from = a - 10, to = a + 20)
+
+        chooseKind(rounds = r, n = n, now = a, playsAt = drums, before = LookPlan()).what shouldBe RoundKind.Flight
+        chooseKind(rounds = r, n = n, now = a, playsAt = drums, before = LookPlan(), flown = true).what shouldBe RoundKind.Looks
+
+        withClue("a round made a flight") {
+            chooseKind(rounds = rounds(force = RoundKind.Flight), n = n, now = a, playsAt = drums, before = LookPlan(), flown = true)
+                .what shouldBe RoundKind.Flight
+        }
+
+        withClue("another kind, flown or not") {
+            val other = (0 until 100).first { r.drawn(it) == RoundKind.Reverse }
+
+            chooseKind(rounds = r, n = other, now = a, playsAt = drums, before = LookPlan(), flown = true).what shouldBe RoundKind.Reverse
+        }
+    }
+
+    "the camera's own flight: a round whose flight would leave within a round after it is no flight, and none after a round's flight" {
+        val r = rounds()
+        val n = 3
+        val leaves = r.leaves(n)
+        val tiny = 1e-6
+
+        withClue("a take-off a round before the round's flight would leave, and just before it") {
+            flownBefore(rounds = r, n = n, retreats = listOf(leaves - r.length)) shouldBe true
+            flownBefore(rounds = r, n = n, retreats = listOf(leaves - tiny)) shouldBe true
+        }
+
+        withClue("a take-off longer ago, or at the moment the flight leaves, or after") {
+            flownBefore(rounds = r, n = n, retreats = listOf(leaves - r.length - tiny)) shouldBe false
+            flownBefore(rounds = r, n = n, retreats = listOf(leaves)) shouldBe false
+            flownBefore(rounds = r, n = n, retreats = emptyList()) shouldBe false
+        }
+
+        val onlyN: (Int) -> Boolean = { it == n }
+
+        withClue("after round $n's flight left, for a round: no take-off") {
+            roundFlewBefore(rounds = r, t = leaves, isFlight = onlyN) shouldBe true
+            roundFlewBefore(rounds = r, t = leaves + r.length - tiny, isFlight = onlyN) shouldBe true
+        }
+
+        withClue("before it left, a round after, or a round that is no flight") {
+            roundFlewBefore(rounds = r, t = leaves - tiny, isFlight = onlyN) shouldBe false
+            roundFlewBefore(rounds = r, t = leaves + r.length, isFlight = onlyN) shouldBe false
+            roundFlewBefore(rounds = r, t = leaves + 1.0, isFlight = { false }) shouldBe false
+            roundFlewBefore(rounds = r, t = Double.NaN, isFlight = { true }) shouldBe false
+        }
+    }
+
+    "the draws repeat after their last round, so a clock without an end asks for no more" {
+        val r = rounds(seed = 2)
+
+        r.drawn(DRAWN_ROUNDS + 7) shouldBe r.drawn(7)
+        r.drawn(Int.MAX_VALUE) shouldBe r.drawn(Int.MAX_VALUE % DRAWN_ROUNDS)
+    }
+
     "the plan in a round keeps the looks of that round and of the one before" {
         val plan = LookPlan(begun = (0 until 3 * LOOKS_A_ROUND).associateWith { Subject.Angle(STADIUM) })
 
@@ -289,16 +390,16 @@ class LookPlanSpec : StringSpec({
         }
 
         chosen(seed = 0) shouldBe listOf(
-            "Looks: Klaue/0 Sirene/2 Beben/3 Skalpell/0 Beben/1",
+            "Reverse: Klaue/0 Sirene/2 Beben/3 Skalpell/0 Beben/1",
             "Flight: Rune/0 Wucht/0 Skalpell/1 Skalpell/0 Klaue/3",
-            "Reverse: stage/7 stage/7 Skalpell/0 stage/0 Skalpell/1",
-            "Flight: Beben/0 stage/2 Beben/3 Rune/2 Klaue/0",
+            "Circle: stage/7 stage/7 Skalpell/0 stage/0 Skalpell/1",
+            "Arc: Beben/0 stage/2 Beben/3 Rune/2 Klaue/0",
         )
         chosen(seed = 7) shouldBe listOf(
-            "Circle: Sirene/2 Rune/0 stage/2 Skalpell/3 Klaue/0",
-            "Looks: Klaue/2 stage/8 stage/10 Skalpell/3 Beben/3",
-            "Reverse: Skalpell/2 stage/6 Skalpell/1 Skalpell/2 Beben/2",
-            "Looks: stage/11 Beben/2 Klaue/2 Beben/0 Klaue/2",
+            "Flight: Sirene/2 Rune/0 stage/2 Skalpell/3 Klaue/0",
+            "Reverse: Klaue/2 stage/8 stage/10 Skalpell/3 Beben/3",
+            "Looks: Skalpell/2 stage/6 Skalpell/1 Skalpell/2 Beben/2",
+            "Flight: stage/11 Beben/2 Klaue/2 Beben/0 Klaue/2",
         )
 
         // where both who play seldom play as a round begins, its first look is one of the two, by the roll, in the

@@ -209,6 +209,12 @@ class Choreography(
     /** When the camera last took off before her (see [retreat]); long ago where it never has. */
     private var retreated: Double = Double.NEGATIVE_INFINITY
 
+    /**
+     * When it took off before her within the last two rounds, the earliest first: a round whose flight would leave
+     * within a round after one of them is no flight ([kind], KLANG-00489).
+     */
+    private val retreats: MutableList<Double> = mutableListOf()
+
     /** Whether it is back from that flight and waits on the total for the round to come there too. */
     private var landed: Boolean = false
 
@@ -224,9 +230,14 @@ class Choreography(
         return chosen.what
     }
 
-    /** What kind the round [n] is (see [chooseKind]). */
+    /**
+     * What kind the round [n] is (see [chooseKind]): no flight where the camera took off before her within a round
+     * before the round's flight would leave (KLANG-00489). A take-off later than that, while the round goes on,
+     * changes nothing: the round keeps its kind.
+     */
     private fun kind(n: Int): RoundKind {
-        val chosen = chooseKind(rounds = rounds, n = n, now = heard, playsAt = activity, before = plan)
+        val flown = flownBefore(rounds = rounds, n = n, retreats = retreats)
+        val chosen = chooseKind(rounds = rounds, n = n, now = heard, playsAt = activity, before = plan, flown = flown)
 
         plan = chosen.plan
 
@@ -384,6 +395,14 @@ class Choreography(
     fun at(t: Double): Shot {
         val home = home(t)
 
+        // the time went back: nothing of it has happened yet (before the round is asked, which reads the take-offs)
+        if (t < retreated) {
+            retreated = Double.NEGATIVE_INFINITY
+            landed = false
+        }
+
+        retreats.removeAll { it > t || it < t - 2 * round }
+
         return retreat(t = t, home = home, planned = planned(t = t, home = home))
     }
 
@@ -399,12 +418,6 @@ class Choreography(
 
         approach = her?.let { Approaching.next(before = approach, t = t, x = it.x, z = it.z, camX = home.pos.x, camZ = home.pos.z) }
 
-        // the time went back: nothing of it has happened yet
-        if (t < retreated) {
-            retreated = Double.NEGATIVE_INFINITY
-            landed = false
-        }
-
         val bars = (t - retreated) / cycle
         val length = Flight.END - Flight.OUT
 
@@ -419,10 +432,12 @@ class Choreography(
 
             landed = false
 
-            val begins = rounds.force == null && t >= start && planned === home && t - retreated >= RETREAT_REST && approach?.arrived == true
+            val begins = rounds.force == null && t >= start && planned === home && t - retreated >= RETREAT_REST &&
+                approach?.arrived == true && !roundFlewBefore(rounds = rounds, t = t, isFlight = { kind(it) == RoundKind.Flight })
 
             if (begins) {
                 retreated = t
+                retreats.add(t)
             }
 
             return planned
