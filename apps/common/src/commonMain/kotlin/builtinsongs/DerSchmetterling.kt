@@ -460,13 +460,13 @@ let metalKick = (() => {
   let thump = Ign.sine()
     .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
     .adsr(0.0005, 0.35, 0.0, 0.05)
-    .distort(0.2, "soft")   // the hard hit: the loud start clips, the tail stays clean
+    .mul(0.8)
+    .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(1.8)
+  let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(2.2)
 
   return thump.plus(crack)
-    .mul(0.25)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
-    // .shape("soft")
+    .mul(0.18)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
     .classic()
 })()
 
@@ -538,7 +538,7 @@ export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 export snare_pat =
   `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
 export snare_shape = x => x.sound(metalSnare).adsrOff().freq(pure(snareHz).add(perlin(-2, 2)))
-  .gain(0.21).pan(0.575).hpf(120).lpf(13500)
+  .gain(0.19).pan(0.575).hpf(105).lpf(13500)
 export snare_arrange = x => x.cylinder(7).mute("<0!160 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
@@ -609,7 +609,7 @@ export song = stack(
         .band(low => low.mul(1.00))
       ) // the glue on the mids only: the kick and the hats stay clean
     )
-    .mul(4.60)
+    .mul(4.70)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   ))
 )
