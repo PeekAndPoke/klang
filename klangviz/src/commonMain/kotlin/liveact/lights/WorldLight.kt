@@ -20,7 +20,7 @@ import kotlin.math.tan
  * the ghosts by [WorldTime.ghosts]; and the whole from the stage as it was made by [WorldTime.on]. At [WorldTime.on] 0
  * every value is the one the stage was made with, so the time of day off changes nothing.
  *
- * - **The sun behind the drummer:** by day big, low and a rich amber, strong enough to spill gold through the mesh
+ * - **The sun behind the drummer:** by day big, low and a pale warm amber, strong enough to spill gold through the mesh
  *   and the haze; by night a small cold white moon, higher up; at ember a deep red furnace, low.
  * - **The haze:** warm and lit by day, cold and thinner by night, red smoke at ember.
  * - **The low front lamp:** by day weaker and warmer, its shadows soft, so the true selves are faint; by night and at
@@ -62,8 +62,12 @@ object WorldLight {
     /** How long a round of the drift takes, in seconds: day to night and back in about four minutes. */
     const val DRIFT_PERIOD = 240.0
 
-    /** The sun's colour by day: a rich amber. */
-    const val DAY_SUN = 0xf5a050
+    /**
+     * The sun's colour by day: a pale warm amber, as pale as the lamps' day colours (straw, cream, a pale sky,
+     * `LightPlan.MOODS`), so the light behind the fog goes with the floor they light (KLANG-00488; it was a rich amber,
+     * `0xf5a050`).
+     */
+    const val DAY_SUN = 0xf2c08c
 
     /** The moon's: a cold white. */
     const val MOON = 0xdde6ff
@@ -132,8 +136,13 @@ object WorldLight {
         return if (wave < 0.5) 0.5 * eased else 0.5 + 0.5 * eased
     }
 
-    /** The share of its light the sun gives against the stage as made: by day 1.3, by night 0.9, at ember 1.6. */
-    fun sunStrength(world: WorldTime): Double = blend(world, made = 1.0, day = 1.3, night = 0.9, ember = 1.6, ghosts = 0.0)
+    /**
+     * The share of its light the sun gives against the stage as made: by day 0.85, by night 0.9, at ember 1.6. By day
+     * it was 1.3, which the tone mapping turned from amber into a yellow that did not go with the floor (KLANG-00488;
+     * the maintainer, 2026-11-26: "it might be enough if the sun is less bright", and after 1.0: "still too bright
+     * or too orange").
+     */
+    fun sunStrength(world: WorldTime): Double = blend(world, made = 1.0, day = 0.85, night = 0.9, ember = 1.6, ghosts = 0.0)
 
     /** How large the sun's glow is against the stage as made: by day 1.7, by night 0.5 (the moon), at ember 1.1. */
     fun sunSize(world: WorldTime): Double = blend(world, made = 1.0, day = 1.7, night = 0.5, ember = 1.1, ghosts = 0.5)

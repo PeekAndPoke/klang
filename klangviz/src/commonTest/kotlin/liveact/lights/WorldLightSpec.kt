@@ -74,7 +74,7 @@ class WorldLightSpec : StringSpec({
         WorldLight.sunSize(DAY) shouldBe near(1.7)
         WorldLight.sunSize(NIGHT) shouldBe near(0.5)
         WorldLight.sunSize(EMBER) shouldBe near(1.1)
-        WorldLight.sunStrength(DAY) shouldBe near(1.3)
+        WorldLight.sunStrength(DAY) shouldBe near(0.85)
         WorldLight.sunStrength(NIGHT) shouldBe near(0.9)
         WorldLight.sunStrength(EMBER) shouldBe near(1.6)
         WorldLight.sunHeight(NIGHT) shouldBe near(2.5)
