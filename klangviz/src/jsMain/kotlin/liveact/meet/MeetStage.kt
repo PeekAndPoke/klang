@@ -9,6 +9,7 @@ import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.stage.BlurLook
 import io.peekandpoke.klang.viz.liveact.stage.MirrorFloor
+import io.peekandpoke.klang.viz.liveact.stage.ReflectionQuality
 import io.peekandpoke.klang.viz.liveact.stage.RippleLook
 import io.peekandpoke.klang.viz.liveact.stage.StoneLook
 import io.peekandpoke.klang.viz.liveact.vec
@@ -89,7 +90,14 @@ class MeetStage(scene: Scene, renderer: WebGLRenderer) {
         floor.receiveShadow = true
         scene.add(floor)
 
-        mirror = MirrorFloor(floor = floor, scene = scene, renderer = renderer, outline = uniform(0.0)) { }
+        mirror = MirrorFloor(
+            floor = floor,
+            scene = scene,
+            renderer = renderer,
+            outline = uniform(0.0),
+            hide = { },
+            quality = ReflectionQuality.Mid,
+        )
         mirror.ripple(RippleLook.Gentle)
         mirror.blur(BlurLook.Crisp)
         mirror.stone(StoneLook.Marble)

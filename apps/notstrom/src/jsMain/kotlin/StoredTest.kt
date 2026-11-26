@@ -63,9 +63,10 @@ data class StoredTest(
          * fog qualities, and a kept `high` meant twelve sheets, now eight. 4 since 2026-11-20: the mirror floor's
          * reflections no longer go with the fog ([ReflectionQuality], on unless a visitor turns them off), so the
          * test's fog part, at low, now draws the new look's mirror as well, which it did not before; a kept result
-         * chose its fog on a lighter stage than the show now draws there.
+         * chose its fog on a lighter stage than the show now draws there. 5 since 2026-11-26: half the fog's sheets
+         * (KLANG-00484: low two, high four), so a kept choice was made on a heavier fog than the show now draws.
          */
-        const val TEST_VERSION = 4
+        const val TEST_VERSION = 5
 
         /** Where the browser keeps it. */
         const val STORAGE_KEY = "notstrom.machine-test"

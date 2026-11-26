@@ -84,7 +84,7 @@ data class LookVariants(
      * Whether the mirror is drawn with the reflections at [reflections]: where the mirror floor is chosen and the
      * reflections are on, at every fog.
      */
-    fun mirrors(reflections: ReflectionQuality): Boolean = floor == FloorLook.Mirror && reflections == ReflectionQuality.On
+    fun mirrors(reflections: ReflectionQuality): Boolean = floor == FloorLook.Mirror && reflections != ReflectionQuality.Off
 
     /**
      * Whether the mirror shows the underworld with the reflections at [reflections]: where it is chosen and the mirror

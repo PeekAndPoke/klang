@@ -78,7 +78,7 @@ fun Tag.ShowDrawer(
  *
  * The first is the picture: the live act's oversampling, its steps (0.5x to 4x) with the one in use marked, the fog
  * on the floor, its qualities (off, low, high) likewise, the lamps' shadows (low, high), and the mirror floor's
- * reflections (off, on), each following the real
+ * reflections (off, low, mid, high), each following the real
  * state (the test's choice, the keys o and g, the live act's own step down), where a choice is the visitor's and
  * holds ([Props.picture]); and the frames a second the live act counts (read once a second while the drawer is shown,
  * nothing while it is hidden).
@@ -641,10 +641,12 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
         ShadowQuality.High -> "High"
     }
 
-    /** The reflections' label on their button: `Off`, `On`. */
+    /** The reflections' label on their button: `Off`, `Low`, `Mid`, `High`. */
     private fun reflectionsLabel(quality: ReflectionQuality): String = when (quality) {
         ReflectionQuality.Off -> "Off"
-        ReflectionQuality.On -> "On"
+        ReflectionQuality.Low -> "Low"
+        ReflectionQuality.Mid -> "Mid"
+        ReflectionQuality.High -> "High"
     }
 
     /** A fog's label on its button: `Off`, `Low`, `High`. */

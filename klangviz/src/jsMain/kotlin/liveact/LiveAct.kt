@@ -295,8 +295,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     private var shadows: ShadowQuality = ShadowQuality.of(props.show.switches)
 
     /**
-     * Whether the mirror floor's reflections are drawn ([ReflectionQuality]), where the look has the mirror floor:
-     * `?reflections=off` starts without them. Changed only by hand ([Props.picture]), no key; the fog has no say in it.
+     * Whether and how finely the mirror floor's reflections are drawn ([ReflectionQuality]), where the look has the
+     * mirror floor: mid, or as `?reflections=off` (low, high) says. Changed only by hand ([Props.picture]), no key;
+     * the fog has no say in it.
      */
     private var reflections: ReflectionQuality = ReflectionQuality.of(props.show.switches)
 

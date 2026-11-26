@@ -61,14 +61,15 @@ import kotlin.math.sqrt
  *
  * How: each frame, just before the floor is drawn (three.js's `onBeforeRender`, as its own `Reflector` does it), a
  * second camera, the frame's camera mirrored in the floor, draws [scene] into a picture of the screen's own pixels
- * (no more than the page's at a pixel ratio of 2, so not more with the oversampling, and at most [MOST_PIXELS]), with
- * its depth; but only within the box the stage's floor fills on the screen ([areaBox]) and round it as far as the blur
- * reaches, and nothing at all where the camera sees none of the stage. Where that box is large (the camera close over
+ * (no more than the page's at a pixel ratio of 2, so not more with the oversampling; and as the reflection quality
+ * says, [ReflectionQuality]: at most a 1920 by 1200 screen's at low and mid or a 4K screen's at high, and at low
+ * half of that each way), with its depth; but only within the box the stage's floor fills on the screen ([areaBox])
+ * and round it as far as the blur reaches, and nothing at all where the camera sees none of the stage. Where that box is large (the camera close over
  * the floor), the mirror draws a smaller share of the picture ([scale], down to half each way), so it never draws
- * more than [BUDGET] of its pixels in a frame. The floor reads the picture where each of its points sees its mirror image;
- * the depth says how far behind the floor that image lies, which sets the blur and the fade. The lamps' shadows are
- * the ones the frame drew just before; the mirror draws none of its own. Nothing stands below the floor, so the
- * camera needs no clipping at the floor.
+ * more than its budget of its pixels in a frame ([ReflectionQuality.budget]; at high it always draws all). The floor
+ * reads the picture where each of its points sees its mirror image; the depth says how far behind the floor that
+ * image lies, which sets the blur and the fade. The lamps' shadows are the ones the frame drew just before; the
+ * mirror draws none of its own. Nothing stands below the floor, so the camera needs no clipping at the floor.
  *
  * The blur's width and the fade are not read from the depth pixel by pixel: at the edge of a leg before the fence the
  * gap behind the floor jumps from half a metre to several, the blur's width with it, and the mirror image was cut
@@ -98,7 +99,11 @@ class MirrorFloor(
     private val renderer: WebGLRenderer,
     private val outline: Uniform<Double>,
     private val hide: (Boolean) -> Unit,
+    quality: ReflectionQuality,
 ) {
+    /** How finely the picture is drawn ([ReflectionQuality]: its size, its budget, its most pixels); see [quality]. */
+    private var quality: ReflectionQuality = quality
+
     /** The floor's own material, given back by [dispose]. */
     private val plain: dynamic = floor.material
 
@@ -136,9 +141,21 @@ class MirrorFloor(
 
     /**
      * How much of the picture is drawn each way, 0.5 to 1: less where the mirroring area fills much of the screen, so
-     * the mirror never draws more than [BUDGET] of the picture's pixels; it follows over some frames, never at once.
+     * the mirror never draws more than its budget of the picture's pixels ([ReflectionQuality.budget]); it follows over
+     * some frames, never at once.
      */
     private var scale = 1.0
+
+    /**
+     * The reflections at [to] ([ReflectionQuality]): the picture is made anew at its size at the next frame, and the
+     * share drawn follows the new budget over some frames. [ReflectionQuality.Off] is the stage's to handle (it takes
+     * the mirror off the floor): here it changes nothing.
+     */
+    fun quality(to: ReflectionQuality) {
+        if (to != ReflectionQuality.Off) {
+            quality = to
+        }
+    }
 
     /** The mirroring area's box on the screen this frame, -1 to 1 each way ([areaBox]): left, bottom, right, top. */
     private val box = DoubleArray(4)
@@ -371,7 +388,7 @@ class MirrorFloor(
         // the share of the picture the box covers, and so how much of the picture can be drawn at most
         val share = max((right - left) * (top - bottom) / 4.0, 1e-6)
 
-        scale += (sqrt(BUDGET / share).coerceIn(0.5, 1.0) - scale) * FOLLOW
+        scale += (sqrt(quality.budget / share).coerceIn(0.5, 1.0) - scale) * FOLLOW
 
         val wide = max(1, (target.width * scale).roundToInt())
         val tall = max(1, (target.height * scale).roundToInt())
@@ -482,8 +499,8 @@ class MirrorFloor(
 
     /**
      * The picture for [screen]: its own pixels, but no more than the page's at a pixel ratio of at most 2 (so it does
-     * not grow with the oversampling) nor than [MOST_PIXELS]; made anew where that changed, and the widths' picture
-     * (half each way) with it.
+     * not grow with the oversampling) nor than the quality's most pixels, and of those the quality's size each way
+     * ([ReflectionQuality.size]); made anew where that changed, and the widths' picture (half each way) with it.
      */
     private fun pictureFor(screen: dynamic): WebGLRenderTarget {
         val shown: dynamic = screen
@@ -500,12 +517,21 @@ class MirrorFloor(
             tall = max(1, (tall * k).roundToInt())
         }
 
-        if (wide.toDouble() * tall > MOST_PIXELS) {
-            val k = sqrt(MOST_PIXELS / (wide.toDouble() * tall))
+        val most = quality.mostPixels
+
+        if (wide.toDouble() * tall > most) {
+            val k = sqrt(most / (wide.toDouble() * tall))
 
             wide = max(1, (wide * k).toInt())
             tall = max(1, (tall * k).toInt())
         }
+
+        // then the quality's share of them each way, after the cap, so that low is half of mid's picture each way on
+        // every screen (a mirror is never made at off, the one quality of no size)
+        val size = quality.size.coerceIn(0.0, 1.0)
+
+        wide = max(1, (wide * size).roundToInt())
+        tall = max(1, (tall * size).roundToInt())
 
         val now = picture
 
@@ -573,11 +599,7 @@ class MirrorFloor(
     }
 
     private companion object {
-        /** The most pixels the picture holds (its memory): a 1920 by 1200 screen's. */
-        const val MOST_PIXELS = 1920.0 * 1200.0
-
-        /** The share of the picture's pixels the mirror draws at most in a frame ([scale]), and how fast it follows. */
-        const val BUDGET = 0.5
+        /** How fast the share of the picture drawn ([scale]) follows the quality's budget ([ReflectionQuality.budget]). */
         const val FOLLOW = 0.1
 
         /** How far the ripple and the marble bend the image at most, as a share of the picture. */

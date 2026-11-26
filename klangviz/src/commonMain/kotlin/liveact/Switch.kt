@@ -75,8 +75,8 @@ enum class Switch(val key: String) {
     Shadows("shadows"),
 
     /**
-     * `?reflections=off`: whether the mirror floor's reflections are drawn, off or on ([ReflectionQuality]), where the
-     * look has the mirror floor ([Floor]); any other value is on, at every fog.
+     * `?reflections=low`: how the mirror floor's reflections are drawn: off, low, mid or high ([ReflectionQuality]),
+     * where the look has the mirror floor ([Floor]); `on` and any other value is mid, at every fog.
      */
     Reflections("reflections"),
 

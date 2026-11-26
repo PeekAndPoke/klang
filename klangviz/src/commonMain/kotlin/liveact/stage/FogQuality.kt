@@ -21,17 +21,20 @@ import kotlin.math.pow
  * medium -> with todays settings just renaming to: off, low, high"): [High] is the former medium's eight sheets, so
  * the picture a show starts with draws fewer sheets than the twelve before, veiling as much. The former high (twelve)
  * and xhigh (sixteen) are gone; their words in an address name no quality now.
+ *
+ * Half the sheets since 2026-11-26 (KLANG-00484; the maintainer: "There is barely any difference noticable between
+ * low and high, so we could maybe half the number of layer"): [Low] two (was four), [High] four (was eight).
  */
 enum class FogQuality(val layers: Int, val word: String, val cols: Int, val rows: Int) {
     Off(layers = 0, word = "off", cols = 0, rows = 0),
-    Low(layers = 4, word = "low", cols = 2, rows = 2),
-    High(layers = 8, word = "high", cols = 4, rows = 2);
+    Low(layers = 2, word = "low", cols = 2, rows = 1),
+    High(layers = 4, word = "high", cols = 2, rows = 2);
 
     /**
      * The see-through share of each sheet, before it fades as the camera comes to its height: the twelve sheets the fog
      * was made with ([MADE_LAYERS]) each let [MADE_SHARE] through, and with fewer sheets each lets so much that all of
-     * them together veil what is behind as much as those twelve did: `1 - (1 - 0.22)^(12 / layers)`. Low's four
-     * about 0.53, High's eight about 0.31; 0 for [Off].
+     * them together veil what is behind as much as those twelve did: `1 - (1 - 0.22)^(12 / layers)`. Low's two
+     * about 0.77, High's four about 0.53; 0 for [Off].
      */
     val share: Double
         get() = if (layers == 0) 0.0 else 1.0 - (1.0 - MADE_SHARE).pow(MADE_LAYERS.toDouble() / layers)

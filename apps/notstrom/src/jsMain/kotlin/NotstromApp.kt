@@ -741,7 +741,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /**
      * The picture test's stage: the stage the show draws, with the band standing at their places (the show frozen at
      * its start, so nothing moves the measure: no music, no flashing stroboscope, the full picture the show starts
-     * with), at 1x whatever the address says. The fog and the shadows are high, the reflections on, or as the address
+     * with), at 1x whatever the address says. The fog and the shadows are high, the reflections mid, or as the address
      * sets them: what the show will draw (where the address sets the fog, the test does not choose it; the reflections
      * it never chooses, so the mirror floor is drawn in both its parts, also with the fog low). It is not seen: the
      * checking screen covers it (an opaque layer over the full-size canvas, which stays in the layout at its real size
@@ -751,7 +751,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     private fun testStage(): Running {
         // the address's switches, frozen at the start (`t=0`: the band at their places), at 1x, and without the
         // stroboscope (nobody has chosen yet); the fog and the shadows the address's, else the live act's own, high; the
-        // reflections the address's, else on
+        // reflections the address's, else mid
         val switches = showSwitches(query = props.query + "&${Switch.Oversample.key}=1", strobe = false, frozenAt = 0.0)
         val stage = Running(
             show = Show(seed = showSeed(switches = switches, random = Random.Default), switches = switches),

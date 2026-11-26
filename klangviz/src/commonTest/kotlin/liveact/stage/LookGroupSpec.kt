@@ -17,7 +17,7 @@ private val NEW = LookFlip.of(Switches.parse("?look=new"))
 
 /** Every group of [look] as a show starts: the fog high, the reflections on. */
 private fun startsWith(look: LookFlip): List<LookGroup> =
-    LookGroup.all(look = look, fog = FogQuality.High, reflections = ReflectionQuality.On)
+    LookGroup.all(look = look, fog = FogQuality.High, reflections = ReflectionQuality.Mid)
 
 /** The group labelled [label]. */
 private fun List<LookGroup>.named(label: String): LookGroup = single { it.label == label }
@@ -122,7 +122,7 @@ class LookGroupSpec : StringSpec({
 
     "the new look with the reflections on: everything shows but the ghosts' colour, at every fog but the haze at fog off" {
         for (fog in FogQuality.entries) {
-            val held = LookGroup.all(look = NEW, fog = fog, reflections = ReflectionQuality.On).mapNotNull { it.held }
+            val held = LookGroup.all(look = NEW, fog = fog, reflections = ReflectionQuality.Mid).mapNotNull { it.held }
             val ghosts = "in the ghosts world only"
 
             held shouldBe if (fog == FogQuality.Off) listOf("no haze at fog off", ghosts) else listOf(ghosts)
@@ -151,7 +151,7 @@ class LookGroupSpec : StringSpec({
     }
 
     "fog off with the reflections on: no haze to part, and the mirror still shows" {
-        val held = LookGroup.all(look = NEW, fog = FogQuality.Off, reflections = ReflectionQuality.On).associate { it.label to it.held }
+        val held = LookGroup.all(look = NEW, fog = FogQuality.Off, reflections = ReflectionQuality.Mid).associate { it.label to it.held }
 
         held["Haze"] shouldBe "no haze at fog off"
         held["Floor"] shouldBe null
@@ -161,6 +161,6 @@ class LookGroupSpec : StringSpec({
     "the floor with the reflections off says why even where the plain floor is in use: the mirror would not be drawn" {
         LookGroup.all(look = TODAY, fog = FogQuality.High, reflections = ReflectionQuality.Off).named("Floor").held shouldBe
             "reflections off"
-        LookGroup.all(look = TODAY, fog = FogQuality.Low, reflections = ReflectionQuality.On).named("Floor").held shouldBe null
+        LookGroup.all(look = TODAY, fog = FogQuality.Low, reflections = ReflectionQuality.Mid).named("Floor").held shouldBe null
     }
 })

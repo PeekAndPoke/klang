@@ -224,7 +224,7 @@ class Stage(
     /** The quality the fog on the floor is drawn at. */
     private var fogQuality: FogQuality = fog
 
-    /** Whether the mirror floor's reflections are drawn ([ReflectionQuality]); the fog has no say in it. */
+    /** Whether and how finely the mirror floor's reflections are drawn ([ReflectionQuality]); the fog has no say in it. */
     private var reflectionQuality: ReflectionQuality = reflections
 
     /**
@@ -494,17 +494,24 @@ class Stage(
         if (wanted && now == null) {
             // the fog on the floor lies on the mirror: it is not mirrored as well; nor is the sky, whose stars would
             // glitter in it like noise
-            mirror = MirrorFloor(floor = floor, scene = scene, renderer = renderer, outline = outlined) { hidden ->
-                sky?.hide(hidden)
-                // nor is the horizon round the audience, which it never sees
-                around?.hideFar(hidden)
+            mirror = MirrorFloor(
+                floor = floor,
+                scene = scene,
+                renderer = renderer,
+                outline = outlined,
+                hide = { hidden ->
+                    sky?.hide(hidden)
+                    // nor is the horizon round the audience, which it never sees
+                    around?.hideFar(hidden)
 
-                if (variants.stage == StageLook.Wall) {
-                    groundFog?.hide(hidden)
-                }
+                    if (variants.stage == StageLook.Wall) {
+                        groundFog?.hide(hidden)
+                    }
 
-                mirrorDrawing?.invoke(hidden)
-            }.also {
+                    mirrorDrawing?.invoke(hidden)
+                },
+                quality = reflectionQuality,
+            ).also {
                 it.ripple(variants.ripple)
                 it.blur(variants.blur)
                 it.stone(variants.stone)
@@ -537,11 +544,13 @@ class Stage(
 
     /**
      * The mirror floor's reflections at [quality], at once: off, the mirror is taken off the floor and its pictures are
-     * freed (its material kept for the next time); on, it is put back, or made where the floor is the mirror and none
-     * was made yet ([mirrorAsChosen]).
+     * freed (its material kept for the next time); low, mid or high, it is put back, or made where the floor is the
+     * mirror and none was made yet ([mirrorAsChosen]), and draws its picture as finely as the step says (made anew at
+     * its size at the next frame).
      */
     fun reflections(quality: ReflectionQuality) {
         reflectionQuality = quality
+        mirror?.quality(quality)
         mirrorAsChosen()
     }
 

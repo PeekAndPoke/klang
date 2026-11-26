@@ -45,7 +45,7 @@ class PictureQualitySpec : StringSpec({
         PictureQuality.measuresTwice(fps1x = 60.0, density = 2.0) shouldBe false
     }
 
-    // The fog: the choices as notstrom gives them (low and high, 4 and 8 sheets)
+    // The fog: two choices of sheets, 4 and 8 (notstrom's low and high until 2026-11-26; 2 and 4 since, KLANG-00484)
 
     "where the first part holds 55 frames, the fog stays high" {
         fog(fpsFull = 60.0, fpsFew = null) shouldBe 8
@@ -103,7 +103,7 @@ class PictureQualitySpec : StringSpec({
     }
 })
 
-/** The fog's sheets [PictureQuality.fogFor] chooses from [choices]: notstrom's low and high unless a case says. */
+/** The fog's sheets [PictureQuality.fogFor] chooses from [choices]: 4 and 8 unless a case says. */
 private fun fog(fpsFull: Double, fpsFew: Double?, choices: List<Int> = listOf(4, 8)): Int = PictureQuality.fogFor(
     fpsFull = fpsFull,
     fpsFew = fpsFew,

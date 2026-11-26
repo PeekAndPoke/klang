@@ -32,7 +32,7 @@ class Picture {
     private val samplesSource = StreamSource(Oversampling.PLAIN)
     private val fogSource = StreamSource(FogQuality.High)
     private val shadowsSource = StreamSource(ShadowQuality.High)
-    private val reflectionsSource = StreamSource(ReflectionQuality.On)
+    private val reflectionsSource = StreamSource(ReflectionQuality.Mid)
     private val fpsSource = StreamSource(0.0)
     private val figuresSource = StreamSource(Figures(arrived = 0, of = 0, failed = false))
     private val lookSource = StreamSource(LookFlip.of(Switches()))
@@ -73,7 +73,7 @@ class Picture {
     /** The shadows' quality now, as the live act draws them; high until one tells. */
     val shadows: Stream<ShadowQuality> = shadowsSource.readonly
 
-    /** Whether the mirror floor's reflections are drawn now, as the live act draws them; on until one tells. */
+    /** How the mirror floor's reflections are drawn now, as the live act draws them; mid until one tells. */
     val reflections: Stream<ReflectionQuality> = reflectionsSource.readonly
 
     /** The frames a second of the last half second counted; 0 until one tells. */
@@ -114,8 +114,8 @@ class Picture {
 
     /**
      * Asks the live act for the reflections at [quality]: off, the mirror floor is drawn as the plain floor and what
-     * its pictures hold on the graphics card is freed; on, it is drawn again where the look has it. Nothing happens
-     * while no live act has it.
+     * its pictures hold on the graphics card is freed; low, mid or high, it is drawn (again) where the look has it, as
+     * finely as the step says. Nothing happens while no live act has it.
      */
     fun chooseReflections(quality: ReflectionQuality) {
         reflectionsTaker?.invoke(quality)

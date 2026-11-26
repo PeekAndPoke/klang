@@ -14,18 +14,18 @@ import kotlin.math.pow
 class FogQualitySpec : StringSpec({
 
     "the qualities, their sheets and their words, fewest first" {
-        FogQuality.entries.map { it.layers } shouldBe listOf(0, 4, 8)
+        FogQuality.entries.map { it.layers } shouldBe listOf(0, 2, 4)
         FogQuality.entries.map { it.word } shouldBe listOf("off", "low", "high")
     }
 
-    "the maps lie 2 by 2 and 4 by 2, with no map to spare" {
-        FogQuality.entries.map { it.cols to it.rows } shouldBe listOf(0 to 0, 2 to 2, 4 to 2)
+    "the maps lie 2 by 1 and 2 by 2, with no map to spare" {
+        FogQuality.entries.map { it.cols to it.rows } shouldBe listOf(0 to 0, 2 to 1, 2 to 2)
         FogQuality.entries.filterNot { it.cols * it.rows == it.layers } shouldBe emptyList()
     }
 
     "the fog was made with twelve sheets of 0.22 each; fewer sheets let more through each" {
-        FogQuality.High.share shouldBe (0.311123 plusOrMinus 1e-6)
-        FogQuality.Low.share shouldBe (0.525448 plusOrMinus 1e-6)
+        FogQuality.High.share shouldBe (0.525448 plusOrMinus 1e-6)
+        FogQuality.Low.share shouldBe (0.774800 plusOrMinus 1e-6)
         FogQuality.Off.share shouldBe 0.0
     }
 

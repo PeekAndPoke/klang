@@ -59,7 +59,7 @@ class PictureSpec : StringSpec({
         chosen shouldBe listOf(ReflectionQuality.Off)
 
         picture.detach()
-        picture.chooseReflections(ReflectionQuality.On)
+        picture.chooseReflections(ReflectionQuality.Mid)
         chosen shouldBe listOf(ReflectionQuality.Off)
     }
 
@@ -71,7 +71,7 @@ class PictureSpec : StringSpec({
         picture.tellReflections(ReflectionQuality.Off)
         unsubscribe()
 
-        seen shouldBe listOf(ReflectionQuality.On, ReflectionQuality.Off)
+        seen shouldBe listOf(ReflectionQuality.Mid, ReflectionQuality.Off)
     }
 
     "the look the live act tells is the look's stream; today's until one tells" {
