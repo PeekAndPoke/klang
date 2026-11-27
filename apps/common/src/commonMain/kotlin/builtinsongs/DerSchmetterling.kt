@@ -32,12 +32,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4750, 3.3)                              // the peak, up high and narrow
+  .lowpass(4750, 3.2)                              // the peak, up high and narrow
   .mul(1.0))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3300, 2.3)                              // the peak, low and wide
+  .lowpass(3300, 2.2)                              // the peak, low and wide
   .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -547,14 +547,30 @@ export hats_pat =
     [cr hh oh hh] [hh hh oh hh]!7 [cr hh oh hh] [hh hh oh hh]!7 [cr hh oh hh] [hh hh oh hh]!7
     [cr hh cr hh]!24 
     [cr rd ~ rd] [~ rd ~ rd]!15 [cr rd ~ rd] [~ rd ~ rd]!15>`
-export hats_shape = x => x.gain(0.17).pan(0.425)
-  .hpf(600).lpf(freq = "15000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 3.0)
-export hats_arrange = x => x.cylinder(8).mute("<0!160 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
+export hats_shape = x => x.gain(0.15).pan(0.425)
+  .hpf(300).adsr(perlin(0.001, 0.003), 0.1, 0.90, 3.0)
+
+// The hats' own desk on their cylinder, as a rock mixer treats hats and cymbals (2026-11-27): their brightness lies at
+// 2 to 8 kHz (two thirds of the samples' energy), not above 15 kHz, so a lowpass up there (lpf 15000, as before) took
+// the air and left the harshness. Dips take the harshness, a shelf brings the air: the clank and the hash a little
+// down, everything above 11 kHz up by 2.5 dB (a shelf made by the crossover: the high band alone raised).
+let hatsDesk = Katalyst(k => k
+  .eq(e => e
+    .band(freq = 3500, q = 1.2, db = -3.0)   // the clank
+    .band(freq = 7500, q = 1.6, db = -2.0))  // the hash
+  .bands(b => b
+    .band(body => body.mul(1.00)).cut(11000)
+    .band(air => air.mul(1.20))             // the air: +2.5 dB
+  )
+)
+
+export hats_arrange = x => x.cylinder(8).katalyst(hatsDesk)
+  .mute("<0!160 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
-export shaker_pat = `<white ~ white ~ white ~ white ~ white ~ white>*8`
-export shaker_shape = x => x.gain(0.03).velocity("<1.0 0.80 0.90 0.80>*8") //  . mute()
-  .hpf(freq = 8000, q = 0.7).lpf(17500, 0.5).clip("<1.0 1.0 1.5>*8") //  . solo()
+export shaker_pat = `<pink ~ pink ~ pink ~ pink ~ pink ~ pink>*8`
+export shaker_shape = x => x.gain(0.05).velocity("<1.0 0.80 0.90 0.80>*8") //  . mute()
+  .hpf(freq = 8000, q = 0.7).lpf(15000, 0.5).clip("<1.0 1.0 1.5>*8") //  . solo()
   .pan(0.35).adsr(0.015, 0.10, 0.0, 0.01)
 export shaker_arrange = x => x.cylinder(10).late(berlin(0.0010, 0.0020).mul(drunk))
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
