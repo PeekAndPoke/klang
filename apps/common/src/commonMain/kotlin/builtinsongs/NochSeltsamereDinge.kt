@@ -93,7 +93,6 @@ let morseKey = (() => {
 
 // Bass  ------------------------------------------------------------------------------------------------------------------
 
-// Der Schmetterling's bass guitar: a sub sine and the harmonics 2f to 6f over it, the snare's frequency cut out.
 let bassSnd = (() => {
 
   // --- Overridable params ----------------------------------------------------------------------
@@ -102,8 +101,13 @@ let bassSnd = (() => {
   let pHarm    = Ign.param("harmonics",   1.00, "Harmonics Volume")
   // ----------------------------------------------------------------------------------------------
 
+  // Sub: a bare sine. No filter — a sine has no harmonics to remove. This is the weight,
+  // and it lives at 36–70 Hz where nothing else in the mix is.
   let sub = Ign.sine(x => x.analog(pAnalog)).mul(pSub)
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.10).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
+
+  // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
+  // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
+  let harmonics = Ign.sine(x => x.harmonics(6, 1.05).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -114,26 +118,52 @@ let bassSnd = (() => {
 
 // Metal kick  ------------------------------------------------------------------------------------------------------------
 
-// Der Schmetterling's kick (thump and crack) and snare (crack, body, wires).
+// Thump and crack, and nothing in between. The "bd" sample rings a partial at 115 Hz, 11 dB under its 68 Hz body, for
+// its whole 250 ms: right where the guitars and the bass want to be. This kick is three tells:
+//   - the thump: a pure sine, no overtones, so once the sweep is through there is nothing above it but the crack
+//   - the punch: a fast three-octave drop that crosses the mud band in a few milliseconds instead of dwelling there
+//   - the crack: the beater on the batter head, a short noise tick around 3.5 kHz
 let metalKick = (() => {
   let thump = Ign.sine()
     .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
     .adsr(0.0005, 0.35, 0.0, 0.05)
-    .distort(0.2, "soft")   // the hard hit: the loud start clips, the tail stays clean
-
-  let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(1.8)
+    .mul(0.8)
+    .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
+ 
+  let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(2.2)
 
   return thump.plus(crack)
-    .mul(0.25)
+    .mul(0.18)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
     .classic()
 })()
 
 // Metal snare  -----------------------------------------------------------------------------------------------------------
 
+// Force first, then the crack. The mix is flat from 125 Hz to 4 kHz and 10 to 20 dB quieter above 5 kHz, where the guitar
+// cab's wall holds. The "sd" sample had no crack (its wires came in after 15 ms) and its body sat at 159 Hz, on the
+// guitars' thump. Measured against the mix at the hits, this snare is 8 to 20 dB on top from 160 to 630 Hz in the first
+// 15 ms, and 9 to 23 dB on top above 4 kHz in the first 3 ms. Three tells:
+//   - the crack: the stick on the batter head, broadband noise above 1.5 kHz
+//   - the body: the head at snareHz (played with .freq), a fifth up at the hit and settling, a deeper sine at 0.75 times
+//     it, the thud (a cluster of sines from 140 to 700 Hz) and the shell (noise around 800 Hz), and the two membrane modes at 1.59 and
+//     2.14 times the head. A lone sine sat in one third-octave band and sounded thin, a "pick" (2026-09-28); the "sd"
+//     sample spread its body over 160 to 250 Hz and had 5 to 10 dB more between 400 Hz and 1 kHz
+//   - the wires: noise that buzzes at the head's frequency, because the wires slap the bottom head on every cycle; they
+//     swell in over 4 ms, once the head moves
+// A sine and clean noise alone is the 80s drum machine snare (too clean, 2026-09-28). No ring after 150 ms: the sample's
+// tail was under the mix in every band, level that nobody heard as snare.
 let metalSnare = (() => {
   let crack = Ign.whitenoise().highpass(1500).adsr(0.0002, 0.040, 0.0, 0.003).mul(3.0)
+  // the body: the head, pushed a fifth up by the hit, a deeper sine under it, the thud of the stick driving the whole drum
+  // (a dense cluster, not a tone, kept above 140 Hz and out of the mud band), and the shell around 800 Hz
   let head  = Ign.sine().pitchEnvelope(7, x => x.adsr(0.0003, 0.015, 0, 0)).adsr(0.0005, 0.15, 0.0, 0.03).mul(3.0)
   let deep  = Ign.sine(Ign.freq().mul(0.75)).adsr(0.0005, 0.080, 0.0, 0.02).mul(2.5)
+  // The thud: 13 inharmonic partials from 138 to 712 Hz, a little over two semitones apart, weighted to the spectrum of
+  // the pink noise band it replaces (2026-09-30). The noise band was about 230 Hz wide and 50 ms long, so every hit rolled
+  // new dice: 6 dB of hit-to-hit loudness, 7.5 dB of peak. The cluster is the same on every hit. The phases of 0.5 are the
+  // flipped start phases: all at 0, the partials rise together and the hit spikes 20 dB over its level; this pattern, the
+  // calmest of all 8192, leaves 12 dB, less than the noise had. One sine with 13 partials since 2026-10-10: the same
+  // sound as 13 sines, about a quarter of the memory per hit.
   let thud  = Ign.sine(x => x.fundamental(0)
       .partial(0.6571, 0.520)
       .partial(0.7571, 0.676)
@@ -152,15 +182,18 @@ let metalSnare = (() => {
   let shell = Ign.whitenoise().bandpass(800, 0.7).adsr(0.0005, 0.050, 0.0, 0.02).mul(2.0)
   let m2    = Ign.sine(Ign.freq().mul(1.59)).adsr(0.0005, 0.035, 0.0, 0.02).mul(0.8)
   let m3    = Ign.sine(Ign.freq().mul(2.14)).adsr(0.0005, 0.020, 0.0, 0.02).mul(0.8)
-  let wires = Ign.whitenoise().times(Ign.sine().mul(0.8).plus(1.0))
+  let wires = Ign.whitenoise().times(Ign.sine().mul(0.8).plus(1.0))   // the buzz: noise that rises and falls with the head
     .bandpass(6000, 0.6).adsr(0.004, 0.11, 0.0, 0.03).mul(1.2)
 
   let drum = head.plus(deep).plus(thud).plus(shell).plus(m2).plus(m3).plus(wires)
 
+  // The preamp: every part peaks in the same millisecond, so the hit stood 25 dB over the snare's loudness and every
+  // master limiter worked on the snare alone. A soft clip rounds that first peak and leaves the body as it was: 6 dB less
+  // peak at the same loudness (2026-09-30).
   return drum.plus(crack)
     .mul(0.3)
     .shape("soft")
-    .mul(1.4895)
+    .mul(1.4895)         // level: as loud as the snare before the clip, at the same gain
     .classic()
 })()
 
@@ -174,6 +207,22 @@ let pedalNotch = Kat.fn(x => x.notch(Kat.param("notch.freq", 420), 0.5))
 
 // One amp for both halves: the pedal, then the cylinder's strip, so the body and the vowel land.
 let glassAmp = Katalyst(k => k.serial(pedalNotch).classic())
+
+// Desks  -----------------------------------------------------------------------------------------------------------------
+
+// The hats' own desk on their cylinder, as a rock mixer treats hats and cymbals (2026-11-27): their brightness lies at
+// 2 to 8 kHz (two thirds of the samples' energy), not above 15 kHz, so a lowpass up there (lpf 15000, as before) took
+// the air and left the harshness. Dips take the harshness, a shelf brings the air: the clank and the hash a little
+// down, everything above 11 kHz up (a shelf made by the crossover: the high band alone raised).
+let hatsDesk = Katalyst(k => k
+  .eq(e => e
+    .band(freq = 3500, q = 1.2, db = -3.0)   // the clank
+    .band(freq = 7500, q = 1.6, db = -2.0))  // the hash
+  .bands(b => b
+    .band(body => body.mul(1.00)).cut(11000)
+    .band(air => air.mul(1.20))             // the air: +1.6 dB
+  )
+)
 
 // Cylinders  -------------------------------------------------------------------------------------------------------------
 
@@ -269,7 +318,8 @@ export kick_pat  = `[bd bd bd ~  bd ~ bd ~] [bd bd ~  ~  bd ~ bd|~  ~]`
 export snare_pat = `[~  ~  ~  ~  ~  ~ ~  ~] [~  ~  sd ~  ~  ~ ~|sd ~]`
 
 export kick = sound(kick_pat).apply(drumTime)
-  .sound(metalKick).adsrOff().note("a1").gain(0.85).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+  // gain 0.85 with the kick this song had; Der Schmetterling's kick is 2.5 dB quieter at the same gain (2026-11-27)
+  .sound(metalKick).adsrOff().note("a1").gain(1.13).velocity("0.98 0.94 0.96 0.94").pan(0.5)
   .degrade(0.01).hpf(35)
   .cylinder(6).tag("kick")
 
@@ -279,7 +329,7 @@ export snare = sound(snare_pat).apply(drumTime)
   .cylinder(6).tag("snare")
 
 export hats = sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
-  .cylinder(5).gain(0.5).pan(0.40).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).lpf(15000).late(0.001)
+  .cylinder(5).katalyst(hatsDesk).gain(0.5).pan(0.40).adsr(0.01, 0.15, 0.8, 2.0).fast(2).degrade(0.1).late(0.001)
   .tag("hats")
 
 // Claps  -----------------------------------------------------------------------------------------------------------------
