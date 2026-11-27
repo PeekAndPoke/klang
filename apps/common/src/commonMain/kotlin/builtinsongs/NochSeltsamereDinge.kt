@@ -309,7 +309,7 @@ export arp = n(arp_pat)
 export morse = n("0").morse("Schön ist es auf der Welt zu sein!")
   .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32))
   .sound(morseKey).adsrOff().analog(2)
-  .gain(0.35).clip(0.35).pan(berlin.slow(2))
+  .gain(0.37).clip(0.35).pan(berlin.slow(2))
   .cylinder(1).body(material = "membrane").tag("morse")
 
 // Bass line  -------------------------------------------------------------------------------------------------------------
@@ -345,7 +345,7 @@ export kick = sound(kick_pat).apply(drumTime)
 
 export snare = sound(snare_pat).apply(drumTime)
   .sound(metalSnare).adsrOff().freq(snareHz).gain(0.50).pan(0.55)
-  .degrade(0.01).lpf(13500)
+  .degrade(0.01).hpf(135).lpf(13500)
   .cylinder(6).tag("snare")
 
 export hats = sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
@@ -354,14 +354,14 @@ export hats = sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd
 
 // Claps  -----------------------------------------------------------------------------------------------------------------
 
-export claps = sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).cylinder(0).gain(0.20).legato(2.0)
+export claps = sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).cylinder(0).gain(0.17).legato(2.0)
   .bpf(sine.range(2000, 2200).fast(3.14)).hpf(600)
   .tag("claps")
 
 // Shore  -----------------------------------------------------------------------------------------------------------------
 
 export shore = note("c").fast(4).sound("brown").legato(2)
-  .cylinder(7).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
+  .cylinder(7).gain(0.10).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
   .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
   .tag("shore")
 
@@ -380,7 +380,7 @@ export song = stack(
   , // Morse
   morse.filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))   // . solo() . mute()
   , // Bass
-  bass.filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))      // . solo() . mute()
+  bass.filterWhen(x => x >= wait * 1.75 && x < (wait * 4 + keep))      // . solo() . mute()
   , // Drums
   stack(
     kick.filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep)),   // . solo() . mute()
@@ -392,17 +392,19 @@ export song = stack(
   , // Shore
   shore
   , // Master
-  master(Katalyst(k => k.oversampleAtLeast(4, r => r
+  master(Katalyst(k => k
     .reverb(0.10, 9, 6500)
     .mul(0.80)
-    .bands(b => b
-      .band(low => low.mul(1.00)).cut(150)
-      .band(mid => mid.distort(0.15, "soft").mul(0.85)).cut(5000)
-      .band(low => low.mul(1.00))
-    ) // the glue on the mids only: the kick and the hats stay clean
+    .oversampleAtLeast(8, r => r
+      .bands(b => b
+        .band(low => low.mul(1.00)).cut(150)
+        .band(mid => mid.distort(0.15, "soft").mul(0.85)).cut(5000)
+        .band(low => low.mul(1.00))
+      ) // the glue on the mids only: the kick and the hats stay clean
+    )
     .mul(3.2)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005, release = 0.10, lookahead = 0.005)
-  )))
+  ))
 )
 
 // Rewritten for the band by Claude (Opus 5.5) from peekandpoke's Seltsamere Dinge: its guitar taken apart into a rig, its

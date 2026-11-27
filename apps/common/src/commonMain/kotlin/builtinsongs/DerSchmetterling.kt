@@ -34,12 +34,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4750, 3.2)                              // the peak, up high and narrow
+  .lowpass(4750, 3.1)                              // the peak, up high and narrow
   .mul(1.0))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3300, 2.2)                              // the peak, low and wide
+  .lowpass(3300, 2.1)                              // the peak, low and wide
   .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -131,9 +131,9 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  3.20)        // thump: closed-back box resonance
-    .band(freq =  900, q = 0.7, db =  3.50)        // roar:  low mids
-    .band(freq = 2700, q = 1.2, db =  1.40)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  2.80)        // thump: closed-back box resonance
+    .band(freq =  900, q = 0.7, db =  3.40)        // roar:  low mids
+    .band(freq = 2700, q = 1.2, db =  1.60)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
@@ -672,7 +672,7 @@ export song = stack(
         .band(low => low.mul(1.00))
       ) // the glue on the mids only: the kick and the hats stay clean
     )
-    .mul(4.80)
+    .mul(4.70)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   ))
 )
