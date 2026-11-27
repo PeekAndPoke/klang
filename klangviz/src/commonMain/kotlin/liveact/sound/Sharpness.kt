@@ -30,8 +30,8 @@ class Sharpness(full: Double) {
     var full: Double = full
         private set
 
-    /** The fewest it goes down to. */
-    val least: Double get() = min(full, 1.0)
+    /** The fewest it goes down to ([leastFor]). */
+    val least: Double get() = leastFor(full = full)
 
     /** The pixels drawn for each of the page's, each way. */
     var ratio: Double = full
@@ -147,5 +147,19 @@ class Sharpness(full: Double) {
 
         /** Faster by this factor at least, against the rate before the first step. */
         const val HELPED = 1.12
+
+        /**
+         * The fewest pixels the picture goes down to on a screen of [full] pixels for each of the page's, each way: a
+         * plain screen's one, or the screen's own where it has fewer. The pixels a show on that screen may settle at,
+         * and what notstrom's picture test draws at (`?soft`).
+         */
+        fun leastFor(full: Double): Double {
+            // NaN-guard: a screen whose ratio is no number, or none at all, counts as a plain screen
+            if (!(full > 0.0)) {
+                return 1.0
+            }
+
+            return min(full, 1.0)
+        }
     }
 }

@@ -66,9 +66,11 @@ data class StoredTest(
          * (KLANG-00484: low two, high four), so a kept choice was made on a heavier fog than the show now draws. 6
          * since 2026-11-26: the test chooses the picture's quality as a whole (KLANG-00492), kept as `quality` in
          * place of the oversampling and the fog. 7 since 2026-11-27: the quality is the detail only, high is the
-         * show's own picture, and the oversampling is kept beside it again.
+         * show's own picture, and the oversampling is kept beside it again. 8 since 2026-11-27: the 1x parts draw at
+         * the pixels the show may settle at, not the screen's own (a retina screen kept low for a machine that plays
+         * high).
          */
-        const val TEST_VERSION = 7
+        const val TEST_VERSION = 8
 
         /** Where the browser keeps it. */
         const val STORAGE_KEY = "notstrom.machine-test"

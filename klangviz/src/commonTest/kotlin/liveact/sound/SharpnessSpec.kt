@@ -179,4 +179,19 @@ class SharpnessSpec : StringSpec({
         tell(sharpness, fps = 22.0, times = 4) shouldBe true
         sharpness.ratio shouldBe (1.26 plusOrMinus 1e-12)
     }
+
+    // the pixels notstrom's picture test draws at (`?soft`): the retina screen's 2 settles at a plain screen's 1
+    "the floor is a plain screen's one pixel, or the screen's own where it has fewer" {
+        Sharpness.leastFor(full = 2.0) shouldBe 1.0
+        Sharpness.leastFor(full = 1.5) shouldBe 1.0
+        Sharpness.leastFor(full = 1.0) shouldBe 1.0
+        Sharpness.leastFor(full = 0.8) shouldBe 0.8
+    }
+
+    "a screen ratio that is no number, none or below none gives a plain screen's floor" {
+        Sharpness.leastFor(full = Double.NaN) shouldBe 1.0
+        Sharpness.leastFor(full = 0.0) shouldBe 1.0
+        Sharpness.leastFor(full = -1.0) shouldBe 1.0
+        Sharpness(full = Double.NaN).least shouldBe 1.0
+    }
 })

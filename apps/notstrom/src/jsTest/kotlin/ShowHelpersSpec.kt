@@ -132,6 +132,26 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "?t=62.1", strobe = true, frozenAt = 0.0).double(Switch.Time) shouldBe 0.0
     }
 
+    // the maintainer, 2026-11-27: a retina screen measured at its full pixels chose low for a machine that plays high
+    "the machine test's stage stands frozen at the start, at 1x, at the fewest pixels, without the stroboscope" {
+        val switches = testSwitches(query = "")
+
+        switches.double(Switch.Time) shouldBe 0.0
+        switches[Switch.Oversample] shouldBe "1"
+        switches.has(Switch.Soft) shouldBe true
+        switches.has(Switch.Sharp) shouldBe false
+        switches.has(Switch.NoStrobe) shouldBe true
+    }
+
+    "the machine test's stage keeps the address's switches, its oversampling at 1x whatever the address says" {
+        val switches = testSwitches(query = "?oversample=2&fog=low&sharp")
+
+        switches[Switch.Oversample] shouldBe "1"
+        switches[Switch.Fog] shouldBe "low"
+        switches.has(Switch.Sharp) shouldBe true
+        switches.has(Switch.Soft) shouldBe true
+    }
+
     "the seed is the address's where it gives one, else drawn" {
         showSeed(switches = Switches.parse("seed=42"), random = Random(1)) shouldBe 42
         showSeed(switches = Switches.parse("seed=x"), random = Random(1)) shouldBe Random(1).nextInt(100_000)

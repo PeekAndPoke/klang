@@ -87,8 +87,9 @@ fun Tag.NotstromApp(query: String) = comp(
  * that is not secure (plain http on a network address) cannot have the engine's sound: the start screen says so and
  * starts nothing. Outside desktop Chrome it warns first ([BrowserCheck], as the studio does). With the click (or
  * "Continue anyway") the player is made, then the machine is tested: the engine's dynamometer ([KlangBenchmark], the
- * studio's PS) and the stage drawn for a few seconds ([FrameStats]), as the high picture at 1x and then, where it may
- * matter, at 2x or, where 1x was slow, as the medium picture; it chooses the picture's detail ([presetFor],
+ * studio's PS) and the stage drawn for a few seconds ([FrameStats]), as the high picture at 1x (at the pixels the
+ * show may settle at, [testStage]) and then, where it may matter, at 2x or, where 1x was slow, as the medium
+ * picture; it chooses the picture's detail ([presetFor],
  * [PicturePreset], KLANG-00492) and its oversampling apart. The result is shown as a score ([MachineScore]) with the
  * choices for the show (the stroboscope,
  * fullscreen) right above the button that
@@ -687,16 +688,18 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         }
 
         val twice = if (PictureQuality.measuresTwice(fps1x = frames.fps, density = density)) {
-            // the same stage at 2x: a new render target and new shaders, so a warm-up of its own
+            // the same stage at 2x: a new render target and new shaders, so a warm-up of its own; at the screen's own
+            // pixels times two, as the show draws 2x (`soft` holds at 1x only)
             stage.picture.choose(2.0)
             measurePicture(stage = stage, warmMs = TWICE_WARM_MS, measureMs = TWICE_MS, from = 2.0 / 3, to = 1.0).fps
         } else {
             null
         }
 
-        // where the high picture was slow at 1x (and so there was no 2x part): the same stage at the medium detail, new
-        // shadow maps (lit materials built anew where the lamps that cast change) and the mirror at low, so a warm-up
-        // of its own; not where the address sets the picture's detail, which wins over the test's choice
+        // where the high picture was slow at 1x (and so there was no 2x part): the same stage at the medium detail (at
+        // the pixels the show may settle at, as the first part), new shadow maps (lit materials built anew where the
+        // lamps that cast change) and the mirror at low, so a warm-up of its own; not where the address sets the
+        // picture's detail, which wins over the test's choice
         val medium = if (measuresMedium(fpsHigh = frames.fps, query = props.query)) {
             stage.picture.choosePreset(PicturePreset.Medium)
             measurePicture(stage = stage, warmMs = MEDIUM_WARM_MS, measureMs = MEDIUM_MS, from = 2.0 / 3, to = 1.0).fps
@@ -710,7 +713,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val result = Tested(
             voices = voices,
             frames = frames,
-            // from the first part: the full picture, as the show starts it
+            // from the first part: the high picture, at the pixels the show may settle at
             score = MachineScore.of(safeVoices = voices, fps = frames.fps),
             preset = presetFor(fpsHigh = frames.fps, fpsMedium = medium),
             oversample = PictureQuality.oversampleFor(fps1x = frames.fps, fps2x = twice, density = density),
@@ -743,19 +746,24 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
     /**
      * The picture test's stage: the stage the show draws, with the band standing at their places (the show frozen at
-     * its start, so nothing moves the measure: no music, no flashing stroboscope, the full picture the show starts
-     * with), at 1x whatever the address says: the high picture ([PicturePreset.High]: the fog and the shadows high,
-     * the reflections mid), or the address's settings where it sets them; its second part draws the same at 2x, or
-     * the medium picture at 1x. It is not seen: the
+     * its start, so nothing moves the measure: no music, no flashing stroboscope, the heaviest moment of the show),
+     * at 1x whatever the address says: the high picture ([PicturePreset.High]: the fog and the shadows high, the
+     * reflections mid), or the address's settings where it sets them; its second part draws the same at 2x, or the
+     * medium picture at 1x.
+     *
+     * At 1x it draws the pixels the show may settle at (`soft`: a plain screen's one for each of the page's,
+     * `Sharpness.leastFor`), not the screen's own: the show starts at the screen's own and steps down where the
+     * frames are slow, but a frozen show does not step, so on a retina screen the test drew four times the pixels of
+     * a plain one and chose low for a machine that plays the high picture at 60 frames a second at about 1.2 (the
+     * maintainer, 2026-11-27: "we should be able to detect that the macbook air can run 60fps with the settings of
+     * my first screenshot"). At 2x it draws what the show draws at 2x, the screen's own pixels times the
+     * oversampling: there the show does not step down its pixels. It is not seen: the
      * checking screen covers it (an opaque layer over the full-size canvas, which stays in the layout at its real size
      * and is really drawn; a canvas hidden or made small could be skipped by the browser and would measure nothing
      * true).
      */
     private fun testStage(): Running {
-        // the address's switches, frozen at the start (`t=0`: the band at their places), at 1x, and without the
-        // stroboscope (nobody has chosen yet); the fog, the shadows and the reflections the address's, else the high
-        // picture's
-        val switches = showSwitches(query = props.query + "&${Switch.Oversample.key}=1", strobe = false, frozenAt = 0.0)
+        val switches = testSwitches(query = props.query)
         val stage = Running(
             show = Show(seed = showSeed(switches = switches, random = Random.Default), switches = switches),
             key = "stage-${++stages}",

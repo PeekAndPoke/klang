@@ -308,16 +308,29 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     /**
      * How finely the picture is drawn: it follows the frame rate (see [Sharpness]), at 1x and at 0.5x (half the
      * pixels of what 1x draws then). Not where the picture is frozen (a still is the same on every machine), not
-     * with oversampling above 1x (that asks for more pixels), and not with `?sharp`, which keeps the screen's own
-     * pixels whatever the frames do.
+     * with oversampling above 1x (that asks for more pixels), not with `?sharp`, which keeps the screen's own
+     * pixels whatever the frames do, and not with `?soft` ([soft]).
      */
     private val sharpness = Sharpness(full = screenRatio())
+
+    /**
+     * The picture is drawn at [Sharpness.least], the fewest pixels it goes down to, from the start (`?soft`,
+     * [Switch.Soft]; notstrom's picture test): at 1x and 0.5x, and not where `?sharp` keeps the screen's own.
+     */
+    private val soft: Boolean
+        get() = Oversampling.follows(samples) && props.show.switches.has(Switch.Soft) &&
+            !props.show.switches.has(Switch.Sharp)
+
+    /** The pixels drawn for each of the page's, each way, before the oversampling: [sharpness]'s, or its floor where [soft]. */
+    private val pixels: Double
+        get() = if (soft) sharpness.least else sharpness.ratio
 
     /** When the oversampling takes a step down, where [Props.stepsDown] asks for it. */
     private val downshift = Downshift()
 
     private val adapts: Boolean
-        get() = Oversampling.follows(samples) && props.show.frozen == null && !props.show.switches.has(Switch.Sharp)
+        get() = Oversampling.follows(samples) && props.show.frozen == null && !props.show.switches.has(Switch.Sharp) &&
+            !props.show.switches.has(Switch.Soft)
 
     /**
      * The whole look, today's and the new one ([LookFlip], `?look=new`, the key x), the one shown and the one kept for
@@ -545,11 +558,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         // lit, seen from where the camera happens to be, is no picture of the show
         ctx.scene.visible = false
 
-        resize()
-
-        if (samples != Oversampling.PLAIN) {
-            sample()
-        }
+        // the pixels as the oversampling and `?soft` ask for them (the stage starts with the screen's own), and the size
+        sample()
 
         scope.launch {
             val band = try {
@@ -738,7 +748,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 listOf(
                     "${fps.toFixed(0)} fps",
                     "slowest frame $worstShown ms",
-                    "pixels ${sharpness.ratio.toFixed(2)}x",
+                    "pixels ${pixels.toFixed(2)}x",
                     "${drawn?.calls ?: "-"} draws, ${drawn?.triangles ?: "-"} triangles",
                 ),
                 listOf(
@@ -938,10 +948,10 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
     /**
      * Sets the renderer's pixels: the screen's (at most 2) or fewer where the frames come too slowly ([sharpness]),
-     * times the oversampling chosen, each way.
+     * or the fewest from the start ([soft]), times the oversampling chosen, each way.
      */
     private fun sample() {
-        renderer?.setPixelRatio(sharpness.ratio * sqrt(samples))
+        renderer?.setPixelRatio(pixels * sqrt(samples))
         resize()
     }
 

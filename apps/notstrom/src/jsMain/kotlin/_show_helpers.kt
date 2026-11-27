@@ -104,6 +104,16 @@ fun showSwitches(
 }
 
 /**
+ * The switches of the machine test's stage under the address of [query]: the address's, frozen at the start (`t=0`:
+ * the band at their places), at 1x with the fewest pixels the show goes down to (`soft`: a plain screen's one for each
+ * of the page's; the address's `?sharp` wins in the live act), and without the stroboscope (nobody has chosen yet);
+ * the fog, the shadows and the reflections the address's, else the high picture's. Why the pixels: notstrom's
+ * `testStage`.
+ */
+fun testSwitches(query: String): Switches =
+    showSwitches(query = "$query&${Switch.Oversample.key}=1&${Switch.Soft.key}", strobe = false, frozenAt = 0.0)
+
+/**
  * The address's switches the app decides itself, whatever the address says: the stroboscope (`nostrobe`, the start
  * screen's choice), the line at the top (`nohud`, shown by the app's own `dev`), the frozen time (`t`), and the app's
  * own `notest`. None of them changes what the machine test measures.
@@ -199,9 +209,10 @@ fun qualityLine(query: String, preset: PicturePreset, oversample: Int): String {
 }
 
 /**
- * Whether the machine test's medium part is worth running: where its first part, the high picture at 1x ([fpsHigh]),
- * does not hold [PictureQuality.HOLD_FPS] (a rate that is no number holds nothing), and the address of [query] does not
- * set the picture's detail itself ([setsPicture]), which wins over the test's choice.
+ * Whether the machine test's medium part is worth running: where its first part, the high picture at 1x at the pixels
+ * the show may settle at ([fpsHigh]), does not hold [PictureQuality.HOLD_FPS] (a rate that is no number holds
+ * nothing), and the address of [query] does not set the picture's detail itself ([setsPicture]), which wins over the
+ * test's choice.
  */
 fun measuresMedium(fpsHigh: Double, query: String): Boolean = !(fpsHigh >= PictureQuality.HOLD_FPS) && !setsPicture(query)
 
@@ -210,6 +221,12 @@ fun measuresMedium(fpsHigh: Double, query: String): Boolean = !(fpsHigh >= Pictu
  * part, the high picture at 1x ([fpsHigh]), holds [PictureQuality.HOLD_FPS]; else [PicturePreset.Medium] where its
  * medium part ([fpsMedium]; null where it was not run) holds it; else [PicturePreset.Low]. A rate that is no number
  * holds nothing. The oversampling is chosen apart ([PictureQuality.oversampleFor]), by the display as well.
+ *
+ * Both parts draw the frozen opening (the heaviest moment) at the pixels the show may settle at, a plain screen's one
+ * for each of the page's (notstrom's `testStage`): the show steps its pixels down by itself where the frames are slow,
+ * so a machine that holds the rate there plays the preset. Measured at a retina screen's full pixels, a MacBook Air
+ * that plays the high picture at 60 frames a second was given low (the maintainer, 2026-11-27: "we should be able to
+ * detect that the macbook air can run 60fps with the settings of my first screenshot").
  */
 fun presetFor(fpsHigh: Double, fpsMedium: Double?): PicturePreset = when {
     fpsHigh >= PictureQuality.HOLD_FPS -> PicturePreset.High

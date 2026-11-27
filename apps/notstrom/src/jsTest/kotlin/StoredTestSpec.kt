@@ -45,6 +45,8 @@ class StoredTestSpec : StringSpec({
 
     "a result of another test version counts no more: 6, when the quality held the oversampling" {
         KEPT.copy(version = 6).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+        // 7 measured at the screen's full pixels: a MacBook Air kept low for a picture it plays at high (2026-11-27)
+        KEPT.copy(version = 7).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION + 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION - 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
     }
@@ -61,7 +63,7 @@ class StoredTestSpec : StringSpec({
     // The stored text, pinned: a field renamed in the code must not change it, or every visitor's kept result is lost
     "the kept text, field by field" {
         JSON.encodeToString(StoredTest.serializer(), KEPT) shouldBe
-            """{"version":7,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """{"version":8,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"quality":"medium","oversample":2}"""
     }
 
@@ -76,7 +78,7 @@ class StoredTestSpec : StringSpec({
     }
 
     "a kept text is read back, also with a field it does not know" {
-        val text = """{"version":7,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+        val text = """{"version":8,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"quality":"medium","oversample":2,"later":true}"""
 
         JSON.decodeFromString(StoredTest.serializer(), text) shouldBe KEPT

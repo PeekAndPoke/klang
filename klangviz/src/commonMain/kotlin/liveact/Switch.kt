@@ -77,6 +77,14 @@ enum class Switch(val key: String) {
     Sharp("sharp"),
 
     /**
+     * `?soft`: the picture is drawn from the start with the fewest pixels it goes down to when the frames get slow (a
+     * plain screen's one for each of the page's, or the screen's own where it has fewer: `Sharpness.leastFor`), and
+     * stays so. At 1x and 0.5x only; with oversampling above 1x the picture keeps the screen's own pixels, as it does
+     * without the switch. [Sharp] wins over it. Notstrom's picture test draws so: the pixels the show may settle at.
+     */
+    Soft("soft"),
+
+    /**
      * `?shadows=low`: how finely the lamps' shadows are drawn: low or high ([ShadowQuality]); any other value is as
      * [Quality] says, else high, the shadows as they were made.
      */

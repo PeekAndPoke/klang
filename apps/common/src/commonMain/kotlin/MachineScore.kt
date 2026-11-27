@@ -67,7 +67,11 @@ data class MachineScore(val sound: Double, val picture: Double, val combined: In
  *
  * The picture's detail (the fog, the shadows, the reflections) is chosen apart from the oversampling, by the app
  * (notstrom's presets, KLANG-00492): its 1x part draws the high detail, which it keeps where that part holds
- * [HOLD_FPS]; where it does not, a medium part decides between medium and low. Until 2026-11-26 a fog part chose the
+ * [HOLD_FPS]; where it does not, a medium part decides between medium and low. Its 1x parts draw at the pixels the
+ * show may settle at (a plain screen's one for each of the page's; the show steps down to them where the frames are
+ * slow, 2026-11-27), the 2x part at the display's own times the oversampling, as the show draws 2x: on a display
+ * between 1 and [DENSE] the 2x part draws more than twice the pixels of the 1x part, so [KEEP_SHARE] asks a little
+ * more of it there than on a plain display. Until 2026-11-26 a fog part chose the
  * fog's sheets here by how the frame time grew with them. The test never chooses 0.5x or 4x oversampling: those are
  * the visitor's choices, and they hold.
  */
