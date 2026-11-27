@@ -7,11 +7,8 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.strings
 
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.workshop.threejs.ExtrudeGeometryOptions
-import io.peekandpoke.klang.workshop.threejs.createBufferGeometry
 import io.peekandpoke.klang.workshop.threejs.createExtrudeGeometry
-import io.peekandpoke.klang.workshop.threejs.createFloat32Attribute
 import io.peekandpoke.klang.workshop.threejs.createShape
-import io.peekandpoke.klang.workshop.threejs.setAttribute
 import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
 import io.peekandpoke.kraft.utils.jsObject
 import org.khronos.webgl.Float32Array
@@ -23,7 +20,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 // The shapes a strung instrument is built of (see StrungInstrument): an outline cut from a slab with rounded edges,
-// shaded smooth; a neck's fretboard measured for its frets; several small parts as one mesh.
+// shaded smooth; a neck's fretboard measured for its frets. Several small parts as one mesh: `merged`.
 
 /**
  * The [outline] cut from a slab [depth] deep, its edges rounded over [round] (as far out from the outline as into
@@ -179,34 +176,3 @@ internal fun fretboardUv(geometry: BufferGeometry, centre: Double, nut: Double, 
 
 /** Across the neck, far beyond any dot or fret: where its other sides are measured. */
 private const val FAR_OFF_BOARD = 9.0f
-
-/**
- * The [parts] as one geometry: one mesh, drawn at once, where each would be drawn on its own (and again for every
- * shadow and for the mirror floor). Each part is placed already; they are freed.
- */
-internal fun merged(parts: List<BufferGeometry>): BufferGeometry {
-    val positions = ArrayList<Double>()
-    val normals = ArrayList<Double>()
-
-    for (part in parts) {
-        val flat = part.asDynamic().toNonIndexed().unsafeCast<BufferGeometry>()
-        val attributes = flat.asDynamic().attributes
-        val position = attributes.position.array.unsafeCast<Float32Array>()
-        val normal = attributes.normal.array.unsafeCast<Float32Array>()
-
-        for (i in 0 until position.length) {
-            positions.add(position[i].toDouble())
-            normals.add(normal[i].toDouble())
-        }
-
-        flat.dispose()
-        part.dispose()
-    }
-
-    val geometry = Three.addon.createBufferGeometry()
-
-    geometry.setAttribute("position", Three.addon.createFloat32Attribute(positions.toTypedArray(), 3))
-    geometry.setAttribute("normal", Three.addon.createFloat32Attribute(normals.toTypedArray(), 3))
-
-    return geometry
-}

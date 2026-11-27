@@ -7,6 +7,7 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
+import io.peekandpoke.klang.viz.liveact.band.instruments.mergedByLook
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.workshop.threejs.createCircleGeometry
 import io.peekandpoke.klang.workshop.threejs.createColor
@@ -64,8 +65,13 @@ class Trumpet(private val rig: Rig) {
     /** The trumpet, in its own space: x from the mouthpiece to the bell, y up. It stands in the figure's scene. */
     val group: Group = buildTrumpet()
 
+    /**
+     * The trumpet: the brass that does not move (the tubes, the bell, the loop and the valves' casings) as one mesh
+     * ([mergedByLook]), the valves' caps each on its own (they go down with a fingering), and the bell's light.
+     */
     private fun buildTrumpet(): Group {
         val g = Three.addon.createGroup()
+        val still = Three.addon.createGroup()
 
         fun tube(from: Double, to: Double, r: Double): Mesh {
             val m = Three.addon.createMesh(Three.addon.createCylinderGeometry(r * s, r * s, (to - from) * s, 10), brass)
@@ -76,8 +82,8 @@ class Trumpet(private val rig: Rig) {
             return m
         }
 
-        g.add(tube(from = 0.0, to = 0.05, r = 0.010))
-        g.add(tube(from = 0.03, to = 0.38, r = 0.0065))
+        still.add(tube(from = 0.0, to = 0.05, r = 0.010))
+        still.add(tube(from = 0.03, to = 0.38, r = 0.0065))
 
         val profile = mutableListOf<Vector2>()
 
@@ -92,14 +98,14 @@ class Trumpet(private val rig: Rig) {
 
         bell.rotation.z = -PI / 2
         bell.position.x = 0.36 * s
-        g.add(bell)
+        still.add(bell)
 
         // the loop under the tube, and the three valves
         val loop = Three.addon.createMesh(Three.addon.createTorusGeometry(0.035 * s, 0.006 * s, 8, 20), brass)
 
         loop.scale.set(2.6, 1.0, 1.0)
         loop.position.set(0.20 * s, -0.04 * s, 0.0)
-        g.add(loop)
+        still.add(loop)
 
         for (i in 0 until 3) {
             val casing = Three.addon.createMesh(Three.addon.createCylinderGeometry(0.011 * s, 0.011 * s, 0.085 * s, 10), brass)
@@ -109,7 +115,7 @@ class Trumpet(private val rig: Rig) {
             val cap = Three.addon.createMesh(Three.addon.createCylinderGeometry(0.008 * s, 0.008 * s, 0.03 * s, 8), brass)
 
             cap.position.set((0.165 + i * 0.027) * s, 0.035 * s, 0.0)
-            g.add(casing)
+            still.add(casing)
             g.add(cap)
             valves.add(cap)
         }
@@ -119,6 +125,10 @@ class Trumpet(private val rig: Rig) {
         disc.rotation.y = PI / 2
         disc.position.x = 0.465 * s
         g.add(disc)
+
+        for (mesh in mergedByLook(still)) {
+            g.add(mesh)
+        }
 
         g.traverse { o ->
             if (o.isMesh) {

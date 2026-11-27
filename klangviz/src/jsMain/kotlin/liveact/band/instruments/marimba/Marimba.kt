@@ -9,6 +9,9 @@ import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.instruments.PartGlow
+import io.peekandpoke.klang.viz.liveact.band.instruments.glowsByPart
+import io.peekandpoke.klang.viz.liveact.band.instruments.mergedByLook
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringMaterials
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
@@ -16,19 +19,19 @@ import io.peekandpoke.klang.viz.liveact.quat
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.ExtrudeGeometryOptions
+import io.peekandpoke.klang.workshop.threejs.InstancedMesh
 import io.peekandpoke.klang.workshop.threejs.colorSpace
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.createExtrudeGeometry
 import io.peekandpoke.klang.workshop.threejs.createInstancedMesh
-import io.peekandpoke.klang.workshop.threejs.emissive
-import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.createShape
 import io.peekandpoke.klang.workshop.threejs.isMesh
 import io.peekandpoke.klang.workshop.threejs.map
 import io.peekandpoke.klang.workshop.threejs.quaternion
+import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
+import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
-import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.Texture
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
@@ -146,10 +149,19 @@ private fun rosewood(): Texture {
 private val NATURAL = listOf(true, false, true, false, true, true, false, true, false, true, false, true)
 
 /**
- * One bar of the marimba: its mesh, its glowing material, its height at rest, and where a mallet lands on it ([place],
- * as plain numbers for the plan of the hands).
+ * One bar of the marimba: which of the bars drawn together it is ([index]), its middle at rest ([x], [restY], [z]),
+ * how [long] it is, the colour it glows in ([glow]), and where a mallet lands on it ([place], as plain numbers for the
+ * plan of the hands).
  */
-internal class MarimbaBar(val bar: Mesh, val material: MeshStandardMaterial, val restY: Double, val place: MarimbaPoint) {
+internal class MarimbaBar(
+    val index: Int,
+    val x: Double,
+    val restY: Double,
+    val z: Double,
+    val long: Double,
+    val glow: Color,
+    val place: MarimbaPoint,
+) {
     /** When it was last hit, within the last moments; -9 where it was not. */
     var hitT: Double = -9.0
 
@@ -178,6 +190,19 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
     val near: Double = 0.42 * s
 
     private val bars = mutableMapOf<Int, MarimbaBar>()
+
+    /**
+     * All bars, one shape drawn once for each bar and stretched to its length: one draw for all of them, where a mesh
+     * and a material for each bar was a draw for each (and again for every lamp's shadow). Each one's light is its
+     * own ([barGlows]), so are its place and its dip when hit (its matrix).
+     */
+    private val barMesh: InstancedMesh
+
+    /** The light each bar gives off by itself, by its [MarimbaBar.index]. */
+    private val barGlows: PartGlow
+
+    /** A bar's place, worked out anew for each bar each frame. */
+    private val barPlace = mat4()
 
     /** The lowest and the highest bar, and how wide a bar is. */
     private val lowest: Int
@@ -249,6 +274,21 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
         // the tubes below the bars: where each one's middle is, and how long it is
         val tubes = mutableListOf<Pair<Vector3, Double>>()
 
+        // the bars: one rosewood for all, each lit by its own light (see glowsByPart); the shape one long, stretched
+        // to each bar's length (a box's picture covers each face whatever its size, so it is the same on each)
+        val barMaterial = Three.addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
+            map = materials.bar
+            roughness = 0.62
+        })
+
+        glowsByPart(barMaterial)
+        barMesh = Three.addon.createInstancedMesh(
+            geometry = Three.addon.createBoxGeometry(width = width * 0.86, height = 0.02 * s, depth = 1.0),
+            material = barMaterial,
+            count = hi - lo + 1,
+        )
+        barGlows = PartGlow.instanced(geometry = barMesh.asDynamic().geometry.unsafeCast<BufferGeometry>(), count = hi - lo + 1)
+
         for (m in lo..hi) {
             val natural = isNatural(m)
             val index = if (natural) naturals.indexOf(m).toDouble() else naturals.indexOf(m - 1) + 0.5
@@ -257,19 +297,6 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
             val length = (0.24 - 0.08 * share) * s
             val z = if (natural) near + length / 2 else near + 0.25 * s + length / 2
             val y = height + (if (natural) 0.0 else 0.025 * s)
-            val material = Three.addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
-                map = materials.bar
-                roughness = 0.62
-                emissive = if (natural) nearGlow else farGlow
-                emissiveIntensity = 0.0
-            })
-            val bar = Three.addon.createMesh(
-                Three.addon.createBoxGeometry(width = width * 0.86, height = 0.02 * s, depth = length),
-                material,
-            )
-
-            bar.position.set(x, y, z)
-            group.add(bar)
 
             // the tube below it: longer for a low note
             val tubeLength = (0.55 - 0.38 * share) * s
@@ -278,12 +305,19 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
 
             // a mallet lands near the bar's end that is toward the player
             bars[m] = MarimbaBar(
-                bar = bar,
-                material = material,
+                index = m - lo,
+                x = x,
                 restY = y,
+                z = z,
+                long = length,
+                glow = if (natural) nearGlow else farGlow,
                 place = MarimbaPoint(x = x, y = y + 0.012 * s, z = z - length * (if (natural) 0.15 else 0.30)),
             )
         }
+
+        // each bar at rest and dark
+        answerBars(t = 0.0)
+        group.add(barMesh)
 
         // the tubes: one cylinder, one long, drawn once for each tube and stretched to its length (one draw for all)
         val tubeMesh = Three.addon.createInstancedMesh(
@@ -304,7 +338,9 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
 
         group.add(tubeMesh)
 
-        // the frame
+        // the frame: it does not move on the marimba, so its parts are drawn as one mesh for each look (see
+        // mergedByLook): the rails and the ends, the dark diamonds, the gold
+        val frame = Three.addon.createGroup()
         val far = near + 0.50 * s
 
         for (z in listOf(near - 0.02 * s, near + 0.245 * s, far)) {
@@ -314,7 +350,8 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
             )
 
             rail.position.set(0.0, height - 0.03 * s, z)
-            group.add(rail)
+            rail.castShadow = true
+            frame.add(rail)
         }
 
         // no legs: the marimba floats (the maintainer, 2026-11-15: "make the marimba fly"); an end closes the frame
@@ -353,14 +390,12 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
 
             end.rotation.y = -PI / 2
             end.position.set(x + endThick / 2, 0.0, 0.0)
-            group.add(end)
+            end.castShadow = true
+            frame.add(end)
         }
 
-        group.traverse { o ->
-            if (o.isMesh) {
-                o.castShadow = true
-            }
-        }
+        tubeMesh.castShadow = true
+        barMesh.castShadow = true
 
         // the gold (it throws no shadow of its own: it lies flat on the frame). On each end one large diamond, a
         // smaller dark one within it, so that it is a diamond's outline
@@ -383,7 +418,7 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
 
                 diamond.position.set(x + out * (endThick / 2 + lift - proud), emblemAt, endMiddle)
                 diamond.quaternion.copy(aboutX)
-                group.add(diamond)
+                frame.add(diamond)
             }
         }
 
@@ -417,11 +452,15 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
                 )
 
                 line.position.set(0.0, y, face)
-                group.add(line)
+                frame.add(line)
             }
         }
 
         group.add(band)
+
+        for (mesh in mergedByLook(frame)) {
+            group.add(mesh)
+        }
 
         fun mallet(): Group {
             val mallet = Three.addon.createGroup()
@@ -494,15 +533,24 @@ class Marimba(rig: Rig, notes: List<Note>, grows: Boolean, home: Place? = null) 
             i--
         }
 
-        for (b in bars.values) {
-            val age = t - b.hitT
-
-            b.material.emissiveIntensity = if (b.hitT < 0) 0.0 else 1.0 * max(0.6, b.v) * exp(-age / 0.22)
-            b.bar.position.y = b.restY - (if (b.hitT < 0) 0.0 else 0.004 * s * b.v * exp(-age / 0.05))
-        }
+        answerBars(t)
 
         // it hovers, a slow breath up and down; the mallets follow it
         group.position.y = floor + hoverAt(t)
+    }
+
+    /** Each bar at [t] (seconds), as its last hit has it ([MarimbaBar.hitT]): it glows and fades, it dips and comes back. */
+    private fun answerBars(t: Double) {
+        for (b in bars.values) {
+            val age = t - b.hitT
+            val dip = if (b.hitT < 0) 0.0 else 0.004 * s * b.v * exp(-age / 0.05)
+
+            barGlows.set(part = b.index, color = b.glow, intensity = if (b.hitT < 0) 0.0 else 1.0 * max(0.6, b.v) * exp(-age / 0.22))
+            barPlace.asDynamic().makeScale(1.0, 1.0, b.long).setPosition(b.x, b.restY - dip, b.z)
+            barMesh.setMatrixAt(b.index, barPlace)
+        }
+
+        barMesh.instanceMatrix.needsUpdate = true
     }
 
     companion object {

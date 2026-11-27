@@ -8,6 +8,7 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.drums
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.instruments.mergedByLook
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.song.Drum
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
@@ -180,13 +181,16 @@ private fun named(name: String, glowing: Boolean = false): Texture {
 /** A place of the kit in the figure's own measures (times its scale gives the place on the stage). */
 private class KitSpot(val x: Double, val y: Double, val z: Double)
 
-/** How a piece of the kit answers a hit, besides its glow. */
+/**
+ * How a piece of the kit answers a hit, besides its glow. What moves ([Swing], [Push]) is a mesh of its own; what
+ * stands still is merged with the rest of the kit that does not move (see [Kit]).
+ */
 private sealed interface KitAnswer {
-    /** A cymbal swings about its [tilt]. */
-    class Swing(val tilt: Double) : KitAnswer
+    /** A cymbal ([mesh]) swings about its [tilt]. */
+    class Swing(val mesh: Object3D, val tilt: Double) : KitAnswer
 
-    /** The kick is pushed toward the audience from [base], its [front] head (resting at [frontZ]) with it. */
-    class Push(val base: Vector3, val front: Object3D, val frontZ: Double) : KitAnswer
+    /** The kick ([mesh]) is pushed toward the audience from [base], its [front] head (resting at [frontZ]) with it. */
+    class Push(val mesh: Object3D, val base: Vector3, val front: Object3D, val frontZ: Double) : KitAnswer
 
     /** A drum stands still. */
     data object Still : KitAnswer
@@ -196,11 +200,10 @@ private sealed interface KitAnswer {
 private class DrumLights(val materials: List<MeshStandardMaterial>, val glow: DrumGlow)
 
 /**
- * A piece of the kit: what moves ([mesh]), where a stick lands on it ([at], the figure's space), how it answers a
- * hit, and what of it lights up when hit ([lights], nothing for most).
+ * A piece of the kit: where a stick lands on it ([at], the figure's space), how it answers a hit (and what of it
+ * moves), and what of it lights up when hit ([lights], nothing for most).
  */
 private class KitPiece(
-    val mesh: Object3D,
     val at: Vector3,
     val answer: KitAnswer,
     val lights: DrumLights? = null,
@@ -216,6 +219,14 @@ private class KitPiece(
  * The drum kit, built where the figure [rig] sits to play it: the stool, the drums and the cymbals, the kick with
  * [name] (the band's) on its front head, and the two sticks. A drum lights up when it is hit, a cymbal swings, the
  * kick is pushed (see [answer]).
+ *
+ * What does not move during the show (the stool, the drums, the stands with their feet, rods, clutches and nuts) is
+ * drawn as one mesh for each look ([mergedByLook]): where each part stands is set here part by part, as it always
+ * was, and merged when the kit is built, so a part put elsewhere (the crash's stand, say) is merged where it now
+ * stands. What moves (the cymbals, the kick and its front head, the sticks) keeps meshes of its own. Some ten meshes
+ * where there were some forty, each drawn again for every lamp's shadow (the maintainer, 2026-11-27: "On the drum
+ * kit we need to keep the individual parts moveable, like putting the crash stand to a different position. But
+ * during a concert it is probably static.").
  */
 class Kit(rig: Rig, name: String) {
     private val s: Double = rig.s
@@ -224,6 +235,9 @@ class Kit(rig: Rig, name: String) {
     val group: Group = Three.addon.createGroup()
 
     private val pieces = mutableMapOf<Drum, KitPiece>()
+
+    /** What does not move during the show, gathered while the kit is built and then merged into [group]. */
+    private val still: Group = Three.addon.createGroup()
 
     /** The stool's height. */
     val seat: Double = 0.50 * s
@@ -263,8 +277,8 @@ class Kit(rig: Rig, name: String) {
             KitMaterials.steel,
         )
         leg.position.set(0.0, seat / 2, -0.02 * s)
-        group.add(stool)
-        group.add(leg)
+        still.add(stool)
+        still.add(leg)
 
         // the drums: where the stick lands (the head's middle), the radius, the height of the shell, the tilt toward
         // the player
@@ -297,9 +311,8 @@ class Kit(rig: Rig, name: String) {
         group.add(front)
 
         pieces[Drum.Kick] = KitPiece(
-            mesh = kick,
             at = vec(),
-            answer = KitAnswer.Push(base = kick.position.clone(), front = front, frontZ = front.position.z),
+            answer = KitAnswer.Push(mesh = kick, base = kick.position.clone(), front = front, frontZ = front.position.z),
             lights = DrumLights(materials = listOf(frontMaterial), glow = KICK_GLOW),
         )
 
@@ -318,6 +331,20 @@ class Kit(rig: Rig, name: String) {
 
             stick
         }
+
+        // what does not move, merged: every part throws its shadow, as every part of the kit does
+        still.traverse { o ->
+            if (o.isMesh) {
+                o.castShadow = true
+            }
+        }
+
+        for (mesh in mergedByLook(still)) {
+            group.add(mesh)
+        }
+
+        // (the parts themselves are not kept)
+        still.clear()
 
         group.traverse { o ->
             if (o.isMesh) {
@@ -380,13 +407,13 @@ class Kit(rig: Rig, name: String) {
                 KitMaterials.steel,
             )
             stand.position.set(at.x * s, at.y * s / 2 - height * s * 0.5, at.z * s + 0.02)
-            group.add(stand)
+            still.add(stand)
         }
 
-        group.add(piece)
+        // a drum stands still: merged with the rest that does not move
+        still.add(piece)
 
         pieces[name] = KitPiece(
-            mesh = piece,
             at = vec(at.x * s, at.y * s, at.z * s),
             answer = KitAnswer.Still,
             lights = hoopMaterial?.let { DrumLights(materials = listOf(it), glow = SNARE_GLOW) },
@@ -411,8 +438,11 @@ class Kit(rig: Rig, name: String) {
 
         piece.position.set(at.x * s, at.y * s, at.z * s)
 
+        // what swings: the cymbal, and a hat's lower one with it, one mesh (see mergedByLook)
+        val swings = Three.addon.createGroup()
         val disc = Three.addon.createMesh(turned(radius = r, bow = bow, bell = bell, bellHigh = bellHigh), KitMaterials.brass)
-        piece.add(disc)
+
+        swings.add(disc)
 
         // what holds it, over the bell: it does not swing with the cymbal
         val over = bow + bellHigh
@@ -424,7 +454,7 @@ class Kit(rig: Rig, name: String) {
 
             lower.rotation.x = PI
             lower.position.y = -gap
-            piece.add(lower)
+            swings.add(lower)
 
             // the rod through both, and the clutch that holds the upper one
             val rod = Three.addon.createMesh(
@@ -438,15 +468,15 @@ class Kit(rig: Rig, name: String) {
                 KitMaterials.steel,
             )
             clutch.position.set(at.x * s, at.y * s + over + 0.018 * s, at.z * s)
-            group.add(rod)
-            group.add(clutch)
+            still.add(rod)
+            still.add(clutch)
         } else {
             val nut = Three.addon.createMesh(
                 cylinder(radiusTop = 0.008 * s, radiusBottom = 0.02 * s, height = 0.028 * s, segments = 10),
                 KitMaterials.steel,
             )
             nut.position.set(at.x * s, at.y * s + over + 0.012 * s, at.z * s)
-            group.add(nut)
+            still.add(nut)
         }
 
         val stand = Three.addon.createMesh(
@@ -454,8 +484,13 @@ class Kit(rig: Rig, name: String) {
             KitMaterials.steel,
         )
         stand.position.set(at.x * s, at.y * s / 2, at.z * s)
+
+        for (mesh in mergedByLook(swings)) {
+            piece.add(mesh)
+        }
+
         group.add(piece)
-        group.add(stand)
+        still.add(stand)
 
         // its three feet, from a hub some way up the stand out to the floor
         val hub = vec(at.x * s, STAND_HUB * s, at.z * s)
@@ -471,7 +506,7 @@ class Kit(rig: Rig, name: String) {
 
             leg.position.copy(hub).addScaledVector(along, 0.5)
             leg.quaternion.setFromUnitVectors(vec(0.0, 1.0, 0.0), along.normalize())
-            group.add(leg)
+            still.add(leg)
         }
 
         // a cymbal is hit near its edge, the side toward the player
@@ -479,7 +514,7 @@ class Kit(rig: Rig, name: String) {
         val toward = vec(sign(at.x) * 0.25 - at.x, 0.0, 0.1 - at.z).normalize()
         edge.addScaledVector(toward, radius * s * 0.75)
 
-        pieces[name] = KitPiece(mesh = piece, at = edge, answer = KitAnswer.Swing(tilt = tilt))
+        pieces[name] = KitPiece(at = edge, answer = KitAnswer.Swing(mesh = piece, tilt = tilt))
     }
 
     /**
@@ -517,12 +552,12 @@ class Kit(rig: Rig, name: String) {
             when (val answer = d.answer) {
                 is KitAnswer.Swing -> {
                     val swing = d.v * 0.22 * exp(-age / 0.5) * sin(age * 22)
-                    d.mesh.rotation.set(answer.tilt * 0.5 + swing, 0.0, swing * 0.6)
+                    answer.mesh.rotation.set(answer.tilt * 0.5 + swing, 0.0, swing * 0.6)
                 }
 
                 is KitAnswer.Push -> {
                     val push = d.v * 0.012 * exp(-age / 0.06)
-                    d.mesh.position.z = answer.base.z + push
+                    answer.mesh.position.z = answer.base.z + push
                     // the head goes with its drum (else the shell hides it, and its light)
                     answer.front.position.z = answer.frontZ + push
                 }

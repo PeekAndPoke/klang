@@ -908,5 +908,10 @@ private fun Object3D.disposeOwn() {
                 material.dispose()
             }
         }
+
+        // a mesh drawn many times over holds each one's place on the card (the marimba's bars and tubes)
+        if (o.isInstancedMesh == true) {
+            o.dispose()
+        }
     }
 }

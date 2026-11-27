@@ -8,14 +8,17 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.strings
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.instruments.PartGlow
+import io.peekandpoke.klang.viz.liveact.band.instruments.glowsByPart
+import io.peekandpoke.klang.viz.liveact.band.instruments.merged
 import io.peekandpoke.klang.workshop.threejs.clone
 import io.peekandpoke.klang.workshop.threejs.copied
 import io.peekandpoke.klang.workshop.threejs.createColor
 import io.peekandpoke.klang.workshop.threejs.emissive
-import io.peekandpoke.klang.workshop.threejs.emissiveIntensity
 import io.peekandpoke.klang.workshop.threejs.setTo
 import io.peekandpoke.klang.workshop.threejs.translate
 import io.peekandpoke.kraft.addons.threejs.js.BufferGeometry
+import io.peekandpoke.kraft.addons.threejs.js.Color
 import io.peekandpoke.kraft.addons.threejs.js.Group
 import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
@@ -84,7 +87,8 @@ internal object StringMaterials {
  * round).
  *
  * Its meshes: the body, the neck and the head (only these three throw a shadow), the hardware (the pickups, the
- * bridge, the knobs and the tuners, one mesh of each metal), and the strings, one each (each lights up on its own).
+ * bridge, the knobs and the tuners, one mesh of each metal), and the strings, one mesh for all of them (each lights
+ * up on its own, see [glowsByPart]).
  */
 class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline, hand: Side = Side.R) {
     private val s = rig.s
@@ -99,8 +103,11 @@ class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline, han
      */
     val group: Group = Three.addon.createGroup()
 
-    /** A string each, the lowest first, lit on its own when it is the one played. */
-    private val strings: List<MeshStandardMaterial>
+    /** The colour the strings light up in: the player's eyes'. */
+    private val glow: Color
+
+    /** The light of each string, the lowest first, lit on its own when it is the one played. */
+    private val strings: PartGlow
 
     /**
      * The body's own material where it wears gold (the gold differs from instrument to instrument): it takes the
@@ -181,26 +188,28 @@ class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline, han
             g.add(addon.createMesh(merged(pickups + fittings), StringMaterials.metal))
         }
 
-        val glow = rig.eyes?.emissive?.copied() ?: addon.createColor(0xffffff)
+        glow = rig.eyes?.emissive?.copied() ?: addon.createColor(0xffffff)
 
-        strings = (0 until k.strings).map { i ->
-            val lit = addon.createMeshStandardMaterial(
-                jsObject<MaterialParameters> {
-                    color = 0x303038
-                    roughness = 0.3
-                    metalness = 0.9
-                    emissive = glow
-                    emissiveIntensity = 0.0
-                },
-            )
-            val y = (0.5 - i.toDouble() / (k.strings - 1)) * k.neck * 0.8 * s         // the lowest string is the upper one
-            val string = addon.createMesh(addon.createBoxGeometry(nut - bridge, 0.0025 * s, 0.0025 * s), lit)
+        // the strings: one mesh, one material, each string's light its own (where a mesh and a material for each
+        // string was a draw for each)
+        val wire = addon.createMeshStandardMaterial(
+            jsObject<MaterialParameters> {
+                color = 0x303038
+                roughness = 0.3
+                metalness = 0.9
+            },
+        )
+        val wires = merged(
+            (0 until k.strings).map { i ->
+                val y = (0.5 - i.toDouble() / (k.strings - 1)) * k.neck * 0.8 * s         // the lowest string is the upper one
 
-            string.position.set((nut + bridge) / 2, y, 0.02 * s)
-            g.add(string)
+                addon.createBoxGeometry(nut - bridge, 0.0025 * s, 0.0025 * s).translate((nut + bridge) / 2, y, 0.02 * s)
+            },
+        )
 
-            lit
-        }
+        glowsByPart(wire)
+        strings = PartGlow.perPoint(geometry = wires, points = wires.asDynamic().attributes.position.count.unsafeCast<Int>() / k.strings)
+        g.add(addon.createMesh(wires, wire))
 
         // only the body, the neck and the head throw a shadow: the hardware's shadow falls inside theirs, a tuner's
         // all but a centimetre of it, and a string's is thinner than a point of the shadow's map
@@ -221,7 +230,10 @@ class StrungInstrument(rig: Rig, design: StringDesign, outline: BodyOutline, han
      * lacquer's finish ([follow]).
      */
     fun light(lit: DoubleArray) {
-        strings.forEachIndexed { index, material -> material.emissiveIntensity = 3.4 * lit[index] }
+        for (index in 0 until strings.parts) {
+            strings.set(part = index, color = glow, intensity = 3.4 * lit[index])
+        }
+
         ownBody?.let { follow(it) }
     }
 
