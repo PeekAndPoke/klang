@@ -16,14 +16,27 @@ package io.peekandpoke.klang.apps.common
  *
  * It starts as [there] says: there, its first frame does not count (it spans the time before the drawing began, the
  * stage being made); not there, it starts [away].
+ *
+ * A frame longer than [GAP_MS] after a shorter one does not count either: the browser stopped drawing for a while
+ * without a word (a window covered, a machine asleep; the maintainer, 2026-11-27: "when i leave the window i get
+ * 'slowest frame of seconds'"). A long frame after a long one is the machine's pace and counts: a machine that draws
+ * slower than a frame a second is still measured (and gets the lighter picture).
  */
 class FrameClock(there: Boolean) {
+    companion object {
+        /** A frame longer than this, in milliseconds, is a pause, not the picture's cost (the live act's `PAUSE_MS`). */
+        const val GAP_MS = 1000.0
+    }
+
     /** How long the frames that counted took together, in milliseconds. */
     var drawnMs: Double = 0.0
         private set
 
     private var gone = !there
     private var spans = there
+
+    /** Whether the last frame with a number was longer than [GAP_MS]. */
+    private var lastLong = false
 
     /** The window lost the focus, or the page was hidden: frames count no more until it is [back]. */
     fun away() {
@@ -40,9 +53,20 @@ class FrameClock(there: Boolean) {
 
     /**
      * A frame that took [ms]: whether it counts. It does where the window is there, it is not the one across a time
-     * away, and its time is a number above 0 (NaN-guard: what is no number counts nothing); then it adds to [drawnMs].
+     * away, its time is a number above 0, and it is no longer than [GAP_MS], or the frame before it was longer than
+     * [GAP_MS] too; then it adds to [drawnMs].
      */
     fun frame(ms: Double): Boolean {
+        // NaN-guard: what is no number counts nothing, and says nothing of the frames' pace
+        if (!(ms.isFinite() && ms > 0.0)) {
+            return false
+        }
+
+        val long = ms > GAP_MS
+        val pause = long && !lastLong
+
+        lastLong = long
+
         if (gone) {
             return false
         }
@@ -53,7 +77,8 @@ class FrameClock(there: Boolean) {
             return false
         }
 
-        if (!(ms.isFinite() && ms > 0.0)) {
+        // a single long frame between shorter ones is a pause, and counts nothing
+        if (pause) {
             return false
         }
 

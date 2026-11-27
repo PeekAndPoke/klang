@@ -65,6 +65,28 @@ class FrameClockSpec : StringSpec({
         clock.drawnMs shouldBe 16.0
     }
 
+    "a single frame longer than a second between shorter ones is a pause the browser made: it counts nothing" {
+        val clock = FrameClock(there = true)
+
+        clock.frame(16.0)
+        clock.frame(16.0) shouldBe true
+        clock.frame(1000.0) shouldBe true
+        clock.frame(1001.0) shouldBe false
+        clock.frame(17.0) shouldBe true
+        clock.frame(4_000.0) shouldBe false
+        clock.frame(16.0) shouldBe true
+        clock.drawnMs shouldBe 1049.0
+    }
+
+    "long frames after a long one are the machine's pace: a machine slower than a frame a second is still measured" {
+        val clock = FrameClock(there = true)
+
+        clock.frame(16.0)
+        // the machine slows down to frames of a second and a half: the first is taken for a pause, the next count
+        listOf(16.0, 1500.0, 1500.0, 1400.0, 1600.0).map { clock.frame(it) } shouldBe listOf(true, false, true, true, true)
+        clock.drawnMs shouldBe 4516.0
+    }
+
     "a frame time that is no number, or not above 0, counts nothing" {
         val clock = FrameClock(there = true)
 

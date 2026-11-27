@@ -113,6 +113,12 @@ whether pausing on a window that lost the focus but is still seen (two screens) 
 - 2026-11-26: created.
 - 2026-11-26: done: the presets, custom, the test's choice and its pause; on the screen to be tuned.
 - 2026-11-27: revised: the presets are the detail only, the oversampling apart (the maintainer's MacBook Air).
+- 2026-11-27: a single frame of more than a second after shorter ones is a pause, not a frame, in the picture test's
+  clock (`FrameClock.GAP_MS`) and in the live act's own counting (`PAUSE_MS`): the browser stops drawing without a
+  word where a window is covered or a machine sleeps (the maintainer: "when i leave the window i get 'slowest frame
+  of seconds'"). A long frame after a long one is the machine's pace and counts, so a machine below a frame a second
+  is still measured and steps down (review round 1: every long frame dropped had made its test fail as "figures did
+  not load"). Pausing stays on the focus too (the maintainer: "when unfocused"). Review round 2 CLEAN.
 - 2026-11-26: DONE.
 - 2026-11-27: IN PROGRESS.
 - 2026-11-27: DONE.

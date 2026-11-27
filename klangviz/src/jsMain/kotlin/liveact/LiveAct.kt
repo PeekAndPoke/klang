@@ -145,7 +145,8 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         val walkInAtOnce: Boolean = false,
         /**
          * Told the time of every frame drawn, in milliseconds since the one before, once the band stands and while the
-         * page is seen (the frames the line at the top counts). For an app that measures how fast this machine draws
+         * page is seen (the frames the line at the top counts), but for a single frame of more than a second between
+         * shorter ones (a pause the browser made). For an app that measures how fast this machine draws
          * the stage (notstrom's picture test, KLANG-00465). A display caps the frames at its refresh rate: above the
          * cap nothing is told apart. Null: nobody is told.
          */
@@ -256,6 +257,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     private var counted = 0
     private var since = window.performance.now()
     private var before = window.performance.now()
+
+    /** Whether the last frame was longer than [PAUSE_MS]: a long frame after it is the machine's pace, no pause. */
+    private var lastLong = false
     private var frames = 0
 
     /** The page is seen again, or no more: the frames are counted anew, so the time it was away is not a slow frame. */
@@ -517,7 +521,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
         renderer = ctx.renderer
         camera = lens
         // a frame is drawn in several goes (the fog's maps have their own): what was drawn is counted over all of them, and
-        // set back to nothing in frame(), with every frame that is counted (after loading or a hidden page the
+        // set back to nothing in frame(), with every frame that is counted (after loading, a hidden page or a pause the
         // line's first number is too high, for a tenth of a second)
         ctx.renderer.info.autoReset = false
 
@@ -670,6 +674,23 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
             return
         }
+
+        val long = nowMs - before > PAUSE_MS
+
+        if (long && !lastLong) {
+            // a long frame between frames of the usual length is a pause, not the picture's cost: the browser stopped
+            // drawing for a while without saying so (a window covered, a machine asleep). Neither counted nor judged,
+            // nor told to the picture test: the counting starts anew (the maintainer, 2026-11-27: "when i leave the
+            // window i get 'slowest frame of seconds'"). A long frame after a long one is this machine's pace: it is
+            // counted and judged like any other, so a machine that draws slower than a frame a second is still
+            // measured, and steps down by itself
+            lastLong = true
+            recount(nowMs)
+
+            return
+        }
+
+        lastLong = long
 
         props.frameTimes?.invoke(nowMs - before)
         worst = maxOf(worst, nowMs - before)
@@ -941,6 +962,13 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
     }
 
     private companion object {
+        /**
+         * A frame longer than this, in milliseconds, between shorter ones is a pause the browser made, not the
+         * picture's cost: neither counted nor judged. The machine test's clock leaves out the same (apps/common's
+         * `FrameClock.GAP_MS`).
+         */
+        const val PAUSE_MS = 1000.0
+
         const val NOTICE_ID = "liveact-notice"
         const val HUD_ID = "liveact-hud"
         const val FLASH_ID = "liveact-flash"
