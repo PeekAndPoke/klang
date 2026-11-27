@@ -129,7 +129,7 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.80)        // thump: closed-back box resonance
+    .band(freq =  120, q = 0.7, db =  2.70)        // thump: closed-back box resonance
     .band(freq =  900, q = 0.7, db =  3.50)        // roar:  low mids
     .band(freq = 2700, q = 1.2, db =  1.40)        // bark:  the upper-mid speaker peak
   )
@@ -388,7 +388,7 @@ export bass_pat =
     [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 -2 -1]
     [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 0 0]>/8`
 
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bassSnd).gain(0.22) // . mute()
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bassSnd).gain(0.23) // . mute()
     .ignp("sub", 1.00).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
     .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
 
@@ -609,7 +609,7 @@ export song = stack(
         .band(low => low.mul(1.00))
       ) // the glue on the mids only: the kick and the hats stay clean
     )
-    .mul(4.70)
+    .mul(4.80)
     .limiter(threshold = -3.0, ratio = 20.0, knee = 2.0, attack = 0.005 , release = 0.10, lookahead = 0.005)
   ))
 )
