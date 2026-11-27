@@ -100,11 +100,14 @@ class Rig(val root: Object3D) {
     /** Which way the face looks, in the head bone's own space. */
     val faceAhead: Vector3
 
-    private companion object {
-        const val EYES_OPACITY = 0.95
+    companion object {
+        /** The farthest a head turns to a side, in radians (some 72 degrees): as far as a head can go (see [faceTo]). */
+        const val MOST_YAW = 1.25
+
+        private const val EYES_OPACITY = 0.95
 
         /** The sphere a figure's skin is kept within for every pose: so many times the figure's height from its middle. */
-        const val REACH = 1.5
+        private const val REACH = 1.5
     }
 
     init {
@@ -315,9 +318,11 @@ class Rig(val root: Object3D) {
 
     /**
      * Turns the face toward [target] (world), [w] of the way (0 to 1): the neck a little, the head the rest. Never
-     * further than a head can go: about 70 degrees to a side, 30 up or down from straight ahead.
+     * further than a head can go: [most] to a side (radians; [MOST_YAW], about 70 degrees, unless given: a look at
+     * one of the band goes only as far as a neck turns comfortably, `COMFORTABLE_YAW`), 30 degrees up or down from
+     * straight ahead.
      */
-    fun faceTo(target: Vector3, w: Double) {
+    fun faceTo(target: Vector3, w: Double, most: Double = MOST_YAW) {
         if (w <= 0) {
             return
         }
@@ -325,7 +330,7 @@ class Rig(val root: Object3D) {
         val head = bone("head")
         val from = head.getWorldPosition(vec())
         val local = root.worldToLocal(target.clone()).sub(root.worldToLocal(from.clone()))
-        val yaw = max(-1.25, min(1.25, atan2(local.x, local.z)))
+        val yaw = max(-most, min(most, atan2(local.x, local.z)))
         val pitch = max(-0.5, min(0.5, atan2(local.y, hypot(local.x, local.z))))
         val want = dir(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
 

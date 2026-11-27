@@ -50,6 +50,22 @@ fun overShoulder(angle: Double): Double = smooth((PI - abs(angle)) / 0.5)
 fun headReach(angle: Double, behind: Boolean): Double = if (behind) overShoulder(angle) else inSight(angle)
 
 /**
+ * How far a head turns toward another member at the most, either side of straight ahead (radians, some 52 degrees):
+ * a look at one who stands farther round turns only so far and stops there (the maintainer, 2026-11-27: "Each member
+ * turn the head on its own. If one can have a direct look at the other fine, but none should 'break their neck'").
+ * Each one's own: what the other turns does not change it. Before, such a look went as far as a head can, 1.25 (some
+ * 72 degrees). The eye contact, a look at one of the band and the look at one visited on a stroll go by it.
+ */
+const val COMFORTABLE_YAW = 0.9
+
+/**
+ * The turn toward another member at [yaw] off straight ahead (radians), as far as a neck turns comfortably: [yaw]
+ * itself within [COMFORTABLE_YAW] either side, else that far (see there). NaN-guard: no number stays no number (the
+ * comparisons with it are false), as the turn it would have been.
+ */
+fun comfortableYaw(yaw: Double): Double = max(-COMFORTABLE_YAW, min(COMFORTABLE_YAW, yaw))
+
+/**
  * How far [x] lies beyond [easy] on either side of 0, with its sign: 0 well within, and from [soft] before the edge
  * to [soft] past it a round bend into the straight line, so nothing starts with a jolt. [soft] 0: a sharp corner.
  */

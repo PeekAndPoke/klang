@@ -11,7 +11,9 @@ package io.peekandpoke.klang.viz.liveact.band.skills
  * guitar in 'Noch seltsamere Dinge' ... basically a new 'walk with guitar' skill"). The way is the trumpet player's
  * stroll route, walked at two thirds of her pace; in rounds, standing at their place between them, from twelve
  * seconds into a long phrase, and home again within the silence after the playing (see `planStringStrolls`). The
- * camera chooses no look on them while they stroll (see `Notstrom.seenAt`).
+ * camera chooses no look on them while they stroll (see `Notstrom.seenAt`). On a stroll they look as the trumpet
+ * player does on hers: at the one they visit, and they stare at the camera they walk to (the maintainer, 2026-11-27:
+ * "add the looks while she strolls"; see `StringStroller.looksAt`).
  *
  * It acts only where the member has a string seat in the song, stands at their place (one who sits stays seated),
  * and the song has no trumpet player, who strolls herself; a song can leave it out (`Score.resting`). The camera

@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact.band.figure
 
+import io.peekandpoke.klang.viz.liveact.COMFORTABLE_YAW
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Player
@@ -87,11 +88,11 @@ fun eyeContact(
     val eb = eyesAt(b)
 
     if (firstTurns) {
-        a.faceTo(eb, contact.firstTurn)
+        a.faceTo(target = eb, w = contact.firstTurn, most = COMFORTABLE_YAW)
     }
 
     if (secondTurns) {
-        b.faceTo(ea, contact.secondTurn)
+        b.faceTo(target = ea, w = contact.secondTurn, most = COMFORTABLE_YAW)
     }
 
     if (firstTurns) {

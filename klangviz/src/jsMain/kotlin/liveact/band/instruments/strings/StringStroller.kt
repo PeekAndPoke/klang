@@ -15,11 +15,16 @@ import io.peekandpoke.klang.viz.liveact.band.figure.capture
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Offset
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollTime
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.Stroller
+import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.Stroller.Companion.LOOK_LET_GO
+import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
+import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.LOOK_BARS
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.song.Strum
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.klang.workshop.threejs.getWorldPosition
+import io.peekandpoke.kraft.addons.threejs.js.Vector3
 
 /**
  * The walk with the guitar (`GuitarStroll`): a string player who strolls about the front of the stage while they
@@ -28,9 +33,19 @@ import io.peekandpoke.klang.workshop.threejs.getWorldPosition
  * own (refreshed here, apart from the ones they play from); [place]: where they stand in the stage plot; [others]:
  * where the others stand, whom they visit on some rounds. The instrument stays on its strap and the player plays on:
  * only where the figure stands, which way it faces, how its legs step and how its hips move change. The hips move
- * as the kind of walk has them on the route ([hips], as the trumpet player's do), not as on the walk-in.
+ * as the kind of walk has them on the route ([hips], as the trumpet player's do), not as on the walk-in. On a
+ * stroll they look as the trumpet player does on hers ([looksAt]): at the one they visit, and at the [camera] they
+ * walk to (as hers, where the total stands unless given); and every look of theirs, their skills' too, is let go
+ * slowly where the stroll turns them away from it ([reach]), as hers are.
  */
-class StringStroller(private val show: Show, private val rig: Rig, private val part: Part<Strum>, place: Place, others: Map<Player, Place>) {
+class StringStroller(
+    private val show: Show,
+    private val rig: Rig,
+    private val part: Part<Strum>,
+    place: Place,
+    others: Map<Player, Place>,
+    private val camera: Vector3 = HOME.pos.clone(),
+) {
     private companion object {
         /** How much slower than the trumpet player's the route's clock runs: two thirds of her pace (the maintainer, 2026-11-27). */
         const val SLOW = 1.5
@@ -53,6 +68,13 @@ class StringStroller(private val show: Show, private val rig: Rig, private val p
      */
     var hips: Double? = null
         private set
+
+    /** Whether the walk is the figure's own at the last [walk]: its walk-in has arrived. Its looks go by it ([looksAt]). */
+    private var own: Boolean = false
+
+    /** The walks at the moments before, for [reach]: kept for one frame ([pastT]), shared by its looks. */
+    private val past: MutableMap<Int, TrumpetPlayer.Walk> = HashMap()
+    private var pastT: Double = Double.NaN
 
     /** The note times last asked of [seen], and what came back: asked every frame, worked out only when they change. */
     private var seenOf: Pair<List<Double>, List<StrollTime>>? = null
@@ -117,6 +139,8 @@ class StringStroller(private val show: Show, private val rig: Rig, private val p
             plan(now = t)
         }
 
+        own = walkIn.since >= 0
+
         val from = stroller.strollFrom(t)
 
         if (walkIn.since < 0 || from == null) {
@@ -133,6 +157,42 @@ class StringStroller(private val show: Show, private val rig: Rig, private val p
         hips = walk.hips
 
         return WalkIn(going = walk.going, far = way.at(from = from, t = t), since = walkIn.since)
+    }
+
+    /**
+     * Where the strolls ask the head to look at [t], to be added after the member's own looks (each over the ones
+     * before it): the look at the one they visit (see [Stroller.visitLook]), and last the stare at the [camera] on a
+     * stroll to it, over all their other looks, let go after the stroll's end as it is let go (see
+     * [Stroller.stareLook]). None while the walk-in has the figure (it is not their own walk yet): ask it after
+     * [walk] in the same frame. The head takes them as far as [reach] says (one turned away from is let go
+     * slowly), the visit's no farther round than a neck turns comfortably (`COMFORTABLE_YAW`).
+     */
+    fun looksAt(t: Double): List<Look> {
+        if (!own) {
+            return emptyList()
+        }
+
+        return listOfNotNull(stroller.visitLook(t), stroller.stareLook(t = t, camera = camera))
+    }
+
+    /**
+     * How far the head takes [look] at [t], whose place lies at [yaw] off the way the figure faces: on its own walk
+     * on a stroll, and for [LOOK_LET_GO] seconds after the stroll and the turn to the front after it, as the trumpet
+     * player's head takes hers (see [Stroller.reach]: one it is turned away from is let go slowly); null elsewhere,
+     * where the pose's own reach holds (`headReach`). Ask it after [walk] in the same frame.
+     */
+    fun reach(look: Look, yaw: Double, t: Double): Double? {
+        if (!own || (stroller.strollFrom(t) == null && stroller.strollFrom(t - LOOK_LET_GO) == null)) {
+            return null
+        }
+
+        // NaN-guard: before the first frame the comparison with no time is true, and the walks are taken anew
+        if (t != pastT) {
+            past.clear()
+            pastT = t
+        }
+
+        return stroller.reach(look = look, yaw = yaw, t = t, past = past)
     }
 
     /**

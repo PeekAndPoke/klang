@@ -8,15 +8,18 @@ package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 import io.peekandpoke.klang.viz.liveact.band.Place
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.figure.TALL
+import io.peekandpoke.klang.viz.liveact.band.skills.Look
 import io.peekandpoke.klang.viz.liveact.camera.HOME
 import io.peekandpoke.klang.viz.liveact.camera.TOTAL_DRIFT_Y
 import io.peekandpoke.klang.viz.liveact.camera.TOTAL_DRIFT_Z
+import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -79,6 +82,22 @@ class Stroller(
         /** How far the face is before the middle, and the room left before the camera, in the figure's sizes. */
         private const val FACE = 0.1
         private const val ROOM = 0.1
+
+        /**
+         * Where they look at one they visit (see [visitLook]): so high over their place, in metres, about at their
+         * eyes; on the riser, over the riser, as the drummer sits at the kit.
+         */
+        private const val EYES = 1.6
+        private const val SEATED_EYES = 1.25
+
+        /**
+         * A look out of sight on a stroll lets go over this many seconds, as Sirene's looks fall (`SIRENE`; the
+         * maintainer, 2026-11-19: "One sudden movement is fine, but the way back then needs to be slower").
+         */
+        const val LOOK_LET_GO = 1.6
+
+        /** The moments before that it is let go from, this many seconds apart. */
+        const val LOOK_STEP = 0.1
     }
 
     /** Which way the stroll goes at one moment: how fast, how much it walks (0 to 1), and the turn into its way. */
@@ -111,6 +130,14 @@ class Stroller(
             StrollRoute.Offset(x = (place.x - home.x) / s, z = (place.z - home.z) / s)
         },
     )
+
+    /**
+     * Where the others' eyes are, about, for the look at one they visit ([visitLook]): over their place in the stage
+     * plot ([others]; the rigs of the others are not theirs to read), at [EYES], or [SEATED_EYES] over the riser.
+     */
+    private val heads: Map<Player, Vector3> = others.mapValues { (_, place) ->
+        vec(place.x, place.y + (if (place.y > 0.0) SEATED_EYES else EYES), place.z)
+    }
 
     /** The strolls as last planned ([plan]), on the route's clock. */
     private var strolls: List<Stroll> = emptyList()
@@ -209,6 +236,53 @@ class Stroller(
         val k = strolls.lastOrNull { x > it.from && x < it.to + StrollHome.STARE_FALL } ?: return 0.0
 
         return k.way.stareAt(x)
+    }
+
+    /**
+     * The stare at the [camera] on a stroll to it at [t] (see [stareAt]), as a still look, to lie over all the other
+     * looks; also as it is let go after the stroll's end. Null where there is none.
+     */
+    fun stareLook(t: Double, camera: Vector3): Look? {
+        val share = stareAt(t)
+
+        return if (share > 0) Look(share = share, at = camera, still = true) else null
+    }
+
+    /**
+     * The look at one they visit on a stroll at [t] (see [visitAt]): at their eyes, about, from their place in the
+     * stage plot ([heads]); one behind they look at over the shoulder. Null where they visit nobody.
+     */
+    fun visitLook(t: Double): Look? {
+        val visiting = visitAt(t) ?: return null
+
+        return if (visiting.share > 0) Look(share = visiting.share, at = heads.getValue(visiting.who), behind = true) else null
+    }
+
+    /**
+     * How far the head takes [look] at [t] (seconds on the show's clock) on a stroll, whose place lies at [yaw] off
+     * the way the figure faces now (radians, either side): as far as a head takes a look there (`headReach`), and
+     * where the stroll has turned the figure away from it, letting go of it slowly, over [LOOK_LET_GO] seconds, as a
+     * look falls (see [lookReach]), by where the stroll had the figure and which way it faced at the moments
+     * [LOOK_STEP] apart before [t] (see [walkAt]). [past]: those moments' walks by their number back, kept by the
+     * caller for one frame, so that several looks share them. As the trumpet player's looks on her strolls go.
+     */
+    fun reach(look: Look, yaw: Double, t: Double, past: MutableMap<Int, TrumpetPlayer.Walk> = HashMap()): Double {
+        val grid = floor(t / LOOK_STEP) * LOOK_STEP
+
+        fun yawFrom(from: TrumpetPlayer.Walk): Double {
+            val off = atan2(look.at.x - from.at.x, look.at.z - from.at.z) - from.turn
+
+            return atan2(sin(off), cos(off))
+        }
+
+        return lookReach(
+            t = t,
+            yaw = yaw,
+            reach = { angle -> headReach(angle = angle, behind = look.behind) },
+            yawBefore = { k -> yawFrom(past.getOrPut(k) { walkAt(grid - k * LOOK_STEP) }) },
+            fall = LOOK_LET_GO,
+            step = LOOK_STEP,
+        )
     }
 
     /** Whom they visit on a stroll at [t] (see [StrollHome.visitAt]); null where they visit nobody. */

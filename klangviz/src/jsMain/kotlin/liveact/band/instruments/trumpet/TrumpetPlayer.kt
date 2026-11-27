@@ -5,6 +5,7 @@
 
 package io.peekandpoke.klang.viz.liveact.band.instruments.trumpet
 
+import io.peekandpoke.klang.viz.liveact.COMFORTABLE_YAW
 import io.peekandpoke.klang.viz.liveact.Show
 import io.peekandpoke.klang.viz.liveact.X_AXIS
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
@@ -25,6 +26,7 @@ import io.peekandpoke.klang.viz.liveact.band.figure.strollHips
 import io.peekandpoke.klang.viz.liveact.band.figure.walkHips
 import io.peekandpoke.klang.viz.liveact.band.skills.Look
 import io.peekandpoke.klang.viz.liveact.camera.HOME
+import io.peekandpoke.klang.viz.liveact.comfortableYaw
 import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.quat
@@ -48,7 +50,6 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.exp
-import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -113,30 +114,7 @@ class TrumpetPlayer(
      */
     class Sound(val note: Note?, val sounding: Double, val high: Double, val blow: Double)
 
-    private companion object {
-        /** A look out of her sight on a stroll lets go over this many seconds, as her looks fall (`SIRENE`). */
-        const val LOOK_LET_GO = 1.6
-
-        /** The moments before that it is let go from, this many seconds apart. */
-        const val LOOK_STEP = 0.1
-
-        /**
-         * Where she looks at one she visits (see [visitLook]): so high over their place, in metres, about at their
-         * eyes; on the riser, over the riser, as the drummer sits at the kit.
-         */
-        const val EYES = 1.6
-        const val SEATED_EYES = 1.25
-    }
-
     private val mover = Mover(show = show, seed = seed, traits = traits)
-
-    /**
-     * Where the others' eyes are, about, for her look at one she visits ([visitLook]): over their place in the stage
-     * plot ([others]; the rigs of the others are not hers to read), at [EYES], or [SEATED_EYES] over the riser.
-     */
-    private val heads: Map<Player, Vector3> = others.mapValues { (_, place) ->
-        vec(place.x, place.y + (if (place.y > 0.0) SEATED_EYES else EYES), place.z)
-    }
 
     /** Her strolls (see [Stroller]): her route, at its own pace, and the strolls as last planned. */
     private val stroller: Stroller
@@ -245,21 +223,13 @@ class TrumpetPlayer(
      * Her stare at the [camera] on a stroll to it at [t] (see [StrollHome.stareAt]), as a still look, last so that it
      * lies over all her other looks; also as it is let go after the stroll's end. Null where there is none.
      */
-    private fun stareAt(t: Double): Look? {
-        val share = stroller.stareAt(t)
-
-        return if (share > 0) Look(share = share, at = camera, still = true) else null
-    }
+    private fun stareAt(t: Double): Look? = stroller.stareLook(t = t, camera = camera)
 
     /**
-     * Her look at one she visits on a stroll at [t] (see [StrollHome.visitAt]): at their eyes, about, from their place
-     * in the stage plot ([heads]); one behind her she looks at over her shoulder. Null where she visits nobody.
+     * Her look at one she visits on a stroll at [t] (see [Stroller.visitLook]): at their eyes, about, from their place
+     * in the stage plot; one behind her she looks at over her shoulder. Null where she visits nobody.
      */
-    private fun visitLook(t: Double): Look? {
-        val visiting = stroller.visitAt(t) ?: return null
-
-        return if (visiting.share > 0) Look(share = visiting.share, at = heads.getValue(visiting.who), behind = true) else null
-    }
+    private fun visitLook(t: Double): Look? = stroller.visitLook(t)
 
     /** A [look] as far as she takes it ([share]), toward [yaw]: off the way she faces, as far as a head turns. */
     private class Turn(val look: Look, val share: Double, val yaw: Double)
@@ -268,8 +238,8 @@ class TrumpetPlayer(
      * The looks her skills ask for at [t], as far as she takes each: as far as she is free to look ([freeToLook]),
      * and as far as the place is in sight where she stands and faces ([walk]); a look at one behind her goes over
      * her shoulder, and lets go where they are straight behind her. Where she turns away from a look on a stroll,
-     * the head lets go of it slowly, over [LOOK_LET_GO] seconds, as a look falls ([lookReach]: by where she stood
-     * and faced over those seconds, from her own way, [walkAt]); not where she is put from outside ([put]), whose
+     * the head lets go of it slowly, over [Stroller.LOOK_LET_GO] seconds, as a look falls ([Stroller.reach]: by where
+     * she stood and faced over those seconds, from her own way, [walkAt]); not where she is put from outside ([put]), whose
      * way before is not hers to know. Straight behind her it lets go all the same.
      */
     private fun looksAt(t: Double, walk: Walk, put: Boolean): List<Turn> {
@@ -280,8 +250,7 @@ class TrumpetPlayer(
         }
 
         // where she stood and faced a moment ago, at fixed times (so the head lets go smoothly as t goes on): worked
-        // out only where she has looks, and once for all of them
-        val grid = floor(t / LOOK_STEP) * LOOK_STEP
+        // out only where she has looks, and once for all of them (see [Stroller.reach])
         val past = HashMap<Int, Walk>()
 
         fun yawOf(look: Look, from: Walk): Double {
@@ -292,22 +261,15 @@ class TrumpetPlayer(
 
         return (looks(t) + listOfNotNull(visitLook(t), stareAt(t))).map { look ->
             val yaw = yawOf(look = look, from = walk)
-            val before: ((Int) -> Double)? = if (put) {
-                null
+            val reach = if (put) {
+                headReach(angle = yaw, behind = look.behind)
             } else {
-                { k -> yawOf(look = look, from = past.getOrPut(k) { walkAt(grid - k * LOOK_STEP) }) }
+                stroller.reach(look = look, yaw = yaw, t = t, past = past)
             }
-            val reach = lookReach(
-                t = t,
-                yaw = yaw,
-                reach = { angle -> headReach(angle = angle, behind = look.behind) },
-                yawBefore = before,
-                fall = LOOK_LET_GO,
-                step = LOOK_STEP,
-            )
             val share = look.share * free * reach
 
-            Turn(look = look, share = share, yaw = max(-1.25, min(1.25, yaw)))
+            // (toward one of the band no farther than a neck turns comfortably)
+            Turn(look = look, share = share, yaw = if (look.behind) comfortableYaw(yaw) else max(-Rig.MOST_YAW, min(Rig.MOST_YAW, yaw)))
         }.filter { it.share > 0 }
     }
 
@@ -409,7 +371,7 @@ class TrumpetPlayer(
             rig.turn("chest", Y_AXIS, chest)
 
             for (turn in turns) {
-                rig.faceTo(turn.look.at, turn.share)
+                rig.faceTo(target = turn.look.at, w = turn.share, most = if (turn.look.behind) COMFORTABLE_YAW else Rig.MOST_YAW)
             }
         }
 

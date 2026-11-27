@@ -12,6 +12,9 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.band.Player
+import io.peekandpoke.klang.viz.liveact.band.skills.Look
+import io.peekandpoke.klang.viz.liveact.headReach
+import io.peekandpoke.klang.viz.liveact.overShoulder
 import io.peekandpoke.klang.viz.liveact.scores.DER_SCHMETTERLING
 import io.peekandpoke.klang.viz.liveact.vec
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
@@ -26,6 +29,9 @@ import io.peekandpoke.kraft.testing.eventually
 import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.time.Duration.Companion.seconds
 
 private var loaded: ThreeJsAddon? = null
@@ -48,8 +54,15 @@ private suspend fun withThree(block: suspend (ThreeJsAddon) -> Unit) {
     }
 }
 
-/** Sirene's stroll in Der Schmetterling's stage plot, at the pace [slow], with its route's clock begun at the stroll [time]. */
-private fun stroller(slow: Double, time: StrollTime): Stroller {
+/**
+ * Sirene's stroll in Der Schmetterling's stage plot, at the pace [slow], with its route's clock begun at the stroll
+ * [time]; [others]: whom she may visit (everyone else unless given).
+ */
+private fun stroller(
+    slow: Double,
+    time: StrollTime,
+    others: Set<Player> = Player.entries.toSet() - Player.Sirene,
+): Stroller {
     val place = DER_SCHMETTERLING.plot.places.getValue(Player.Sirene)
     val home = vec(place.x, place.y, place.z)
 
@@ -59,7 +72,7 @@ private fun stroller(slow: Double, time: StrollTime): Stroller {
         homeTurn = place.turn,
         s = 1.0,
         closest = Stroller.closestToCamera(home = home, chin = 1.45, s = 1.0, height = 1.7),
-        others = DER_SCHMETTERLING.plot.places.filterKeys { it != Player.Sirene },
+        others = DER_SCHMETTERLING.plot.places.filterKeys { it in others },
         slow = slow,
     ).apply {
         plan(times = listOf(time), now = Double.NEGATIVE_INFINITY)
@@ -119,6 +132,96 @@ class StrollerSpec : StringSpec({
             moved shouldBeGreaterThan 100
             stares shouldBeGreaterThan 10
             visits shouldBeGreaterThan 10
+        }
+    }
+
+    "the stroll's looks: the stare at the camera as a still look, the look at one visited at their eyes, over the shoulder" {
+        withThree { three ->
+            Three.addon = three
+
+            // the drummer on his riser and Rune on the floor, the only ones to visit
+            val slow = stroller(slow = 1.5, time = StrollTime(from = 30.0, to = 2430.0), others = setOf(Player.Wucht, Player.Rune))
+            val camera = vec(1.0, 2.0, 9.0)
+            val places = DER_SCHMETTERLING.plot.places
+            var stares = 0
+            val visited = mutableSetOf<Player>()
+            var t = 0.0
+
+            while (t < 2450.0) {
+                val share = slow.stareAt(t)
+                val stare = slow.stareLook(t = t, camera = camera)
+                val visit = slow.visitAt(t)
+                val look = slow.visitLook(t)
+
+                withClue("at $t") {
+                    if (share > 0) {
+                        stares++
+                        listOf(stare?.share, stare?.at === camera, stare?.still, stare?.behind) shouldBe listOf(share, true, true, false)
+                    } else {
+                        stare shouldBe null
+                    }
+
+                    if (visit != null && visit.share > 0) {
+                        val place = places.getValue(visit.who)
+                        // so high over their place: 1.25 m over the riser, as the drummer sits at the kit, else 1.6 m
+                        val eyes = if (visit.who == Player.Wucht) place.y + 1.25 else 1.6
+
+                        visited.add(visit.who)
+                        listOf(look?.share, look?.at?.x, look?.at?.y, look?.at?.z, look?.behind, look?.still) shouldBe
+                            listOf(visit.share, place.x, eyes, place.z, true, false)
+                    } else {
+                        look shouldBe null
+                    }
+                }
+
+                t += 0.25
+            }
+
+            stares shouldBeGreaterThan 10
+            visited shouldBe setOf(Player.Wucht, Player.Rune)
+        }
+    }
+
+    "on a stroll a look the figure turns away from is let go no faster than over 1.6 s, where the head alone snaps" {
+        withThree { three ->
+            Three.addon = three
+
+            val slow = stroller(slow = 1.5, time = StrollTime(from = 30.0, to = 630.0))
+            // a look at where the total stands, as a stare at the camera is
+            val look = Look(share = 1.0, at = vec(0.0, 1.85, 9.4))
+            val dt = 1.0 / 30
+            // the steepest a look falls over 1.6 s (the soft S's slope is 1.5 at the most), over a frame
+            val most = 1.5 / 1.6 * dt
+            var before = Double.NaN
+            var plainBefore = Double.NaN
+            var snaps = 0
+            var t = 30.0
+
+            while (t < 640.0) {
+                val walk = slow.walkAt(t)
+                val off = atan2(look.at.x - walk.at.x, look.at.z - walk.at.z) - walk.turn
+                val yaw = atan2(sin(off), cos(off))
+                val held = slow.reach(look = look, yaw = yaw, t = t)
+                val plain = headReach(angle = yaw, behind = false)
+
+                // (where it nears straight behind, the look over the shoulder ends it: not a fall of the look's own)
+                if (before == before && overShoulder(yaw) >= 1.0) {
+                    withClue("at $t") {
+                        (held >= before - most - 1e-9) shouldBe true
+                    }
+                }
+
+                if (plainBefore == plainBefore && plain < plainBefore - most) {
+                    snaps++
+                }
+
+                before = held
+                plainBefore = plain
+                t += dt
+            }
+
+            // (where the head alone never let go faster, the check would say nothing)
+            snaps shouldBeGreaterThan 0
         }
     }
 })

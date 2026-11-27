@@ -773,18 +773,26 @@ class StrollRoute(
         /**
          * Where she stands to visit each of the others: off their place, in her sizes (some 0.98 m each), each
          * spot chosen on the stage plot of 2026-11-21 (`StagePlot`). Beside them as the total sees them, so she hides
-         * nobody there, about a metre from them and clear of their instruments: in front of the guitarists, on the
-         * side toward the middle (some 1.1 m from each, 0.66 m and 0.86 m from their guitars' heads); before the bass
-         * player on the side toward the middle (1.31 m from him, 0.7 m from his bass's head, which reaches out that
-         * way); left of the marimba (1.2 m from its player, 0.48 m from the marimba's end); and before the riser,
-         * right of its middle (0.55 m before it, 2.1 m from the drummer up on it, 1.03 m from the marimba player).
+         * nobody there (0.4 m or more off the total's line of sight to anyone behind her), and clear of their
+         * instruments: in front of the guitarists, on the side toward the middle (some 1.35 m from the left one and
+         * 1.27 m from the right one); before the bass player on the side toward the middle (1.57 m from him, his
+         * bass's head reaching out that way); left of the marimba (1.2 m from its player, 0.48 m from the marimba's
+         * end); and before the riser, right of its middle (0.55 m before it, 2.1 m from the drummer up on it, 1.03 m
+         * from the marimba player).
+         *
+         * The guitarists and the bass player she visits a fifth farther off than she did (the maintainer, 2026-11-27:
+         * "she get a little too close to the others and then she almost 'breaks her neck' trying to look at them"):
+         * some 1.14 m, 1.06 m and 1.31 m before; the left guitarist's spot a little more to the audience as well, so
+         * she keeps off the line of sight to the bass player. The marimba player's spot stays: farther left she stood
+         * in the line of sight to the drummer, and every spot farther off that does not (behind him) has her way
+         * there pass the marimba. The drummer's spot stays, as far off as it is.
          */
         internal val VISIT_BESIDE: Map<Player, Offset> = mapOf(
-            Player.Skalpell to Offset(x = 0.87, z = 0.77),
-            Player.Beben to Offset(x = 0.92, z = 0.97),
+            Player.Skalpell to Offset(x = 0.95, z = 1.0),
+            Player.Beben to Offset(x = 1.1, z = 1.16),
             Player.Wucht to Offset(x = 0.71, z = 2.04),
             Player.Rune to Offset(x = -1.22, z = 0.1),
-            Player.Klaue to Offset(x = -0.82, z = 0.71),
+            Player.Klaue to Offset(x = -0.98, z = 0.85),
         )
 
         /** The others in the order the roll picks the first of a visit from. */

@@ -14,9 +14,10 @@ import io.peekandpoke.kraft.addons.threejs.js.Vector3
  * Where a member's head is asked to look at one moment, and how much: [share] from 0 (not at all) to 1 (all the
  * way), toward [at], a place in the world. [at] may be a live vector (the camera's place, which the show keeps up to
  * date): it is read when the head turns. [behind]: the place may lie behind the member (another member), and the
- * head turns as far as a head can toward it, over the shoulder (not at one straight behind); else the look lets
- * go where the place is out of sight (see `headReach`). [still]: a stare, which calms the body's nod and wander while it lasts (the trumpet player's pose does; a string player's
- * does not yet). How the head turns to it is the pose's own.
+ * head turns toward it as far as a neck turns comfortably (`COMFORTABLE_YAW`), over the shoulder (not at one
+ * straight behind); else the look lets go where the place is out of sight (see `headReach`). [still]: a stare, which calms the nod and the wander while
+ * it lasts, as far as it is taken (the trumpet player's whole nod; a string player's head's). How the head turns to
+ * it is the pose's own.
  */
 class Look(val share: Double, val at: Vector3, val behind: Boolean = false, val still: Boolean = false)
 

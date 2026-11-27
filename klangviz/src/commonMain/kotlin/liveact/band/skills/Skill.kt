@@ -87,8 +87,9 @@ data class CameraStare(override val timing: ChanceInSlots) : TimedSkill {
 
 /**
  * The look "inward": a short look at one of the other members, there and back, at the moments its [timing] gives.
- * Whom, the roll chooses for each use (see [whom]). The head turns as far as a head can, also to one who stands
- * behind, over the shoulder; not to one straight behind (see `overShoulder`).
+ * Whom, the roll chooses for each use (see [whom]). The head turns as far as a neck turns comfortably
+ * (`COMFORTABLE_YAW`), also to one who stands behind, over the shoulder; not to one straight behind (see
+ * `overShoulder`).
  */
 data class BandGlance(override val timing: ChanceInSlots) : TimedSkill {
     override val rolls: Double get() = 2000.0

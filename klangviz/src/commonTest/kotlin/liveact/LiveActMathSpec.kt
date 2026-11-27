@@ -166,4 +166,14 @@ class LiveActMathSpec : StringSpec({
         beyond(x = 0.25, easy = 0.2, soft = 0.0) shouldBe (0.05 plusOrMinus 1e-12)
         beyond(x = -0.25, easy = 0.2, soft = 0.0) shouldBe (-0.05 plusOrMinus 1e-12)
     }
+
+    "toward one of the band a head turns as far as a neck turns comfortably, and stops there" {
+        // (the maintainer, 2026-11-27: "none should 'break their neck'") a direct look where it is within reach
+        comfortableYaw(0.5) shouldBe 0.5
+        comfortableYaw(-0.9) shouldBe -0.9
+        // and no farther than some 52 degrees to either side, where the head went 72 before
+        comfortableYaw(0.95) shouldBe 0.9
+        comfortableYaw(1.25) shouldBe 0.9
+        comfortableYaw(-3.0) shouldBe -0.9
+    }
 })

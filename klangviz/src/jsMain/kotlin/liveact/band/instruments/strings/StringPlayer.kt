@@ -39,6 +39,7 @@ import io.peekandpoke.klang.viz.liveact.band.skills.browHand
 import io.peekandpoke.klang.viz.liveact.band.skills.capHand
 import io.peekandpoke.klang.viz.liveact.band.skills.capTugAt
 import io.peekandpoke.klang.viz.liveact.band.skills.scratchHand
+import io.peekandpoke.klang.viz.liveact.comfortableYaw
 import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
@@ -160,6 +161,12 @@ class StringPlayer(
     skills: List<Skill> = emptyList(),
     hand: Side = Side.R,
     private val lap: Lap = Lap.OnThigh,
+    /**
+     * How far the head takes a look at a time, whose place lies at a yaw off the way the figure faces (radians):
+     * as far as a head takes a look there unless given (`headReach`); on a stroll with the instrument the stroll's
+     * (see `StringStroller.reach`: one the figure turns away from is let go slowly).
+     */
+    private val headReachOf: (look: Look, yaw: Double, t: Double) -> Double = { look, yaw, _ -> headReach(angle = yaw, behind = look.behind) },
 ) {
     private val mover = Mover(show = show, seed = seed, traits = traits)
 
@@ -445,8 +452,10 @@ class StringPlayer(
 
         // where the member's skills ask the head to look (a glance at the camera every now and then): the head comes
         // up from the instrument and turns to each look as far as it is asked, each over the ones before it, and
-        // goes back. Without a look the head is turned toward the neck
+        // goes back. Without a look the head is turned toward the neck. A stare (a still look) calms the head's nod
+        // and its wander as far as it is taken, as the trumpet player's does
         var look = 0.0
+        var calm = 0.0
         var yaw = 0.35 * mirror
         var pitch = 0.0
 
@@ -458,23 +467,30 @@ class StringPlayer(
 
             // nobody looks at a camera behind their back: the head would have to turn right round. At one who stands
             // behind (another member) the look goes over the shoulder, and not at all at one straight behind
-            share *= headReach(angle = toward, behind = asked.behind)
+            share *= headReachOf(asked, toward, t)
 
             if (asked.behind) {
-                // the head turned as far as a head can (as `Rig.faceTo` does)
-                toward = max(-1.25, min(1.25, toward))
+                // toward one of the band the head turns as far as a neck turns comfortably, no farther (as the eye
+                // contact and the trumpet player's looks at the band do)
+                toward = comfortableYaw(toward)
             }
 
             yaw += (toward - 0.18 * mirror - yaw) * share     // the chest is turned 0.18 already
             pitch += (atan2(eye.y - from, hypot(eye.x, eye.z)) - pitch) * share
             look = max(look, share)
+
+            if (asked.still) {
+                calm = max(calm, share)
+            }
         }
 
-        rig.turn("neck", X_AXIS, bang * 0.4 * nod * parts.head * (1 - 0.7 * look))
-        rig.turn("head", X_AXIS, (0.12 - 0.18 * up + bang * nod * parts.head) * (1 - 0.8 * look) - pitch)
+        val held = nod * (1 - 0.7 * calm)
+
+        rig.turn("neck", X_AXIS, bang * 0.4 * held * parts.head * (1 - 0.7 * look))
+        rig.turn("head", X_AXIS, (0.12 - 0.18 * up + bang * held * parts.head) * (1 - 0.8 * look) - pitch)
 
         if (look < 0.5) {
-            mover.apply(rig, t)
+            mover.apply(rig = rig, t = t, calm = 0.8 * calm)
         }
 
         rig.turn("head", Y_AXIS, yaw)

@@ -11,17 +11,21 @@ import io.peekandpoke.klang.viz.liveact.Three
 import io.peekandpoke.klang.viz.liveact.Timed
 import io.peekandpoke.klang.viz.liveact.Y_AXIS
 import io.peekandpoke.klang.viz.liveact.band.Cast
+import io.peekandpoke.klang.viz.liveact.band.NoteSeat
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.band.StringSeat
+import io.peekandpoke.klang.viz.liveact.band.after
 import io.peekandpoke.klang.viz.liveact.band.dress.ClothPattern
 import io.peekandpoke.klang.viz.liveact.band.dress.DressedBody
 import io.peekandpoke.klang.viz.liveact.band.dress.HairPart
 import io.peekandpoke.klang.viz.liveact.band.dress.ShadowHair
 import io.peekandpoke.klang.viz.liveact.band.dress.pattern
+import io.peekandpoke.klang.viz.liveact.band.figure.CapturedPose
 import io.peekandpoke.klang.viz.liveact.band.figure.HairTail
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
+import io.peekandpoke.klang.viz.liveact.band.figure.WalkIn
 import io.peekandpoke.klang.viz.liveact.band.figure.blend
 import io.peekandpoke.klang.viz.liveact.band.figure.capture
 import io.peekandpoke.klang.viz.liveact.band.figure.enter
@@ -32,7 +36,10 @@ import io.peekandpoke.klang.viz.liveact.band.figure.strollHips
 import io.peekandpoke.klang.viz.liveact.band.figure.walkInHips
 import io.peekandpoke.klang.viz.liveact.band.figure.walkPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.drums.Drummer
+import io.peekandpoke.klang.viz.liveact.band.instruments.drums.KitMaterials
+import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaMaterials
 import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
+import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringMaterials
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringStroller
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
@@ -46,19 +53,8 @@ import io.peekandpoke.klang.viz.liveact.band.skills.crowdSpots
 import io.peekandpoke.klang.viz.liveact.band.skills.idlesAt
 import io.peekandpoke.klang.viz.liveact.band.skills.keepsIdle
 import io.peekandpoke.klang.viz.liveact.band.skills.lookAt
+import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.smooth
-import io.peekandpoke.klang.viz.liveact.band.NoteSeat
-import io.peekandpoke.klang.viz.liveact.band.after
-import io.peekandpoke.klang.viz.liveact.band.figure.CapturedPose
-import io.peekandpoke.klang.viz.liveact.band.figure.WalkIn
-import io.peekandpoke.klang.viz.liveact.band.instruments.drums.KitMaterials
-import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaMaterials
-import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringMaterials
-import io.peekandpoke.kraft.addons.threejs.js.Object3D
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.sin
 import io.peekandpoke.klang.viz.liveact.song.DrumHit
 import io.peekandpoke.klang.viz.liveact.song.Note
 import io.peekandpoke.klang.viz.liveact.song.Part
@@ -79,8 +75,13 @@ import io.peekandpoke.klang.workshop.threejs.lerp
 import io.peekandpoke.klang.workshop.threejs.materials
 import io.peekandpoke.klang.workshop.threejs.name
 import io.peekandpoke.klang.workshop.threejs.quaternion
+import io.peekandpoke.kraft.addons.threejs.js.Object3D
 import io.peekandpoke.kraft.addons.threejs.js.Scene
 import io.peekandpoke.kraft.addons.threejs.js.Vector3
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.sin
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -389,11 +390,12 @@ class Notstrom private constructor(
         seed = character(seat.player).seed,
         bearing = Members.of(seat.player).bearing,
         outline = seat.outline ?: seat.design.outline,
-        looks = headLooksOf(seat.player),
+        looks = stringLooksOf(seat.player),
         idles = idlesOf(player = seat.player, part = stringPart(seat)),
         skills = Members.of(seat.player).skills,
         hand = Members.of(seat.player).hand,
         lap = Members.of(seat.player).lap,
+        headReachOf = stringReachOf(seat.player),
     )
 
     /**
@@ -651,6 +653,31 @@ class Notstrom private constructor(
         val roll = { index: Double -> show.own(index, member.character.seed) }
 
         return { t -> lookAt(who = player, skills = member.skills, t = t, roll = roll, places = places) }
+    }
+
+    /**
+     * Where [player]'s head is asked to look at a time as a string player: where their skills ask (see
+     * [headLooksOf]), and on a stroll with their instrument the stroll's looks after those, over them (see
+     * [StringStroller.looksAt]: at the one they visit, at the camera they walk to).
+     */
+    private fun stringLooksOf(player: Player): (Double) -> List<Look> {
+        val own = headLooksOf(player)
+
+        return { t ->
+            val stroll = strolling?.takeIf { it.first == player }?.second
+
+            if (stroll == null) own(t) else own(t) + stroll.looksAt(t)
+        }
+    }
+
+    /**
+     * How far [player]'s head takes a look as a string player (see `StringPlayer`): on a stroll with their
+     * instrument as the stroll has it (see [StringStroller.reach]: one they turn away from is let go slowly), else
+     * as far as a head takes it there.
+     */
+    private fun stringReachOf(player: Player): (Look, Double, Double) -> Double = { look, yaw, t ->
+        strolling?.takeIf { it.first == player }?.second?.reach(look = look, yaw = yaw, t = t)
+            ?: headReach(angle = yaw, behind = look.behind)
     }
 
     /**

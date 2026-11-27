@@ -17,6 +17,7 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Kind
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.StrollRoute.Offset
+import io.peekandpoke.klang.viz.liveact.camera.TOTAL_FROM
 import io.peekandpoke.klang.viz.liveact.smooth
 import io.peekandpoke.klang.viz.liveact.stage.StageEdge
 import kotlin.math.PI
@@ -53,6 +54,15 @@ private val OTHERS: Map<Player, Pair<Double, Double>> = mapOf(
     Player.Rune to (1.7 to 0.4),
     Player.Klaue to (3.0 to 1.7),
     Player.Wucht to (0.1 to -2.1),
+)
+
+/** How far she stands from each one she visits, in metres. */
+private val VISITED_APART: Map<Player, Double> = mapOf(
+    Player.Skalpell to 1.35,
+    Player.Beben to 1.57,
+    Player.Rune to 1.2,
+    Player.Klaue to 1.27,
+    Player.Wucht to 2.12,
 )
 
 /** The others' places as the frontwoman's player hands them to her route: off her place, in her sizes (StrollGaitSpec too). */
@@ -420,7 +430,7 @@ class StrollRouteSpec : StringSpec({
     "now and then she visits the others, every one of them, and stands beside them a while" {
         // (the maintainer, 2026-11-21: 'And Sirene should "visit" her band-members') Every one of them is visited
         // over the first 60 rounds of a few seeds, one or two in a round; at each stop she stands where the spot
-        // says for the stay's time, about a metre from the one she visits.
+        // says for the stay's time, 1.2 m to 1.57 m from the one she visits (2.12 m from the drummer on his riser).
         val visited = mutableSetOf<Player>()
 
         for (seed in SEEDS) {
@@ -443,7 +453,10 @@ class StrollRouteSpec : StringSpec({
                     var t = arrives
 
                     withClue("seed $seed, round $round: beside $who, at $spot") {
-                        hypot(PLACE_X + SIZE * spot.x - ox, PLACE_Z + SIZE * spot.z - oz) shouldBe (1.15 plusOrMinus 1.0)
+                        // (a fifth farther from those on the floor than at first, 2026-11-27: "she get a little too
+                        // close to the others")
+                        hypot(PLACE_X + SIZE * spot.x - ox, PLACE_Z + SIZE * spot.z - oz) shouldBe
+                            (VISITED_APART.getValue(who) plusOrMinus 0.01)
                         worked.walks[i + 1].start - (worked.walks[i].start + worked.walks[i].time) shouldBe
                             (StrollRoute.VISIT_STAY plusOrMinus 1e-9)
                     }
@@ -460,6 +473,29 @@ class StrollRouteSpec : StringSpec({
         }
 
         visited shouldBe OTHERS.keys
+    }
+
+    "where she stands to visit one, she hides nobody from the total" {
+        // (the spots' own word: "beside them as the total sees them, so she hides nobody there") Seen from where the
+        // total stands, each spot lies 0.4 m or more off the line of sight to every one of the band behind her. In
+        // plan: her head is about as high as such a line where she stands (the total at 1.85 m, the eyes at 1.6 m,
+        // the drummer's 1.65 m on his riser).
+        val route = StrollRoute(seed = 1, restTurn = 0.1, closest = CLOSEST, others = OTHERS_OFF)
+
+        for ((who, spot) in route.spots) {
+            val x = PLACE_X + SIZE * spot.x
+            val z = PLACE_Z + SIZE * spot.z
+
+            for ((other, at) in OTHERS) {
+                if (at.second >= z) {
+                    continue
+                }
+
+                withClue("beside $who, at $x, $z m: the line of sight to $other") {
+                    fromLine(x = x, z = z, a = TOTAL_FROM.x to TOTAL_FROM.z, b = at) shouldBeGreaterThan 0.4
+                }
+            }
+        }
     }
 
     "beside one she visits she turns to them and looks at them, eased in and out, 45 degrees at the most" {
