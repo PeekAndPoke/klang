@@ -93,24 +93,23 @@ let morseKey = (() => {
 
 // Bass  ------------------------------------------------------------------------------------------------------------------
 
-let bassSnd = (() => {
-
-  // --- Overridable params ----------------------------------------------------------------------
+// The bass with a crack on every hit, a variant to A/B (2026-11-27; the maintainer: "the bass-guitar could use a
+// e-bass crack on every hit"): bassSnd and two tells more. A plucked string's high partials die long before its
+// fundamental, and the string slaps the frets at the hit. `ignp("crack", ...)` sets how much of both, 1 by default.
+// Measured against bassSnd at the same gain: as loud, the same below 500 Hz, 1.5 to 4 kHz from -76 to -38 dB.
+let bassCrack = (() => {
   let pAnalog  = Ign.slot.analog
   let pSub     = Ign.param("sub",         1.00, "Sub Volume")
   let pHarm    = Ign.param("harmonics",   1.00, "Harmonics Volume")
-  // ----------------------------------------------------------------------------------------------
-
-  // Sub: a bare sine. No filter — a sine has no harmonics to remove. This is the weight,
-  // and it lives at 36–70 Hz where nothing else in the mix is.
+  let pCrack   = Ign.param("crack",       1.00, "Crack Volume")
   let sub = Ign.sine(x => x.analog(pAnalog)).mul(pSub)
-
-  // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
-  // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
   let harmonics = Ign.sine(x => x.harmonics(6, 1.05).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
-
-  return sub.plus(harmonics)
-    .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
+  // the pluck: the string's upper partials, bright at the hit and gone in 60 ms (a saw, its low end left to the above)
+  let pluck = Ign.saw(x => x.analog(pAnalog)).highpass(400).lowpass(3000, 0.8).adsr(0.001, 0.06, 0.0, 0.02).mul(0.6)
+  // the clank: the string slapping the frets, a 10 ms click around 2.4 kHz
+  let clank = Ign.whitenoise().bandpass(2400, 1.2).adsr(0.0005, 0.010, 0.0, 0.005).mul(1.0)
+  return sub.plus(harmonics).plus(pluck.plus(clank).mul(pCrack))
+    .eq(e => e.band(freq = snareHz, q = 3.0, db = -3))
     .mul(0.2)
     .distort(0.1, "soft")
     .classic()
@@ -118,22 +117,25 @@ let bassSnd = (() => {
 
 // Metal kick  ------------------------------------------------------------------------------------------------------------
 
-// Thump and crack, and nothing in between. The "bd" sample rings a partial at 115 Hz, 11 dB under its 68 Hz body, for
-// its whole 250 ms: right where the guitars and the bass want to be. This kick is three tells:
-//   - the thump: a pure sine, no overtones, so once the sweep is through there is nothing above it but the crack
-//   - the punch: a fast three-octave drop that crosses the mud band in a few milliseconds instead of dwelling there
-//   - the crack: the beater on the batter head, a short noise tick around 3.5 kHz
-let metalKick = (() => {
-  let thump = Ign.sine()
-    .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
-    .adsr(0.0005, 0.35, 0.0, 0.05)
-    .mul(0.8)
-    .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
- 
+// The deep kick, a variant to A/B (2026-11-27; the maintainer: "less mud than in Schmetterling but an audible 'whoom'
+// deep kick"). Four tells:
+//   - the whoom: the body glides down a fourth over a third of a second, and rings half a second (metalKick: 0.35 s)
+//   - its octave, quieter and shorter, so small speakers hear the pitch, still under the mud band
+//   - the punch: an octave drop in 15 ms from under the mud band, clean (metalKick drives its body hard: overtones
+//     in the mud)
+//   - the crack, as metalKick's
+// Measured against metalKick at the same gain: as loud, 2 dB less from 150 Hz up, 0.4 dB more below.
+let metalKickDeep = (() => {
+  // the whoom: the body glides down a fourth over a third of a second; a slow drop is what the ear hears as the boom
+  let glide = x => x.adsr(0.0001, 0.30, 0, 0)
+  let whoom = Ign.sine().pitchEnvelope(5, glide).adsr(0.001, 0.55, 0.0, 0.08)
+  // its octave, quieter and shorter: the pitch on small speakers, still under the mud band (74 to 100 Hz on d1)
+  let octave = Ign.sine(Ign.freq().mul(2)).pitchEnvelope(5, glide).adsr(0.001, 0.22, 0.0, 0.05).mul(0.35)
+  // the punch: a short, fast drop of an octave, from under the mud band (74 Hz on d1); clean, a drive here is mud
+  let punch = Ign.sine().pitchEnvelope(12, x => x.adsr(0.0001, 0.015, 0, 0)).adsr(0.0005, 0.03, 0.0, 0.01).mul(0.7)
   let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(2.2)
-
-  return thump.plus(crack)
-    .mul(0.18)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
+  return whoom.plus(octave).plus(punch).plus(crack)
+    .mul(0.14)                                     // level: as loud as metalKick at the same gain
     .classic()
 })()
 
@@ -302,7 +304,7 @@ export bass_pat = `<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2 d1 
 export bass = note(bass_pat).slow(16)
   .ply("<2 4 8 16>")
   .transpose("<[0 0 0 0 0 0 12 0] [0 0 0 0 0 7 12 0]>")
-  .sound(bassSnd).velocity("1.0 0.80 0.90 0.80 0.95 0.80 0.90 0.85")
+  .sound(bassCrack).velocity("1.0 0.80 0.90 0.80 0.95 0.80 0.90 0.85")
   .adsr(0.003, 5.00, 0.00, 0.015).clip(0.80).hpf(35)
   .gain(0.18).pan(0.5)
   .cylinder(4).tag("bass")
@@ -318,8 +320,9 @@ export kick_pat  = `[bd bd bd ~  bd ~ bd ~] [bd bd ~  ~  bd ~ bd|~  ~]`
 export snare_pat = `[~  ~  ~  ~  ~  ~ ~  ~] [~  ~  sd ~  ~  ~ ~|sd ~]`
 
 export kick = sound(kick_pat).apply(drumTime)
-  // gain 0.85 with the kick this song had; Der Schmetterling's kick is 2.5 dB quieter at the same gain (2026-11-27)
-  .sound(metalKick).adsrOff().note("a1").gain(1.13).velocity("0.98 0.94 0.96 0.94").pan(0.5)
+  // gain 0.85 with the kick this song had; Der Schmetterling's deep kick is 3.3 dB quieter on a1 at the same gain
+  // (2026-11-27)
+  .sound(metalKickDeep).adsrOff().note("a1").gain(1.24).velocity("0.98 0.94 0.96 0.94").pan(0.5)
   .degrade(0.01).hpf(35)
   .cylinder(6).tag("kick")
 
