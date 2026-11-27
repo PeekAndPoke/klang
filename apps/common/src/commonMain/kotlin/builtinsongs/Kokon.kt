@@ -233,23 +233,36 @@ let heavy  = makeGuitar(pickupHumbucker)
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them  ----------------------------------
 
-// The bass with a crack on every hit, a variant to A/B (2026-11-27; the maintainer: "the bass-guitar could use a
-// e-bass crack on every hit"): bassSnd and two tells more. A plucked string's high partials die long before its
-// fundamental, and the string slaps the frets at the hit. `ignp("crack", ...)` sets how much of both, 1 by default.
-// Measured against bassSnd at the same gain: as loud, the same below 500 Hz, 1.5 to 4 kHz from -76 to -38 dB.
+// The bass: a sub sine for the weight, sine harmonics for small speakers, and a crack on every hit (2026-11-27; the
+// maintainer: "the bass-guitar could use a e-bass crack on every hit"). A plucked string's high partials die long
+// before its fundamental, and the string slaps the frets at the hit. `ignp("sub", ...)`, `ignp("harmonics", ...)` and
+// `ignp("crack", ...)` set how much of each, 1 by default. Measured against the bass before it (the same, without the
+// crack): as loud, the same below 500 Hz, 1.5 to 4 kHz from -76 to -38 dB.
 let bassCrack = (() => {
+
+  // --- Overridable params ----------------------------------------------------------------------
   let pAnalog  = Ign.slot.analog
   let pSub     = Ign.param("sub",         1.00, "Sub Volume")
   let pHarm    = Ign.param("harmonics",   1.00, "Harmonics Volume")
   let pCrack   = Ign.param("crack",       1.00, "Crack Volume")
+  // ----------------------------------------------------------------------------------------------
+
+  // Sub: a bare sine. No filter: a sine has no harmonics to remove. This is the weight,
+  // and it lives at 36 to 70 Hz where nothing else in the mix is.
   let sub = Ign.sine(x => x.analog(pAnalog)).mul(pSub)
+
+  // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
+  // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
   let harmonics = Ign.sine(x => x.harmonics(6, 1.05).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
+
   // the pluck: the string's upper partials, bright at the hit and gone in 60 ms (a saw, its low end left to the above)
   let pluck = Ign.saw(x => x.analog(pAnalog)).highpass(400).lowpass(3000, 0.8).adsr(0.001, 0.06, 0.0, 0.02).mul(0.6)
+
   // the clank: the string slapping the frets, a 10 ms click around 2.4 kHz
   let clank = Ign.whitenoise().bandpass(2400, 1.2).adsr(0.0005, 0.010, 0.0, 0.005).mul(1.0)
+
   return sub.plus(harmonics).plus(pluck.plus(clank).mul(pCrack))
-    .eq(e => e.band(freq = snareHz, q = 3.0, db = -3))
+    .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
     .mul(0.2)
     .distort(0.1, "soft")
     .classic()
@@ -257,14 +270,14 @@ let bassCrack = (() => {
 
 // Metal kick  ------------------------------------------------------------------------------------------------------
 
-// The deep kick, a variant to A/B (2026-11-27; the maintainer: "less mud than in Schmetterling but an audible 'whoom'
+// The deep kick (2026-11-27; the maintainer: "less mud than in Schmetterling but an audible 'whoom'
 // deep kick"). Four tells:
-//   - the whoom: the body glides down a fourth over a third of a second, and rings half a second (metalKick: 0.35 s)
+//   - the whoom: the body glides down a fourth over a third of a second, and rings half a second (the kick before it: 0.35 s)
 //   - its octave, quieter and shorter, so small speakers hear the pitch, still under the mud band
-//   - the punch: an octave drop in 15 ms from under the mud band, clean (metalKick drives its body hard: overtones
+//   - the punch: an octave drop in 15 ms from under the mud band, clean (the kick before it drove its body hard: overtones
 //     in the mud)
-//   - the crack, as metalKick's
-// Measured against metalKick at the same gain: as loud, 2 dB less from 150 Hz up, 0.4 dB more below.
+//   - the crack: the beater on the batter head, a short noise tick around 2.6 kHz
+// Measured against the kick before it at the same gain: as loud, 2 dB less from 150 Hz up, 0.4 dB more below.
 let metalKickDeep = (() => {
   // the whoom: the body glides down a fourth over a third of a second; a slow drop is what the ear hears as the boom
   let glide = x => x.adsr(0.0001, 0.30, 0, 0)
@@ -275,7 +288,7 @@ let metalKickDeep = (() => {
   let punch = Ign.sine().pitchEnvelope(12, x => x.adsr(0.0001, 0.015, 0, 0)).adsr(0.0005, 0.03, 0.0, 0.01).mul(0.7)
   let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(2.2)
   return whoom.plus(octave).plus(punch).plus(crack)
-    .mul(0.14)                                     // level: as loud as metalKick at the same gain
+    .mul(0.14)                                     // level: as loud as the kick before it at the same gain
     .classic()
 })()
 
