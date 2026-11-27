@@ -691,14 +691,16 @@ internal class KlangPatternScheduler(
         return try {
             cycles.events(pattern = pattern, tempo = map, from = cycle.toDouble(), to = cycle + 1.0).map { event ->
                 val startSec = map.secondsAt(event.startCycles)
+                val durationSec = map.durationSec(startCycle = event.startCycles, durationCycles = event.durationCycles)
 
                 KlangCycleEvent(
                     startSec = startSec,
-                    endSec = startSec + map.durationSec(startCycle = event.startCycles, durationCycles = event.durationCycles),
+                    endSec = startSec + durationSec,
                     startCycles = event.startCycles,
                     durationCycles = event.durationCycles,
                     data = event.toVoiceData(),
                     sourceLocations = event.sourceLocations,
+                    gateSec = event.gateSeconds(durationSec),
                 )
             }
         } catch (t: Throwable) {

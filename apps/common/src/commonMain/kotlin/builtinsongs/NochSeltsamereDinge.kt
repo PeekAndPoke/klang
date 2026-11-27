@@ -290,15 +290,19 @@ export leaps = rootsTime.clip(0.825).scaleTranspose(leaps_pat)
 
 export arp_pat = `<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>`
 
+// The line, and its two quiet copies an octave and two octaves up beside it; only the line itself carries the tag, so
+// the band sees the notes Sirene plays, not the copies (the maintainer, 2026-11-27: they lit strings of their own and
+// kept her guitar busy for longer than the line sounds)
 export arp = n(arp_pat)
   .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
   .cylinder(2).s("supersaw").unison(voices = 11, spread = saw.range(0.05, 0.35).slow(16))
   .gain(0.6 * 0.11).distort(0.7).adsr(0.008, 3.0, 0.5, 0.2).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
   .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body(material = "violin", wet = 0.5)
-  .pan(0.5).superimpose(
+  .pan(0.5).apply(
+    x => x.tag("arp"),
     x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.08).pan(0.3).superimpose(pan(0.7)),
     x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(24).gain(0.6 * 0.04).pan(0.1).superimpose(pan(0.9))
-  ).tag("arp")
+  )
 
 // Morse  -----------------------------------------------------------------------------------------------------------------
 

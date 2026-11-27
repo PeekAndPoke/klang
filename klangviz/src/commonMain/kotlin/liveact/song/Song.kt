@@ -14,7 +14,11 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** One sounding event of a recorded song, as the recorder wrote it: [t] and [d] in seconds, [c] in cycles. */
+/**
+ * One sounding event of a recorded song, as the recorder wrote it: [t] and [d] (its slot) in seconds, [c] in cycles;
+ * [g] how long its note is held in seconds (its gate, null: its slot) and [env] how its sound rises and falls (null:
+ * unknown).
+ */
 @Serializable
 data class RecordedEvent(
     val t: Double,
@@ -27,6 +31,8 @@ data class RecordedEvent(
     val sound: String? = null,
     val index: Int? = null,
     val pan: Double? = null,
+    val g: Double? = null,
+    val env: Envelope? = null,
 )
 
 /** One render of a song, as recorded beside its audio: its tempo ([rpm], cycles a minute) and every event. */
@@ -46,13 +52,18 @@ data class Recording(
     }
 }
 
-/** One event as the players read it: when, how long, how hard ([v], 0.25 to 1 within its tag), and what. */
+/**
+ * One event as the players read it: when, how long ([d] its slot, [g] how long it is held), how hard ([v], 0.25 to 1
+ * within its tag), what, and how its sound rises and falls ([env], null: unknown).
+ */
 data class SongEvent(
     override val t: Double,
     val d: Double,
     val v: Double,
     val midi: Int?,
     val sound: String?,
+    val g: Double = d,
+    val env: Envelope? = null,
 ) : Timed
 
 /** A drum, a cymbal, or the kick. */
@@ -67,8 +78,19 @@ data class DrumHit(override val t: Double, val drum: Drum, val limb: Limb, val v
 /** One note of a tune: its pitch as a midi number, [d] seconds long. */
 data class Note(override val t: Double, val midi: Int, val v: Double, val d: Double) : Timed
 
-/** One pluck or strum of a string player: [midi] is its lowest note, [all] every note that sounds in it. */
-data class Strum(override val t: Double, val d: Double, val midi: Int, val v: Double, val all: List<Int>) : Timed
+/**
+ * One pluck or strum of a string player: [midi] is its lowest note, [all] every note that sounds in it; [g] how long it
+ * is held, [env] how it sounds (null: unknown), as [SongEvent] has them.
+ */
+data class Strum(
+    override val t: Double,
+    val d: Double,
+    val midi: Int,
+    val v: Double,
+    val all: List<Int>,
+    val g: Double = d,
+    val env: Envelope? = null,
+) : Timed
 
 /**
  * A part of a song, as its player reads it: the [events] it plays, as far as the song is known. A recording is known
@@ -187,6 +209,9 @@ class Song(rpm: Double, val grows: Boolean = true, val startsAt: Double = 0.0) {
                         v = min(1.0, max(0.25, (e.gain ?: most) / most)),
                         midi = midiOf(e),
                         sound = e.sound,
+                        // NaN-guard: a gate of no number is the slot, an envelope with one says nothing
+                        g = e.g?.takeIf { it.isFinite() } ?: e.d,
+                        env = e.env?.takeIf { it.known },
                     )
                 )
             }
@@ -368,10 +393,14 @@ class Song(rpm: Double, val grows: Boolean = true, val startsAt: Double = 0.0) {
                     midi = min(last.midi, midi),
                     v = max(last.v, n.v),
                     d = max(last.d, n.d),
+                    // held as long as the longest; sounding as the first that says how (a strum across tags that sound
+                    // apart takes one envelope: the first)
+                    g = max(last.g, n.g),
+                    env = last.env ?: n.env,
                     all = if (midi in last.all) last.all else last.all + midi,
                 )
             } else {
-                out.add(Strum(t = n.t, d = n.d, midi = midi, v = n.v, all = listOf(midi)))
+                out.add(Strum(t = n.t, d = n.d, midi = midi, v = n.v, all = listOf(midi), g = n.g, env = n.env))
             }
         }
 

@@ -22,4 +22,9 @@ class KlangCycleEvent(
     /** What the scheduler sends for it. A control-only event (`control == true`) sets state and sounds no note. */
     val data: VoiceData,
     val sourceLocations: SourceLocationChain?,
+    /**
+     * How long its note is held, in seconds: its slot times its `legato` ([KlangPatternEvent.gateSeconds]), where the
+     * envelope's release begins. Without one given, the whole slot.
+     */
+    val gateSec: Double = endSec - startSec,
 )

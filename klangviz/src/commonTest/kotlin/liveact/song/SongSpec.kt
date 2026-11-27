@@ -106,6 +106,25 @@ class SongSpec : StringSpec({
         strums[1].all shouldBe listOf(55)
     }
 
+    "a strum is held as long as the longest of its notes, and sounds as the first that says how (2026-11-27)" {
+        val glass = Envelope(attack = 0.01, decay = 1.0, sustain = 0.66, release = 2.75)
+        val s = song(
+            event(1.0, "roots", note = "a2", d = 7.7).copy(g = 5.4, env = glass),
+            event(1.01, "roots", note = "a3", d = 7.7).copy(g = 6.0),
+            event(9.0, "roots", note = "e3", d = 7.7),
+            event(12.0, "roots", note = "c3", d = 7.7).copy(g = Double.NaN, env = glass.copy(release = Double.NaN)),
+        )
+        val strums = s.strumsOf(listOf("roots"))
+
+        strums[0].g shouldBe 6.0
+        strums[0].env shouldBe glass
+        // without a gate, the slot; without an envelope, none; what is no number is not taken
+        strums[1].g shouldBe 7.7
+        strums[1].env shouldBe null
+        strums[2].g shouldBe 7.7
+        strums[2].env shouldBe null
+    }
+
     "when the events with some tags start, sorted across the tags" {
         val s = song(event(3.0, "a"), event(1.0, "b"), event(2.0, "a"), event(9.0, "c"))
 

@@ -10,6 +10,12 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.viz.liveact.song.Envelope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
@@ -21,6 +27,13 @@ private fun playing(heard: Double? = null): FakePlayback =
     FakePlayback(rpm = 60.0, events = { cycleOf(it) }).also { it.heard = heard }
 
 private fun SongReading.leadTimes(): List<Double> = song.times(listOf("lead"))
+
+/** Voice params as an event carries them. */
+private fun params(vararg values: Pair<String, Double>): KlangMap<Double> = KlangMap<Double>().also { map ->
+    for ((key, value) in values) {
+        map[key] = value
+    }
+}
 
 class SongReadingSpec : StringSpec({
 
@@ -230,5 +243,25 @@ class SongReadingSpec : StringSpec({
         reading.readOn()
 
         playback.asked.shouldBeEmpty()
+    }
+
+    "a voice's envelope: the pattern's, the engine's defaults where it writes none" {
+        SongReading.envelopeOf(params("adsr.attack" to 0.008, "adsr.decay" to 3.0, "adsr.sustain" to 0.5, "adsr.release" to 0.2)) shouldBe
+            Envelope(attack = 0.008, decay = 3.0, sustain = 0.5, release = 0.2)
+        SongReading.envelopeOf(params("adsr.release" to 2.0)) shouldBe
+            Envelope(attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = 2.0)
+        SongReading.envelopeOf(null) shouldBe
+            Envelope(attack = VOICE_ADSR_ATTACK_SEC, decay = VOICE_ADSR_DECAY_SEC, sustain = VOICE_ADSR_SUSTAIN_LEVEL, release = VOICE_ADSR_RELEASE_SEC)
+    }
+
+    "with the pattern's envelope off, the instrument's own as the song writes it, a plucked string's for the rest" {
+        SongReading.envelopeOf(params("adsr.on" to 0.0, "attack" to 0.01, "decay" to 1.0, "sustain" to 0.66, "release" to 2.75)) shouldBe
+            Envelope(attack = 0.01, decay = 1.0, sustain = 0.66, release = 2.75)
+        // Der Schmetterling's guitars write their attack and decay only
+        SongReading.envelopeOf(params("adsr.on" to 0.0, "attack" to 0.004, "decay" to 5.0, "adsr.release" to 9.0)) shouldBe
+            SongReading.PLUCK.copy(attack = 0.004, decay = 5.0)
+        // none of its own written: the band cannot know it
+        SongReading.envelopeOf(params("adsr.on" to 0.0, "adsr.decay" to 2.0)) shouldBe null
+        SongReading.envelopeOf(params("adsr.on" to 0.0, "release" to Double.NaN)) shouldBe null
     }
 })

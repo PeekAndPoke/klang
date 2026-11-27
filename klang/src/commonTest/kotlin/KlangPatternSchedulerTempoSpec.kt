@@ -349,6 +349,16 @@ class KlangPatternSchedulerTempoSpec : StringSpec({
         }
     }
 
+    "a cycle read for the band carries the gate its event asks for, in seconds, beside its slot" {
+        withScheduler(rpm30) {
+            val halved = scheduler.cycleEvents(0).single()
+
+            (halved.endSec - halved.startSec) shouldBe (2.0 plusOrMinus eps)
+            halved.gateSec shouldBe (1.0 plusOrMinus eps)
+            scheduler.cycleEvents(1).single().gateSec shouldBe (2.0 plusOrMinus eps)
+        }
+    }
+
     "the cycle counter runs on steadily across a tempo change" {
         withScheduler(rpm30) {
             round(atSec = 20.0)

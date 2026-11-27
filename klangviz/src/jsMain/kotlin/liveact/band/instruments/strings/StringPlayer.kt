@@ -16,10 +16,10 @@ import io.peekandpoke.klang.viz.liveact.band.figure.HipMotion
 import io.peekandpoke.klang.viz.liveact.band.figure.Mover
 import io.peekandpoke.klang.viz.liveact.band.figure.Rig
 import io.peekandpoke.klang.viz.liveact.band.figure.Side
-import io.peekandpoke.klang.viz.liveact.band.members.Lap
 import io.peekandpoke.klang.viz.liveact.band.figure.Traits
 import io.peekandpoke.klang.viz.liveact.band.figure.walkHips
 import io.peekandpoke.klang.viz.liveact.band.members.Bearing
+import io.peekandpoke.klang.viz.liveact.band.members.Lap
 import io.peekandpoke.klang.viz.liveact.band.skills.BrowWipe
 import io.peekandpoke.klang.viz.liveact.band.skills.CapTug
 import io.peekandpoke.klang.viz.liveact.band.skills.HandGoal
@@ -43,6 +43,7 @@ import io.peekandpoke.klang.viz.liveact.headReach
 import io.peekandpoke.klang.viz.liveact.lastIndexAt
 import io.peekandpoke.klang.viz.liveact.mat4
 import io.peekandpoke.klang.viz.liveact.smooth
+import io.peekandpoke.klang.viz.liveact.song.Envelope
 import io.peekandpoke.klang.viz.liveact.song.Part
 import io.peekandpoke.klang.viz.liveact.song.Strum
 import io.peekandpoke.klang.viz.liveact.vec
@@ -77,10 +78,6 @@ import kotlin.math.tanh
 // a left-handed one with the left, on a mirrored instrument.
 // All places are in the figure's own measures; the instrument hangs from the trunk and moves with it.
 
-// how a played string's light falls, in seconds to 1/e: while the note rings, and once it has ended
-private const val RING = 0.25
-private const val DAMP = 0.06
-
 /** How far along the neck the fingers reach from the hand's own place, in the figure's measure. */
 private const val REACH = 0.04
 
@@ -89,6 +86,9 @@ private class Pluck(
     override val t: Double,
     val v: Double,
     val d: Double,
+    /** How long its note is held (its gate) and how it sounds (null: unknown): how its strings' light falls. */
+    val g: Double,
+    val envelope: Envelope?,
     /** The fingers' place along the neck, from the nut: at the frets they press. */
     val along: Double,
     /** The hand's own place along the neck: the middle of the four frets its fingers reach in its position. */
@@ -196,6 +196,16 @@ class StringPlayer(
     private val nut = instrument.nut
 
     private var notes: List<Pluck> = emptyList()
+        set(value) {
+            field = value
+            reach = NoteLight.reach(
+                starts = DoubleArray(value.size) { value[it].t },
+                lasts = DoubleArray(value.size) { NoteLight.lasts(held = value[it].g, envelope = value[it].envelope) },
+            )
+        }
+
+    /** For each of [notes], the latest moment it or any before it is still lit ([NoteLight.reach]): where a look back stops. */
+    private var reach: DoubleArray = DoubleArray(0)
 
     /**
      * The last plan (see [planStrings]): what was played stays held as it was, and where the song has forgotten its
@@ -258,6 +268,8 @@ class StringPlayer(
                 t = n.t,
                 v = n.v,
                 d = n.d,
+                g = n.g,
+                envelope = n.env,
                 along = alongOf(fret),
                 hold = alongOf(grip.position + Tuning.SPAN / 2.0),
                 across = acrossOf(fingers.sum().toDouble() / fingers.size),
@@ -326,19 +338,24 @@ class StringPlayer(
         val k = design
 
         var energy = 0.0
-        // a string's light fades as a plucked string's sound does: one exponential fall from the pluck (RING), and a
-        // quicker one from where the note ends (the next one at the latest), as the hand damps it (DAMP)
+        // a string's light follows its note's sound (NoteLight): its envelope where the band knows it, held as long as
+        // the note is; without one, a fall from the pluck that holds a glow while the note is held, and a quicker one
+        // from where the note ends (the next one at the latest), as the hand damps it
         val lit = DoubleArray(k.strings)
         var i = notes.lastIndexAt(t)
 
-        while (i >= 0 && notes[i].t > t - 4.0) {
+        // back as far as any note is still lit: a long note's light outlasts the four seconds the look back once was
+        while (i >= 0 && reach[i] > t) {
             val n = notes[i]
             val age = t - n.t
             val next = notes.getOrNull(i + 1)
-            val held = min(n.d, if (next != null) next.t - n.t else 9.0)
-            val level = exp(-age / RING - max(0.0, age - held) / DAMP)
+            // held for its gate; without an envelope also not past the next pluck, as a hand damps the string for it
+            val held = if (n.envelope != null) n.g else min(n.g, if (next != null) next.t - n.t else 9.0)
+            val level = NoteLight.level(age = age, held = held, envelope = n.envelope)
 
-            energy += n.v * exp(-age / 0.25)
+            if (age < NoteLight.WINDOW) {
+                energy += n.v * exp(-age / 0.25)
+            }
 
             for (string in n.strings) {
                 lit[string] = max(lit[string], n.v * level)

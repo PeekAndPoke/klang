@@ -6,14 +6,20 @@
 package io.peekandpoke.klang.apps.common.liveact
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_ATTACK_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_DECAY_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_RELEASE_SEC
+import io.peekandpoke.klang.audio_bridge.constants.VOICE_ADSR_SUSTAIN_LEVEL
 import io.peekandpoke.klang.audio_engine.KlangCycleEvent
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
+import io.peekandpoke.klang.common.infra.KlangMap
+import io.peekandpoke.klang.viz.liveact.song.Envelope
 import io.peekandpoke.klang.viz.liveact.song.RecordedEvent
 import io.peekandpoke.klang.viz.liveact.song.Song
-import kotlinx.coroutines.delay
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.delay
 
 /**
  * A song read ahead for the live act while it plays (KLANG-00449): the cycles of the [playback] that plays it, asked
@@ -169,10 +175,63 @@ class SongReading private constructor(
             sound = data.sound,
             index = data.soundIndex,
             pan = data.pan?.takeIf { it.isFinite() },
+            // NaN-guard: a gate of no number is none (the band takes the slot)
+            g = gateSec.takeIf { it.isFinite() },
+            env = envelopeOf(data.ignitorParams),
         )
     }
 
     companion object {
+        /**
+         * How a voice's sound rises and falls, from its [params] (2026-11-27: the strings' light
+         * follows it): the pattern's envelope (`adsr.attack` ... `adsr.release`, the engine's defaults where one is not
+         * written), or, where the pattern turned it off (`adsrOff()`), the instrument's own, as the song writes it
+         * (`ignp("attack", ...)`: `attack`, `decay`, `sustain`, `release`); what the song does not write of that is a
+         * plucked string's ([PLUCK]). Null where the voice has its envelope off and the song writes none of its own:
+         * the band cannot know it (an instrument's defaults are not in the event).
+         *
+         * Known limits: the engine's defaults are a classic voice's; a sample's voice takes the sample's own envelope
+         * where the pattern writes none, and an instrument without the classic strip has none at all, so the band then
+         * shows a held note where the sound may be a pluck. With the envelope off, the unprefixed names are read as an
+         * envelope although an instrument may use them for something else, and what the song leaves unwritten is a
+         * plucked string's, not the instrument's own. Where none is known the band goes by how long the note is held (the
+         * light's fallback); the songs are not written for the band. A choke group (`cut`) is not read: a note it cuts
+         * stays lit through its gate.
+         */
+        fun envelopeOf(params: KlangMap<Double>?): Envelope? {
+            // NaN-guard: a value of no number is not written
+            fun read(key: String): Double? = params?.get(key)?.takeIf { it.isFinite() }
+
+            if (read("adsr.on") == 0.0) {
+                val own = listOf("attack", "decay", "sustain", "release").map { read(it) }
+
+                if (own.all { it == null }) {
+                    return null
+                }
+
+                return Envelope(
+                    attack = own[0] ?: PLUCK.attack,
+                    decay = own[1] ?: PLUCK.decay,
+                    sustain = own[2] ?: PLUCK.sustain,
+                    release = own[3] ?: PLUCK.release,
+                )
+            }
+
+            return Envelope(
+                attack = read("adsr.attack") ?: VOICE_ADSR_ATTACK_SEC,
+                decay = read("adsr.decay") ?: VOICE_ADSR_DECAY_SEC,
+                sustain = read("adsr.sustain") ?: VOICE_ADSR_SUSTAIN_LEVEL,
+                release = read("adsr.release") ?: VOICE_ADSR_RELEASE_SEC,
+            )
+        }
+
+        /**
+         * A plucked string's envelope, for what an instrument's own the song leaves unwritten: no sustain, a quick
+         * release, and a decay whose light falls as the strings' did before the envelope was read (a quarter second to
+         * 1/e).
+         */
+        val PLUCK = Envelope(attack = 0.005, decay = 0.75, sustain = 0.0, release = 0.05)
+
         /** How far ahead of what is heard the song is read, in cycles. */
         private const val AHEAD = 8.0
 
