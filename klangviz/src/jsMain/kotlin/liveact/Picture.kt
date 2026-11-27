@@ -122,11 +122,10 @@ class Picture {
     }
 
     /**
-     * Asks the live act for the whole picture at [preset] ([PicturePreset]): its oversampling, fog, shadows and
-     * reflections, each as its own choice above does it. Nothing happens while no live act has it.
+     * Asks the live act for the picture's detail at [preset] ([PicturePreset]): its fog, shadows and reflections, each
+     * as its own choice above does it; the oversampling stays. Nothing happens while no live act has it.
      */
     fun choosePreset(preset: PicturePreset) {
-        choose(preset.samples)
         chooseFog(preset.fog)
         chooseShadows(preset.shadows)
         chooseReflections(preset.reflections)

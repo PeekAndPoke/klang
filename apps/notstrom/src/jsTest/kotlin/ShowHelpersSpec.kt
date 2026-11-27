@@ -82,33 +82,49 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "?notest&dev", strobe = true) shouldBe Switches.parse("look=new&opening=night")
     }
 
-    "the test's picture quality is handed on, unless the address sets it by hand; medium sets nothing" {
-        showSwitches(query = "", strobe = true, quality = PicturePreset.High)[Switch.Quality] shouldBe "high"
+    "the test's picture detail is handed on, unless the address sets it by hand; high sets nothing" {
+        showSwitches(query = "", strobe = true, quality = PicturePreset.Medium)[Switch.Quality] shouldBe "medium"
         showSwitches(query = "", strobe = true, quality = PicturePreset.Low)[Switch.Quality] shouldBe "low"
-        showSwitches(query = "", strobe = true, quality = PicturePreset.Medium).has(Switch.Quality) shouldBe false
+        showSwitches(query = "", strobe = true, quality = PicturePreset.High).has(Switch.Quality) shouldBe false
         showSwitches(query = "?quality=max", strobe = true, quality = PicturePreset.Low)[Switch.Quality] shouldBe "max"
         // one setting of the address is handed on beside the test's quality, and wins over it in the live act
-        val both = showSwitches(query = "?oversample=4", strobe = true, quality = PicturePreset.High)
-
-        both[Switch.Oversample] shouldBe "4"
-        both[Switch.Quality] shouldBe "high"
-        setsOversample("?seed=1&oversample=1") shouldBe true
-        setsOversample("?seed=1") shouldBe false
+        showSwitches(query = "?fog=off", strobe = true, quality = PicturePreset.Medium)[Switch.Fog] shouldBe "off"
         setsQuality("?quality=low") shouldBe true
         setsQuality("?qualityx=low") shouldBe false
     }
 
-    "the machine test's choice: high where its 2x part holds, medium where its 1x part holds 55, else low" {
-        presetFor(fps1x = 60.0, fps2x = 60.0, density = 1.0) shouldBe PicturePreset.High
-        presetFor(fps1x = 60.0, fps2x = 40.0, density = 1.0) shouldBe PicturePreset.Medium
-        presetFor(fps1x = 60.0, fps2x = null, density = 1.0) shouldBe PicturePreset.Medium
-        // a dense display never gets 2x: medium where 1x holds
-        presetFor(fps1x = 60.0, fps2x = 60.0, density = 2.0) shouldBe PicturePreset.Medium
-        presetFor(fps1x = 55.0, fps2x = null, density = 2.0) shouldBe PicturePreset.Medium
-        presetFor(fps1x = 54.9, fps2x = null, density = 1.0) shouldBe PicturePreset.Low
-        presetFor(fps1x = Double.NaN, fps2x = null, density = 1.0) shouldBe PicturePreset.Low
-        // a 2x rate that holds is no high where 1x did not (the flow never measures it so, but the rule holds anyway)
-        presetFor(fps1x = 40.0, fps2x = 60.0, density = 1.0) shouldBe PicturePreset.Low
+    "the test's oversampling is handed on apart from the detail, unless the address sets it by hand; 1 sets nothing" {
+        showSwitches(query = "", strobe = true, oversample = 2)[Switch.Oversample] shouldBe "2"
+        showSwitches(query = "", strobe = true, oversample = 1).has(Switch.Oversample) shouldBe false
+        showSwitches(query = "?oversample=4", strobe = true, oversample = 2)[Switch.Oversample] shouldBe "4"
+
+        val both = showSwitches(query = "", strobe = true, quality = PicturePreset.Low, oversample = 2)
+
+        both[Switch.Quality] shouldBe "low"
+        both[Switch.Oversample] shouldBe "2"
+        setsOversample("?seed=1&oversample=1") shouldBe true
+        setsOversample("?seed=1") shouldBe false
+    }
+
+    "the machine test's detail: high where the high picture holds 55 at 1x, else medium where the medium one does, else low" {
+        presetFor(fpsHigh = 60.0, fpsMedium = null) shouldBe PicturePreset.High
+        presetFor(fpsHigh = 55.0, fpsMedium = null) shouldBe PicturePreset.High
+        presetFor(fpsHigh = 54.9, fpsMedium = 58.0) shouldBe PicturePreset.Medium
+        presetFor(fpsHigh = 40.0, fpsMedium = 54.9) shouldBe PicturePreset.Low
+        presetFor(fpsHigh = 40.0, fpsMedium = null) shouldBe PicturePreset.Low
+        presetFor(fpsHigh = Double.NaN, fpsMedium = Double.NaN) shouldBe PicturePreset.Low
+    }
+
+    "the medium part runs where the high picture is slow, and not where the address sets the detail" {
+        measuresMedium(fpsHigh = 54.9, query = "") shouldBe true
+        measuresMedium(fpsHigh = Double.NaN, query = "?seed=2") shouldBe true
+        measuresMedium(fpsHigh = 55.0, query = "") shouldBe false
+        // the oversampling is no detail: it does not stop the medium part
+        measuresMedium(fpsHigh = 30.0, query = "?oversample=2") shouldBe true
+
+        for (query in listOf("?quality=low", "?fog=low", "?nofog", "?shadows=low", "?reflections=off")) {
+            measuresMedium(fpsHigh = 30.0, query = query) shouldBe false
+        }
     }
 
     "the address's frozen time is not taken; the app's is" {
@@ -172,11 +188,15 @@ class ShowHelpersSpec : StringSpec({
         showSwitches(query = "", strobe = true, quality = PicturePreset.Low).has(Switch.Reflections) shouldBe false
     }
 
-    "the result's line says the picture's quality the test chose, or that the address sets it" {
-        qualityLine(query = "", preset = PicturePreset.Low) shouldBe "Picture quality: low."
-        qualityLine(query = "?seed=2", preset = PicturePreset.High) shouldBe "Picture quality: high."
-        for (query in listOf("?quality=max", "?oversample=4", "?nofog", "?fog=low", "?shadows=low", "?reflections=high")) {
-            qualityLine(query = query, preset = PicturePreset.Medium) shouldBe "Picture quality: as the address sets it."
+    "the result's line says the detail and the oversampling the test chose, or which of them the address sets" {
+        qualityLine(query = "", preset = PicturePreset.Low, oversample = 1) shouldBe "Picture quality: low, no oversampling."
+        qualityLine(query = "?seed=2", preset = PicturePreset.High, oversample = 2) shouldBe "Picture quality: high, 2x oversampling."
+        qualityLine(query = "?oversample=4", preset = PicturePreset.Medium, oversample = 2) shouldBe
+            "Picture quality: medium, oversampling as the address sets it."
+
+        for (query in listOf("?quality=max", "?nofog", "?fog=low", "?shadows=low", "?reflections=high")) {
+            qualityLine(query = query, preset = PicturePreset.Medium, oversample = 2) shouldBe
+                "Picture quality: as the address sets it, 2x oversampling."
         }
     }
 

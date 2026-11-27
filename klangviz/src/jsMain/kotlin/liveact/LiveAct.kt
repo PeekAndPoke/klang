@@ -276,7 +276,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
      * and faster. The cost in frames goes about with the samples. The key o steps through them; `?oversample=2`
      * starts with one.
      */
-    private var samples: Double = Oversampling.of(props.show.switches)
+    private var samples: Double = Oversampling.parse(props.show.switches[Switch.Oversample])
 
     /** The oversampling was chosen by hand (the key o, or [Props.picture]): it holds, no step down by itself. */
     private var byHand = false

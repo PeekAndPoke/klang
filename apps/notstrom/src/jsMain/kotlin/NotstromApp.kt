@@ -87,9 +87,10 @@ fun Tag.NotstromApp(query: String) = comp(
  * that is not secure (plain http on a network address) cannot have the engine's sound: the start screen says so and
  * starts nothing. Outside desktop Chrome it warns first ([BrowserCheck], as the studio does). With the click (or
  * "Continue anyway") the player is made, then the machine is tested: the engine's dynamometer ([KlangBenchmark], the
- * studio's PS) and the stage drawn for a few seconds ([FrameStats]), as the medium picture and then, where it may
- * matter, as the high one (2x oversampling); it chooses the picture's quality as a whole ([presetFor], [PicturePreset],
- * KLANG-00492). The result is shown as a score ([MachineScore]) with the choices for the show (the stroboscope,
+ * studio's PS) and the stage drawn for a few seconds ([FrameStats]), as the high picture at 1x and then, where it may
+ * matter, at 2x or, where 1x was slow, as the medium picture; it chooses the picture's detail ([presetFor],
+ * [PicturePreset], KLANG-00492) and its oversampling apart. The result is shown as a score ([MachineScore]) with the
+ * choices for the show (the stroboscope,
  * fullscreen) right above the button that
  * starts it; `?notest` skips the tests ([skipsTests]) and shows the choices on the start screen. Nothing of the
  * result is sent. It is kept in this browser ([StoredTest]): where a kept result fits this machine as it is now, the
@@ -169,7 +170,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     private class Fading(val step: OpeningFade.Step, val from: Phase, var lastMs: Double)
 
     /**
-     * What the tests found, and the picture's quality the picture test chose ([preset]); [keptAt]: when it was measured,
+     * What the tests found, and the picture's detail ([preset]) and oversampling the picture test chose; [keptAt]: when it was measured,
      * where it is a kept result ([StoredTest]), null for one just measured; [notKept]: one just measured that is not
      * kept for the next visit, as the address changes the picture ([keepsTest]).
      */
@@ -178,6 +179,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val frames: FrameStats,
         val score: MachineScore,
         val preset: PicturePreset,
+        val oversample: Int,
         val keptAt: Double? = null,
         val notKept: Boolean = false,
     )
@@ -210,7 +212,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /** The dynamometer's progress while it runs. */
     private var soundProgress: KlangBenchmark.Progress? by value(null)
 
-    /** How far the picture test is, in tenths: 0 to 10, over its two parts (the first, then the 2x part). */
+    /** How far the picture test is, in tenths: 0 to 10, over its two parts (the first, then the 2x or the medium part). */
     private var pictureTenths: Int by value(0)
 
     /** Whether the picture test waits for the window to be there again (it pauses while away, [FrameClock]). */
@@ -377,6 +379,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             frames = fitting.frames,
             score = MachineScore.of(safeVoices = fitting.voices, fps = fitting.fps),
             preset = preset,
+            oversample = fitting.oversample,
             keptAt = fitting.at,
         )
         problem = null
@@ -586,7 +589,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val screen = window.screen
         val fitting = kept()?.takeIf { it.fits(ratio = window.devicePixelRatio, width = screen.width, height = screen.height) }
 
-        return (tested?.preset ?: fitting?.preset)?.samples ?: 1.0
+        return (tested?.oversample ?: fitting?.oversample ?: 1).toDouble()
     }
 
     /**
@@ -684,9 +687,19 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         }
 
         val twice = if (PictureQuality.measuresTwice(fps1x = frames.fps, density = density)) {
-            // the same stage as the high picture, at 2x: a new render target and new shaders, so a warm-up of its own
-            stage.picture.choose(PicturePreset.High.samples)
+            // the same stage at 2x: a new render target and new shaders, so a warm-up of its own
+            stage.picture.choose(2.0)
             measurePicture(stage = stage, warmMs = TWICE_WARM_MS, measureMs = TWICE_MS, from = 2.0 / 3, to = 1.0).fps
+        } else {
+            null
+        }
+
+        // where the high picture was slow at 1x (and so there was no 2x part): the same stage at the medium detail, new
+        // shadow maps (lit materials built anew where the lamps that cast change) and the mirror at low, so a warm-up
+        // of its own; not where the address sets the picture's detail, which wins over the test's choice
+        val medium = if (measuresMedium(fpsHigh = frames.fps, query = props.query)) {
+            stage.picture.choosePreset(PicturePreset.Medium)
+            measurePicture(stage = stage, warmMs = MEDIUM_WARM_MS, measureMs = MEDIUM_MS, from = 2.0 / 3, to = 1.0).fps
         } else {
             null
         }
@@ -699,7 +712,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
             frames = frames,
             // from the first part: the full picture, as the show starts it
             score = MachineScore.of(safeVoices = voices, fps = frames.fps),
-            preset = presetFor(fps1x = frames.fps, fps2x = twice, density = density),
+            preset = presetFor(fpsHigh = frames.fps, fpsMedium = medium),
+            oversample = PictureQuality.oversampleFor(fps1x = frames.fps, fps2x = twice, density = density),
             notKept = !keepsTest(props.query),
         )
 
@@ -719,6 +733,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                     fps = frames.fps,
                     slowestMs = frames.slowestMs,
                     quality = result.preset.word,
+                    oversample = result.oversample,
                 )
             )
         }
@@ -729,16 +744,16 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
     /**
      * The picture test's stage: the stage the show draws, with the band standing at their places (the show frozen at
      * its start, so nothing moves the measure: no music, no flashing stroboscope, the full picture the show starts
-     * with), at 1x whatever the address says: the medium picture ([PicturePreset.Medium]: the fog and the shadows high,
-     * the reflections mid), or the address's settings where it sets them; its second part draws the same at 2x, the
-     * high picture. It is not seen: the
+     * with), at 1x whatever the address says: the high picture ([PicturePreset.High]: the fog and the shadows high,
+     * the reflections mid), or the address's settings where it sets them; its second part draws the same at 2x, or
+     * the medium picture at 1x. It is not seen: the
      * checking screen covers it (an opaque layer over the full-size canvas, which stays in the layout at its real size
      * and is really drawn; a canvas hidden or made small could be skipped by the browser and would measure nothing
      * true).
      */
     private fun testStage(): Running {
         // the address's switches, frozen at the start (`t=0`: the band at their places), at 1x, and without the
-        // stroboscope (nobody has chosen yet); the fog, the shadows and the reflections the address's, else the medium
+        // stroboscope (nobody has chosen yet); the fog, the shadows and the reflections the address's, else the high
         // picture's
         val switches = showSwitches(query = props.query + "&${Switch.Oversample.key}=1", strobe = false, frozenAt = 0.0)
         val stage = Running(
@@ -892,7 +907,8 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
         val switches = showSwitches(
             query = props.query,
             strobe = strobe,
-            quality = tested?.preset ?: PicturePreset.Medium,
+            quality = tested?.preset ?: PicturePreset.High,
+            oversample = tested?.oversample ?: 1,
             opens = true,
         )
 
@@ -1111,7 +1127,7 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
                     voices = it.voices,
                     frames = it.frames,
                     score = it.score,
-                    quality = qualityLine(query = props.query, preset = it.preset),
+                    quality = qualityLine(query = props.query, preset = it.preset, oversample = it.oversample),
                     measured = it.keptAt?.let { at -> measuredLine(at) } ?: NOT_KEPT.takeIf { _ -> it.notKept },
                     options = { options() },
                     onStart = { go(test = false) },
@@ -1234,5 +1250,11 @@ class NotstromApp(ctx: Ctx<Props>) : Component<NotstromApp.Props>(ctx) {
 
         /** How long the picture test measures at 2x, in milliseconds. */
         const val TWICE_MS = 2_000.0
+
+        /** How long the picture test draws the medium picture before it measures (new shadow maps), in ms. */
+        const val MEDIUM_WARM_MS = 1_000.0
+
+        /** How long the picture test measures the medium picture, in milliseconds. */
+        const val MEDIUM_MS = 2_000.0
     }
 }

@@ -77,8 +77,9 @@ fun Tag.ShowDrawer(
  * Mouse and touch are told apart by the pointer events' kind: a tap also sends the browser's emulated mouse events,
  * which would hold the drawer for ever as a mouse resting on it. It holds its rows (and with `?dev` the look, below).
  *
- * The first is the picture: its quality as a whole, the four presets ([PicturePreset], KLANG-00492), the one the
- * settings make marked, else "Custom" lit (shown, not chosen); then the live act's oversampling, its steps (0.5x to
+ * The first is the picture: its level of detail, the four presets ([PicturePreset], KLANG-00492: fog, shadows and
+ * reflections), the one the settings make marked, else "Custom" lit (shown, not chosen); then the live act's
+ * oversampling (not part of the presets), its steps (0.5x to
  * 4x) with the one in use marked, the fog on the floor, its qualities (off, low, high) likewise, the lamps' shadows
  * (low, high), and the mirror floor's reflections (off, low, mid, high), each following the real state (the test's
  * choice, the keys o and g, the live act's own step down), where a choice is the visitor's and holds
@@ -353,12 +354,12 @@ class ShowDrawer(ctx: Ctx<Props>) : Component<ShowDrawer.Props>(ctx) {
                 plainButton(text = "Next song", primary = false) { props.onNext() }
             }
 
-            // the picture's quality as a whole: a preset, or custom where the settings below are none of them
+            // the picture's detail: a preset, or custom where the fog, shadows and reflections below are none of them
             row {
                 group {
                     +"Quality"
 
-                    val preset = PicturePreset.matching(samples = samples, fog = fog, shadows = shadows, reflections = reflections)
+                    val preset = PicturePreset.matching(fog = fog, shadows = shadows, reflections = reflections)
 
                     for (each in PicturePreset.entries) {
                         plainButton(text = presetLabel(each), primary = each == preset) { props.picture.choosePreset(each) }

@@ -20,57 +20,55 @@ class PicturePresetSpec : StringSpec({
         PicturePreset.named(null) shouldBe null
     }
 
-    "what each sets: medium the picture the show starts with, high the same at 2x, low lighter, max all" {
-        PicturePreset.Medium.let { listOf(it.samples, it.fog, it.shadows, it.reflections) } shouldBe
-            listOf(1.0, FogQuality.High, ShadowQuality.High, ReflectionQuality.Mid)
-        PicturePreset.High.let { listOf(it.samples, it.fog, it.shadows, it.reflections) } shouldBe
-            listOf(2.0, FogQuality.High, ShadowQuality.High, ReflectionQuality.Mid)
-        PicturePreset.Low.let { listOf(it.samples, it.fog, it.shadows, it.reflections) } shouldBe
-            listOf(1.0, FogQuality.Low, ShadowQuality.Low, ReflectionQuality.Off)
-        PicturePreset.Max.let { listOf(it.samples, it.fog, it.shadows, it.reflections) } shouldBe
-            listOf(4.0, FogQuality.High, ShadowQuality.High, ReflectionQuality.High)
+    "what each sets: high the picture the show starts with, medium and low lighter, max the most" {
+        PicturePreset.Low.let { listOf(it.fog, it.shadows, it.reflections) } shouldBe
+            listOf(FogQuality.Low, ShadowQuality.Low, ReflectionQuality.Off)
+        PicturePreset.Medium.let { listOf(it.fog, it.shadows, it.reflections) } shouldBe
+            listOf(FogQuality.High, ShadowQuality.Low, ReflectionQuality.Low)
+        PicturePreset.High.let { listOf(it.fog, it.shadows, it.reflections) } shouldBe
+            listOf(FogQuality.High, ShadowQuality.High, ReflectionQuality.Mid)
+        PicturePreset.Max.let { listOf(it.fog, it.shadows, it.reflections) } shouldBe
+            listOf(FogQuality.High, ShadowQuality.High, ReflectionQuality.High)
 
-        // the show without any switch starts as medium
+        // the show without any switch starts as high, at any oversampling
         val none = Switches()
 
-        PicturePreset.matching(Oversampling.of(none), FogQuality.of(none), ShadowQuality.of(none), ReflectionQuality.of(none)) shouldBe
-            PicturePreset.Medium
+        PicturePreset.matching(FogQuality.of(none), ShadowQuality.of(none), ReflectionQuality.of(none)) shouldBe PicturePreset.High
     }
 
-    "four settings that are a preset are that preset; any other combination is custom" {
+    "three settings that are a preset are that preset; any other combination is custom" {
         for (preset in PicturePreset.entries) {
-            PicturePreset.matching(preset.samples, preset.fog, preset.shadows, preset.reflections) shouldBe preset
+            PicturePreset.matching(preset.fog, preset.shadows, preset.reflections) shouldBe preset
         }
 
-        PicturePreset.matching(1.0, FogQuality.High, ShadowQuality.High, ReflectionQuality.Low) shouldBe null
-        PicturePreset.matching(0.5, FogQuality.Low, ShadowQuality.Low, ReflectionQuality.Off) shouldBe null
-        PicturePreset.matching(2.0, FogQuality.Off, ShadowQuality.High, ReflectionQuality.Mid) shouldBe null
+        PicturePreset.matching(FogQuality.High, ShadowQuality.High, ReflectionQuality.Low) shouldBe null
+        PicturePreset.matching(FogQuality.Off, ShadowQuality.Low, ReflectionQuality.Off) shouldBe null
+        PicturePreset.matching(FogQuality.Low, ShadowQuality.Low, ReflectionQuality.Low) shouldBe null
     }
 
-    "the address's quality sets the four; each one's own switch wins over it" {
-        val high = Switches.parse("?quality=high")
-
-        Oversampling.of(high) shouldBe 2.0
-        FogQuality.of(high) shouldBe FogQuality.High
-        ReflectionQuality.of(high) shouldBe ReflectionQuality.Mid
-
+    "the address's quality sets the three; each one's own switch wins over it; the oversampling is not part of it" {
         val low = Switches.parse("?quality=low")
 
-        Oversampling.of(low) shouldBe 1.0
         FogQuality.of(low) shouldBe FogQuality.Low
         ShadowQuality.of(low) shouldBe ShadowQuality.Low
         ReflectionQuality.of(low) shouldBe ReflectionQuality.Off
+        Oversampling.parse(low[Switch.Oversample]) shouldBe Oversampling.PLAIN
 
-        val mixed = Switches.parse("?quality=low&fog=high&oversample=4&shadows=high&reflections=mid")
+        val medium = Switches.parse("?quality=medium")
 
-        Oversampling.of(mixed) shouldBe 4.0
+        ShadowQuality.of(medium) shouldBe ShadowQuality.Low
+        ReflectionQuality.of(medium) shouldBe ReflectionQuality.Low
+
+        val mixed = Switches.parse("?quality=low&fog=high&shadows=high&reflections=mid")
+
         FogQuality.of(mixed) shouldBe FogQuality.High
         ShadowQuality.of(mixed) shouldBe ShadowQuality.High
         ReflectionQuality.of(mixed) shouldBe ReflectionQuality.Mid
 
         FogQuality.of(Switches.parse("?quality=max&nofog")) shouldBe FogQuality.Off
-        Oversampling.of(Switches.parse("?quality=max&oversample=nonsense")) shouldBe Oversampling.PLAIN
-        Oversampling.of(Switches.parse("?quality=nonsense")) shouldBe Oversampling.PLAIN
-        Oversampling.of(Switches.parse("?quality=max")) shouldBe 4.0
+        // a word of its own that names none leaves the quality's
+        FogQuality.of(Switches.parse("?quality=low&fog=thick")) shouldBe FogQuality.Low
+        ReflectionQuality.of(Switches.parse("?quality=max")) shouldBe ReflectionQuality.High
+        ReflectionQuality.of(Switches.parse("?quality=nonsense")) shouldBe ReflectionQuality.Mid
     }
 })

@@ -60,17 +60,16 @@ enum class Switch(val key: String) {
     NoHud("nohud"),
 
     /**
-     * `?quality=high`: the whole picture's quality, one of low, medium, high or max ([PicturePreset]): it sets the
-     * oversampling, the fog, the shadows and the reflections, each of which its own switch overrides
-     * (`?quality=high&fog=low`); without it, or with another word, each is as its own switch or its default says. A
-     * fog, shadows or reflections switch that names none leaves the quality's; an `?oversample=` of any value is
-     * taken (one that names no step is 1x).
+     * `?quality=medium`: the picture's level of detail, one of low, medium, high or max ([PicturePreset]): it sets the
+     * fog, the shadows and the reflections, each of which its own switch overrides (`?quality=high&fog=low`; one
+     * that names none leaves the quality's); without it, or with another word, each is as its own switch or its
+     * default says. The oversampling is not part of it ([Oversample]).
      */
     Quality("quality"),
 
     /**
      * `?oversample=2`: the picture starts drawn with that many samples for each pixel shown: 0.5, 1, 2 or 4 (the key o
-     * steps through them, [Oversampling]); any other value is 1. Without it, as `?quality=` says ([PicturePreset]).
+     * steps through them, [Oversampling]); any other value is 1.
      */
     Oversample("oversample"),
 
@@ -78,14 +77,15 @@ enum class Switch(val key: String) {
     Sharp("sharp"),
 
     /**
-     * `?shadows=low`: how finely the lamps' shadows are drawn: low or high ([ShadowQuality]); any other value is high,
-     * the shadows as they were made.
+     * `?shadows=low`: how finely the lamps' shadows are drawn: low or high ([ShadowQuality]); any other value is as
+     * [Quality] says, else high, the shadows as they were made.
      */
     Shadows("shadows"),
 
     /**
      * `?reflections=low`: how the mirror floor's reflections are drawn: off, low, mid or high ([ReflectionQuality]),
-     * where the look has the mirror floor ([Floor]); `on` and any other value is mid, at every fog.
+     * where the look has the mirror floor ([Floor]); `on` is mid, any other value as [Quality] says, else mid, at every
+     * fog.
      */
     Reflections("reflections"),
 
@@ -197,8 +197,8 @@ enum class Switch(val key: String) {
     NoFog("nofog"),
 
     /**
-     * `?fog=low`: how finely the fog on the floor is drawn: off, low or high (0, 4 or 8 level sheets, [FogQuality]);
-     * any other value is high (also the former `medium` and `xhigh`). It wins over [NoFog].
+     * `?fog=low`: how finely the fog on the floor is drawn: off, low or high (0, 2 or 4 level sheets, [FogQuality]);
+     * any other value is as [Quality] says, else high (also the former `medium` and `xhigh`). It wins over [NoFog].
      */
     Fog("fog"),
 

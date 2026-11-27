@@ -26,13 +26,6 @@ object Oversampling {
     /** The step `?oversample=` asks for ([text]): one of [STEPS], else [PLAIN]. */
     fun parse(text: String?): Double = text?.toDoubleOrNull()?.takeIf { it in STEPS } ?: PLAIN
 
-    /**
-     * The step the address asks for: `?oversample=` where it is there ([parse]), else the quality's (`?quality=`,
-     * [PicturePreset]), else [PLAIN].
-     */
-    fun of(switches: Switches): Double =
-        if (switches.has(Switch.Oversample)) parse(switches[Switch.Oversample]) else PicturePreset.of(switches)?.samples ?: PLAIN
-
     /** The step after [samples], as the key o cycles through them all: after the last, the first again. */
     fun next(samples: Double): Double = STEPS[(STEPS.indexOf(samples) + 1).mod(STEPS.size)]
 

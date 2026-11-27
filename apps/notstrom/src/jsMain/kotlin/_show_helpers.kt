@@ -58,9 +58,10 @@ fun tempoLine(song: Song): String = "${song.rpm} rpm"
  * can remove the ?hud option."). The former `?hud` names nothing now: it is handed on as a word the live act does not
  * know, and shows no line.
  *
- * [quality]: the picture's quality the machine's test chose (`quality=high`; medium, the live act's own, sets
+ * [quality]: the picture's detail the machine's test chose (`quality=medium`; high, the live act's own, sets
  * nothing); the address's own `?quality=` wins ([setsQuality]), and its switch of one of the settings (`?fog=low`,
- * `?oversample=4`, ...) wins over either in the live act.
+ * ...) wins over either in the live act. [oversample]: the oversampling the test chose (`oversample=2`); the
+ * address's own `?oversample=` wins.
  * The look is the new one (`look=new`: the fence, the mirror floor, the haze giving way to the shadows, Sirene's eyes in
  * her shadow, the lacquer, the drifting world; the maintainer, 2026-11-20: "please make the new look the default look in
  * notstrom"), unless the address sets `?look=` itself ([setsLook]; `?look=today` gives the look as it was made). The key
@@ -78,7 +79,8 @@ fun tempoLine(song: Song): String = "${song.rpm} rpm"
 fun showSwitches(
     query: String,
     strobe: Boolean,
-    quality: PicturePreset = PicturePreset.Medium,
+    quality: PicturePreset = PicturePreset.High,
+    oversample: Int = 1,
     frozenAt: Double? = null,
     opens: Boolean = true,
 ): Switches {
@@ -86,12 +88,13 @@ fun showSwitches(
     val hud = parts.any { it.substringBefore("=") == DEV }
     // what the app decides is set below or not handed on; the address's others are handed on
     val others = parts.filter { it.substringBefore("=") !in APP_SWITCHES }
-    // the picture's quality the test chose, unless the address sets it by hand; the address's own switch of one of
-    // its settings (`?fog=low`) wins over it in the live act
+    // the picture's detail the test chose, unless the address sets it by hand (the address's own switch of one of its
+    // settings, `?fog=low`, wins over it in the live act); the oversampling it chose, unless the address sets it
     val all = others + listOfNotNull(
         Switch.NoStrobe.key.takeUnless { strobe },
         Switch.NoHud.key.takeUnless { hud },
-        "${Switch.Quality.key}=${quality.word}".takeUnless { setsQuality(query) || quality == PicturePreset.Medium },
+        "${Switch.Quality.key}=${quality.word}".takeUnless { setsQuality(query) || quality == PicturePreset.High },
+        "${Switch.Oversample.key}=$oversample".takeUnless { setsOversample(query) || oversample <= 1 },
         "${Switch.Look.key}=$NEW_LOOK".takeUnless { setsLook(query) },
         "${Switch.Opening.key}=$OPENING".takeUnless { setsOpening(query) || frozenAt != null || !opens },
         frozenAt?.let { "${Switch.Time.key}=$it" },
@@ -174,29 +177,43 @@ fun setsFog(query: String): Boolean = query.keys().any { it == Switch.Fog.key ||
 fun setsQuality(query: String): Boolean = query.keys().any { it == Switch.Quality.key }
 
 /**
- * Whether the address sets any of the picture's quality by hand: the whole (`?quality=`), or one of its settings (the
- * oversampling, the fog, the shadows, the reflections).
+ * Whether the address sets the picture's detail by hand: the whole (`?quality=`), or one of its settings (the fog, the
+ * shadows, the reflections).
  */
-fun setsPicture(query: String): Boolean = setsQuality(query) || setsOversample(query) || setsFog(query) ||
+fun setsPicture(query: String): Boolean = setsQuality(query) || setsFog(query) ||
     query.keys().any { it == Switch.Shadows.key || it == Switch.Reflections.key }
 
 /**
- * The picture's quality the show starts with, in one short line for the tests' result: the [preset] the test chose,
- * or, where the address of [query] sets any of the picture's quality, that it does.
+ * The picture the show starts with, in one short line for the tests' result: the detail ([preset]) and the
+ * [oversample] the test chose, or, where the address of [query] sets either, that it does.
  */
-fun qualityLine(query: String, preset: PicturePreset): String =
-    if (setsPicture(query)) "Picture quality: as the address sets it." else "Picture quality: ${preset.word}."
+fun qualityLine(query: String, preset: PicturePreset, oversample: Int): String {
+    val detail = if (setsPicture(query)) "as the address sets it" else preset.word
+    val sharp = when {
+        setsOversample(query) -> "oversampling as the address sets it"
+        oversample > 1 -> "${oversample}x oversampling"
+        else -> "no oversampling"
+    }
+
+    return "Picture quality: $detail, $sharp."
+}
 
 /**
- * The picture's quality the machine test chooses ([StoredTest.QUALITY_CHOICES]): [PicturePreset.High] where its 2x part
- * holds (as [PictureQuality.oversampleFor] judges 2x, with [fps1x], [fps2x] and the display's [density]), else
- * [PicturePreset.Medium] where its first part, the medium picture at 1x, holds [PictureQuality.HOLD_FPS], else
- * [PicturePreset.Low]. A rate that is no number holds nothing.
+ * Whether the machine test's medium part is worth running: where its first part, the high picture at 1x ([fpsHigh]),
+ * does not hold [PictureQuality.HOLD_FPS] (a rate that is no number holds nothing), and the address of [query] does not
+ * set the picture's detail itself ([setsPicture]), which wins over the test's choice.
  */
-fun presetFor(fps1x: Double, fps2x: Double?, density: Double): PicturePreset = when {
-    fps1x >= PictureQuality.HOLD_FPS && PictureQuality.oversampleFor(fps1x = fps1x, fps2x = fps2x, density = density) >= 2 ->
-        PicturePreset.High
-    fps1x >= PictureQuality.HOLD_FPS -> PicturePreset.Medium
+fun measuresMedium(fpsHigh: Double, query: String): Boolean = !(fpsHigh >= PictureQuality.HOLD_FPS) && !setsPicture(query)
+
+/**
+ * The picture's detail the machine test chooses ([StoredTest.QUALITY_CHOICES]): [PicturePreset.High] where its first
+ * part, the high picture at 1x ([fpsHigh]), holds [PictureQuality.HOLD_FPS]; else [PicturePreset.Medium] where its
+ * medium part ([fpsMedium]; null where it was not run) holds it; else [PicturePreset.Low]. A rate that is no number
+ * holds nothing. The oversampling is chosen apart ([PictureQuality.oversampleFor]), by the display as well.
+ */
+fun presetFor(fpsHigh: Double, fpsMedium: Double?): PicturePreset = when {
+    fpsHigh >= PictureQuality.HOLD_FPS -> PicturePreset.High
+    fpsMedium != null && fpsMedium >= PictureQuality.HOLD_FPS -> PicturePreset.Medium
     else -> PicturePreset.Low
 }
 

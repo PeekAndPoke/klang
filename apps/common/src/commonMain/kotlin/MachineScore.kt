@@ -65,13 +65,14 @@ data class MachineScore(val sound: Double, val picture: Double, val combined: In
  * A known limit: the test draws in the window as it is, and the show may play in fullscreen, with more pixels to
  * draw. Where that is too much, the live act's own step down while the show plays is the safety net.
  *
- * The fog, the shadows and the reflections are chosen with the oversampling, as the picture's quality as a whole, by
- * the app (notstrom's presets, KLANG-00492): the 1x part draws its medium picture, the 2x part its high one, and below
- * [HOLD_FPS] at 1x it takes its low one. Until 2026-11-26 a fog part chose the fog's sheets here by how the frame time
- * grew with them. The test never chooses 0.5x or 4x oversampling: those are the visitor's choices, and they hold.
+ * The picture's detail (the fog, the shadows, the reflections) is chosen apart from the oversampling, by the app
+ * (notstrom's presets, KLANG-00492): its 1x part draws the high detail, which it keeps where that part holds
+ * [HOLD_FPS]; where it does not, a medium part decides between medium and low. Until 2026-11-26 a fog part chose the
+ * fog's sheets here by how the frame time grew with them. The test never chooses 0.5x or 4x oversampling: those are
+ * the visitor's choices, and they hold.
  */
 object PictureQuality {
-    /** The frames a second a part of the picture test must hold: the 1x part for the medium picture, the 2x part for 2x. */
+    /** The frames a second a part of the picture test must hold: the 1x part, the 2x part and the medium part alike. */
     const val HOLD_FPS = 55.0
 
     /** The share of the 1x part's frame rate the 2x part must keep. */

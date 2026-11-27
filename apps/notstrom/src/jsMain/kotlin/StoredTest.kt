@@ -19,8 +19,8 @@ import kotlin.js.Date
  * [version]: the test's ([TEST_VERSION]); [at]: when it was measured, in milliseconds since 1970; [ratio], [width]
  * and [height]: what it was measured on (the device's pixels for each of the page's, and the screen's size in the
  * page's pixels); [voices]: the safe voices the sound test found; [fps] and [slowestMs]: the frame stats of the
- * picture test's first part (the score's picture half); [quality]: the picture's quality the test chose, a
- * [PicturePreset] by its word (`medium`; KLANG-00492, before that the oversampling and the fog).
+ * picture test's first part (the score's picture half); [quality]: the picture's detail the test chose, a
+ * [PicturePreset] by its word (`medium`; KLANG-00492, before that the fog), and [oversample] the oversampling.
  *
  * The names in the stored text are fixed ([SerialName]): a field renamed in the code keeps reading what was kept.
  */
@@ -36,6 +36,7 @@ data class StoredTest(
     @SerialName("fps") val fps: Double,
     @SerialName("slowestMs") val slowestMs: Double,
     @SerialName("quality") val quality: String,
+    @SerialName("oversample") val oversample: Int,
 ) {
     /** The frame stats the result screen shows. */
     val frames: FrameStats get() = FrameStats(fps = fps, slowestMs = slowestMs)
@@ -46,11 +47,12 @@ data class StoredTest(
     /**
      * Whether this result counts for the machine as it is now: measured by this [TEST_VERSION], on a display of the
      * same [ratio] and screen size ([width] by [height]), and holding what the test may choose (a preset of
-     * [QUALITY_CHOICES]). Otherwise the test runs again, and its result takes this one's place.
+     * [QUALITY_CHOICES], an oversampling of [OVERSAMPLE_CHOICES]). Otherwise the test runs again, and its result takes
+     * this one's place.
      */
     fun fits(ratio: Double, width: Int, height: Int): Boolean =
         version == TEST_VERSION && this.ratio == ratio && this.width == width && this.height == height &&
-            preset in QUALITY_CHOICES
+            preset in QUALITY_CHOICES && oversample in OVERSAMPLE_CHOICES
 
     companion object {
         /**
@@ -63,18 +65,22 @@ data class StoredTest(
          * chose its fog on a lighter stage than the show now draws there. 5 since 2026-11-26: half the fog's sheets
          * (KLANG-00484: low two, high four), so a kept choice was made on a heavier fog than the show now draws. 6
          * since 2026-11-26: the test chooses the picture's quality as a whole (KLANG-00492), kept as `quality` in
-         * place of the oversampling and the fog.
+         * place of the oversampling and the fog. 7 since 2026-11-27: the quality is the detail only, high is the
+         * show's own picture, and the oversampling is kept beside it again.
          */
-        const val TEST_VERSION = 6
+        const val TEST_VERSION = 7
 
         /** Where the browser keeps it. */
         const val STORAGE_KEY = "notstrom.machine-test"
 
         /**
-         * The picture's qualities the machine test chooses from ([presetFor]): its first part draws [PicturePreset.Medium],
-         * its second [PicturePreset.High]. [PicturePreset.Max] is the visitor's choice, never the test's.
+         * The picture's details the machine test chooses from ([presetFor]): its first part draws [PicturePreset.High],
+         * its medium part [PicturePreset.Medium]. [PicturePreset.Max] is the visitor's choice, never the test's.
          */
         val QUALITY_CHOICES: List<PicturePreset> = listOf(PicturePreset.Low, PicturePreset.Medium, PicturePreset.High)
+
+        /** The oversampling the machine test chooses from: 0.5x and 4x are the visitor's choices, never the test's. */
+        val OVERSAMPLE_CHOICES: List<Int> = listOf(1, 2)
     }
 }
 

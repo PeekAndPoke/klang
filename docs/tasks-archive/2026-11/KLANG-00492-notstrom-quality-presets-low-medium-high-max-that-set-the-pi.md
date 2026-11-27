@@ -1,6 +1,6 @@
 # KLANG-00492: notstrom quality presets low medium high max that set the picture's settings
 
-> **Status (2026-11-26): DONE.** Four presets and custom; the machine test chooses one and pauses while the window is away.
+> **Status (2026-11-27): DONE.** Four presets of the detail and custom, the oversampling apart (revised); the machine test chooses both and pauses while the window is away.
 
 ## Why this exists
 
@@ -30,6 +30,41 @@ First proposed with Medium at fog low and reflections low (2026-11-26, in the se
 that the test maps onto the presets and no machine gets less than today. Measured in the headless browser the same
 day: software drawing, a frame or two a second, the numbers noise (fog low slower than high); the presets' real
 costs are for the machine test on a real card, and the table for the maintainer to tune at the screen.
+
+## Revised (2026-11-27): the oversampling apart
+
+The maintainer, 2026-11-27: "On a macbook air with retina display we will only get 1x oversampling but the setting
+should still not be low. How do we decide?" The first presets held the oversampling, so a dense display, which never
+gets 2x from the test, could never reach High, whatever its card. How games do it (from memory, not looked up): the
+detail preset (shadows, effects, reflections) and the render scale are two settings, and an auto-detect sets both.
+So since 2026-11-27 the presets are the detail only:
+
+| Preset | Fog  | Shadows | Reflections |
+|--------|------|---------|-------------|
+| Low    | low  | low     | off         |
+| Medium | high | low     | low         |
+| High   | high | high    | mid         |
+| Max    | high | high    | high        |
+
+High is the picture the show starts with. The oversampling is its own setting again, chosen by the test as before
+(2x only on a plain display that holds it). The test draws the high picture at 1x first: where it holds 55 frames,
+high, and on a plain display the 2x part decides the oversampling; where not, a medium part: medium where that
+holds, else low. Custom concerns the three detail settings only, so the oversampling (and the live act's own step
+down of it) never makes it custom. The machine test's version went to 7; it keeps the detail and the oversampling.
+
+The table of 2026-11-26 above, and "Decided", "The work" and the first acceptance below, are history: they held
+the oversampling (`Oversampling.of`, a first part of medium, version 6). What the revision did:
+
+- `PicturePreset` without the oversampling; `Oversampling.of` removed again (the live act reads `?oversample=` as
+  before); `Picture.choosePreset` leaves the oversampling; the drawer's Custom matches the three detail settings.
+- The machine test: high at 1x first; then the 2x part (plain display, high holds) or the medium part
+  (`measuresMedium`: high slow, the address sets no detail); `presetFor(fpsHigh, fpsMedium)`; the oversampling by
+  `PictureQuality.oversampleFor` as before. `StoredTest` keeps `quality` and `oversample` (version 7);
+  `showSwitches` hands both on (high and 1x set nothing); the result's line names both.
+- Acceptance: `PicturePresetSpec`, `ShowHelpersSpec` (`presetFor`, `measuresMedium`, the two handed on apart, the
+  line), `StoredTestSpec` (version 7; texts of 5 and 6 not read); klangviz js and jvm, notstrom js green; 3 mutants
+  killed (the medium part ignored, the oversampling not handed on, the shadows not matched), and the medium gate's;
+  review CLEAN with four minors, applied; round 2 CLEAN (reviewer-opus-high).
 
 ## Decided
 
@@ -77,4 +112,7 @@ whether pausing on a window that lost the focus but is still seen (two screens) 
 
 - 2026-11-26: created.
 - 2026-11-26: done: the presets, custom, the test's choice and its pause; on the screen to be tuned.
+- 2026-11-27: revised: the presets are the detail only, the oversampling apart (the maintainer's MacBook Air).
 - 2026-11-26: DONE.
+- 2026-11-27: IN PROGRESS.
+- 2026-11-27: DONE.

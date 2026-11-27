@@ -24,7 +24,8 @@ private val KEPT = StoredTest(
     voices = 212,
     fps = 59.5,
     slowestMs = 21.5,
-    quality = "high",
+    quality = "medium",
+    oversample = 2,
 )
 
 /** As the browser's storage reads it (ultra's persistInLocalStorage): what it does not know, it leaves out. */
@@ -42,15 +43,15 @@ class StoredTestSpec : StringSpec({
         KEPT.fits(ratio = 1.25, width = 1280, height = 900) shouldBe false
     }
 
-    "a result of another test version counts no more: 5, before the test chose the picture's quality as a whole" {
-        KEPT.copy(version = 5).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+    "a result of another test version counts no more: 6, when the quality held the oversampling" {
+        KEPT.copy(version = 6).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION + 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
         KEPT.copy(version = StoredTest.TEST_VERSION - 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
     }
 
     "a kept quality that names no preset makes the result count no more" {
         KEPT.copy(quality = "ultra").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
-        KEPT.preset shouldBe PicturePreset.High
+        KEPT.preset shouldBe PicturePreset.Medium
     }
 
     "what the result screen shows comes back from it" {
@@ -60,20 +61,23 @@ class StoredTestSpec : StringSpec({
     // The stored text, pinned: a field renamed in the code must not change it, or every visitor's kept result is lost
     "the kept text, field by field" {
         JSON.encodeToString(StoredTest.serializer(), KEPT) shouldBe
-            """{"version":6,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
-            """"fps":59.5,"slowestMs":21.5,"quality":"high"}"""
+            """{"version":7,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """"fps":59.5,"slowestMs":21.5,"quality":"medium","oversample":2}"""
     }
 
-    "a text kept by version 5 (the oversampling and the fog, no quality) is not read: the test runs again" {
-        val old = """{"version":5,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+    "a text kept by version 5 (no quality) or 6 (no oversampling) is not read: the test runs again" {
+        val five = """{"version":5,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
             """"fps":59.5,"slowestMs":21.5,"oversample":2,"fog":"low"}"""
+        val six = """{"version":6,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """"fps":59.5,"slowestMs":21.5,"quality":"high"}"""
 
-        shouldThrow<SerializationException> { JSON.decodeFromString(StoredTest.serializer(), old) }
+        shouldThrow<SerializationException> { JSON.decodeFromString(StoredTest.serializer(), five) }
+        shouldThrow<SerializationException> { JSON.decodeFromString(StoredTest.serializer(), six) }
     }
 
     "a kept text is read back, also with a field it does not know" {
-        val text = """{"version":6,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
-            """"fps":59.5,"slowestMs":21.5,"quality":"high","later":true}"""
+        val text = """{"version":7,"at":1795089600000,"ratio":1.25,"width":1280,"height":800,"voices":212,""" +
+            """"fps":59.5,"slowestMs":21.5,"quality":"medium","oversample":2,"later":true}"""
 
         JSON.decodeFromString(StoredTest.serializer(), text) shouldBe KEPT
     }
@@ -86,10 +90,13 @@ class StoredTestSpec : StringSpec({
         measuredLine(localNoon(year = 2027, month = 0, day = 2) + 5 * 60_000.0) shouldBe "Measured on this machine on 2 Jan 2027 at 12:05."
     }
 
-    "a kept result must hold what the test may choose: low, medium or high, never max" {
+    "a kept result must hold what the test may choose: low, medium or high, never max; 1x or 2x" {
         KEPT.copy(quality = "low").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
-        KEPT.copy(quality = "medium").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
+        KEPT.copy(quality = "high").fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
         KEPT.copy(quality = "max").fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+        KEPT.copy(oversample = 1).fits(ratio = 1.25, width = 1280, height = 800) shouldBe true
+        KEPT.copy(oversample = 4).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
+        KEPT.copy(oversample = 0).fits(ratio = 1.25, width = 1280, height = 800) shouldBe false
     }
 })
 
