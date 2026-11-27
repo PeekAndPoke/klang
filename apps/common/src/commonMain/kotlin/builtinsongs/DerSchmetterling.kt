@@ -406,14 +406,14 @@ let melodyAmp = makeAmp(melodyStages, 0.280)     // 0.280 was the gain of guitar
 // The hats' own desk on their cylinder, as a rock mixer treats hats and cymbals (2026-11-27): their brightness lies at
 // 2 to 8 kHz (two thirds of the samples' energy), not above 15 kHz, so a lowpass up there (lpf 15000, as before) took
 // the air and left the harshness. Dips take the harshness, a shelf brings the air: the clank and the hash a little
-// down, everything above 11 kHz up by 2.5 dB (a shelf made by the crossover: the high band alone raised).
+// down, everything above 11 kHz up (a shelf made by the crossover: the high band alone raised).
 let hatsDesk = Katalyst(k => k
   .eq(e => e
     .band(freq = 3500, q = 1.2, db = -3.0)   // the clank
     .band(freq = 7500, q = 1.6, db = -2.0))  // the hash
   .bands(b => b
     .band(body => body.mul(1.00)).cut(11000)
-    .band(air => air.mul(1.20))             // the air: +2.5 dB
+    .band(air => air.mul(1.20))             // the air: +1.6 dB
   )
 )
 

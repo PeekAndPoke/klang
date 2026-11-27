@@ -145,9 +145,9 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.50)        // thump: closed-back box resonance
-    .band(freq =  920, q = 0.7, db =  3.60)        // roar:  low mids
-    .band(freq = 2700, q = 1.2, db =  1.30)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  2.70)        // thump: closed-back box resonance
+    .band(freq =  900, q = 0.7, db =  3.50)        // roar:  low mids
+    .band(freq = 2700, q = 1.2, db =  1.40)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
@@ -213,7 +213,7 @@ let makeGuitar = (pickup) => {
     .pitchEnvelope(0.2, x => x.adsr(pAttack.div(5), 0.100, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.pinknoise().adsr(pAttack.mul(5), pDecay, pSustain, pRelease).highpass(2000).mul(0.06))
+    .plus(Ign.pinknoise().adsr(pAttack.mul(5), pDecay, pSustain, pRelease).highpass(2000).mul(0.05))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "exp"))
@@ -233,7 +233,7 @@ let heavy  = makeGuitar(pickupHumbucker)
 
 // Bass — sub sine + parallel saturated grind, mud band filtered out between them  ----------------------------------
 
-let bass = (() => {
+let bassSnd = (() => {
 
   // --- Overridable params ----------------------------------------------------------------------
   let pAnalog  = Ign.slot.analog
@@ -247,7 +247,7 @@ let bass = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(8, 0.9).fundamental(0).analog(pAnalog).analogSpread(0.02)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 1.05).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -258,22 +258,40 @@ let bass = (() => {
 
 // Metal kick  ------------------------------------------------------------------------------------------------------
 
+// Thump and crack, and nothing in between. The "bd" sample rings a partial at 115 Hz, 11 dB under its 68 Hz body, for
+// its whole 250 ms: right where the guitars and the bass want to be. This kick is three tells:
+//   - the thump: a pure sine, no overtones, so once the sweep is through there is nothing above it but the crack
+//   - the punch: a fast three-octave drop that crosses the mud band in a few milliseconds instead of dwelling there
+//   - the crack: the beater on the batter head, a short noise tick around 3.5 kHz
 let metalKick = (() => {
   let thump = Ign.sine()
     .pitchEnvelope(12, x => x.adsr(0.0001, 0.05, 0, 0))
-    .adsr(0.0005, 0.25, 0.0, 0.05)
+    .adsr(0.0005, 0.35, 0.0, 0.05)
+    .mul(0.8)
     .distort(0.3, "soft")   // the hard hit: the loud start clips, the tail stays clean
  
-  let crack = Ign.whitenoise().bandpass(2800, 0.8).adsr(0.0003, 0.025, 0.0, 0.02).mul(1.8)
+  let crack = Ign.whitenoise().bandpass(2600, 0.8).adsr(0.0003, 0.035, 0.0, 0.02).mul(2.2)
 
   return thump.plus(crack)
-    .mul(0.26)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
-    .shape("soft")
+    .mul(0.18)                                     // level: as loud as the bd shape it replaced, at the same gain(0.25)
     .classic()
 })()
 
 // Metal snare  -----------------------------------------------------------------------------------------------------
 
+// Force first, then the crack. The mix is flat from 125 Hz to 4 kHz and 10 to 20 dB quieter above 5 kHz, where the guitar
+// cab's wall holds. The "sd" sample had no crack (its wires came in after 15 ms) and its body sat at 159 Hz, on the
+// guitars' thump. Measured against the mix at the hits, this snare is 8 to 20 dB on top from 160 to 630 Hz in the first
+// 15 ms, and 9 to 23 dB on top above 4 kHz in the first 3 ms. Three tells:
+//   - the crack: the stick on the batter head, broadband noise above 1.5 kHz
+//   - the body: the head at snareHz (played with .freq), a fifth up at the hit and settling, a deeper sine at 0.75 times
+//     it, the thud (a cluster of sines from 140 to 700 Hz) and the shell (noise around 800 Hz), and the two membrane modes at 1.59 and
+//     2.14 times the head. A lone sine sat in one third-octave band and sounded thin, a "pick" (2026-09-28); the "sd"
+//     sample spread its body over 160 to 250 Hz and had 5 to 10 dB more between 400 Hz and 1 kHz
+//   - the wires: noise that buzzes at the head's frequency, because the wires slap the bottom head on every cycle; they
+//     swell in over 4 ms, once the head moves
+// A sine and clean noise alone is the 80s drum machine snare (too clean, 2026-09-28). No ring after 150 ms: the sample's
+// tail was under the mix in every band, level that nobody heard as snare.
 let metalSnare = (() => {
   let crack = Ign.whitenoise().highpass(1500).adsr(0.0002, 0.040, 0.0, 0.003).mul(3.0)
   // the body: the head, pushed a fifth up by the hit, a deeper sine under it, the thud of the stick driving the whole drum
@@ -313,7 +331,9 @@ let metalSnare = (() => {
   // master limiter worked on the snare alone. A soft clip rounds that first peak and leaves the body as it was: 6 dB less
   // peak at the same loudness (2026-09-30).
   return drum.plus(crack)
-    .mul(0.3).oversampleAtLeast(2, y => y.shape("soft")).mul(1.4895)         // level: as loud as the snare before the clip, at the same gain
+    .mul(0.3)
+    .shape("soft")
+    .mul(1.4895)         // level: as loud as the snare before the clip, at the same gain
     .classic()
 })()
 
@@ -362,6 +382,22 @@ let soarAmp   = makeAmp(brightStages, lowCut(240)) // two octaves up, nothing of
 let swellAmp  = makeAmp(brightStages, topCut(6500))                                        // cylinder 7
 let strumAmp  = makeAmp(cleanStages,  noCuts)                                              // cylinder 8
 let chimeAmp  = makeAmp(cleanStages,  noCuts)                                              // cylinder 10
+
+// Desks  -----------------------------------------------------------------------------------------------------------
+
+// The hats' own desk on their cylinder, as a rock mixer treats hats and cymbals (2026-11-27): their brightness lies at
+// 2 to 8 kHz (two thirds of the samples' energy), not above 15 kHz, so a lowpass up there (lpf 15000, as before) took
+// the air and left the harshness. Dips take the harshness, a shelf brings the air: the clank and the hash a little
+// down, everything above 11 kHz up (a shelf made by the crossover: the high band alone raised).
+let hatsDesk = Katalyst(k => k
+  .eq(e => e
+    .band(freq = 3500, q = 1.2, db = -3.0)   // the clank
+    .band(freq = 7500, q = 1.6, db = -2.0))  // the hash
+  .bands(b => b
+    .band(body => body.mul(1.00)).cut(11000)
+    .band(air => air.mul(1.20))             // the air: +1.6 dB
+  )
+)
 
 // Cylinders  -------------------------------------------------------------------------------------------------------
 
@@ -567,13 +603,13 @@ export snare = pat => sound(pat)
 
 export hats = pat => sound(pat)
   .velocity("1.0 0.7 0.8 0.7")
-  .hpf(800).lpf(freq = 14500, q = 0.5).adsr(0.005, 0.1, 0.70, 2.0) // some body, less sizzle
-  .gain(0.70).pan(0.40)                            
-  .cylinder(11).apply(drumRoom).late(perlin(0.002, 0.0035)).tag("hats")
+  .hpf(800).adsr(0.005, 0.1, 0.70, 2.0) // some body
+  .gain(0.70).pan(0.40)
+  .cylinder(13).katalyst(hatsDesk).apply(drumRoom).late(perlin(0.002, 0.0035)).tag("hats")
 
 // Bass: the Schmetterling's bass guitar, on every kick, on the chord's root two octaves down.
 export bassGuitar = (roots, pat) => n(roots.add(-14)).struct(pat)
-  .sound(bass).velocity("0.98 0.94 0.96 0.94")
+  .sound(bassSnd).velocity("0.98 0.94 0.96 0.94")
   .ignp("sub", 1.00).ignp("harmonics", 0.95)
   .adsr(0.003, 5.00, 0.0, 0.040).hpf(30)
   .clip(0.90).gain(0.40).cylinder(15).tag("bass")
