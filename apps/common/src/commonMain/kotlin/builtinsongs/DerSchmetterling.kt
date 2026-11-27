@@ -25,7 +25,9 @@ let transposition =   -2    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  220    // Where does the snare cut through?
 
-// Guitar rig - Pickups  ---------------------------------------------------------------------------------------------------------------------------
+// INSTRUMENTS: the guitar rig, the guitars, the bass, the marimba, the trumpet, the drums  -------------------------------------------------------------------
+
+// Guitar rig - Pickups  --------------------------------------------------------------------------------------------------------------------------------------
 
 // Simplest pickup ... direct passthrough
 let pickupStock = Ign.fn(x => x)
@@ -46,7 +48,7 @@ let pickupNeck = Ign.fn(x => x
   .notch(freq = Ign.freq().mul(4), q = 2.0)        // the neck sits a quarter along the string
   .mul(1.2))
 
-// Guitar rig - Pedals  ---------------------------------------------------------------------------------------------------------------------------
+// Guitar rig - Pedals  ---------------------------------------------------------------------------------------------------------------------------------------
 
 // Simplest pedal ... direct passthrough
 let pedalStock = Kat.fn(x => x)
@@ -74,7 +76,7 @@ let pedalBoost = Kat.fn(x => x.parallel(
   dirt => dirt.highpass(600).mul(1.2)
 ).mul(0.65))
 
-// Guitar rig - Pre-Amps  ---------------------------------------------------------------------------------------------------------------------------
+// Guitar rig - Pre-Amps  -------------------------------------------------------------------------------------------------------------------------------------
 
 let preampStock = Kat.fn(x => x
   .distort(0.20, "tube").highpass(100)
@@ -104,7 +106,7 @@ let preampHighGain = Kat.fn(x => x
   .lowpass(5200)                                   // the fizz
   .mul(0.75))                                      // volume
 
-// Guitar rig - Power Amps  --------------------------------------------------------------------------------------------------------------------------
+// Guitar rig - Power Amps  -----------------------------------------------------------------------------------------------------------------------------------
 
 // Power amps: the last saturating stage. Tells: symmetric or not, and the presence bump. The last mul is the master.
 let powerStock = Kat.fn(x => x.drive(0.3))
@@ -120,7 +122,7 @@ let powerClassA = Kat.fn(x => x
   .distort(0.25, "asym")
   .mul(1.3))                                       // master
 
-// Guitar rig - Cabinets  --------------------------------------------------------------------------------------------------------------------------
+// Guitar rig - Cabinets  -------------------------------------------------------------------------------------------------------------------------------------
 // the linear half of the amp. All of these are static and linear.
 
 // Two plain lowpasses at 5 kHz, the cab the guitar had before the cabs existed.
@@ -162,6 +164,7 @@ let snareCut = Kat.fn(x => x
 let ampLevel = Kat.fn(x => x.mul(0.18).parallel(c => c, c => c.shape("soft")))
 
 // Guitar  ----------------------------------------------------------------------------------------------------------------------------------------------------
+
 // The string, the pregain and the envelope, then the pickup: the voice ends there, the amp is the guitarist's cylinder.
 let makeGuitar = (pickup) => {
 
@@ -209,31 +212,11 @@ let makeGuitar = (pickup) => {
     .classic()
 }
 
-// The amps: the stages after the pickup, in signal order. A/B one stage at a time:
-//   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck      (in the voice: makeGuitar)
-//   pedal:  pedalStock  | pedalScreamer | pedalFuzz       | pedalBoost
-//   preamp: preampStock | preampClean   | preampCrunch    | preampHighGain
-//   power:  powerStock  | powerPushPull | powerClassA
-//   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
-// Two guitarists, two amps: the rhythm amp for guitars 2 and 3 (hard left and right), the melody amp for guitar 1 in the
-// centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
-let rhythmStages = Kat.fn(x => x.serial(pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, ampLevel))
-let melodyStages = Kat.fn(x => x.serial(pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, ampLevel))
-
-// One amp: the stages in one 4x region, the voice gain of the rig per note as its level, then the cylinder's usual
-// strip (body, reverb, compressor, fader), so the patterns' body, reverb, compressor and katp("gain.gain") still land.
-let makeAmp = (stages, level) => Katalyst(k => k
-  .oversampleAtLeast(8, r => r.serial(stages))
-  .mul(level)
-  .classic())
-
-let rhythmAmp = makeAmp(rhythmStages, 0.220)     // 0.220 was the gain of guitars 2 and 3
-let melodyAmp = makeAmp(melodyStages, 0.280)     // 0.280 was the gain of guitar 1
-
 let guitar       = makeGuitar(pickupHumbucker)
 let guitarMelody = makeGuitar(pickupSingle)
 
-// Bass — sub sine + parallel saturated grind, mud band filtered out between them ----------------
+// Bass — sub sine + parallel saturated grind, mud band filtered out between them  ----------------------------------------------------------------------------
+
 let bassSnd = (() => {
 
   // --- Overridable params ----------------------------------------------------------------------
@@ -257,15 +240,7 @@ let bassSnd = (() => {
     .classic()
 })()
 
-export guitarDyna = (s) => "0.98!2 0.65!6  0.85!2 0.65!2 0.80!2 0.65!2"
-  .sub(perlin(0.00, 0.05).seed(s)).mul("[1.00 0.90 0.95 0.90  1.00 0.90 0.95 0.90]")
-export guitarClip = (s) => "<0.97!31 0.84 0.97!31 0.82 0.97!30 0.84 0.81>"
-  .sub("<[0.0!7 0.05] [0.0!7 0.06] [0.0!7 0.05] [0.0!7 0.07]>").add(perlin(0.01, 0.02).slow(8).seed(s))
-export guitarDecay = (s) => "5.0".mul(perlin(0.975, 1.025).slow(4).seed(s))
-
-// Lead - Inspired by: Editors - Papillon  ---------------------------------------------------------------------------------------------------------------------
-export lead_pat =
-  `<[-7 0 2 4] [-7 0 4 [2 -1]|[4 2]|[4 6]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
+// Marimba  ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 // Marimba: a wooden bar with three tuned modes (1 : 4 : 10). The upper two are gone within 100 ms, so the pitch is
 // stated at the hit and only the fundamental rings on, longer on low bars. A mallet thump, and the resonator tube
@@ -289,120 +264,7 @@ let marimba = (() => {
     .classic()
 })()
 
-export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).adsrOff()
-  .velocity(guitarDyna(0)).body(material = "steel", wet = 0.2)
-  .hpf(380, 0.7).lpf(7500, 0.7)
-  .pan(0.30).superimpose(pan(0.70)) // . solo()
-  .clip(0.80)
-
-export lead_arrange = x => x.cylinder(0) //  .mute()
-  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.21))
-  .velocity("<1.1 0.95 1.00 0.95>*4")
-  .shuffle("<1!64  1!17 4!14 1!1 1!64  1!7 4!8 1!1  1!64>")
-  .mute(   "<1!64  0!32          1!64  0!32         1!64>")
-  .late(berlin(0.0015, 0.0035).mul(drunk).fast(8))
-
-export lead = n(lead_pat).apply(lead_shape).tag("lead")
-
-// Guitar 1  --------------------------------------------------------------------------------------------------------------------------------------------------
-export guitar1_pat =
-  `<[[-7 -7] [[2 3] [4 2] 0] 2 [<1 -1 3>!3 -1] [-7 -7 4 3] 0 2 <[-1 1 3@2] [[3 4] 6@2 7] [[1 3] 4 3 2] [[6 10 7 5]]>]!4
-    [[4 [4 4 2 0] [4 3 2 0] 0] [-1 [1 [<3 2> 1] -1 -4]] [-3!4 -3!8 4 2 4 0] [2 [2 [7 6] 4@2]]]!2
-    [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>]
-    [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[3 2] 1]]>/4`
-
-export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
-  .sound(guitarMelody).adsrOff().unison(voices = 11, spread = 0.07) // . solo()
-  .ignp("attack", perlin(0.004, 0.005).seed(1))
-  .ignp("decay", guitarDecay(1)) //. mute()
-  .clip(guitarClip(1).fast(2)).pan(0.5)
-
-// The melody guitarist's cylinder: everything it does, written once.
-let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
-  // How hard the amp is hit: the maintainer's by ear. Centred, the guitar reaches each side's amp 3 dB lower than
-  // the rig per note heard it (constant-power pan); 1.4 would make that up, 1.0 is the start value.
-  .gain(1.10)
-  .body(material = "spruce", wet = 0.15)
-  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.31)
-
-export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
-  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
-  .mute("<0!160 1!64 0!32>")
-  .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
-
-export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
-
-// Guitar 2  --------------------------------------------------------------------------------------------------------------------------------------------------
-export guitar2_pat =
-  `<[4 4 6 8  4 4 2  3]  [7  7 [ 5  4]     6  7 4 5 6]
-    [4 4 6 8  4 4 7  8]  [9 11 [10  9]     8  7 4 2 3]
-    [4 4 6 8  4 4 5  6]  [4  4 6           8 11 [7 4] [0 2] 3]
-    [4 4 3 6  4 4 2  3]  [7  4 [2 7] [6 7] [4 4 6 4]!2 [3 2] 1]>/4`
-
-export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
-  .sound(guitar).adsrOff().unison(voices = 13, spread = 0.10)
-  .ignp("attack", perlin(0.005, 0.006).seed(2))
-  .ignp("decay", guitarDecay(2))
-  .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
-
-// The rhythm guitarists' cylinder: guitars 2 and 3 play through ONE amp. Everything the cylinder does is written here
-// once, so the two never write different bus settings (only the newest voice's would be heard).
-let rhythmBus = x => x.cylinder(2).katalyst(rhythmAmp)
-  // How hard the amp is hit: the maintainer's by ear. Two guitars feed one amp now, and one compressor.
-  .gain(0.75)
-  // One amp, one wood: the maintainer's by ear. Maple was guitar 2's, mahogany guitar 3's.
-  .body(material = "maple", wet = 0.15)
-  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
-  .katp("gain.gain", 0.32)
-
-export guitar2_arrange = x => x.apply(rhythmBus)  // . solo()
-  .scale("<e2:minor>").mute("<0!160 1!16 0!16>") // .mute()
-  .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
-
-export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
-
-// Guitar 3  --------------------------------------------------------------------------------------------------------------------------------------------------
-export guitar3_pat =
-  `<[0 0  2 4  0 0 -2 -1]  [4 4         2 [4 -1]   4 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1]  [4 7         2 [4  2]   4 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1]  [0 [[0 4] 7] 2 [4  6]   [[7 6] 7] [4 0] -2 -1]
-    [0 0 -1 3  0 0 -2 -1]  [4 0         2 [4  2]   0 0 0 0]>/4`
-
-export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
-  .sound(guitar).adsrOff().unison(voices = 13, spread = 0.10)
-  .ignp("attack", perlin(0.005, 0.006).seed(3))
-  .ignp("decay", guitarDecay(3))
-  .clip(guitarClip(3).fast(2)).pan(0.10).superimpose(pan(0.90))
-
-export guitar3_arrange = x => x.apply(rhythmBus) //  . solo()
-  .scale("<e2:minor>").mute("<0!160 1!16 0!16>") //.mute()
-  .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
-
-export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
-
-// Bass  ------------------------------------------------------------------------------------------------------------------------------------------------------
-export bass_pat =
-  `<[0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 -2 -1]
-    [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0  5  6]
-    [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 -2 -1]
-    [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 0 0]>/8`
-
-export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bassSnd).gain(0.23) // . mute()
-    .ignp("sub", 1.00).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
-    .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
-
-export bass_arrange = x => x.cylinder(4) // . mute()
-  .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!160 1!32>")
-  .pan(0.5).clip("<[0.80 0.70 0.65 0.70]>*4".sub(perlin(0.0, 0.1).slow(8)))
-  .late(berlin(0.0005, 0.0010).mul(drunk).seg(4))
-
-export bass = n(bass_pat).struct(
-  `< x x x [x x]  x x [x x] [x!4]                                              x x [x x] x  [x x] x x [x!4]
-    [x x@2 x]!6 [x x]!2                                                        [x x@2 [x!2]]!4 [x x] [x x] [x [x x]] x
-    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [[x x] x]   [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x]!2
-    [x!4]!4 [[x x] x] [[x x] x] [[x x] x] [x!4]                                [x!2 x@2] [x!2] [x!2 x@2] x [x x] [x [x x]] [x [x x]] [x@3 x]>`
-).fast(2).apply(bass_shape).tag("bass")
+// Trumpet  ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 // Trumpet 2: a blown trumpet (chest, late blare, breath, growl), next to the first one for comparing by ear
 let trumpet2 = (() => {
@@ -433,24 +295,8 @@ let trumpet2 = (() => {
     .classic()
 })()
 
-export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3@2 -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2@2 1 0]>`
-
-export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
-  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "brass", wet = 0.10)
-  .vibrato(rate = 5.5, semitones = 0.135)
-  .hpf(240).lpf("5400".add(perlin(-300, 300).fast(4))).clip(0.9)
-  .apply(
-    x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
-    x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
-  )
-
-export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
-  .scale("e5:minor").gain(0.05)
-  .mute("<1!96 0!32 1!96  0!32 1!96 0!32 1!96>")                          
-
-export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
-
 // Metal kick  ------------------------------------------------------------------------------------------------------------------------------------------------
+
 // Thump and crack, and nothing in between. The "bd" sample rings a partial at 115 Hz, 11 dB under its 68 Hz body, for
 // its whole 250 ms: right where the guitars and the bass want to be. This kick is three tells:
 //   - the thump: a pure sine, no overtones, so once the sweep is through there is nothing above it but the crack
@@ -471,6 +317,7 @@ let metalKick = (() => {
 })()
 
 // Metal snare  -----------------------------------------------------------------------------------------------------------------------------------------------
+
 // Force first, then the crack. The mix is flat from 125 Hz to 4 kHz and 10 to 20 dB quieter above 5 kHz, where the guitar
 // cab's wall holds. The "sd" sample had no crack (its wires came in after 15 ms) and its body sat at 159 Hz, on the
 // guitars' thump. Measured against the mix at the hits, this snare is 8 to 20 dB on top from 160 to 630 Hz in the first
@@ -529,7 +376,204 @@ let metalSnare = (() => {
     .classic()
 })()
 
+// KATALYSTS: the amps and the desks, and the cylinders they sit on  ------------------------------------------------------------------------------------------
+
+// Amps  ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// The amps: the stages after the pickup, in signal order. A/B one stage at a time:
+//   pickup: pickupStock | pickupSingle  | pickupHumbucker | pickupNeck      (in the voice: makeGuitar)
+//   pedal:  pedalStock  | pedalScreamer | pedalFuzz       | pedalBoost
+//   preamp: preampStock | preampClean   | preampCrunch    | preampHighGain
+//   power:  powerStock  | powerPushPull | powerClassA
+//   cab:    cabStock    | cab4x12       | cab1x12         | cabCombo
+// Two guitarists, two amps: the rhythm amp for guitars 2 and 3 (hard left and right), the melody amp for guitar 1 in the
+// centre. On one rig the humbucker, the screamer and the cab all peak near 2.6 kHz; three guitars on it pile up there.
+let rhythmStages = Kat.fn(x => x.serial(pedalScreamer, preampHighGain, powerPushPull, snareCut, cab4x12, ampLevel))
+let melodyStages = Kat.fn(x => x.serial(pedalBoost, preampCrunch, powerPushPull, snareCut, cab4x12, ampLevel))
+
+// One amp: the stages in one 4x region, the voice gain of the rig per note as its level, then the cylinder's usual
+// strip (body, reverb, compressor, fader), so the patterns' body, reverb, compressor and katp("gain.gain") still land.
+let makeAmp = (stages, level) => Katalyst(k => k
+  .oversampleAtLeast(8, r => r.serial(stages))
+  .mul(level)
+  .classic())
+
+let rhythmAmp = makeAmp(rhythmStages, 0.220)     // 0.220 was the gain of guitars 2 and 3
+let melodyAmp = makeAmp(melodyStages, 0.280)     // 0.280 was the gain of guitar 1
+
+// Desks  -----------------------------------------------------------------------------------------------------------------------------------------------------
+
+// The hats' own desk on their cylinder, as a rock mixer treats hats and cymbals (2026-11-27): their brightness lies at
+// 2 to 8 kHz (two thirds of the samples' energy), not above 15 kHz, so a lowpass up there (lpf 15000, as before) took
+// the air and left the harshness. Dips take the harshness, a shelf brings the air: the clank and the hash a little
+// down, everything above 11 kHz up by 2.5 dB (a shelf made by the crossover: the high band alone raised).
+let hatsDesk = Katalyst(k => k
+  .eq(e => e
+    .band(freq = 3500, q = 1.2, db = -3.0)   // the clank
+    .band(freq = 7500, q = 1.6, db = -2.0))  // the hash
+  .bands(b => b
+    .band(body => body.mul(1.00)).cut(11000)
+    .band(air => air.mul(1.20))             // the air: +2.5 dB
+  )
+)
+
+// Cylinders  -------------------------------------------------------------------------------------------------------------------------------------------------
+
+// The melody guitarist's cylinder: everything it does, written once.
+let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
+  // How hard the amp is hit: the maintainer's by ear. Centred, the guitar reaches each side's amp 3 dB lower than
+  // the rig per note heard it (constant-power pan); 1.4 would make that up, 1.0 is the start value.
+  .gain(1.10)
+  .body(material = "spruce", wet = 0.15)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.31)
+
+// The rhythm guitarists' cylinder: guitars 2 and 3 play through ONE amp. Everything the cylinder does is written here
+// once, so the two never write different bus settings (only the newest voice's would be heard).
+let rhythmBus = x => x.cylinder(2).katalyst(rhythmAmp)
+  // How hard the amp is hit: the maintainer's by ear. Two guitars feed one amp now, and one compressor.
+  .gain(0.75)
+  // One amp, one wood: the maintainer's by ear. Maple was guitar 2's, mahogany guitar 3's.
+  .body(material = "maple", wet = 0.15)
+  .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
+  .katp("gain.gain", 0.32)
+
+// THE SONG: the parts, then the arrangement  -----------------------------------------------------------------------------------------------------------------
+
+// Guitar feel  -----------------------------------------------------------------------------------------------------------------------------------------------
+
+export guitarDyna = (s) => "0.98!2 0.65!6  0.85!2 0.65!2 0.80!2 0.65!2"
+  .sub(perlin(0.00, 0.05).seed(s)).mul("[1.00 0.90 0.95 0.90  1.00 0.90 0.95 0.90]")
+export guitarClip = (s) => "<0.97!31 0.84 0.97!31 0.82 0.97!30 0.84 0.81>"
+  .sub("<[0.0!7 0.05] [0.0!7 0.06] [0.0!7 0.05] [0.0!7 0.07]>").add(perlin(0.01, 0.02).slow(8).seed(s))
+export guitarDecay = (s) => "5.0".mul(perlin(0.975, 1.025).slow(4).seed(s))
+
+// Lead - Inspired by: Editors - Papillon  --------------------------------------------------------------------------------------------------------------------
+
+export lead_pat =
+  `<[-7 0 2 4] [-7 0 4 [2 -1]|[4 2]|[4 6]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|[5 3]|3|3|3|3 [1 -1]|1|1|1|1]>*2`
+
+export lead_shape = x => x.sound(marimba).ply("1|1|1|1|1|1|2".fast(5.sqrt())).adsrOff()
+  .velocity(guitarDyna(0)).body(material = "steel", wet = 0.2)
+  .hpf(380, 0.7).lpf(7500, 0.7)
+  .pan(0.30).superimpose(pan(0.70)) // . solo()
+  .clip(0.80)
+
+export lead_arrange = x => x.cylinder(0) //  .mute()
+  .scale("<e5:minor!140 e6:minor!32>").gain("<0.50!140 0.25!32>").gain(mul(0.21))
+  .velocity("<1.1 0.95 1.00 0.95>*4")
+  .shuffle("<1!64  1!17 4!14 1!1 1!64  1!7 4!8 1!1  1!64>")
+  .mute(   "<1!64  0!32          1!64  0!32         1!64>")
+  .late(berlin(0.0015, 0.0035).mul(drunk).fast(8))
+
+export lead = n(lead_pat).apply(lead_shape).tag("lead")
+
+// Guitar 1  --------------------------------------------------------------------------------------------------------------------------------------------------
+
+export guitar1_pat =
+  `<[[-7 -7] [[2 3] [4 2] 0] 2 [<1 -1 3>!3 -1] [-7 -7 4 3] 0 2 <[-1 1 3@2] [[3 4] 6@2 7] [[1 3] 4 3 2] [[6 10 7 5]]>]!4
+    [[4 [4 4 2 0] [4 3 2 0] 0] [-1 [1 [<3 2> 1] -1 -4]] [-3!4 -3!8 4 2 4 0] [2 [2 [7 6] 4@2]]]!2
+    [[-3,-7] [[-4,-8] [-1,-4]] [0,-3] <[[4 6],[-2 3]] [0,-1]>]
+    [<[7,4] [[7 4 6 0  7 4 2 0]!2]> [2 0 -1 0] 0 [[3 2] 1]]>/4`
+
+export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
+  .sound(guitarMelody).adsrOff().unison(voices = 11, spread = 0.07) // . solo()
+  .ignp("attack", perlin(0.004, 0.005).seed(1))
+  .ignp("decay", guitarDecay(1)) //. mute()
+  .clip(guitarClip(1).fast(2)).pan(0.5)
+
+export guitar1_arrange = x => x.apply(melodyBus)  // . solo()
+  .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>")  // .mute()
+  .mute("<0!160 1!64 0!32>")
+  .late(berlin(0.0009, 0.0012).mul(drunk).seed(1))
+
+export guitar1 = n(guitar1_pat).struct("<[x!16]!7 [x!24]!1 [x!16]!16>").apply(guitar1_shape).tag("guitar1")
+
+// Guitar 2  --------------------------------------------------------------------------------------------------------------------------------------------------
+
+export guitar2_pat =
+  `<[4 4 6 8  4 4 2  3]  [7  7 [ 5  4]     6  7 4 5 6]
+    [4 4 6 8  4 4 7  8]  [9 11 [10  9]     8  7 4 2 3]
+    [4 4 6 8  4 4 5  6]  [4  4 6           8 11 [7 4] [0 2] 3]
+    [4 4 3 6  4 4 2  3]  [7  4 [2 7] [6 7] [4 4 6 4]!2 [3 2] 1]>/4`
+
+export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
+  .sound(guitar).adsrOff().unison(voices = 13, spread = 0.10)
+  .ignp("attack", perlin(0.005, 0.006).seed(2))
+  .ignp("decay", guitarDecay(2))
+  .clip(guitarClip(2).fast(2)).pan(0.10).superimpose(pan(0.90))
+
+export guitar2_arrange = x => x.apply(rhythmBus)  // . solo()
+  .scale("<e2:minor>").mute("<0!160 1!16 0!16>") // .mute()
+  .late(berlin(0.0006, 0.0009).mul(drunk).seed(2))
+
+export guitar2 = n(guitar2_pat).struct("<[[x!2] x!7]!3 [x!16]!4 [x!24]!1 [[x!2]!2 x!6]!15 [x!16]>").apply(guitar2_shape).tag("guitar2")
+
+// Guitar 3  --------------------------------------------------------------------------------------------------------------------------------------------------
+
+export guitar3_pat =
+  `<[0 0  2 4  0 0 -2 -1]  [4 4         2 [4 -1]   4 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1]  [4 7         2 [4  2]   4 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1]  [0 [[0 4] 7] 2 [4  6]   [[7 6] 7] [4 0] -2 -1]
+    [0 0 -1 3  0 0 -2 -1]  [4 0         2 [4  2]   0 0 0 0]>/4`
+
+export guitar3_shape = x => x.pregain(guitarDyna(3).fast(2))
+  .sound(guitar).adsrOff().unison(voices = 13, spread = 0.10)
+  .ignp("attack", perlin(0.005, 0.006).seed(3))
+  .ignp("decay", guitarDecay(3))
+  .clip(guitarClip(3).fast(2)).pan(0.10).superimpose(pan(0.90))
+
+export guitar3_arrange = x => x.apply(rhythmBus) //  . solo()
+  .scale("<e2:minor>").mute("<0!160 1!16 0!16>") //.mute()
+  .late(berlin(0.0003, 0.0006).mul(drunk).seed(3))
+
+export guitar3 = n(guitar3_pat).struct("<[[x!2] x!3]!4 [x!8]!3 [x!24]!1 [[x!4] x!3]!8 [x!8]!7 [x!16]>").apply(guitar3_shape).tag("guitar3")
+
+// Bass  ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+export bass_pat =
+  `<[0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 -2 -1]
+    [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0  5  6]
+    [0 0  2 4  0 0 -2 -1] [0 0 2 4       0 0 -2 -1]
+    [0 0 -1 3  7 0 -2 -1] [0 0 3 [0 -2]  0 0 0 0]>/8`
+
+export bass_shape = x => x.velocity("0.98 0.96 0.97 0.96".fast(2)).sound(bassSnd).gain(0.23) // . mute()
+    .ignp("sub", 1.00).ignp("harmonics", 1.00).clip("0.90".sub(perlin(0.0, 0.05).slow(8)))  //  . solo()
+    .adsr(0.003, 5.00, 0.00, 0.015).hpf(35)
+
+export bass_arrange = x => x.cylinder(4) // . mute()
+  .scale("e1:minor").notch(freq = snareHz, q = 1.0).mute("<0!160 1!32>")
+  .pan(0.5).clip("<[0.80 0.70 0.65 0.70]>*4".sub(perlin(0.0, 0.1).slow(8)))
+  .late(berlin(0.0005, 0.0010).mul(drunk).seg(4))
+
+export bass = n(bass_pat).struct(
+  `< x x x [x x]  x x [x x] [x!4]                                              x x [x x] x  [x x] x x [x!4]
+    [x x@2 x]!6 [x x]!2                                                        [x x@2 [x!2]]!4 [x x] [x x] [x [x x]] x
+    [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x] [[x x] x]   [x x] [x [x x]] [x x] [x [x x]]  [[x x] [~ x]] [x x] [[x x] x]!2
+    [x!4]!4 [[x x] x] [[x x] x] [[x x] x] [x!4]                                [x!2 x@2] [x!2] [x!2 x@2] x [x x] [x [x x]] [x [x x]] [x@3 x]>`
+).fast(2).apply(bass_shape).tag("bass")
+
+// Trumpet line  ----------------------------------------------------------------------------------------------------------------------------------------------
+
+export trumpet_pat = `<[~ 0 1 ~  0 ~ 2 ~] [0 ~ 0 -4  -3@2 -1 0] [~ 0 -1 0  ~ 0 ~ 0] [~ 0 2 ~  2@2 1 0]>`
+
+export trumpet2_shape = x => x.sound(trumpet2).adsrOff() //  .solo()
+  .velocity("1.0 0.8 0.9 0.8".fast(2).sub(perlin(0.0, 0.02))).body(material = "brass", wet = 0.10)
+  .vibrato(rate = 5.5, semitones = 0.135)
+  .hpf(240).lpf("5400".add(perlin(-300, 300).fast(4))).clip(0.9)
+  .apply(
+    x => x.pan(0.38).late(berlin(0.0015, 0.0020).seed(100).mul(drunk).slow(4)),
+    x => x.pan(0.62).late(berlin(0.0015, 0.0020).seed(101).mul(drunk).slow(4)),
+  )
+
+export trumpet_arrange = x => x.cylinder(5) // .solo(0.99)
+  .scale("e5:minor").gain(0.05)
+  .mute("<1!96 0!32 1!96  0!32 1!96 0!32 1!96>")                          
+
+export trumpet = n(trumpet_pat).apply(trumpet2_shape).tag("trommel") // trumpet_shape is the first trumpet
+
 // Drums  -----------------------------------------------------------------------------------------------------------------------------------------------------
+
 export kick_pat = `<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd  ~ bd  ~]!32 [bd!4]!16 [bd ~ bd [~ bd]]!15 [bd!16]!1>`
 export kick_shape = x => x.sound(metalKick).adsrOff().note("e1").transpose(transposition).gain(0.33).velocity("0.98 0.94 0.96 0.94").pan(0.5)
 export kick_arrange = x => x.cylinder(6).mute("<0!160 1!32>").late(berlin(0.0000, 0.0005).mul(drunk).seg(4)) // .mute()
@@ -550,20 +594,6 @@ export hats_pat =
 export hats_shape = x => x.gain(0.15).pan(0.425)
   .hpf(300).adsr(perlin(0.001, 0.003), 0.1, 0.90, 3.0)
 
-// The hats' own desk on their cylinder, as a rock mixer treats hats and cymbals (2026-11-27): their brightness lies at
-// 2 to 8 kHz (two thirds of the samples' energy), not above 15 kHz, so a lowpass up there (lpf 15000, as before) took
-// the air and left the harshness. Dips take the harshness, a shelf brings the air: the clank and the hash a little
-// down, everything above 11 kHz up by 2.5 dB (a shelf made by the crossover: the high band alone raised).
-let hatsDesk = Katalyst(k => k
-  .eq(e => e
-    .band(freq = 3500, q = 1.2, db = -3.0)   // the clank
-    .band(freq = 7500, q = 1.6, db = -2.0))  // the hash
-  .bands(b => b
-    .band(body => body.mul(1.00)).cut(11000)
-    .band(air => air.mul(1.20))             // the air: +2.5 dB
-  )
-)
-
 export hats_arrange = x => x.cylinder(8).katalyst(hatsDesk)
   .mute("<0!160 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
@@ -576,10 +606,12 @@ export shaker_arrange = x => x.cylinder(10).late(berlin(0.0010, 0.0020).mul(drun
 export shaker = sound(shaker_pat).apply(shaker_shape).tag("shaker")
 
 // Count-in  --------------------------------------------------------------------------------------------------------------------------------------------------
+
 export countin = sound("oh!2").apply(hats_shape).velocity(0.4).tag("countin").reverb(wet = "0.1", size = 0)
 export countin_arrange = x => x.cylinder(0).filterWhen(t => t < 2)
 
 // Song  ------------------------------------------------------------------------------------------------------------------------------------------------------
+
 export song_arrange = x => x.late(2).filterWhen(t => t >= 2) // shift the song one cycle to make room for the count-in
 
 export song_body = stack(
