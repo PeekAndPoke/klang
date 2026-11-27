@@ -29,6 +29,8 @@ let keep = 32 * 6
 let notchFreq = sine.range(320, 520).slow(20)
 let snareHz   = 220                                // a3: the snare sits on the key
 
+// INSTRUMENTS: the glass guitar, the morse key, the bass, the drums  -----------------------------------------------------
+
 // Glass guitar rig  ------------------------------------------------------------------------------------------------------
 // The guitar of Seltsamere Dinge as a rig, in the parts the guitars of Der Schmetterling have: the string and the pickup
 // in the voice, the pedals and the room on the guitarists' cylinder. Its tells:
@@ -75,66 +77,8 @@ let pickupGrit = Ign.fn(x => x
 let glassClean = makeGlass(pickupGlass)
 let glassGrit  = makeGlass(pickupGrit)
 
-// The notch pedal: a wide notch on the amp. The line sets it with every note (katp "notch.freq"), so it steps with the
-// chords, as it did when it was each note's own.
-let pedalNotch = Kat.fn(x => x.notch(Kat.param("notch.freq", 420), 0.5))
+// Morse key  -------------------------------------------------------------------------------------------------------------
 
-// One amp for both halves: the pedal, then the cylinder's strip, so the body and the vowel land.
-let glassAmp = Katalyst(k => k.serial(pedalNotch).classic())
-
-// The glass guitarists' cylinder: everything it does, written once.
-let glassBus = x => x.cylinder(3).katalyst(glassAmp)
-  .body(material = "glass")
-  .vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
-
-// How the glass guitar is played: the clean string in the middle, its crushed twin coming in over 64 cycles and
-// spreading out to both sides, a slow wobble on it. The swell over the first 32 cycles is the guitar's own.
-let glassSwell = cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2))
-
-let glass = x => x
-  .unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).analog(10)
-  .gain(0.50).katp("notch.freq", notchFreq)
-  .apply(
-    clean => clean.sound(glassClean).adsrOff(),
-    grit => grit.sound(glassGrit).adsrOff()
-      .ignp("bits", "2.0".add(berlin.range(-1, 1).mul(0.75).slow(4)))
-      .gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(1.2))
-      .vibrato(rate = "0.51".add(perlin.div(20)), semitones = 0.06)
-      .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))
-  )
-  .velocity(glassSwell)
-  .apply(glassBus)
-
-// Glass guitar, the roots  ----------------------------------------------------------------------------------------------
-// One chord every four cycles, mostly the root alone.
-export roots_pat =
-  `<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4`
-
-let rootsTime = note(roots_pat).struct("x!4").slow(16)
-
-export roots = rootsTime.clip(0.7).apply(glass).tag("roots")
-
-// Glass guitar, the leaps  ----------------------------------------------------------------------------------------------
-// The same chords, leaping an octave up and down from them, and a fifth.
-export leaps_pat = `<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32`
-
-export leaps = rootsTime.clip(0.825).scaleTranspose(leaps_pat)
-  .pan(sine.range(0.3, 0.7).slow(20)).apply(glass).tag("leaps")
-
-// Arpeggio  --------------------------------------------------------------------------------------------------------------
-export arp_pat = `<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>`
-
-export arp = n(arp_pat)
-  .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-  .cylinder(2).s("supersaw").unison(voices = 11, spread = saw.range(0.05, 0.35).slow(16))
-  .gain(0.6 * 0.11).distort(0.7).adsr(0.008, 3.0, 0.5, 0.2).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
-  .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body(material = "violin", wet = 0.5)
-  .pan(0.5).superimpose(
-    x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.08).pan(0.3).superimpose(pan(0.7)),
-    x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(24).gain(0.6 * 0.04).pan(0.1).superimpose(pan(0.9))
-  ).tag("arp")
-
-// Morse  -----------------------------------------------------------------------------------------------------------------
 // The morse key: a buzzer behind a narrow band, crushed to 5 bits, the sound of a radio far away. The same chain the
 // pulse had, now an instrument of its own.
 let morseKey = (() => {
@@ -147,13 +91,8 @@ let morseKey = (() => {
     .classic()
 })()
 
-export morse = n("0").morse("Schön ist es auf der Welt zu sein!")
-  .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32))
-  .sound(morseKey).adsrOff().analog(2)
-  .gain(0.35).clip(0.35).pan(berlin.slow(2))
-  .cylinder(1).body(material = "membrane").tag("morse")
-
 // Bass  ------------------------------------------------------------------------------------------------------------------
+
 // Der Schmetterling's bass guitar: a sub sine and the harmonics 2f to 6f over it, the snare's frequency cut out.
 let bassSnd = (() => {
 
@@ -173,19 +112,8 @@ let bassSnd = (() => {
     .classic()
 })()
 
-// The guitar's roots without their chords, on the same four cycle grid, played in eighths: the root, and an octave or
-// a fifth up towards the end of each cycle.
-export bass_pat = `<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2 d1 c1 d1]>/4`
+// Metal kick  ------------------------------------------------------------------------------------------------------------
 
-export bass = note(bass_pat).slow(16)
-  .ply("<2 4 8 16>")
-  .transpose("<[0 0 0 0 0 0 12 0] [0 0 0 0 0 7 12 0]>")
-  .sound(bassSnd).velocity("1.0 0.80 0.90 0.80 0.95 0.80 0.90 0.85")
-  .adsr(0.003, 5.00, 0.00, 0.015).clip(0.80).hpf(35)
-  .gain(0.18).pan(0.5)
-  .cylinder(4).tag("bass")
-
-// Drums  -----------------------------------------------------------------------------------------------------------------
 // Der Schmetterling's kick (thump and crack) and snare (crack, body, wires).
 let metalKick = (() => {
   let thump = Ign.sine()
@@ -199,6 +127,8 @@ let metalKick = (() => {
     .mul(0.25)
     .classic()
 })()
+
+// Metal snare  -----------------------------------------------------------------------------------------------------------
 
 let metalSnare = (() => {
   let crack = Ign.whitenoise().highpass(1500).adsr(0.0002, 0.040, 0.0, 0.003).mul(3.0)
@@ -234,6 +164,102 @@ let metalSnare = (() => {
     .classic()
 })()
 
+// KATALYSTS: the glass amp, and the cylinder it sits on  -----------------------------------------------------------------
+
+// Amps  ------------------------------------------------------------------------------------------------------------------
+
+// The notch pedal: a wide notch on the amp. The line sets it with every note (katp "notch.freq"), so it steps with the
+// chords, as it did when it was each note's own.
+let pedalNotch = Kat.fn(x => x.notch(Kat.param("notch.freq", 420), 0.5))
+
+// One amp for both halves: the pedal, then the cylinder's strip, so the body and the vowel land.
+let glassAmp = Katalyst(k => k.serial(pedalNotch).classic())
+
+// Cylinders  -------------------------------------------------------------------------------------------------------------
+
+// The glass guitarists' cylinder: everything it does, written once.
+let glassBus = x => x.cylinder(3).katalyst(glassAmp)
+  .body(material = "glass")
+  .vowel(vowel = "e o e i a u".slow(24), wet = 0.40)
+
+// THE SONG: the parts, then the arrangement  -----------------------------------------------------------------------------
+
+// Glass guitar, the playing  ---------------------------------------------------------------------------------------------
+
+// How the glass guitar is played: the clean string in the middle, its crushed twin coming in over 64 cycles and
+// spreading out to both sides, a slow wobble on it. The swell over the first 32 cycles is the guitar's own.
+let glassSwell = cat(saw.range(0.25, 1.0).pow(1.5).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2))
+
+let glass = x => x
+  .unison(voices = 9, spread = saw.range(0.05, 0.45).slow(64)).analog(10)
+  .gain(0.50).katp("notch.freq", notchFreq)
+  .apply(
+    clean => clean.sound(glassClean).adsrOff(),
+    grit => grit.sound(glassGrit).adsrOff()
+      .ignp("bits", "2.0".add(berlin.range(-1, 1).mul(0.75).slow(4)))
+      .gain(saw.range(0.2, 1.0).slow(64).pow(1.1).mul(1.2))
+      .vibrato(rate = "0.51".add(perlin.div(20)), semitones = 0.06)
+      .pan(saw.range(0.5, 0.1).slow(64)).superimpose(pan(saw.range(0.5, 0.9).slow(64)))
+  )
+  .velocity(glassSwell)
+  .apply(glassBus)
+
+// Glass guitar, the roots  -----------------------------------------------------------------------------------------------
+
+// One chord every four cycles, mostly the root alone.
+export roots_pat =
+  `<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 [c2@3] [d1,d2] [c1,c2,c3] [d1,d1,d2,a1,a2]]>/4`
+
+let rootsTime = note(roots_pat).struct("x!4").slow(16)
+
+export roots = rootsTime.clip(0.7).apply(glass).tag("roots")
+
+// Glass guitar, the leaps  -----------------------------------------------------------------------------------------------
+
+// The same chords, leaping an octave up and down from them, and a fifth.
+export leaps_pat = `<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/32`
+
+export leaps = rootsTime.clip(0.825).scaleTranspose(leaps_pat)
+  .pan(sine.range(0.3, 0.7).slow(20)).apply(glass).tag("leaps")
+
+// Arpeggio  --------------------------------------------------------------------------------------------------------------
+
+export arp_pat = `<[0 2 4 6 7 6 4 2]!14 [2 0 2 4 6 7 4 1] [-2 -1 0 2 7 4 -1 -3]>`
+
+export arp = n(arp_pat)
+  .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
+  .cylinder(2).s("supersaw").unison(voices = 11, spread = saw.range(0.05, 0.35).slow(16))
+  .gain(0.6 * 0.11).distort(0.7).adsr(0.008, 3.0, 0.5, 0.2).lpf(attack = 0.008, decay = 5.0, sustain = 0.2, release = 0.1).clip(1.05)
+  .hpf(800).lpf(freq = 1400, env = perlin.range(21.7, 27.9).slow(8), q = 1.5).analog(15).body(material = "violin", wet = 0.5)
+  .pan(0.5).superimpose(
+    x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(12).gain(0.6 * 0.08).pan(0.3).superimpose(pan(0.7)),
+    x => x.hpf(800).lpf(freq = 1500, q = 5).bpf(freq = notchFreq, q = 1.0).transpose(24).gain(0.6 * 0.04).pan(0.1).superimpose(pan(0.9))
+  ).tag("arp")
+
+// Morse  -----------------------------------------------------------------------------------------------------------------
+
+export morse = n("0").morse("Schön ist es auf der Welt zu sein!")
+  .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32))
+  .sound(morseKey).adsrOff().analog(2)
+  .gain(0.35).clip(0.35).pan(berlin.slow(2))
+  .cylinder(1).body(material = "membrane").tag("morse")
+
+// Bass line  -------------------------------------------------------------------------------------------------------------
+
+// The guitar's roots without their chords, on the same four cycle grid, played in eighths: the root, and an octave or
+// a fifth up towards the end of each cycle.
+export bass_pat = `<a1 [f1 c2 e1 [f1 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2 d1 c1 d1]>/4`
+
+export bass = note(bass_pat).slow(16)
+  .ply("<2 4 8 16>")
+  .transpose("<[0 0 0 0 0 0 12 0] [0 0 0 0 0 7 12 0]>")
+  .sound(bassSnd).velocity("1.0 0.80 0.90 0.80 0.95 0.80 0.90 0.85")
+  .adsr(0.003, 5.00, 0.00, 0.015).clip(0.80).hpf(35)
+  .gain(0.18).pan(0.5)
+  .cylinder(4).tag("bass")
+
+// Drums  -----------------------------------------------------------------------------------------------------------------
+
 // The kick and the snare keep the old drum line: one bar of sixteen steps, played slower and faster through every 32
 // cycles. One line, split in two: where the old one chose "bd|sd:5", the kick's "bd|~" and the snare's "~|sd" roll the
 // same dice, so one of them plays.
@@ -257,11 +283,13 @@ export hats = sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd
   .tag("hats")
 
 // Claps  -----------------------------------------------------------------------------------------------------------------
+
 export claps = sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).cylinder(0).gain(0.20).legato(2.0)
   .bpf(sine.range(2000, 2200).fast(3.14)).hpf(600)
   .tag("claps")
 
 // Shore  -----------------------------------------------------------------------------------------------------------------
+
 export shore = note("c").fast(4).sound("brown").legato(2)
   .cylinder(7).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(7)).adsr(0.5, 1.0, 1.0, 2.5)
   .bpf(freq = perlin.range(440, 440 * 4).segment(16).slow(6), q = sine.range(0.25, 5.0).slow(48).early(12))
