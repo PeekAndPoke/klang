@@ -42,8 +42,9 @@ import kotlin.math.min
 /**
  * Places [camera] for each frame ([look]): a fixed look where the show's switches ask for one, else the
  * choreography (when the song is there; `?still`: the wide view only), else the total. The choreography goes by
- * where each player stands ([homes], the stage plot's), when they play ([activity]), and who plays seldom and who
- * strolls ([seldom], [strolls], the cast's): see [Choreography].
+ * where each player stands ([homes], the stage plot's), when they play ([activity]; none while they stroll, see
+ * `Notstrom.seenAt`), who plays seldom ([seldom], the cast's) and who strolls ([strolls], the score's: see
+ * `Score.strolls`): see [Choreography].
  *
  * The camera by hand: a key takes it over from the choreography, until 0 or Escape gives it back (where Esc
  * also closes what the live act is shown in, as in the app, only 0 is of use).

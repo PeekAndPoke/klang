@@ -52,7 +52,7 @@ data class Cast(
 ) {
     /**
      * The one who strolls about the stage while their part rests: the trumpet player (see `TrumpetPlayer`); nobody
-     * in a song without a trumpet.
+     * in a song without a trumpet. Who strolls in a song, also with a guitar, the score says (`Score.strolls`).
      */
     val strolls: Player? get() = trumpet?.player
 

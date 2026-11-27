@@ -14,6 +14,7 @@ import io.peekandpoke.klang.viz.liveact.band.skills.CameraStare
 import io.peekandpoke.klang.viz.liveact.band.skills.CrowdGaze
 import io.peekandpoke.klang.viz.liveact.band.skills.EyeContact
 import io.peekandpoke.klang.viz.liveact.band.skills.GhostEyes
+import io.peekandpoke.klang.viz.liveact.band.skills.GuitarStroll
 import io.peekandpoke.klang.viz.liveact.band.skills.InwardStare
 import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
@@ -22,7 +23,8 @@ import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
  * the crowd when she is facing the crowd, and then look 'inward' or stare at the camera"): now and then a long stare
  * at the camera ([CameraStare]), a short look at one of the band ([BandGlance]), a look at nothing ([InwardStare];
  * "inward" also meant "not looking anywhere", 2026-11-18), and most often her gaze wandering over the crowd
- * ([CrowdGaze]). Never with the trumpet at her lips.
+ * ([CrowdGaze]). Never with the trumpet at her lips. With a guitar she walks about the front of the stage as she
+ * plays ([GuitarStroll]).
  */
 val SIRENE: Member = Member(
     player = Player.Sirene,
@@ -108,6 +110,9 @@ val SIRENE: Member = Member(
             spotMost = 2.5,
             move = 0.8,
         ),
+        // with a guitar she walks about the front of the stage as she plays, slowly, on her trumpet's route (the
+        // maintainer, 2026-11-27): only where she has a string seat, stands, and the song does not rest it
+        GuitarStroll,
     ),
     lap = Lap.Between,
 )

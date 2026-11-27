@@ -6,9 +6,12 @@
 package io.peekandpoke.klang.viz.liveact
 
 import io.peekandpoke.klang.viz.liveact.band.Cast
+import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.StagePlot
-import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
+import io.peekandpoke.klang.viz.liveact.band.members.Members
+import io.peekandpoke.klang.viz.liveact.band.skills.GuitarStroll
 import io.peekandpoke.klang.viz.liveact.band.skills.Skill
+import io.peekandpoke.klang.viz.liveact.triggers.ChanceInSlots
 
 /**
  * A song's score: what binds one song to the show, as plain data. The [cast] (who of the band plays which instrument
@@ -28,4 +31,15 @@ data class Score(
     val eyeContact: ChanceInSlots,
     val idles: Double = 1.0,
     val resting: Set<Skill> = emptySet(),
-)
+) {
+    /**
+     * The one who strolls about the stage: the trumpet player where the song has one (she strolls while her part
+     * rests, see `TrumpetPlayer`); else a string player whose sheet has the walk with the guitar ([GuitarStroll]),
+     * which this song does not rest, and who stands at their place (they stroll while they play, see
+     * `StringStroller`); nobody else. The band and the camera are handed it (the camera answers the one who strolls).
+     */
+    val strolls: Player?
+        get() = cast.strolls ?: cast.strings.firstOrNull { seat ->
+            GuitarStroll in Members.of(seat.player).skills && GuitarStroll !in resting && plot.places[seat.player]?.sits != true
+        }?.player
+}

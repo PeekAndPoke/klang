@@ -17,6 +17,12 @@ import kotlin.math.floor
 // round's last 32 bars (it took 24: the maintainer, 2026-11-21, "the 360 around the band has to be a bit slower").
 internal const val FIRST = 34
 internal const val BACK = 43
+
+/**
+ * How long one look lasts, in bars: the camera judges who plays over that long, and a stroller's notes are kept from it
+ * that long before she sets off (`StringStroller`), so no look on her begins and then swings round her as she walks.
+ */
+internal const val LOOK_BARS = 3
 internal const val CIRCLE = 16
 internal const val ROUND = 48
 
@@ -31,7 +37,7 @@ internal const val EARLY = 12
 internal const val LOOKS_A_ROUND = 5
 
 /** The bar of a round at which its look number [i] begins: 0 to 2 are the late three, 3 and 4 the early two. */
-internal fun opens(i: Int): Int = if (i < 3) FIRST + 3 * i else EARLY + 3 * (i - 3)
+internal fun opens(i: Int): Int = if (i < 3) FIRST + LOOK_BARS * i else EARLY + LOOK_BARS * (i - 3)
 
 /** The kind of a round of the choreography. [key] is its name in a page's switches (`?move=circle`). */
 enum class RoundKind(val key: String) {
@@ -283,7 +289,7 @@ private fun choose(
     before: LookPlan,
 ): Chosen<Subject> {
     val a = rounds.begins(n = n, i = i)
-    val b = a + 3 * rounds.bar
+    val b = a + LOOK_BARS * rounds.bar
     // the first of its row of looks: nobody was shown right before it
     val leads = i == 0 || i == 3
 

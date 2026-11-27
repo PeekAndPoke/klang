@@ -237,7 +237,8 @@ class SongReading private constructor(
 
         /**
          * And never less than this, in seconds: the frontwoman must know her next note thirteen seconds ahead to come
-         * back from a stroll without a jump (see TrumpetPlayer), and a look between two players takes nine.
+         * back from a stroll without a jump (see TrumpetPlayer), and a look between two players takes nine. A guitarist
+         * who strolls counts on it to tell a phrase's end (`STROLL_AHEAD`, see `planStringStrolls`).
          */
         private const val AHEAD_SEC = 14.0
 

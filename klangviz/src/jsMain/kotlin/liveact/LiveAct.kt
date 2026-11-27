@@ -195,12 +195,12 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
 
         now.clock.changeTo(music = music, at = at)
         show.take(next = music, at = at)
-        now.band.reseat(cast = next.cast, plot = next.plot, idles = next.idles, startsAt = at, t = t)
+        now.band.reseat(cast = next.cast, plot = next.plot, strolls = next.strolls, idles = next.idles, startsAt = at, t = t)
         now.view.retake(
             homes = next.plot.places,
-            activity = now.band::playsAt,
+            activity = now.band::seenAt,
             seldom = next.cast.seldom,
-            strolls = next.cast.strolls,
+            strolls = next.strolls,
             after = at,
             t = t,
         )
@@ -557,6 +557,7 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                     show = show,
                     cast = score.cast,
                     plot = score.plot,
+                    strolls = score.strolls,
                     scene = ctx.scene,
                     models = props.models,
                     version = props.version,
@@ -583,9 +584,9 @@ class LiveAct(ctx: Ctx<Props>) : Component<LiveAct.Props>(ctx) {
                 camera = lens,
                 rigs = band.rigs,
                 homes = score.plot.places,
-                activity = band::playsAt,
+                activity = band::seenAt,
                 seldom = score.cast.seldom,
-                strolls = score.cast.strolls,
+                strolls = score.strolls,
             )
             // the clock last: it starts to listen to the music and to the page's keys, and from here on nothing can
             // fail before it is kept (and with it given up on unmount)

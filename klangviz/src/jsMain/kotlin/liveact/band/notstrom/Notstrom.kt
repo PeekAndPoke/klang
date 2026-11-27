@@ -27,11 +27,14 @@ import io.peekandpoke.klang.viz.liveact.band.figure.capture
 import io.peekandpoke.klang.viz.liveact.band.figure.enter
 import io.peekandpoke.klang.viz.liveact.band.figure.eyesAt
 import io.peekandpoke.klang.viz.liveact.band.figure.stepLegs
+import io.peekandpoke.klang.viz.liveact.band.figure.strideOf
+import io.peekandpoke.klang.viz.liveact.band.figure.strollHips
 import io.peekandpoke.klang.viz.liveact.band.figure.walkInHips
 import io.peekandpoke.klang.viz.liveact.band.figure.walkPose
 import io.peekandpoke.klang.viz.liveact.band.instruments.drums.Drummer
 import io.peekandpoke.klang.viz.liveact.band.instruments.marimba.MarimbaPlayer
 import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringPlayer
+import io.peekandpoke.klang.viz.liveact.band.instruments.strings.StringStroller
 import io.peekandpoke.klang.viz.liveact.band.instruments.trumpet.TrumpetPlayer
 import io.peekandpoke.klang.viz.liveact.band.members.Members
 import io.peekandpoke.klang.viz.liveact.band.skills.IDLE_MARGIN
@@ -92,6 +95,8 @@ class Notstrom private constructor(
     private val show: Show,
     cast: Cast,
     plot: StagePlot,
+    /** The one who strolls about the stage, the score's (see `Score.strolls`); nobody where null. */
+    strolls: Player?,
     /** Every player's rig, in the players' order. */
     val rigs: Map<Player, Rig>,
     /** The figures' dressed parts (the dark skin, the hair), each with its pattern: what the lacquer look re-dresses. */
@@ -106,6 +111,7 @@ class Notstrom private constructor(
      */
     private var cast: Cast = cast
     private var plot: StagePlot = plot
+    private var strolls: Player? = strolls
     private var idles: Double = idles
 
     /** The moment on the show's clock at which the song that plays now begins: the plot's walks are told from there. */
@@ -143,7 +149,7 @@ class Notstrom private constructor(
         /**
          * Loads the six figures (from [models], a folder's address ending in a slash) into [scene], each at its
          * place in the stage [plot], and casts the band as [cast] says: every figure gets its instrument and its part
-         * of the song.
+         * of the song. [strolls]: the one who strolls about the stage (see `Score.strolls`).
          *
          * The files are fetched together, but the figures enter the scene in the players' order: what is made first
          * is drawn first. [viewer]: where the camera is (who looks at the viewer looks there); it is read every
@@ -155,6 +161,7 @@ class Notstrom private constructor(
             show: Show,
             cast: Cast,
             plot: StagePlot,
+            strolls: Player?,
             scene: Scene,
             models: String,
             version: String,
@@ -180,7 +187,16 @@ class Notstrom private constructor(
                 bodies.addAll(dress(player = player, rig = rig))
             }
 
-            return Notstrom(show = show, cast = cast, plot = plot, rigs = rigs, bodies = bodies, viewer = viewer, idles = idles)
+            return Notstrom(
+                show = show,
+                cast = cast,
+                plot = plot,
+                strolls = strolls,
+                rigs = rigs,
+                bodies = bodies,
+                viewer = viewer,
+                idles = idles,
+            )
         }
 
         /**
@@ -252,10 +268,22 @@ class Notstrom private constructor(
     private fun rig(player: Player) = rigs.getValue(player)
 
     /**
-     * When [player] begins a note, sorted, as far as the song is known: what the camera and the eyes go by. By the tags
-     * the cast gives them (see [Cast.tagsOf]).
+     * When [player] begins a note, sorted, as far as the song is known: what the eyes go by (the camera's choice of a
+     * look by [seenAt]). By the tags the cast gives them (see [Cast.tagsOf]).
      */
     fun playsAt(player: Player): List<Double> = show.times(*cast.tagsOf(player).toTypedArray())
+
+    /**
+     * When [player] begins a note as the camera's choice of a look goes by it: as [playsAt], but none while they
+     * stroll with their instrument, nor a look before that would reach into a stroll (see [StringStroller.seen]): a
+     * look on a player goes round with them, and would swing as they walk.
+     */
+    fun seenAt(player: Player): List<Double> {
+        val times = playsAt(player)
+        val (who, stroller) = strolling ?: return times
+
+        return if (who == player) stroller.seen(times) else times
+    }
 
     /** The drummer's hits: the song's drums (see `Song.drumHits`), else the test beat. */
     private fun drumPart(): Part<DrumHit> = show.song?.part { drumHits(cast.drums.kit) } ?: Part.fixed(testBeat(64, show.bpm))
@@ -369,6 +397,24 @@ class Notstrom private constructor(
     )
 
     /**
+     * The string player who walks about the stage with the instrument while they play (see [StringStroller]), and
+     * their strolls: the one who strolls ([strolls]) where they have a string seat; null where nobody does.
+     */
+    private var strolling: Pair<Player, StringStroller>? = strollingOf()
+
+    private fun strollingOf(): Pair<Player, StringStroller>? {
+        val seat = cast.strings.firstOrNull { it.player == strolls } ?: return null
+
+        return seat.player to StringStroller(
+            show = show,
+            rig = rig(seat.player),
+            part = stringPart(seat),
+            place = plot.places.getValue(seat.player),
+            others = plot.places.filterKeys { it != seat.player },
+        )
+    }
+
+    /**
      * An instrument that goes at a change of song: [prop] floats up from where it was ([from], its height) and is
      * seen through more and more ([veil], made at its first frame) from the moment [since] on the show's clock; it is
      * taken out of the scene and freed when it is gone.
@@ -427,8 +473,8 @@ class Notstrom private constructor(
     /**
      * The band goes on with another song without leaving the stage (KLANG-00481; the maintainer, 2026-11-23: "let
      * the no longer needed instruments vanish; while they vanish everyone takes the new start pose; only when the
-     * start pose is fully reached let the new instruments appear"). [cast], [plot] and [idles] are the next song's
-     * score's; [startsAt]: the moment on the show's
+     * start pose is fully reached let the new instruments appear"). [cast], [plot], [strolls] and [idles] are the next
+     * song's score's; [startsAt]: the moment on the show's
      * clock at which the song begins; [t]: now on that clock. The [plot] is the song's own: the walks to it are planned
      * here, from where everyone is. Call it once the show has taken the next song
      * (`Show.take`): the parts are read from it.
@@ -437,7 +483,7 @@ class Notstrom private constructor(
      * drummer (both songs have him at the kit), and a strung player who has the same design in both. Every other
      * instrument of the song before goes, and every other one of the next song comes.
      */
-    fun reseat(cast: Cast, plot: StagePlot, idles: Double, startsAt: Double, t: Double) {
+    fun reseat(cast: Cast, plot: StagePlot, strolls: Player?, idles: Double, startsAt: Double, t: Double) {
         check(cast.drums.player == this.cast.drums.player) { "A change of the drummer is not built yet" }
         check(settled) { "The band is still in the change of song before" }
 
@@ -459,6 +505,7 @@ class Notstrom private constructor(
 
         this.cast = cast
         this.plot = plot.after(before = here, keeps = keeps)
+        this.strolls = strolls
         this.idles = idles
         this.startsAt = startsAt
 
@@ -508,6 +555,7 @@ class Notstrom private constructor(
         frontwoman = cast.trumpet?.let { seat ->
             trumpetPlayerOf(seat).also { made -> comes(player = seat.player, props = listOf(made.trumpet.group)) }
         }
+        strolling = strollingOf()
 
         // who goes on with the same player gets up by that player's own pose, where they sat; who has another one
         // now eases from how they were held into what it has them do
@@ -683,16 +731,24 @@ class Notstrom private constructor(
 
 
         // the string players and the marimba player walk as they stand, the legs stepping and the hips moving as each
-        // one's gait has them on the walk-in
+        // one's gait has them on the walk-in; one who strolls with the instrument, once there, as their stroll has them
+        // (see [StringStroller]: it puts the figure, and the legs and the hips step by the way it walks)
         for ((player, stringPlayer) in strings) {
-            val walk = walks.getValue(player)
+            val arrived = walks.getValue(player)
+            val stroll = strolling?.takeIf { it.first == player }?.second
+            val walk = stroll?.walk(t = t, walkIn = arrived) ?: arrived
+            val gait = character(player).gait
+            // (on a stroll the hips move as the kind of walk has them, as the trumpet player's do)
+            val hips = stroll?.hips?.let { kind ->
+                strollHips(rig = rig(player), stride = strideOf(rig(player), walk), going = walk.going, amount = gait.hipsWith(kind))
+            } ?: walkInHips(rig = rig(player), walk = walk, gait = gait)
             // one whose place is on the floor sits down over the first SIT seconds after arriving there
             val down = if (plot.places.getValue(player).sits) smooth(walk.since / SIT) else 0.0
             // (and one who sat in the song before gets up first, from the change of song on)
             val up = if (player in rising) 1 - smooth((t - easedAt) / SIT) else 0.0
             val sits = max(down, up)
 
-            stringPlayer.update(t, hips = walkInHips(rig = rig(player), walk = walk, gait = character(player).gait), sits = sits)
+            stringPlayer.update(t, hips = hips, sits = sits)
 
             if (!plot.entrances.getValue(player).carries) {
                 // coming from the song before with another instrument to play, the hands are empty: a plain walk.

@@ -15,6 +15,7 @@ import io.peekandpoke.klang.viz.liveact.band.StagePlot
 import io.peekandpoke.klang.viz.liveact.band.StringSeat
 import io.peekandpoke.klang.viz.liveact.band.instruments.bass.Bass
 import io.peekandpoke.klang.viz.liveact.band.skills.GhostEyes
+import io.peekandpoke.klang.viz.liveact.band.skills.GuitarStroll
 import io.peekandpoke.klang.viz.liveact.band.instruments.guitar.Guitar
 import io.peekandpoke.klang.viz.liveact.song.DrumTags
 import io.peekandpoke.klang.viz.liveact.stage.Stage
@@ -111,6 +112,6 @@ val KOKON: Score = Score(
     eyeContact = DER_SCHMETTERLING.eyeContact,
     // a quiet song: hardly anyone shakes out a hand or scratches their head
     idles = 0.08,
-    // and nobody's eyes leave their face for their shadow
-    resting = setOf(GhostEyes),
+    // and nobody's eyes leave their face for their shadow; Sirene sits with her guitar, and does not walk with it
+    resting = setOf(GhostEyes, GuitarStroll),
 )

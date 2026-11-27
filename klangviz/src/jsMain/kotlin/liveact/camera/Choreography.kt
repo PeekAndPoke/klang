@@ -152,8 +152,8 @@ private const val OVERHEAD = 2.1
  * from where, in which order, when, and how it comes back).
  *
  * [rigs]: the players' figures. [looks]: the looks at each player (see [looksOn]). [activity]: the times a player plays a note, sorted, as far as the song is known
- * (asked at every look). [seldom]: the players who play seldom, and [strolls]: the one who strolls (both the cast's,
- * see [Rounds]). [force]: makes every round that kind (to see one; else the seed decides).
+ * (asked at every look; none while they stroll, see `Notstrom.seenAt`). [seldom]: the players who play seldom (the
+ * cast's), and [strolls]: the one who strolls (the score's, see `Score.strolls`); see [Rounds]. [force]: makes every round that kind (to see one; else the seed decides).
  */
 class Choreography(
     show: Show,

@@ -19,6 +19,7 @@ import io.peekandpoke.klang.viz.liveact.band.Player
 import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_BACK
 import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_LATE_LEAST
 import io.peekandpoke.klang.viz.liveact.band.skills.CONTACT_MEET
+import io.peekandpoke.klang.viz.liveact.band.skills.GuitarStroll
 
 /** Every song's score. */
 private val SCORES = mapOf(
@@ -106,6 +107,17 @@ class ScoresSpec : StringSpec({
                     }
                 }
             }
+        }
+    }
+
+    "who strolls: the trumpet player, else one with the walk with the guitar who stands and whose song does not rest it" {
+        DER_SCHMETTERLING.strolls shouldBe DER_SCHMETTERLING.cast.trumpet?.player
+        NOCH_SELTSAMERE_DINGE.strolls shouldBe Player.Sirene
+        NOCH_SELTSAMERE_DINGE.copy(resting = setOf(GuitarStroll)).strolls shouldBe null
+
+        withClue("Kokon rests it, and she sits there") {
+            KOKON.strolls shouldBe null
+            KOKON.copy(resting = emptySet()).strolls shouldBe null
         }
     }
 })
