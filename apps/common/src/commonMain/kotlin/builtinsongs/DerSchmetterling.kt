@@ -20,7 +20,7 @@ import * from "sprudel"
 
 // Song Status: Upcoming Garage Band ...
 
-let feel          =    5    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
+let feel          =    3    // 0.0 .. guitar | 100.0 .. rave | 200.0 .. hyper
 let transposition =   -2    // -1 .. D# | 0 .. E | 1 .. F
 let drunk         =  0.8    // How many liters of beers did each band member have?
 let snareHz       =  220    // Where does the snare cut through?
@@ -32,12 +32,12 @@ let pickupStock = Ign.fn(x => x)
 
 // Single coil at the bridge: a high, sharp resonance, thin and bright, low output.
 let pickupSingle = Ign.fn(x => x
-  .lowpass(4750, 3.2)                              // the peak, up high and narrow
+  .lowpass(4750, 3.3)                              // the peak, up high and narrow
   .mul(1.0))                                       // low output, the amp stays cleaner
 
 // Humbucker at the bridge: a lower, broader resonance, fat and dark, hot output that pushes the amp harder.
 let pickupHumbucker = Ign.fn(x => x
-  .lowpass(3300, 2.2)                              // the peak, low and wide
+  .lowpass(3300, 2.3)                              // the peak, low and wide
   .mul(1.2))                                       // hot output
 
 // Humbucker at the neck: darker still, and the neck position cancels the 4th harmonic (the hollow, woody tell).
@@ -129,9 +129,9 @@ let cabStock = Kat.fn(x => x.lowpass(5000).lowpass(5000))
 // 4x12 closed back: the air in the sealed box thumps, the speaker barks in the upper mids, and above 5 kHz there is a wall.
 let cab4x12 = Kat.fn(x => x
   .eq(e => e
-    .band(freq =  120, q = 0.7, db =  2.50)        // thump: closed-back box resonance
-    .band(freq =  920, q = 0.7, db =  3.60)        // roar:  low mids
-    .band(freq = 2700, q = 1.2, db =  1.30)        // bark:  the upper-mid speaker peak
+    .band(freq =  120, q = 0.7, db =  2.80)        // thump: closed-back box resonance
+    .band(freq =  900, q = 0.7, db =  3.50)        // roar:  low mids
+    .band(freq = 2700, q = 1.2, db =  1.40)        // bark:  the upper-mid speaker peak
   )
   .lowpass(5000, 0.707, x => x.passes(3))          // the wall: 36 dB/oct, the fizz is gone
   .highpass(100, 0.707, x => x.passes(2)))
@@ -196,7 +196,7 @@ let makeGuitar = (pickup) => {
     .pitchEnvelope(0.2, x => x.adsr(pAttack.div(5), 0.100, 0, 0))
     //.lowpass(freq = Ign.freq().times(4).add(Ign.constant(5000).adsr(pAttack, 1.0, 0.0, 0.050)), q = 0.7)
     // noise burst
-    .plus(Ign.pinknoise().adsr(pAttack.mul(5), pDecay, pSustain, pRelease).highpass(2000).mul(0.06))
+    .plus(Ign.pinknoise().adsr(pAttack.mul(5), pDecay, pSustain, pRelease).highpass(2000).mul(0.05))
     //.plus(Ign.crackle(1.3).highpass(1200).adsr(0.003, 0.001, 0.0, 0.05).mul(1.5))
     // the string - lowpass adsr for the string sound and adsr for the string
     .adsr(pAttack, pDecay, pSustain, pRelease, e => e.curves("exp", "exp", "exp"))
@@ -248,7 +248,7 @@ let bassSnd = (() => {
 
   // Harmonics: sine partials at 2f .. 6f, gain 1/n, the fundamental left to the sub above. On the
   // low E that is 82 to 328 Hz, the band a small speaker can play and the ear folds back into 41 Hz.
-  let harmonics = Ign.sine(x => x.harmonics(6, 1.10).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
+  let harmonics = Ign.sine(x => x.harmonics(6, 1.05).fundamental(0).analog(pAnalog).analogSpread(0.05)).mul(pHarm)
 
   return sub.plus(harmonics)
     .eq(e => e.band(freq = snareHz, q = 3.0, db = -3)) // let the snare cut through
@@ -321,7 +321,7 @@ export guitar1_shape = x => x.pregain(guitarDyna(1).fast(2).mul(0.8))
 let melodyBus = x => x.cylinder(1).katalyst(melodyAmp)
   // How hard the amp is hit: the maintainer's by ear. Centred, the guitar reaches each side's amp 3 dB lower than
   // the rig per note heard it (constant-power pan); 1.4 would make that up, 1.0 is the start value.
-  .gain(1.05)
+  .gain(1.10)
   .body(material = "spruce", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
   .katp("gain.gain", 0.31)
@@ -350,7 +350,7 @@ export guitar2_shape = x => x.pregain(guitarDyna(2).fast(2))
 // once, so the two never write different bus settings (only the newest voice's would be heard).
 let rhythmBus = x => x.cylinder(2).katalyst(rhythmAmp)
   // How hard the amp is hit: the maintainer's by ear. Two guitars feed one amp now, and one compressor.
-  .gain(0.8)
+  .gain(0.75)
   // One amp, one wood: the maintainer's by ear. Maple was guitar 2's, mahogany guitar 3's.
   .body(material = "maple", wet = 0.15)
   .compressor(threshold = -14.9, ratio = 4, knee = 6, attack = 0.001, release = beats(0.1))
@@ -538,7 +538,7 @@ export kick = sound(kick_pat).apply(kick_shape).tag("kick")  // . solo()
 export snare_pat =
   `<[~!2]!2  [~!4]!2  [~!8]!2  [~!16]  [~!24]  [~  sd  ~ sd]!15 [[~ sd] sd  [[sd? sd?] sd] [sd!4]] [~  sd  ~ sd]!16 [~ sd ~ sd]!32>`
 export snare_shape = x => x.sound(metalSnare).adsrOff().freq(pure(snareHz).add(perlin(-2, 2)))
-  .gain(0.19).pan(0.575).hpf(105).lpf(13500)
+  .gain(0.19).pan(0.575).hpf(115).lpf(13500)
 export snare_arrange = x => x.cylinder(7).mute("<0!160 1!32>").late(berlin(0.005, 0.0015).mul(drunk).seg(4))
 export snare = sound(snare_pat).apply(snare_shape).tag("snare") // .solo()
 
@@ -548,7 +548,7 @@ export hats_pat =
     [cr hh cr hh]!24 
     [cr rd ~ rd] [~ rd ~ rd]!15 [cr rd ~ rd] [~ rd ~ rd]!15>`
 export hats_shape = x => x.gain(0.17).pan(0.425)
-  .hpf(650).lpf(freq = "15000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 3.0)
+  .hpf(600).lpf(freq = "15000".add(perlin.mul(500).slow(4)), q = 0.5).adsr(perlin(0.001, 0.003), 0.1, 0.90, 3.0)
 export hats_arrange = x => x.cylinder(8).mute("<0!160 1!32>").late(berlin(0.0015, 0.0030).mul(drunk).seg(4))
 export hats = sound(hats_pat).fast(2).apply(hats_shape).velocity("<1.0 0.90 0.95 0.88>*8".sub(berlin(0.0, 0.05).slow(4))).tag("hats")
 
